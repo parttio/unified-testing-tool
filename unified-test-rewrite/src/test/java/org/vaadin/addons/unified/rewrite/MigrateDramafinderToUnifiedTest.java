@@ -67,7 +67,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
-    void springBootTestAndTheToolGuardGoAndElementCodeRunsThroughTheEscapeHatch() {
+    void springBootTestAndTheToolGuardGo() {
         rewriteRun(java(VIEW), java(
                 """
                 package com.example;
@@ -91,23 +91,17 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                 """
                 package com.example;
 
-                import com.microsoft.playwright.Page;
-                import com.vaadin.testing.unified.RequiresTestingTool;
-                import com.vaadin.testing.unified.TestingTool;
                 import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
                 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
                 import org.junit.jupiter.api.Test;
-                import org.vaadin.addons.dramafinder.element.ButtonElement;
 
                 @UnifiedSpringBootTest
                 class PeopleTest {
                     @Test
-                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
                     void saves(UnifiedPage page) {
-                        Page playwright = page.unwrap(Page.class);
                         page.navigate(PeopleView.class);
-                        // TODO unified: Dramafinder Escape Hatch: ButtonElement.getByText(playwright, "Save").click()
-                        ButtonElement.getByText(playwright, "Save").click();
+                        page.find(UnifiedButton.class).withText("Save").single().click();
                     }
                 }
                 """));
@@ -288,6 +282,218 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                         new PeoplePage(playwright).save();
                         // TODO unified: Dramafinder Escape Hatch: playwright.locator("vaadin-button").click()
                         playwright.locator("vaadin-button").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void queryApiLookupsLocalsAndElementAssertionsBecomeWrappersAndUnifiedAssertions() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import static org.vaadin.addons.dramafinder.element.query.ElementQueries.find;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.AutoWait;
+                import org.vaadin.addons.dramafinder.element.CheckboxElement;
+                import org.vaadin.addons.dramafinder.element.DialogElement;
+                import org.vaadin.addons.dramafinder.element.TextFieldElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void edits() {
+                        navigate(PeopleView.class);
+                        TextFieldElement name = find(page, TextFieldElement.class).withLabel("Name").single();
+                        name.setValue("Alan");
+                        AutoWait.waitForVaadinIdle(page);
+                        name.assertValue("Alan");
+                        find(page, CheckboxElement.class).withLabel("Active").first().check();
+                        find(page, TextFieldElement.class).get(1).assertDisabled();
+                        DialogElement.getByHeaderText(page, "Edit").assertOpen();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import com.vaadin.testing.unified.component.UnifiedDialog;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    void edits(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+                        name.setValue("Alan");
+                        assertThat(name).hasValue("Alan");
+                        // TODO unified: was first(); single() fails when several components match
+                        page.find(UnifiedCheckbox.class).withLabel("Active").single().check();
+                        assertThat(page.find(UnifiedTextField.class).all().get(1)).isDisabled();
+                        assertThat(page.find(UnifiedDialog.class).withHeaderTitle("Edit").single()).isOpen();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLookupWithACallTheWrapperLacksStaysBehindTheEscapeHatch() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.TextFieldElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void checksThePattern() {
+                        navigate(PeopleView.class);
+                        TextFieldElement name = TextFieldElement.getByLabel(page, "Name");
+                        name.setValue("Alan");
+                        name.assertPattern("[A-Z].*");
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.TextFieldElement;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void checksThePattern(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PeopleView.class);
+                        // TODO unified: Dramafinder Escape Hatch: TextFieldElement.getByLabel(playwright, "Name")
+                        TextFieldElement name = TextFieldElement.getByLabel(playwright, "Name");
+                        // TODO unified: Dramafinder Escape Hatch: name.setValue("Alan")
+                        name.setValue("Alan");
+                        // TODO unified: Dramafinder Escape Hatch: name.assertPattern("[A-Z].*")
+                        name.assertPattern("[A-Z].*");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void gridRowsCellsAndWaitsBecomeUnifiedGridCalls() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.GridElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void readsTheGrid() {
+                        navigate(PeopleView.class);
+                        GridElement people = GridElement.get(page);
+                        people.waitForGridToStopLoading();
+                        people.assertRowCount(3);
+                        Assertions.assertEquals(3, people.getTotalRowCount());
+                        GridElement.RowElement ada = people.findRow(people.findRowIndexesWithColumnText(0, "Ada").get(0)).get();
+                        Assertions.assertEquals("ada@example.com", ada.getCell(1).getText());
+                        ada.select();
+                        ada.assertSelected();
+                        GridElement.RowElement first = people.findRow(0).orElseThrow();
+                        first.getCell("Email").assertText("alan@example.com");
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    void readsTheGrid(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        assertThat(people).hasRowCount(3);
+                        Assertions.assertEquals(3, people.getRowCount());
+                        // TODO unified: was findRowIndexesWithColumnText(0, ..).get(0): any column matches now; single() fails when several rows match
+                        UnifiedGrid.UnifiedGridRow ada = people.row(people.rows().withCellText("Ada").single().getIndex());
+                        Assertions.assertEquals("ada@example.com", ada.getCellText(1));
+                        ada.select();
+                        assertThat(ada).isSelected();
+                        UnifiedGrid.UnifiedGridRow first = people.row(0);
+                        assertThat(first).hasCellText("Email", "alan@example.com");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aGridWithACallNoRuleConvertsStaysBehindTheEscapeHatch() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.GridElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void sorts() {
+                        navigate(PeopleView.class);
+                        GridElement people = GridElement.get(page);
+                        people.findHeaderCellByText("Name").orElseThrow().clickSort();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.GridElement;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void sorts(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PeopleView.class);
+                        // TODO unified: Dramafinder Escape Hatch: GridElement.get(playwright)
+                        GridElement people = GridElement.get(playwright);
+                        // TODO unified: Dramafinder Escape Hatch: people.findHeaderCellByText("Name").orElseThrow().clickSort()
+                        people.findHeaderCellByText("Name").orElseThrow().clickSort();
                     }
                 }
                 """));
