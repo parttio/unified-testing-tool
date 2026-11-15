@@ -59,3 +59,7 @@ _Avoid_: TODO, FIXME, warning
 **Component Reference**:
 A test's direct handle on a component's Java object, such as a field of the view, which only Browserless has; a Unified UI Test locates components instead.
 _Avoid_: Field access, component instance
+
+**User Step**:
+One action or check a Unified UI Test performs, stated the way a user would describe it ("fill text field 'City' with 'Turku'"), as the Unified API reports it.
+_Avoid_: Step method, log line, trace, keyword
