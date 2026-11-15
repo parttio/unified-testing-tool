@@ -33,7 +33,7 @@ Something a Unified UI Test can require from the Testing Tool running it, such a
 _Avoid_: Feature flag, tag
 
 **Wrapper**:
-The Unified API's object for one component of a given type, named with the `Unified` prefix, which re-finds its component on every use.
+The Unified API's object for one component of a given type, named with the `Unified` prefix, which re-finds its component, by its type and filters, on every use.
 _Avoid_: Element, tester, locator, page object
 
 **Unified Page**:
