@@ -33,7 +33,7 @@ Something a Unified UI Test can require from the Testing Tool running it, such a
 _Avoid_: Feature flag, tag
 
 **Wrapper**:
-The Unified API's object for one component of a given type, named with the `Unified` prefix, which re-finds its component on every use.
+The Unified API's object for one component of a given type, named with the `Unified` prefix, which re-finds its component, by its type and filters, on every use.
 _Avoid_: Element, tester, locator, page object
 
 **Unified Page**:
@@ -59,3 +59,7 @@ _Avoid_: TODO, FIXME, warning
 **Component Reference**:
 A test's direct handle on a component's Java object, such as a field of the view, which only Browserless has; a Unified UI Test locates components instead.
 _Avoid_: Field access, component instance
+
+**User Step**:
+One action or check a Unified UI Test performs, stated the way a user would describe it ("fill text field 'City' with 'Turku'"), as the Unified API reports it.
+_Avoid_: Step method, log line, trace, keyword
