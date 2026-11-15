@@ -125,6 +125,23 @@ Inferences:
 6. **Licensing and login** for route 1 (F13, F14). Route 2 avoids both if it doesn't depend on Copilot's private CDN plugins.
 7. **The output style isn't settled.** #193 may change the emitted shape (action-first verbs, no `.single()`, steps), so any code writer built before #193 settles would be rewritten.
 
+## 6. Copilot 25.4 snapshot
+
+Checked `com.vaadin:copilot:25.4-SNAPSHOT` build `25.4-20261112.070010-84` (`maven.vaadin.com/vaadin-prereleases`; latest milestone `25.4.0-alpha5`) against 25.3.5. **Nothing the findings rely on changed.**
+
+| Part | 25.4 vs 25.3.5 | How checked |
+|---|---|---|
+| `com.vaadin.copilot.testbenchgenerator` (25 classes) and `GenerateTestsHandler`, `TestGenerationServerClient`, `TestFramework` | Identical | Class lists plus `javap -p -c -constants`, with constant-pool numbers and branch offsets stripped |
+| Recorder browser code, `cdn.vaadin.com/copilot/25.4-SNAPSHOT/copilot-plugins-5910.js` (build suffix from jar `consts.ts`) and `…/25.4.0-alpha5/copilot-plugins.js` | Identical | `TestBenchTestGenerator` region diffed after replacing minified names of 1–3 characters |
+| `copilot-plugin-support.d.ts`, `copilot-experimental-features-*.js` | Byte-identical | `diff` |
+| Flow `main` (25.4-SNAPSHOT): `publishClient.ts` `getNodeInfo().javaClass`, `DevToolsMessageHandler` | Still present | raw files on `vaadin/flow` `main`, 2026-11-15 |
+
+The only new Copilot classes are a Kotlin source rewriter (`kotlinrewriter.KotlinTemplateWriter`, `KotlinAttachmentLocator`, `rewriter.TemplatePolicy`), unrelated to recording.
+
+## 7. Does route 2 need AI?
+
+No. Copilot's recorder is rule-based end to end: DOM event capture (F5), component choice from metadata (F6), a fixed locator order (F7) and JavaParser code writing (F10). AI is only in the separate UI Test Generation panel (F12). Route 2 rebuilds that deterministic pipeline, and can be more exact than Copilot's because the dev-mode server component supplies the Java class and the label, accessible name, text and test id (E7, E8). Not reusing Copilot's private recorder also keeps Vaadin's AI server and CDN bundle out of the loop. Whether a third-party Copilot panel needs a Vaadin login is untested.
+
 ## Open questions
 
 Depend on #193's readable style:
