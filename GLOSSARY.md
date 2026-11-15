@@ -56,6 +56,10 @@ _Avoid_: Converter, codemod, migration script
 The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch.
 _Avoid_: TODO, FIXME, warning
 
+**Unified Recorder**:
+The development-time tool that turns what a developer does in the running application into a Unified UI Test.
+_Avoid_: Copilot recorder, codegen, test generator
+
 **Component Reference**:
 A test's direct handle on a component's Java object, such as a field of the view, which only Browserless has; a Unified UI Test locates components instead.
 _Avoid_: Field access, component instance
