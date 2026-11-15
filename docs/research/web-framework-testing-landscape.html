@@ -1,0 +1,876 @@
+<title>Web Framework Testing Landscape</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: report column (~72ch) with a sticky contents rail on wide screens; facts in scrollable tables, reasoning in tinted panels */
+:root {
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --fg: #16212a;
+  --muted: #586774;
+  --line: #d9e1e6;
+  --accent: #0b6e8a;
+  --accent-soft: #e3f1f5;
+  --inf: #fbf5e6;
+  --inf-line: #e2cf9c;
+  --inf-fg: #6b5418;
+  --code-bg: #eef2f4;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1519; --surface: #151d23; --fg: #e3eaee; --muted: #93a3ae; --line: #26333c;
+    --accent: #5cc3dd; --accent-soft: #15303a; --inf: #221d10; --inf-line: #5a4a22; --inf-fg: #e2c879;
+    --code-bg: #1c262d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1519; --surface: #151d23; --fg: #e3eaee; --muted: #93a3ae; --line: #26333c;
+  --accent: #5cc3dd; --accent-soft: #15303a; --inf: #221d10; --inf-line: #5a4a22; --inf-fg: #e2c879;
+  --code-bg: #1c262d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 15.5px/1.65 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 40px 80px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; }
+@media (min-width: 1100px) { .wrap { grid-template-columns: 230px minmax(0, 1fr); } }
+nav.toc { display: none; }
+@media (min-width: 1100px) {
+  nav.toc { display: block; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow: auto; }
+}
+nav.toc p { font: 600 11px/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; border-left: 1px solid var(--line); }
+nav.toc a { display: block; padding: 5px 0 5px 14px; margin-left: -1px; border-left: 2px solid transparent; color: var(--muted); text-decoration: none; font-size: 13px; line-height: 1.4; }
+nav.toc a:hover, nav.toc a.on { color: var(--fg); border-left-color: var(--accent); }
+main { min-width: 0; max-width: 900px; }
+header { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow { font: 600 12px/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+h1 { font: 700 clamp(28px, 4.4vw, 42px)/1.12 var(--font-display); letter-spacing: -.02em; margin: 0 0 14px; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 17px; max-width: 62ch; margin: 0 0 22px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.chips li { font: 500 12.5px/1 var(--font-mono); padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); }
+.qs { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 28px 0 0; padding: 0; list-style: none; counter-reset: q; }
+.qs a { display: flex; flex-direction: column; gap: 6px; height: 100%; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); text-decoration: none; color: var(--fg); font-size: 13.5px; line-height: 1.4; }
+.qs a:hover { border-color: var(--accent); }
+.qs b { font: 600 11px/1 var(--font-mono); color: var(--accent); }
+.intro { color: var(--muted); font-size: 14.5px; }
+details.versions { margin: 12px 0 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+details.versions summary { cursor: pointer; padding: 10px 14px; font-weight: 500; color: var(--fg); }
+details.versions .tbl { margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; }
+section { padding-top: 36px; }
+h2 { font: 600 clamp(21px, 2.6vw, 26px)/1.25 var(--font-display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance; }
+h3 { font: 600 16px/1.3 var(--font-display); margin: 26px 0 10px; display: flex; align-items: center; gap: 8px; }
+h3.ver::after { content: "Sourced"; font: 600 10.5px/1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+.infbox { margin: 22px 0 0; padding: 4px 18px 6px; background: var(--inf); border: 1px solid var(--inf-line); border-radius: 8px; }
+.infbox h3 { color: var(--inf-fg); margin-top: 14px; }
+.tag { display: inline-block; font: 600 10.5px/1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; margin: -4px 0 6px; }
+.inf-tag { background: var(--inf); color: var(--inf-fg); border: 1px solid var(--inf-line); }
+section.lead { padding: 26px 24px 10px; margin-top: 32px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+section.lead ol { padding-left: 22px; }
+section.lead li { margin-bottom: 12px; }
+p, li { max-width: 74ch; }
+ol, ul { padding-left: 22px; }
+li { margin-bottom: 6px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+code { font: 0.86em/1.4 var(--font-mono); background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 600; }
+.tbl { overflow-x: auto; margin: 12px 0 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; line-height: 1.5; }
+th { text-align: left; font: 600 11.5px/1.3 var(--font-body); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 12px; vertical-align: top; border-top: 1px solid var(--line); }
+tbody tr:first-child td { border-top: 0; }
+table { min-width: 640px; }
+.facts td:first-child { font: 500 12px/1.5 var(--font-mono); color: var(--accent); white-space: nowrap; }
+.facts td:nth-child(2) { min-width: 300px; }
+.facts td:last-child { font-size: 12.5px; color: var(--muted); min-width: 200px; overflow-wrap: anywhere; }
+[id="1-browserless-or-real-browser-what-each-framework-recommends"] .tbl:not(.facts) td:first-child { white-space: nowrap; }
+footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+<li><a href="#answer-in-short">Answer in short</a></li>
+<li><a href="#1-browserless-or-real-browser-what-each-framework-recommends">1. Browserless or real browser: what each framework recommends</a></li>
+<li><a href="#2-who-the-tests-are-for-developers-or-business">2. Who the tests are for: developers or business</a></li>
+<li><a href="#3-official-ai-and-agent-features-around-testing">3. Official AI and agent features around testing</a></li>
+<li><a href="#4-new-patterns-because-of-agents">4. New patterns because of agents</a></li>
+<li><a href="#5-how-humans-read-these-tests">5. How humans read these tests</a></li>
+<li><a href="#what-this-means-for-this-repo-inferences">What this means for this repo (inferences)</a></li>
+<li><a href="#open-questions">Open questions</a></li>
+<li><a href="#not-checked">Not checked</a></li>
+    </ol>
+  </nav>
+  <main>
+    <header>
+      <p class="eyebrow">Unified Testing Tool · Research note</p>
+      <h1>How web frameworks test their UIs, and what changed with AI agents</h1>
+      <p class="sub">Browserless or real browser, who the tests are written for, what the tools now ship for AI agents, and how people read the results. Every fact links to a primary source.</p>
+      <ul class="chips">
+        <li>Researched 2026-11-15</li>
+        <li>14 frameworks · 5 test tools</li>
+        <li>Sources pinned to commits</li>
+      </ul>
+      <ol class="qs">
+        <li><a href="#1-browserless-or-real-browser-what-each-framework-recommends"><b>Q1</b>Browserless or real browser?</a></li>
+        <li><a href="#2-who-the-tests-are-for-developers-or-business"><b>Q2</b>Developers or business engineers?</a></li>
+        <li><a href="#3-official-ai-and-agent-features-around-testing"><b>Q3</b>What exists for AI workflows?</a></li>
+        <li><a href="#4-new-patterns-because-of-agents"><b>Q4</b>New patterns because of agents?</a></li>
+        <li><a href="#5-how-humans-read-these-tests"><b>Q5</b>How do humans read it?</a></li>
+      </ol>
+    </header>
+    <div class="intro">
+<p>Background research for the Unified API's direction. It does not belong to a single ticket. It touches the readability map <a target="_blank" rel="noopener" href="https://github.com/parttio/unified-testing-tool/issues/193">#193</a> and the Copilot recorder note <a target="_blank" rel="noopener" href="https://github.com/parttio/unified-testing-tool/blob/main/docs/research/copilot-recorder.md">copilot-recorder.md</a>, which covers Vaadin Copilot's test generation and is not repeated here.</p>
+<p>Researched 2026-11-15. Each source is pinned to a commit, or to a dated spec, where one was available. AI features change fast, so the versions checked are listed here:</p>
+<details class="versions"><summary>Versions and commits checked</summary><div class="tbl"><table>
+<thead>
+<tr class="header">
+<th>Project</th>
+<th>Version or commit checked</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Playwright</td>
+<td>npm <code>playwright</code> 1.65.1 (1.65.0 released 2026-11-05); docs at <code>microsoft/playwright@b4d016a</code>; <code>@playwright/mcp</code> 0.0.85; <code>playwright-cli@b217248</code></td>
+</tr>
+<tr class="even">
+<td>Cypress</td>
+<td>npm <code>cypress</code> 16.3.0; docs at <code>cypress-documentation@31105b4</code></td>
+</tr>
+<tr class="odd">
+<td>Selenium</td>
+<td>npm <code>selenium-webdriver</code> 4.52.0; docs at <code>seleniumhq.github.io@95a9c47</code></td>
+</tr>
+<tr class="even">
+<td>Testing Library</td>
+<td><code>@testing-library/react</code> 16.3.3, <code>@testing-library/dom</code> 10.4.2; docs at <code>testing-library-docs@7c49d04</code></td>
+</tr>
+<tr class="odd">
+<td>Vitest</td>
+<td>5.1.0; docs at <code>vitest@cab34bb</code></td>
+</tr>
+<tr class="even">
+<td>Angular</td>
+<td><code>@angular/core</code> 22.2.6; docs at <code>angular/angular@1e6afa4</code></td>
+</tr>
+<tr class="odd">
+<td>React / Vue / Svelte / SvelteKit / Next.js</td>
+<td>19.x docs at <code>react.dev@46a54e0</code> / <code>vue</code> 3.5.45, docs at <code>vuejs/docs@40aa88a</code> / <code>svelte</code> 5.57.3, <code>@sveltejs/kit</code> 3.2.0, docs at <code>svelte@99c0745</code> / <code>next</code> 16.4.6, docs at <code>next.js@c71d522</code></td>
+</tr>
+<tr class="even">
+<td>Vaadin</td>
+<td>docs at <code>vaadin/docs@f0394e7</code> (the same commit as the Copilot note)</td>
+</tr>
+<tr class="odd">
+<td>Server-side frameworks</td>
+<td>Spring <code>spring-framework@4cb62d8</code>, Rails <code>rails@8217632</code>, Django <code>django@f24f38c</code>, Laravel docs <code>13.x@623f599</code>, Pest docs <code>5.x@6e368f6</code>, Phoenix <code>phoenix@789f851</code>, LiveView <code>phoenix_live_view@039bf11</code>, ASP.NET Core docs <code>AspNetCore.Docs@692feee</code></td>
+</tr>
+</tbody>
+</table></div></details>
+
+    </div>
+<section id="answer-in-short" class="lead"><h2 id="answer-in-short">Answer in short</h2>
+<ol type="1">
+<li><strong>Browserless or real browser? Both, in layers, almost everywhere.</strong> Every framework checked recommends a fast layer without a real browser for most tests, plus a thin layer of real-browser end-to-end (E2E) tests for critical flows. The fast layer is one of two kinds. JavaScript frameworks (Angular, Vue, Svelte, React via Testing Library) run component tests in Node with an emulated DOM (<code>jsdom</code> or <code>happy-dom</code>). Server-side frameworks test on the server with no DOM at all: Vaadin Browserless, Phoenix <code>LiveViewTest</code>, Spring MockMvc, Django's test client, Wicket's <code>WicketTester</code>, Blazor's bUnit. A third option is growing: component tests in a <em>real</em> browser through Vitest browser mode. Angular supports it, Vaadin's React-view guide uses it, and Svelte uses it through Storybook. For E2E, Playwright is the default or first-listed choice in Angular, Vue, Svelte, Next.js, Blazor and Pest/Laravel. Rails and Django still default to Selenium. Vaadin's own E2E tool, TestBench, is Selenium-based and commercial.</li>
+<li><strong>Audience: developers first.</strong> The official guides of every framework are written for developers. Business-readable tests show up in three forms. (a) Cucumber/Gherkin, which says outright that it closes "the gap between business people and technical people". (b) Plain Java or PHP written as user stories. Vaadin's Browserless docs ask for tests that "a product owner can read … aloud". (c) Since 2025, natural-language steps and specs: Cypress <code>cy.prompt</code> names "product owners, QA, and developers" as authors, and Playwright's planner agent writes Markdown test plans. Recorders (Playwright codegen, Cypress Studio, Selenium IDE, Vaadin Copilot) are the low-code way in. All of them produce ordinary code that a developer then owns.</li>
+<li><strong>Official AI features, as of 2026-11:</strong> Playwright has the most. It ships an MCP server and <code>playwright-cli</code> (bundled since 1.62), the planner/generator/healer test agents (1.56, JS only), "Copy prompt" on failures (1.51), a trace CLI for agents and "video receipts" (1.59), and an <code>'ai'</code> snapshot mode with <code>getByRef</code> (1.64). Cypress has <code>cy.prompt</code> (natural language with self-healing, beta since 15.13), Studio AI, agent skills, <code>cypress tap</code>, and a Cloud MCP (generally available 2026-05-20). Selenium ships no AI tools of its own. Instead it has an "AI Agents" docs page that tells agents what <em>not</em> to write, plus an <code>llms.txt</code>. On the framework side, Angular (a CLI MCP server with <code>run_target</code> for tests, skills, <code>llms.txt</code>, rules files), Next.js (a dev-server MCP, docs bundled in <code>node_modules</code>, a managed <code>AGENTS.md</code>), Svelte (MCP, skills, subagents), Laravel (Boost: MCP, guidelines, skills) and Vaadin (a docs MCP server, skills, a dev-loop CLI for agents, Copilot test generation) all give agents <em>context and a run loop</em>. None of the frameworks ships its own test-writing agent. They lean on Playwright's or Cypress's.</li>
+<li><strong>New patterns because of agents:</strong> (a) the <strong>accessibility tree as the agent's view of the page</strong>: Playwright MCP's snapshots, Playwright's <code>'ai'</code> aria snapshot with element refs, <code>boxes</code> "useful for AI consumption", and the WebDriver BiDi spec's <code>accessibility</code> locator; (b) <strong>role and name locators as the shared language</strong> between humans, codegen and agents; (c) <strong>CLI plus skills instead of MCP</strong> for coding agents, now recommended by Playwright itself because it uses fewer tokens; (d) <strong>docs written for agents</strong>: <code>llms.txt</code>, Markdown copies of doc pages, docs bundled with the package, <code>AGENTS.md</code> blocks managed by the framework; (e) <strong>agent-readable failure output</strong>: a trace CLI, "Copy prompt", Cloud MCP, <code>--json</code> output, browser console forwarded to the terminal; (f) <strong>self-healing</strong>, either as a reviewed code change (Playwright healer) or at runtime (<code>cy.prompt</code>). Most framework repos now carry an <code>AGENTS.md</code> or <code>CLAUDE.md</code> for their <em>own</em> contributors, and Next.js, Phoenix and Laravel Boost write one into <em>users'</em> apps.</li>
+<li><strong>How humans read tests:</strong> by names and steps, by reports and traces, and more and more through AI summaries. Playwright's trace viewer and HTML report are the reference. Cypress has the Command Log, Test Replay and AI "Test Intent Summaries". For review, the tools stress that AI output is plain code that goes through normal review (Cypress: "PR review friendly"; Playwright: "simple, auditable structure"). Selenium gives a checklist for reviewing agent-written tests. Playwright 1.59 adds annotated "receipt" videos so a human can check what an agent did.</li>
+</ol>
+
+</section>
+<section id="1-browserless-or-real-browser-what-each-framework-recommends"><h2 id="1-browserless-or-real-browser-what-each-framework-recommends">1. Browserless or real browser: what each framework recommends</h2>
+<h3 id="comparison">Comparison</h3>
+<div class="tbl"><table>
+<thead>
+<tr class="header">
+<th>Framework</th>
+<th>Fast layer, no real browser</th>
+<th>Real-browser layer</th>
+<th>What the official docs recommend</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Vaadin Flow</strong></td>
+<td><strong>Browserless</strong> (server-side component tree, free; replaces "UI Unit Testing")</td>
+<td><strong>TestBench</strong> (Selenium, commercial); Playwright described as an option</td>
+<td>Browserless for most tests and use cases; "a thin layer of browser tests" for rendering, client JS and smoke tests (B1–B4)</td>
+</tr>
+<tr class="even">
+<td><strong>Vaadin React views (Hilla)</strong></td>
+<td>none: Browserless "can't test React views"</td>
+<td>Vitest <strong>browser mode</strong> with React Testing Library, services mocked; E2E</td>
+<td>B5</td>
+</tr>
+<tr class="odd">
+<td><strong>React</strong></td>
+<td>React Testing Library (RTL) in jsdom</td>
+<td>via the meta-frameworks</td>
+<td>react.dev points to RTL and has removed <code>test-utils</code> and deprecated <code>react-test-renderer</code> (R1–R2)</td>
+</tr>
+<tr class="even">
+<td><strong>Angular</strong></td>
+<td>Vitest + <code>jsdom</code> (default since the Karma move); CDK <strong>component harnesses</strong></td>
+<td><code>ng e2e</code> prompts for Playwright, Cypress, Nightwatch, WebdriverIO or Puppeteer; Vitest can run in a real browser</td>
+<td>A1–A4</td>
+</tr>
+<tr class="odd">
+<td><strong>Vue</strong></td>
+<td>Vitest + <code>@vue/test-utils</code> (or <code>@testing-library/vue</code>) in happy-dom</td>
+<td>Cypress component testing; Playwright or Cypress for E2E</td>
+<td>V1–V3</td>
+</tr>
+<tr class="even">
+<td><strong>Svelte / SvelteKit</strong></td>
+<td>Vitest + jsdom</td>
+<td>Storybook on Vitest browser mode; Playwright for E2E</td>
+<td>S1–S3</td>
+</tr>
+<tr class="odd">
+<td><strong>Next.js</strong></td>
+<td>Jest or Vitest</td>
+<td>Playwright or Cypress</td>
+<td>E2E over unit tests for <code>async</code> Server Components (N1)</td>
+</tr>
+<tr class="even">
+<td><strong>Spring MVC</strong></td>
+<td>MockMvc; MockMvc + <strong>HtmlUnit</strong> (also behind the WebDriver and Geb APIs)</td>
+<td>"a small number of true end-to-end integration tests"</td>
+<td>SP1–SP2</td>
+</tr>
+<tr class="odd">
+<td><strong>Rails</strong></td>
+<td>integration tests</td>
+<td><strong>system tests</strong> (Capybara, Selenium + Chrome by default)</td>
+<td>"system tests should be reserved for critical user paths"; scaffolds no longer generate them (RA1–RA2)</td>
+</tr>
+<tr class="even">
+<td><strong>Django</strong></td>
+<td>test client, <code>RequestFactory</code></td>
+<td><code>LiveServerTestCase</code> + Selenium</td>
+<td>"a combination of all of these test types" (DJ1–DJ2)</td>
+</tr>
+<tr class="odd">
+<td><strong>Laravel</strong></td>
+<td>HTTP tests</td>
+<td><strong>Pest 4</strong> browser tests (Playwright); Dusk (ChromeDriver)</td>
+<td>"For new projects, we recommend using Pest for browser testing" (L1–L2)</td>
+</tr>
+<tr class="even">
+<td><strong>Phoenix LiveView</strong></td>
+<td><code>Phoenix.LiveViewTest</code>: test process "in substitution of a browser"</td>
+<td>not covered by the module</td>
+<td>PH1</td>
+</tr>
+<tr class="odd">
+<td><strong>Blazor</strong></td>
+<td><strong>bUnit</strong> (third party, "isn't supported or maintained by Microsoft")</td>
+<td>Playwright for .NET as the E2E example</td>
+<td>choose per component; table of cases (BZ1–BZ2)</td>
+</tr>
+<tr class="even">
+<td><strong>Wicket / Karibu</strong></td>
+<td><code>WicketTester</code>; Karibu-Testing (the origin of Vaadin's browserless approach)</td>
+<td>n/a</td>
+<td>W1, K1</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="verified-facts" class="ver">Verified facts</h3>
+<div class="tbl facts"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Fact</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>B1</td>
+<td>"Vaadin provides two approaches to test your application: browserless testing and end-to-end testing … Browserless testing is free for all users. End-to-end testing requires a commercial TestBench subscription." Browserless tests "don't need a browser or a servlet container"; E2E suits "the critical parts of your application, such as the login and the checkout process".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/flow/testing/index.adoc#L13-L29">vaadin/docs <code>articles/flow/testing/index.adoc</code> L13–29 @ f0394e7</a></td>
+</tr>
+<tr class="even">
+<td>B2</td>
+<td>"Service and browserless tests … can cover most of your application, including its use cases from start to finish. Keep end-to-end tests for what only a browser can show." A per-feature table picks the kind of test. For example, an AI chat is tested Browserless "with a scripted LLM provider in place of the model", and the clipboard needs E2E.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/testing/index.adoc#L45-L93"><code>articles/building-apps/testing/index.adoc</code> L45–93</a></td>
+</tr>
+<tr class="odd">
+<td>B3</td>
+<td>"Keep a Thin Layer of Browser Tests. Browserless tests prove behavior, not rendering." The suggested smoke tests: main views open, custom components render, no JS console errors, login works, gestures reach the server.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/testing/index.adoc#L98-L115">same file L98–115</a></td>
+</tr>
+<tr class="even">
+<td>B4</td>
+<td>"Browserless testing replaces the older UI Unit Testing module." The docs describe Playwright as an E2E option that "lacks a high-level API for Vaadin components and … doesn't automatically wait for the client-server communication".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/testing/browserless/migrate-ui-unit-tests.adoc#L12"><code>building-apps/testing/browserless/migrate-ui-unit-tests.adoc</code> L12</a>; <a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/flow/testing/playwright.adoc#L12"><code>flow/testing/playwright.adoc</code> L12</a></td>
+</tr>
+<tr class="odd">
+<td>B5</td>
+<td>"Browserless tests can't test React views." React views are tested with "Vitest in browser mode, which runs the tests in a real browser, and React Testing Library … The tests replace the browser-callable services with mocks."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/testing/index.adoc#L47"><code>building-apps/testing/index.adoc</code> L47</a>; <a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/react/test-views.adoc#L13-L24"><code>building-apps/react/test-views.adoc</code> L13–24</a></td>
+</tr>
+<tr class="even">
+<td>R1</td>
+<td>React 19 removed all <code>react-dom/test-utils</code> functions except <code>act</code>, because they "made it too easy to depend on low level implementation details". For shallow rendering and <code>react-test-renderer</code>: "We recommend migrating your tests to @testing-library/react".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/reactjs/react.dev/blob/46a54e0592729712b7640308b53268e84fdc7c9f/src/content/blog/2024/04/25/react-19-upgrade-guide.md#L351">react.dev <code>blog/2024/04/25/react-19-upgrade-guide.md</code> L351, L378, L520–522 @ 46a54e0</a></td>
+</tr>
+<tr class="odd">
+<td>R2</td>
+<td>The <code>act</code> reference suggests "a library like React Testing Library, whose helpers are wrapped with <code>act()</code>".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/reactjs/react.dev/blob/46a54e0592729712b7640308b53268e84fdc7c9f/src/content/reference/react/act.md#L18">react.dev <code>reference/react/act.md</code> L18</a></td>
+</tr>
+<tr class="even">
+<td>A1</td>
+<td>New Angular CLI projects use Vitest. "Vitest runs your unit tests in a Node.js environment. To simulate the browser's DOM, Vitest uses … <code>jsdom</code>." Karma is still supported. Tests can also run "in a real browser" with a browser provider (<code>ng test --browsers=chromium</code>).</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/guide/testing/overview.md#L5-L11">angular <code>adev/…/guide/testing/overview.md</code> L5–11, L125–137 @ 1e6afa4</a></td>
+</tr>
+<tr class="odd">
+<td>A2</td>
+<td><code>ng e2e</code> with no e2e target prompts for Playwright, Cypress, Nightwatch, WebdriverIO or Puppeteer. Protractor is not offered.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/tools/cli/end-to-end.md#L15-L27"><code>adev/…/tools/cli/end-to-end.md</code> L15–27</a></td>
+</tr>
+<tr class="even">
+<td>A3</td>
+<td>A <strong>component harness</strong> "allows tests to interact with components the way an end user does via a supported API". "You can use the same harness implementation in both unit and end-to-end tests. Test authors only need to learn one API."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/guide/testing/component-harnesses-overview.md#L3-L21"><code>adev/…/component-harnesses-overview.md</code> L3–9, L21</a></td>
+</tr>
+<tr class="odd">
+<td>A4</td>
+<td>The CDK has two built-in harness environments, <code>TestbedHarnessEnvironment</code> (unit) and <code>SeleniumWebDriverHarnessEnvironment</code> (E2E). Other environments "require custom bindings".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/guide/testing/using-component-harnesses.md#L15-L51"><code>adev/…/using-component-harnesses.md</code> L15–51</a></td>
+</tr>
+<tr class="even">
+<td>V1</td>
+<td>Vue recommends Vitest. "Component tests should focus on the component's public interfaces … test what a component does, not how it does it."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vuejs/docs/blob/40aa88af0094f7bab4aaf786e55c748a6a251d88/src/guide/scaling-up/testing.md#L125-L139">vuejs/docs <code>guide/scaling-up/testing.md</code> L125, L139 @ 40aa88a</a></td>
+</tr>
+<tr class="odd">
+<td>V2</td>
+<td>For components, Vue recommends Vitest with <code>@vue/test-utils</code>, or Cypress component testing when behaviour "depends on properly rendering styles or triggering native DOM events". Browser runners catch more but are "orders of magnitude slower".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vuejs/docs/blob/40aa88af0094f7bab4aaf786e55c748a6a251d88/src/guide/scaling-up/testing.md#L219-L235">same file L219–235</a></td>
+</tr>
+<tr class="even">
+<td>V3</td>
+<td>For E2E, Vue lists Playwright first, then Cypress. The setup example uses <code>happy-dom</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vuejs/docs/blob/40aa88af0094f7bab4aaf786e55c748a6a251d88/src/guide/scaling-up/testing.md#L279-L323">same file L279–323</a></td>
+</tr>
+<tr class="odd">
+<td>S1</td>
+<td>Svelte "is unopinionated about which testing framework you use". With Vite it recommends Vitest. Component tests use jsdom.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/sveltejs/svelte/blob/99c07450d2e093c0d637903dc2c94f28f264d70d/documentation/docs/07-misc/02-testing.md#L5-L9">svelte <code>documentation/docs/07-misc/02-testing.md</code> L5–9, L196–216 @ 99c0745</a></td>
+</tr>
+<tr class="even">
+<td>S2</td>
+<td>Storybook component tests "are run with Vitest's browser mode, which renders your components in a real browser".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/sveltejs/svelte/blob/99c07450d2e093c0d637903dc2c94f28f264d70d/documentation/docs/07-misc/02-testing.md#L281">same file L281</a></td>
+</tr>
+<tr class="odd">
+<td>S3</td>
+<td>E2E: "This section uses Playwright as an example." The Svelte CLI can set it up.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/sveltejs/svelte/blob/99c07450d2e093c0d637903dc2c94f28f264d70d/documentation/docs/07-misc/02-testing.md#L321-L325">same file L321–325</a></td>
+</tr>
+<tr class="even">
+<td>N1</td>
+<td>Next.js has guides for Cypress, Jest, Playwright and Vitest. "Since <code>async</code> Server Components are new … we recommend using End-to-End Testing over Unit Testing for <code>async</code> components."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vercel/next.js/blob/c71d522ee9fed36a31b5e03c9d69bafee3ef5929/docs/01-app/02-guides/testing/index.mdx#L10-L20">next.js <code>docs/01-app/02-guides/testing/index.mdx</code> L10–20 @ c71d522</a></td>
+</tr>
+<tr class="odd">
+<td>SP1</td>
+<td>Spring's MockMvc–HtmlUnit integration lets you "test HTML pages by using tools such as HtmlUnit, WebDriver, and Geb without the need to deploy to a Servlet container", including "JavaScript within pages".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-framework/blob/4cb62d893e09e23791d661e8d9b35aedee7006d0/framework-docs/modules/ROOT/pages/testing/mockmvc/htmlunit.adoc#L5-L15">spring-framework <code>framework-docs/…/testing/mockmvc/htmlunit.adoc</code> L5–15 @ 4cb62d8</a></td>
+</tr>
+<tr class="even">
+<td>SP2</td>
+<td>"Reduce the number of end-to-end integration tests by refactoring our detailed tests to use mock services … then implement a small number of true end-to-end integration tests."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-framework/blob/4cb62d893e09e23791d661e8d9b35aedee7006d0/framework-docs/modules/ROOT/pages/testing/mockmvc/htmlunit/why.adoc#L176-L182"><code>…/htmlunit/why.adoc</code> L176–182</a></td>
+</tr>
+<tr class="odd">
+<td>RA1</td>
+<td>Rails system tests run "in either a real or a headless browser" through Capybara. They are "significantly slower", "can be brittle", so they "should be reserved for critical user paths".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/rails/rails/blob/8217632cf87ad03a0f36212b7ea3e0ad933224bc/guides/source/testing.md#L1433-L1460">rails <code>guides/source/testing.md</code> L1433–1460 @ 8217632</a></td>
+</tr>
+<tr class="even">
+<td>RA2</td>
+<td>"Rails no longer generates system tests by default when using scaffolds. This change reflects the best practice of using system tests sparingly." The default driver is Selenium with Chrome.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/rails/rails/blob/8217632cf87ad03a0f36212b7ea3e0ad933224bc/guides/source/testing.md#L1464-L1466">same file L1464–1466, L1504</a></td>
+</tr>
+<tr class="odd">
+<td>DJ1</td>
+<td>Django's test client "is not intended to be a replacement for Selenium". Use the client for templates and context, and "in-browser frameworks like Selenium to test <em>rendered</em> HTML and the <em>behavior</em> of web pages". "A comprehensive test suite should use a combination of all of these."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/django/django/blob/f24f38c6b2825f15628c07bf2892f1664eed9361/docs/topics/testing/tools.txt#L39-L54">django <code>docs/topics/testing/tools.txt</code> L39–54 @ f24f38c</a></td>
+</tr>
+<tr class="even">
+<td>DJ2</td>
+<td><code>LiveServerTestCase</code> and <code>StaticLiveServerTestCase</code> serve the app for Selenium tests.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/django/django/blob/f24f38c6b2825f15628c07bf2892f1664eed9361/docs/topics/testing/tools.txt#L1035-L1071">same file L1035–1071</a></td>
+</tr>
+<tr class="odd">
+<td>L1</td>
+<td>"Pest 4 now includes automated browser testing … For new projects, we recommend using Pest for browser testing." Dusk uses a standalone ChromeDriver.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/laravel/docs/blob/623f59945b4db18566fcb6a10bdc1a7b17242daf/dusk.md#L57-L59">laravel/docs <code>dusk.md</code> L57–59 @ 623f599</a></td>
+</tr>
+<tr class="even">
+<td>L2</td>
+<td>Pest browser testing needs <code>npm install playwright</code>. It locates by visible text (<code>click('Login')</code>), CSS, or <code>@login</code> for a <code>data-test</code> attribute. It has <code>assertNoSmoke()</code> (no console logs or JS errors) and <code>assertNoAccessibilityIssues()</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/pestphp/docs/blob/6e368f64fed849966541bfdc1736b8180309343c/browser-testing.md#L51-L57">pestphp/docs <code>browser-testing.md</code> L51–57, L139–140, L167–176, L883 @ 6e368f6</a></td>
+</tr>
+<tr class="odd">
+<td>PH1</td>
+<td>"In LiveComponents and LiveView tests, we interact with views via process communication in substitution of a browser."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/phoenixframework/phoenix_live_view/blob/039bf117f7c663f90743f5d3b191fc1016a9c2c4/lib/phoenix_live_view/test/live_view_test.ex#L44-L49">phoenix_live_view <code>lib/phoenix_live_view/test/live_view_test.ex</code> L44–49 @ 039bf11</a></td>
+</tr>
+<tr class="even">
+<td>BZ1</td>
+<td>Microsoft's Blazor doc describes unit testing (bUnit) and E2E testing (Playwright for .NET as the example). Unit tests give "access to the instance of the CUT"; E2E tests "must make sure that the expected environmental state has been reached".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/dotnet/AspNetCore.Docs/blob/692feee601358eeb5d8915b46143303f45e83887/aspnetcore/blazor/test.md#L23-L43">AspNetCore.Docs <code>aspnetcore/blazor/test.md</code> L23–43 @ 692feee</a></td>
+</tr>
+<tr class="odd">
+<td>BZ2</td>
+<td>"There's no official Microsoft testing framework for Blazor … bUnit is a third-party testing library and isn't supported or maintained by Microsoft." bUnit's <code>MarkupMatches</code> compares HTML semantically.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/dotnet/AspNetCore.Docs/blob/692feee601358eeb5d8915b46143303f45e83887/aspnetcore/blazor/test.md#L69-L72">same file L69–72, L158</a></td>
+</tr>
+<tr class="even">
+<td>W1</td>
+<td><code>WicketTester</code> renders components and pages, clicks links and checks feedback messages, on a <code>WebApplication</code> or a mock application.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/apache/wicket/blob/3456374b11c840e1bf85c5eb7c30962555271103/wicket-user-guide/src/main/asciidoc/testing/testing_1.adoc#L43-L47">apache/wicket <code>wicket-user-guide/…/testing/testing_1.adoc</code> L43–47 @ 3456374</a></td>
+</tr>
+<tr class="odd">
+<td>K1</td>
+<td>Karibu-Testing "only runs in JVM and only tests server-side code. There is no browser running". It calls this "browserless testing", and its README notes that UI Unit Testing was being added to TestBench.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/mvysny/karibu-testing/blob/0a6a39b0b18e004ed5b8419d97ba6bc342f2525d/README.md#L11-L49">mvysny/karibu-testing <code>README.md</code> L11–49 @ 0a6a39b</a></td>
+</tr>
+<tr class="even">
+<td>VT1</td>
+<td>Vitest browser mode: for CI, install the <code>playwright</code> or <code>webdriverio</code> provider. It recommends against <code>@testing-library/user-event</code> "because it simulates events instead of actually triggering them".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vitest-dev/vitest/blob/cab34bb0ee23f00676ea895560c8b16399ce40b7/docs/guide/browser/index.md#L68">vitest <code>docs/guide/browser/index.md</code> L68, L592 @ cab34bb</a></td>
+</tr>
+</tbody>
+</table></div>
+<div class="infbox"><h3 id="inferences-our-reasoning-not-sourced-fact" class="inf">Inferences (our reasoning, not sourced fact)</h3>
+<ul>
+<li><strong>The consensus is a test pyramid with a browserless base.</strong> Server-side frameworks (Vaadin, Spring, Rails, Django, Phoenix, Wicket, Blazor) all say: most tests without a browser, a few in a browser. Rails went further and stopped generating browser tests by default. Vaadin's guidance (B1–B3) is in line with this.</li>
+<li><strong>"Browserless" means two different things.</strong> For JS frameworks it means an <em>emulated DOM</em> (jsdom, happy-dom), where the same DOM-level locators still work. For server-side frameworks it means <em>no DOM at all</em>: the test reads the server's component tree. The Unified API has to bridge exactly this gap. Locating by label, text and accessible name works on both sides. CSS does not.</li>
+<li><strong>Real-browser component tests are the newer middle layer</strong> (Vitest browser mode, Cypress component testing, Storybook). They cut into the "emulated DOM" layer in JS land. They don't apply to Flow, where rendering needs the server.</li>
+<li><strong>The closest prior art to the Unified API is Angular CDK component harnesses (A3–A4).</strong> They give one test API that runs on a unit environment and on a WebDriver environment, with an SPI for more environments. That is the same idea as a Wrapper running on several Testing Tools, one level below.</li>
+</ul>
+</div></section>
+<section id="2-who-the-tests-are-for-developers-or-business"><h2 id="2-who-the-tests-are-for-developers-or-business">2. Who the tests are for: developers or business</h2>
+<h3 id="verified-facts-1" class="ver">Verified facts</h3>
+<div class="tbl facts"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Fact</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>AU1</td>
+<td>Testing Library's guiding principle: "The more your tests resemble the way your software is used, the more confidence they can give you."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/testing-library/testing-library-docs/blob/7c49d046b100e657c64bae78270a5813c1c02eb6/docs/guiding-principles.mdx#L7-L11">testing-library-docs <code>docs/guiding-principles.mdx</code> L7–11 @ 7c49d04</a></td>
+</tr>
+<tr class="even">
+<td>AU2</td>
+<td>BDD "closes the gap between business people and technical people" and produces "system documentation that is automatically checked against the system's behaviour".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cucumber/docs/blob/3c93e6cee4c6164f40ed69dfe84ac440c2983120/content/docs/bdd/_index.md#L15-L19">cucumber/docs <code>content/docs/bdd/_index.md</code> L15–19 @ 3c93e6c</a></td>
+</tr>
+<tr class="odd">
+<td>AU3</td>
+<td>The "Three Amigos" (product owner, tester, developer) turn user stories into Gherkin. A developer and a tester can write it "as long as their output is actively reviewed by the product owner".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cucumber/docs/blob/3c93e6cee4c6164f40ed69dfe84ac440c2983120/content/docs/bdd/who-does-what.md#L15-L35">cucumber/docs <code>bdd/who-does-what.md</code> L15–35</a></td>
+</tr>
+<tr class="even">
+<td>AU4</td>
+<td>Cucumber recommends a <strong>declarative</strong> style that "describes the behaviour of the application, rather than the implementation details". "By avoiding terms like 'click a button' … the scenario is more resilient to implementation details of the UI."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cucumber/docs/blob/3c93e6cee4c6164f40ed69dfe84ac440c2983120/content/docs/bdd/better-gherkin.md#L39-L43">cucumber/docs <code>bdd/better-gherkin.md</code> L39–43, L82</a></td>
+</tr>
+<tr class="odd">
+<td>AU5</td>
+<td>Vaadin: write Browserless tests "so that someone who has never seen the code, such as a product owner, can read a test method aloud and recognize the use case. The tests then double as a specification." Test method → actor → page object layers, for example <code>bob.books("B12")</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/testing/browserless/write-user-stories.adoc#L10-L54">vaadin/docs <code>building-apps/testing/browserless/write-user-stories.adoc</code> L10–54</a></td>
+</tr>
+<tr class="even">
+<td>AU6</td>
+<td><code>cy.prompt</code> "turns natural language test steps into real, executable Cypress commands". Its stated benefit: "Product owners, QA, and developers can all describe steps in natural language that become real tests."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/app/ai/ai-test-generation.mdx#L14">cypress-documentation <code>docs/app/ai/ai-test-generation.mdx</code> L14, L51 @ 31105b4</a></td>
+</tr>
+<tr class="odd">
+<td>AU7</td>
+<td>Playwright's planner agent writes a Markdown test plan (<code>specs/*.md</code>). "Specs are structured plans describing scenarios in human-readable terms. They include steps, expected outcomes, and data." It can take a Product Requirement Document as input.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/test-agents-js.md#L57-L85">playwright <code>docs/src/test-agents-js.md</code> L57–85, L241–244 @ b4d016a</a></td>
+</tr>
+<tr class="even">
+<td>AU8</td>
+<td>Recorders: Playwright codegen "opens a browser window for interaction and the Playwright Inspector for recording". Selenium IDE "records a user's actions in the browser" and is "an excellent way to learn Selenium syntax". Cypress Studio records interactions, and Studio AI "recommends assertions automatically. You review them, keep what fits".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/codegen-intro.md#L8">playwright <code>codegen-intro.md</code> L8</a>; <a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/ide.en.md#L6-L12">seleniumhq.github.io <code>documentation/ide.en.md</code> L6–12 @ 95a9c47</a>; <a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/app/ai/cypress-studio.mdx#L16-L21">cypress-documentation <code>docs/app/ai/cypress-studio.mdx</code> L16–21</a></td>
+</tr>
+<tr class="odd">
+<td>AU9</td>
+<td>Vaadin Copilot's UI Test Recorder and AI test generation: see <a target="_blank" rel="noopener" href="https://github.com/parttio/unified-testing-tool/blob/main/docs/research/copilot-recorder.md">copilot-recorder.md</a>, facts F1–F14.</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<div class="infbox"><h3 id="inferences" class="inf">Inferences</h3>
+<ul>
+<li><strong>No framework targets non-developers with its own test API.</strong> The audiences are developers (component tests), developers and QA (E2E), and business readers through a layer on top: Gherkin, user-story page objects, Markdown plans or natural-language prompts.</li>
+<li><strong>Natural language is replacing Gherkin as the "business-readable" entry point in AI tools.</strong> <code>cy.prompt</code> steps and Playwright's Markdown specs play the role Gherkin played, but without step definitions to maintain. That gain comes with a cost: the result is not deterministic until it is turned into code (§3).</li>
+<li>Cucumber's "declarative, no 'click a button'" advice (AU4) and Vaadin's user-story layers (AU5) say the same thing. The readable layer should name intents, and the locators belong one layer down. This is relevant to #193.</li>
+</ul>
+</div></section>
+<section id="3-official-ai-and-agent-features-around-testing"><h2 id="3-official-ai-and-agent-features-around-testing">3. Official AI and agent features around testing</h2>
+<h3 id="verified-facts-2" class="ver">Verified facts</h3>
+<div class="tbl facts"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Fact</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>AI1</td>
+<td><strong>Playwright Test Agents</strong> (1.56, released 2025-10-06): "three custom agent definitions designed to guide LLMs": <strong>planner</strong> (explores the app, writes a Markdown plan), <strong>generator</strong> (turns the plan into tests and "verifies selectors and assertions live"), <strong>healer</strong> (runs, "inspects the current UI to locate equivalent elements", "suggests a patch (e.g., locator update, wait adjustment, data fix)", reruns "until it passes or until guardrails stop the loop", or skips the test "if the healer believes that functionality is broken"). Set up with <code>npx playwright init-agents --loop=vscode|claude|codex|opencode</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/release-notes-js.md#L1140-L1160">release-notes-js.md L1140–1160</a>; <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/test-agents-js.md#L12-L49">test-agents-js.md L12–49, L129–213</a>; npm release dates</td>
+</tr>
+<tr class="even">
+<td>AI2</td>
+<td>The test agents doc exists only as <code>test-agents-js.md</code>. There is no Java, Python or .NET variant at that commit.</td>
+<td><code>docs/src/test-agents-{java,python,csharp}.md</code> → 404 @ b4d016a</td>
+</tr>
+<tr class="odd">
+<td>AI3</td>
+<td><strong>Playwright MCP</strong> "enables LLMs to interact with web pages through structured accessibility snapshots, bypassing the need for screenshots". "Uses Playwright's accessibility tree, not pixel-based input." "No vision models needed." Vision is an opt-in capability (<code>--caps vision</code>).</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright-mcp/blob/78eca85361efb545a4c0f59b6140aef0721c5412/README.md#L3-L17">playwright-mcp <code>README.md</code> L3, L13–17, L415 @ 78eca85</a></td>
+</tr>
+<tr class="even">
+<td>AI4</td>
+<td><strong>Playwright CLI + skills vs MCP</strong>: "coding agents increasingly favor CLI–based workflows exposed as SKILLs over MCP because CLI invocations are more token-efficient: they avoid loading large tool schemas and verbose accessibility trees." MCP "remains relevant for … exploratory automation, self-healing tests, or long-running autonomous workflows".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright-mcp/blob/78eca85361efb545a4c0f59b6140aef0721c5412/README.md#L5-L11">playwright-mcp <code>README.md</code> L5–11</a>; <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright-cli/blob/b21724888b8100b05ef8dee3a92f2bb03bf4dcde/README.md#L5-L14">playwright-cli <code>README.md</code> L5–14 @ b217248</a></td>
+</tr>
+<tr class="odd">
+<td>AI5</td>
+<td><code>playwright-cli</code> acts on element refs from a snapshot (<code>click &lt;ref&gt;</code>, <code>fill &lt;ref&gt; &lt;text&gt;</code>, <code>snapshot</code>, <code>find &lt;text&gt;</code>) and can <code>generate-locator &lt;ref&gt;</code> to turn a ref into a Playwright locator. <code>install --skills</code> installs skills for Claude Code, Copilot and others.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright-cli/blob/b21724888b8100b05ef8dee3a92f2bb03bf4dcde/README.md#L144-L160">playwright-cli <code>README.md</code> L30–37, L144–160, L289</a></td>
+</tr>
+<tr class="even">
+<td>AI6</td>
+<td>Playwright <strong>1.62</strong> (2026-07-24) "now bundles the Playwright MCP server and <code>playwright-cli</code>, runnable via <code>npx playwright mcp</code> and <code>npx playwright cli</code>".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/release-notes-js.md#L524-L526">release-notes-js.md L524–526</a></td>
+</tr>
+<tr class="odd">
+<td>AI7</td>
+<td>Playwright <strong>1.59</strong> (2026-04-01): <code>npx playwright test --debug=cli</code> lets coding agents "attach and debug tests"; <code>npx playwright trace</code> lets agents "explore Playwright Trace … from the command line"; <code>Browser.bind</code> lets MCP or the CLI attach to a running browser; "Agentic video receipts … for human review".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/release-notes-js.md#L804-L910">release-notes-js.md L735–910</a></td>
+</tr>
+<tr class="even">
+<td>AI8</td>
+<td>Playwright <strong>1.51</strong> (2025-03-06): a "Copy prompt" button on errors in the HTML report, trace viewer and UI mode copies "a pre-filled LLM prompt that contains the error message and useful context". 1.56 added an option to disable it.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/release-notes-js.md#L1374-L1378">release-notes-js.md L1374–1378, L1172</a></td>
+</tr>
+<tr class="odd">
+<td>AI9</td>
+<td><strong>Cypress AI</strong> splits into "AI that writes tests for you" (Studio, <code>cy.prompt</code>) and "Cypress made legible to your agents" (skills, <code>cypress tap</code>, Cloud MCP, Cloud CLI, "agent-ready reports"). "No AI capability in Cypress requires a paid subscription."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/app/ai/overview.mdx#L13-L24">cypress-documentation <code>docs/app/ai/overview.mdx</code> L13–24, L62–95</a></td>
+</tr>
+<tr class="even">
+<td>AI10</td>
+<td><code>cy.prompt</code>: introduced in Cypress 15.4.0 and in beta since 15.13.0 (the experimental flag was removed). Generated code is cached and shared, including with CI. If cached selectors fail, "Cypress regenerates code for that step automatically". There are two workflows: "Generate once, commit to source control" or "Continuous self-healing".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/api/commands/prompt.mdx#L579-L582"><code>docs/api/commands/prompt.mdx</code> L579–582</a>; <a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/app/ai/ai-test-generation.mdx#L107-L159"><code>docs/app/ai/ai-test-generation.mdx</code> L107–159</a></td>
+</tr>
+<tr class="odd">
+<td>AI11</td>
+<td>Cypress <strong>Cloud MCP</strong> lets agents "query run statuses, identify flaky tests, and retrieve failure details — including Test Replay links". It "reached general availability on May 20, 2026".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/cloud/integrations/cloud-mcp.mdx#L13-L19"><code>docs/cloud/integrations/cloud-mcp.mdx</code> L13–19</a></td>
+</tr>
+<tr class="even">
+<td>AI12</td>
+<td><strong>Selenium</strong> has an "AI Agents" docs page. Models "learned Selenium from more than a decade of blog posts … most of that material describes Selenium 2 and Selenium 3". It lists <code>llms.txt</code> first among the resources for agents, and gives a rules block to paste into <code>AGENTS.md</code>/<code>CLAUDE.md</code>. MCP servers for Selenium are "community-maintained … third-party projects rather than part of the Selenium project". The blog post behind it is dated 2026-09-29.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/ai_agents/_index.en.md#L10-L37">seleniumhq.github.io <code>documentation/ai_agents/_index.en.md</code> L10–37, L147–200, L342–356 @ 95a9c47</a>; <a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/blog/2026/using-ai-agents-with-selenium.md#L4"><code>blog/2026/using-ai-agents-with-selenium.md</code> L4</a></td>
+</tr>
+<tr class="odd">
+<td>AI13</td>
+<td>Selenium also has an "outdated patterns" page for agents: <code>DesiredCapabilities</code>, manual driver downloads, <code>sleep()</code>, absolute XPath, <code>find_element_by_*</code>, <code>executable_path</code>, CDP-only calls.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/ai_agents/outdated_patterns.en.md#L21-L286"><code>documentation/ai_agents/outdated_patterns.en.md</code></a></td>
+</tr>
+<tr class="even">
+<td>AI14</td>
+<td><strong>Angular CLI MCP server</strong>: "tools for code generation, workspace analysis, and running builds/tests". Tools include <code>get_best_practices</code>, <code>search_documentation</code>, and <code>run_target</code> ("build, test, lint, e2e"). Its documented workflow: the agent finds the test framework with <code>list_projects</code>, writes the test, and runs it with <code>run_target</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/ai/mcp-server-setup.md#L63-L76">angular <code>adev/…/ai/mcp-server-setup.md</code> L3, L63–76, L102</a></td>
+</tr>
+<tr class="odd">
+<td>AI15</td>
+<td>Angular also ships <code>best-practices.md</code> as system instructions, rules files per IDE (including an <code>AGENTS.md</code>), <code>llms.txt</code> and <code>llms-full.txt</code>, and an <code>angular-developer</code> skill that covers "testing" among other topics.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/ai/develop-with-ai.md#L13-L43"><code>adev/…/ai/develop-with-ai.md</code> L13–43</a>; <a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/ai/agent-skills.md#L13-L23"><code>adev/…/ai/agent-skills.md</code> L13–23</a></td>
+</tr>
+<tr class="even">
+<td>AI16</td>
+<td><strong>Next.js 16+</strong>: the dev server exposes MCP at <code>/_next/mcp</code> (<code>get_errors</code>, <code>get_logs</code>, <code>get_page_metadata</code>, …) through <code>next-devtools-mcp</code>. Its <code>browser_eval</code> tool "points the agent at the agent-browser CLI for verifying pages in a real browser".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vercel/next.js/blob/c71d522ee9fed36a31b5e03c9d69bafee3ef5929/docs/01-app/02-guides/mcp.mdx#L12-L60">next.js <code>docs/01-app/02-guides/mcp.mdx</code> L12, L41–60</a></td>
+</tr>
+<tr class="odd">
+<td>AI17</td>
+<td><strong>Svelte</strong> AI tools: an <code>AGENTS.md</code> instruction, an MCP server that uses "static analysis to correct common generative AI pitfalls", skills, and subagents. The overview page doesn't mention testing.</td>
+<td><a target="_blank" rel="noopener" href="https://svelte.dev/docs/ai/overview">svelte.dev/docs/ai/overview</a>, fetched 2026-11-15 (not pinned)</td>
+</tr>
+<tr class="even">
+<td>AI18</td>
+<td><strong>Laravel Boost</strong>: an MCP server (including a "Browser Logs" tool), AI guidelines, and skills such as <code>pest-testing</code>. <code>boost:install</code> writes <code>CLAUDE.md</code>/<code>AGENTS.md</code> and replaces only its own <code>&lt;laravel-boost-guidelines&gt;</code> block.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/laravel/docs/blob/623f59945b4db18566fcb6a10bdc1a7b17242daf/boost.md#L32-L56">laravel/docs <code>boost.md</code> L32–56, L133, L266</a></td>
+</tr>
+<tr class="odd">
+<td>AI19</td>
+<td><strong>Vaadin</strong>: a docs MCP server at <code>https://mcp.vaadin.com/docs</code>. Vaadin Skills (a Claude Code/Codex plugin) covers theming, design and form layout. Testing is not among the listed skills.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/agentic-development/mcp/index.adoc#L16-L20"><code>building-apps/agentic-development/mcp/index.adoc</code> L16–20</a>; <a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/agentic-development/agent-skills.adoc#L12-L17"><code>…/agent-skills.adoc</code> L12–17</a></td>
+</tr>
+<tr class="even">
+<td>AI20</td>
+<td><strong>Vaadin dev-loop CLI</strong> exists "because AI coding agents are bad at the part of development that happens after the edit". An agent runs <code>apply</code> and "reads a verdict from the exit code". It installs skills into <code>.agents/skills/vaadin-devloop/</code> and <code>.claude/skills/</code>, and "the skills expect … a browser automation tool such as a Playwright MCP server, and the Vaadin MCP server".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/flow/configuration/live-reload/dev-loop-cli.adoc#L25-L29"><code>flow/configuration/live-reload/dev-loop-cli.adoc</code> L25–29, L91, L104</a></td>
+</tr>
+<tr class="odd">
+<td>AI21</td>
+<td><strong>Dramafinder</strong> ships its API reference and a <code>START-HERE.md</code> inside the jar "so an agent can read them offline instead of decompiling". It also ships Claude Code skills <code>vaadin-playwright-test</code> and <code>vaadin-playwright-screenshot</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/parttio/dramafinder/blob/ce2505ba86f6d5d1cf9888516f636c9b39571057/README.md#L84-L108">parttio/dramafinder <code>README.md</code> L84–108 @ ce2505b</a></td>
+</tr>
+<tr class="even">
+<td>AI22</td>
+<td><strong>Chrome DevTools for agents</strong> (<code>chrome-devtools-mcp</code>, Google's ChromeDevTools org) lets "your coding agent … control and inspect a live Chrome browser", as an MCP server and as a CLI, with skills such as <code>a11y-debugging</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/8ba2ac945ebaf1adb92208c29f3a30e73a920956/README.md#L1-L9">ChromeDevTools/chrome-devtools-mcp <code>README.md</code> L1–9, L124 @ 8ba2ac9</a></td>
+</tr>
+<tr class="odd">
+<td>AI23</td>
+<td>Not found: an official AI or agent feature for testing in Testing Library, Vue, React, Spring, Rails, Django, Phoenix LiveView, bUnit or Cucumber.</td>
+<td>Searched the pinned docs above for <code>MCP</code>, <code>agent</code>, <code>LLM</code>, <code>AI</code>; see also AG4</td>
+</tr>
+</tbody>
+</table></div>
+<div class="infbox"><h3 id="inferences-1" class="inf">Inferences</h3>
+<ul>
+<li><strong>Who does what.</strong> Test tools (Playwright, Cypress) build the agents that <em>write, run and heal</em> tests. Frameworks build what makes agents <em>correct</em>: current docs, best-practice rules, and a fast "did my change work" loop. Vaadin follows the framework pattern, and its Copilot test generation is the exception (see the Copilot note).</li>
+<li><strong>Healing comes in two forms.</strong> Playwright's healer changes the test source, and the change is reviewed like any other code. <code>cy.prompt</code> "continuous self-healing" changes behaviour at runtime, with a "Self-healed" tag in the Command Log as the audit trail. The first form fits a project that values deterministic, reviewable tests.</li>
+<li><strong>Java is behind.</strong> Playwright's test agents are JS-only (AI2). The Java tooling for agents is MCP/CLI-based browser control plus project skills, such as Dramafinder's (AI21) and Vaadin's (AI20). We found no official AI tooling in TestBench beyond Copilot's generator.</li>
+</ul>
+</div></section>
+<section id="4-new-patterns-because-of-agents"><h2 id="4-new-patterns-because-of-agents">4. New patterns because of agents</h2>
+<h3 id="verified-facts-3" class="ver">Verified facts</h3>
+<div class="tbl facts"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Fact</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>AG1</td>
+<td>Playwright's <strong>ARIA snapshots</strong> (1.49, 2024-11) assert "the accessibility tree of a page against a predefined snapshot template" in YAML (<code>- heading "…" [level=1]</code>). Later additions: storage in separate YAML files (1.50); a <code>boxes</code> option "useful for AI consumption" (1.60); <code>ariaSnapshotJSON</code> (1.63); <code>getByRef</code> for refs such as <code>e2</code> "reported by <code>Page.ariaSnapshot</code> in the <code>'ai'</code> mode" (1.64). In 1.65, text the browser doesn't render is "no longer part of accessible names and aria snapshots".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/aria-snapshots.md#L9-L20">aria-snapshots.md L9–20</a>; <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/release-notes-js.md#L256">release-notes-js.md L91, L256, L381, L661, L1478, L1524</a></td>
+</tr>
+<tr class="even">
+<td>AG2</td>
+<td><strong>Role and name locators.</strong> Playwright: "we recommend prioritizing user-facing attributes and explicit contracts such as <code>getByRole</code>", "the closest way to how users and assistive technology perceive the page". CSS and XPath are "not recommended". Codegen "prioritiz[es] role, text, and test id locators". The generator agent's sample output uses <code>getByRole('textbox', { name: 'What needs to be done?' })</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/locators.md#L76">locators.md L13–15, L76, L268, L697</a>; <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/codegen-intro.md#L37">codegen-intro.md L37</a>; <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/test-agents-js.md#L156-L168">test-agents-js.md L156–168</a></td>
+</tr>
+<tr class="odd">
+<td>AG3</td>
+<td><strong>Testing Library query priority</strong>: (1) "Queries Accessible to Everyone": <code>getByRole</code> ("should be your top preference"), <code>getByLabelText</code>, <code>getByPlaceholderText</code>, <code>getByText</code>, <code>getByDisplayValue</code>; (2) semantic queries: <code>getByAltText</code>, <code>getByTitle</code>; (3) <code>getByTestId</code>, since "the user cannot see (or hear) these". Vitest browser mode uses a fork of Playwright's locators ("Ivya") with the same <code>getByRole</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/testing-library/testing-library-docs/blob/7c49d046b100e657c64bae78270a5813c1c02eb6/docs/queries/about.mdx#L94-L133">testing-library-docs <code>docs/queries/about.mdx</code> L94–133</a>; <a target="_blank" rel="noopener" href="https://github.com/vitest-dev/vitest/blob/cab34bb0ee23f00676ea895560c8b16399ce40b7/docs/api/browser/locators.md#L10-L13">vitest <code>docs/api/browser/locators.md</code> L10–13</a></td>
+</tr>
+<tr class="even">
+<td>AG4</td>
+<td><strong>Not everyone agrees.</strong> Cypress's default <code>selectorPriority</code> (used by Studio, <code>cy.prompt</code> and its AI skills) is <code>data-cy</code>, <code>data-test</code>, <code>data-testid</code>, <code>data-qa</code>, <code>name</code>, <code>id</code>, <code>class</code>, <code>tag</code>, attributes, <code>nth-child</code>. Its best practices call <code>data-cy</code> "Best. Isolated from all changes." Selenium prefers unique IDs, then CSS. Its agent rules say "Prefer <code>id</code> and <code>name</code>, then a CSS selector on a stable attribute". Phoenix's agent rules say "Always reference the key element IDs you added in the LiveView templates in your tests … instead of checking raw HTML or text content".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/partials/_default-selector-priority.mdx">cypress-documentation <code>docs/partials/_default-selector-priority.mdx</code></a>; <a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/api/cypress-api/element-selector-api.mdx#L14"><code>element-selector-api.mdx</code> L14, L75</a>; <a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/app/core-concepts/best-practices.mdx#L293"><code>best-practices.mdx</code> L243, L293</a>; <a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/test_practices/encouraged/locators.en.md#L10-L17">selenium <code>test_practices/encouraged/locators.en.md</code> L10–17</a>; <a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/ai_agents/_index.en.md#L181-L185">selenium <code>ai_agents/_index.en.md</code> L181–185</a>; <a target="_blank" rel="noopener" href="https://github.com/phoenixframework/phoenix/blob/789f851c3cda02f56702a16700ebba48d270cbd3/usage-rules/liveview.md#L74-L81">phoenix <code>usage-rules/liveview.md</code> L74–81 @ 789f851</a></td>
+</tr>
+<tr class="odd">
+<td>AG5</td>
+<td><strong>The WebDriver BiDi spec</strong> (W3C Working Draft, 2026-11-13) defines <code>browsingContext.locateNodes</code> locator types <code>accessibility</code> (<code>{ name, role }</code>), <code>css</code>, <code>context</code>, <code>innerText</code> and <code>xpath</code>. Selenium calls BiDi "the cross-browser replacement for the Chrome DevTools Protocol".</td>
+<td><a target="_blank" rel="noopener" href="https://www.w3.org/TR/2026/WD-webdriver-bidi-20261113/">W3C TR WD-webdriver-bidi-20261113, <code>browsingContext.AccessibilityLocator</code></a>; <a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/webdriver/bidi/_index.en.md#L6-L9">selenium <code>webdriver/bidi/_index.en.md</code> L6–9</a></td>
+</tr>
+<tr class="even">
+<td>AG6</td>
+<td><strong><code>llms.txt</code></strong> is "a proposal to standardise on using an <code>/llms.txt</code> file to provide information to help agents use a website". v2 dates from 2026-08-10. It reports "thousands of sites" and a Lighthouse audit for it.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/AnswerDotAI/llms-txt/blob/3700a0a624a4a004c6a246789b37f389940b1b58/nbs/index.qmd#L2-L22">AnswerDotAI/llms-txt <code>nbs/index.qmd</code> L2–22 @ 3700a0a</a></td>
+</tr>
+<tr class="odd">
+<td>AG7</td>
+<td><code>/llms.txt</code> returned <code>200 text/plain</code> on 2026-11-15 for react.dev, angular.dev, vuejs.org, svelte.dev, nextjs.org/docs, docs.cypress.io, selenium.dev, vaadin.com/docs and hexdocs.pm/phoenix_live_view. It returned 404 at playwright.dev, testing-library.com, laravel.com/docs, docs.spring.io and guides.rubyonrails.org. Vaadin's <code>llms.txt</code> tells agents to use its MCP server first.</td>
+<td><code>curl</code> on 2026-11-15; <a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/index.adoc#L8-L9">vaadin/docs <code>articles/index.adoc</code> L8–9</a></td>
+</tr>
+<tr class="even">
+<td>AG8</td>
+<td><strong>Docs bundled for agents</strong>: Next.js 16.2+ ships its docs in <code>node_modules/next/dist/docs/</code>, and <code>next dev</code> keeps a managed block in <code>AGENTS.md</code> pointing at them ("APIs … may all differ from your training data"). Every docs page has a Markdown version at its <code>.md</code> URL. <code>create-next-app --agents-md</code> is the default.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vercel/next.js/blob/c71d522ee9fed36a31b5e03c9d69bafee3ef5929/docs/01-app/02-guides/ai-agents.mdx#L24-L50">next.js <code>docs/01-app/02-guides/ai-agents.mdx</code> L24–50, L67, L87</a>; <a target="_blank" rel="noopener" href="https://github.com/vercel/next.js/blob/c71d522ee9fed36a31b5e03c9d69bafee3ef5929/docs/01-app/03-api-reference/06-cli/create-next-app.mdx#L61"><code>06-cli/create-next-app.mdx</code> L61</a></td>
+</tr>
+<tr class="odd">
+<td>AG9</td>
+<td><strong><code>AGENTS.md</code></strong> is "a simple, open format for guiding coding agents … a README for agents". Its site says it is used by "over 60k open-source projects" and is stewarded under the Linux Foundation's Agentic AI Foundation.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/agentsmd/agents.md/blob/d001185d792eb6402a58e4cbef1c228b309ec25d/README.md#L5-L8">agentsmd/agents.md <code>README.md</code> L5–8 @ d001185</a>; agents.md page meta, fetched 2026-11-15</td>
+</tr>
+<tr class="even">
+<td>AG10</td>
+<td><strong>Contributor <code>AGENTS.md</code>/<code>CLAUDE.md</code> in framework repos</strong> (root files at HEAD, 2026-11-15): <code>AGENTS.md</code> in angular/angular, vercel/next.js, sveltejs/svelte, microsoft/playwright, cypress-io/cypress, rails/rails, spring-projects/spring-framework, SeleniumHQ/selenium; <code>CLAUDE.md</code> in facebook/react, vaadin/flow, cypress-io/cypress, SeleniumHQ/selenium; <code>.github/copilot-instructions.md</code> in django/django, bUnit-dev/bUnit, playwright, selenium. None of these was found in vuejs/core, laravel/framework or phoenix_live_view.</td>
+<td>raw-file checks at <a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/AGENTS.md">angular@1e6afa4</a>, <a target="_blank" rel="noopener" href="https://github.com/vercel/next.js/blob/c71d522ee9fed36a31b5e03c9d69bafee3ef5929/AGENTS.md">next.js@c71d522</a>, <a target="_blank" rel="noopener" href="https://github.com/sveltejs/svelte/blob/99c07450d2e093c0d637903dc2c94f28f264d70d/AGENTS.md">svelte@99c0745</a>, <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/AGENTS.md">playwright@b4d016a</a>, <a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress/blob/454bf4704d5c914de0de0a3120352a7b984d9dfe/AGENTS.md">cypress@454bf47</a>, <a target="_blank" rel="noopener" href="https://github.com/rails/rails/blob/8217632cf87ad03a0f36212b7ea3e0ad933224bc/AGENTS.md">rails@8217632</a>, <a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-framework/blob/4cb62d893e09e23791d661e8d9b35aedee7006d0/AGENTS.md">spring-framework@4cb62d8</a>, <a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/selenium/blob/fa946675f25301326b16f883535c572e75b5c663/AGENTS.md">selenium@fa94667</a>, <a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/df6aa4ec76cff5b3adde531c6fe8c36099e0469b/CLAUDE.md">react@df6aa4e</a>, <a target="_blank" rel="noopener" href="https://github.com/vaadin/flow/blob/28a611f969c2daebbcf97086297149d605e7f71e/CLAUDE.md">flow@28a611f</a>, <a target="_blank" rel="noopener" href="https://github.com/django/django/blob/f24f38c6b2825f15628c07bf2892f1664eed9361/.github/copilot-instructions.md">django@f24f38c</a>, <a target="_blank" rel="noopener" href="https://github.com/bUnit-dev/bUnit/blob/7464b7374c6dc0749eda44754b9a4af52cf1c399/.github/copilot-instructions.md">bUnit@7464b73</a></td>
+</tr>
+<tr class="odd">
+<td>AG11</td>
+<td><strong><code>AGENTS.md</code> generated into users' apps</strong>: Phoenix's <code>mix phx.new</code> writes one unless you pass <code>--no-agents-md</code>, built from its usage rules. Next.js does the same (AG8), and so does Laravel Boost (AI18).</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/phoenixframework/phoenix/blob/789f851c3cda02f56702a16700ebba48d270cbd3/installer/lib/mix/tasks/phx.new.ex#L74">phoenix <code>installer/lib/mix/tasks/phx.new.ex</code> L74 @ 789f851</a></td>
+</tr>
+<tr class="even">
+<td>AG12</td>
+<td><strong>Agent-readable output</strong>: Next.js forwards browser console errors to the terminal "so the output agents already read carries the client-side failures". Playwright CLI errors print as JSON with <code>--json</code>. The Vaadin dev loop gives agents "a verdict from the exit code" and a <code>--json</code> schema. Cypress <code>cypress tap</code> lets the agent "read the Command Log, the error, and the DOM".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vercel/next.js/blob/c71d522ee9fed36a31b5e03c9d69bafee3ef5929/docs/01-app/02-guides/ai-agents.mdx#L142-L152">next.js <code>ai-agents.mdx</code> L142–152</a>; <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright-cli/blob/b21724888b8100b05ef8dee3a92f2bb03bf4dcde/README.md#L30-L31">playwright-cli <code>README.md</code> L30–31</a>; <a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/flow/configuration/live-reload/dev-loop-cli.adoc#L29">vaadin <code>dev-loop-cli.adoc</code> L29, L353</a>; <a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/app/ai/overview.mdx#L65-L68">cypress <code>overview.mdx</code> L65–68</a></td>
+</tr>
+<tr class="odd">
+<td>AG13</td>
+<td><strong>Verify, don't infer.</strong> Selenium: "verify locators against the running application instead of inferring them". Playwright's generator "verifies selectors and assertions live".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/ai_agents/_index.en.md#L357-L360">selenium <code>ai_agents/_index.en.md</code> L357–360</a>; <a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/test-agents-js.md#L131-L132">test-agents-js.md L131–132</a></td>
+</tr>
+<tr class="even">
+<td>AG14</td>
+<td>Playwright 1.64 adds <code>page.webmcp</code> to test the tools a page registers through the experimental <strong>WebMCP</strong> browser API. Playwright MCP offers page-defined tools to agents as <code>webmcp_&lt;tool&gt;</code>.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/release-notes-js.md#L121-L145">release-notes-js.md L121–145</a></td>
+</tr>
+</tbody>
+</table></div>
+<div class="infbox"><h3 id="inferences-2" class="inf">Inferences</h3>
+<ul>
+<li><strong>The accessibility tree has become the shared view of the page for humans, test code and agents.</strong> Agents see the page as an ARIA snapshot (AG1, AI3). Codegen and the generator agent emit <code>getByRole(role, { name })</code> (AG2). BiDi now standardises an accessibility locator (AG5). Tests written in role-and-name terms are therefore the ones an agent can both <em>write</em> (it reads roles and names) and <em>repair</em> (the healer re-locates "equivalent elements").</li>
+<li><strong>Test ids remain a respected minority view.</strong> Cypress, Selenium and Phoenix's agent rules prefer stable ids (AG4). Their argument is that ids are isolated from copy changes. The role-based side argues that ids prove nothing about what the user sees.</li>
+<li><strong>"Docs for agents" is now a standard deliverable.</strong> Most framework sites serve <code>llms.txt</code>. Several ship MCP servers. Next.js, Phoenix and Laravel manage blocks in the <em>user's</em> <code>AGENTS.md</code>. Selenium wrote a page whose only purpose is to correct what models learned from old blog posts.</li>
+<li><strong>Fewer tokens wins.</strong> Playwright now steers coding agents from MCP to CLI plus skills (AI4), and Next.js reports better agent results from bundled docs plus <code>AGENTS.md</code> than from skills (its claim, from a Vercel blog post we did not verify). Expect compact, text-first outputs: snapshot files, <code>find</code>, JSON, exit codes.</li>
+</ul>
+</div></section>
+<section id="5-how-humans-read-these-tests"><h2 id="5-how-humans-read-these-tests">5. How humans read these tests</h2>
+<h3 id="verified-facts-4" class="ver">Verified facts</h3>
+<div class="tbl facts"><table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Fact</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>H1</td>
+<td>Playwright: "Automated tests should verify that the application code works for the end users, and avoid relying on implementation details." For CI failures, "use the Playwright trace viewer instead of videos and screenshots".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/best-practices-js.md#L14">best-practices-js.md L14, L283</a></td>
+</tr>
+<tr class="even">
+<td>H2</td>
+<td>The trace viewer lets you "go back and forward through each action of your test and visually see what was happening", with a DOM snapshot before and after each action, plus logs, network and console.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/trace-viewer-intro-js.md#L10">trace-viewer-intro-js.md L10, L70</a></td>
+</tr>
+<tr class="odd">
+<td>H3</td>
+<td>Generated Playwright tests carry their origin and steps as comments: <code>// spec: specs/basic-operations.md</code>, <code>// 1. Click in the "What needs to be done?" input field</code>, <code>// Expected Results:</code>. Agent artefacts follow "a simple, auditable structure" (<code>specs/</code>, <code>tests/</code>, <code>seed.spec.ts</code>).</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/test-agents-js.md#L156-L190">test-agents-js.md L156–190, L215–226</a></td>
+</tr>
+<tr class="even">
+<td>H4</td>
+<td>Agentic video receipts: "chapter titles provide context, action annotations highlight each interaction, and the visual walkthrough is faster to review than text logs".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/microsoft/playwright/blob/b4d016aadc5cbd2b898a284307975fe73e05483d/docs/src/release-notes-js.md#L804-L828">release-notes-js.md L804–828</a></td>
+</tr>
+<tr class="odd">
+<td>H5</td>
+<td>Cypress: <code>cy.prompt</code>'s generated code is visible behind a <strong>Code</strong> button in the Command Log. The "generate once" workflow is "PR review friendly". Self-healed steps carry a "Self-healed" tag on the step, prompt and test, and are flagged in Cloud runs.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/app/ai/ai-test-generation.mdx#L275-L288">ai-test-generation.mdx L21, L117–126, L275–288</a></td>
+</tr>
+<tr class="even">
+<td>H6</td>
+<td>Cypress AI "Test Intent Summaries are AI-generated descriptions of a test's purpose", meant for "reviewing a new test, debugging a failure, or triaging analytics".</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/cypress-io/cypress-documentation/blob/31105b4c87aa8e8898e73a30507ca9e95bed9b90/docs/cloud/features/cypress-ai-features.mdx#L147">cypress-documentation <code>docs/cloud/features/cypress-ai-features.mdx</code> L50, L147</a></td>
+</tr>
+<tr class="odd">
+<td>H7</td>
+<td>Selenium on reviewing agent-written tests: review "the way you would review a new starter's"; "Do not accept a sleep or a longer timeout as the fix for a flaky test"; "Review the locators before any test is written"; "Run the test a few times before you believe it."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/SeleniumHQ/seleniumhq.github.io/blob/95a9c47a25d814df04a8a2c9ef15027a74be3126/website_and_docs/content/documentation/ai_agents/_index.en.md#L377-L393">selenium <code>ai_agents/_index.en.md</code> L377–393</a></td>
+</tr>
+<tr class="even">
+<td>H8</td>
+<td>Angular harnesses "make tests become more readable and easier to maintain". bUnit's semantic <code>MarkupMatches</code> gives "more stable tests" than string comparison.</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/angular/angular/blob/1e6afa4cb84c9194d72d946ba9c22bf740360d9c/adev/src/content/guide/testing/component-harnesses-overview.md#L7-L9">component-harnesses-overview.md L7–9</a>; <a target="_blank" rel="noopener" href="https://github.com/dotnet/AspNetCore.Docs/blob/692feee601358eeb5d8915b46143303f45e83887/aspnetcore/blazor/test.md#L158">blazor <code>test.md</code> L158</a></td>
+</tr>
+<tr class="odd">
+<td>H9</td>
+<td>Vaadin's user-story tests: "The test method says who does what, and what should happen. It doesn't say where anything is on the screen."</td>
+<td><a target="_blank" rel="noopener" href="https://github.com/vaadin/docs/blob/f0394e71abf829838c3d2b68056f8c44b695ebc5/articles/building-apps/testing/browserless/write-user-stories.adoc#L44-L46">write-user-stories.adoc L44–46</a></td>
+</tr>
+</tbody>
+</table></div>
+<div class="infbox"><h3 id="inferences-3" class="inf">Inferences</h3>
+<ul>
+<li>Humans read tests through three channels: the <strong>source</strong> (names, steps, intent-level helpers), the <strong>run record</strong> (trace, Command Log, report, video) and, more and more, <strong>AI summaries</strong> of both. For AI-written tests, the run record and a clean diff matter more, because the reviewer did not write the steps.</li>
+<li>Every vendor stresses that AI output is ordinary code going through ordinary review. None of them offers a separate "AI test" format. Runtime self-healing is the exception, and it adds visible tags so a human can audit it.</li>
+</ul>
+
+</div></section>
+<section id="what-this-means-for-this-repo-inferences"><h2 id="what-this-means-for-this-repo-inferences">What this means for this repo (inferences)</h2><p class="tag inf-tag">Our reasoning, not sourced fact</p>
+<p>All of this section is our reasoning. It is not sourced fact.</p>
+<ol type="1">
+<li><strong>The Unified API's locator style fits the agent era.</strong> The query shape <code>find(Wrapper.class).withLabel/withAccessibleName/withText(...)</code>, with <code>withTestId</code>/<code>withId</code> as fallbacks (<a target="_blank" rel="noopener" href="https://github.com/parttio/unified-testing-tool/blob/main/docs/spec/04-locating.md">spec 04</a>, ADR <a target="_blank" rel="noopener" href="https://github.com/parttio/unified-testing-tool/blob/main/docs/adr/0001-locator-filters-follow-component-type.md">0001</a>), is Playwright's <code>getByRole(role, { name })</code> with the Wrapper type in place of the role. It follows the same order as Testing Library (AG3), and the same order Playwright's generator and codegen emit (AG2). So an agent that reads an ARIA snapshot (<code>textbox "Name"</code>) has a direct mapping to <code>find(UnifiedTextField.class).withLabel("Name")</code>. The same mapping would let a Migration Recipe or agent skill convert agent-generated Playwright tests. One open point: Cypress-, Selenium- and Phoenix-style id-first tests (AG4) map only to the fallback filters.</li>
+<li><strong>Angular CDK harnesses are the nearest prior art</strong> (A3–A4): one component API on a no-browser environment and on WebDriver, with an SPI for more environments. Worth a look for the adapter SPI and Wrapper authoring docs, and worth citing in an ADR as precedent.</li>
+<li><strong>The Browserless-first stance matches the field.</strong> Vaadin, Spring, Rails, Django, Blazor and Phoenix all recommend a fast base and a thin browser layer. No other framework we checked lets the <em>same</em> test run in either layer by choice per run. That is the Unified API's distinct value, and it is worth stating plainly in the README.</li>
+<li><strong>Agents need a text view of the page.</strong> Browserless already writes a text component tree on failure (<a target="_blank" rel="noopener" href="https://github.com/parttio/unified-testing-tool/blob/main/docs/spec/09-capabilities.md#failure-evidence">spec 09</a>). Playwright and Selenium only write a screenshot. A tool-neutral text snapshot in role-and-name terms, on every Testing Tool, would give an agent (and a human) the same failure view whatever the Testing Tool. That is the "agent-readable output" pattern (AG12, AI7, AI8).</li>
+<li><strong>Ship docs for agents with the jar</strong>, as Dramafinder does (AI21): a <code>START-HERE.md</code>, the API reference and the migration guides under <code>META-INF</code>. Also consider an <code>llms.txt</code> for the docs site and a short <code>AGENTS.md</code>. This follows the pattern across the field (AG6–AG11), and ADR <a target="_blank" rel="noopener" href="https://github.com/parttio/unified-testing-tool/blob/main/docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md">0004</a> already plans an agent skill for migration.</li>
+<li><strong>Healing should produce a diff, not a runtime guess.</strong> The lazy, re-finding Wrapper already avoids stale references. If the project ever helps with broken locators, Playwright's healer model (propose a code patch, rerun, skip if the feature is broken) fits a deterministic, reviewed test suite better than <code>cy.prompt</code>'s runtime healing.</li>
+<li><strong>Readable tests sit one layer above locators.</strong> Cucumber's declarative style, Vaadin's user-story layers and Playwright's Markdown specs all keep intents in the readable layer and locators below it. This supports #193 and the step-report idea in #195.</li>
+</ol>
+</section>
+<section id="open-questions"><h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Should the Unified API offer a tool-neutral <strong>accessibility snapshot</strong> (read and assert), like Playwright's <code>toMatchAriaSnapshot</code>? Can Browserless compute roles and names close enough to the browser's to make that portable?</li>
+<li>Does Playwright's healer or generator work on <strong>Java</strong> Playwright, or on Dramafinder or Unified tests, through MCP alone? The agent definitions are JS-only (AI2). This was not tested.</li>
+<li>Does the Vaadin MCP server know about Browserless locators, and will it know about the Unified API? Vaadin Skills list no testing skill (AI19).</li>
+<li>Next.js's claim that bundled docs plus <code>AGENTS.md</code> beat skills comes from a Vercel blog post and an evals page. Neither was verified.</li>
+<li>Since which Rails version do scaffolds skip system tests? The guide doesn't say (RA2).</li>
+</ul>
+</section>
+<section id="not-checked"><h2 id="not-checked">Not checked</h2>
+<ul>
+<li>Pages rendered on the docs sites were read from their source repos where possible. Svelte's AI overview (AI17) and the agents.md site meta (AG9) were read live and are not pinned.</li>
+<li>No AI feature was run end to end. Statements about behaviour (healing, caching, snapshots) are as documented.</li>
+<li>Secondary write-ups (blogs, comparisons) were not used. Hilla has no separate testing guide in <code>vaadin/docs@f0394e7</code>, so its React views are covered by B5. We found no dedicated testing guide on react.dev, but did not search exhaustively.</li>
+</ul>
+</section>
+    <footer>Source: <code>docs/research/web-framework-testing-landscape.md</code> in parttio/unified-testing-tool. Panels marked as reasoning are inferences, not sourced fact.</footer>
+  </main>
+</div>
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  if (!('IntersectionObserver' in window) || !links.length) return;
+  var map = {};
+  links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        links.forEach(function (a) { a.classList.remove('on'); });
+        var a = map[e.target.id]; if (a) a.classList.add('on');
+      }
+    });
+  }, { rootMargin: '0px 0px -70% 0px' });
+  document.querySelectorAll('main section[id]').forEach(function (s) { io.observe(s); });
+})();
+</script>
