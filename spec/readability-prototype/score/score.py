@@ -5,12 +5,12 @@ extended with the new styles' verbs. Run: python3 -I score/score.py src/main/jav
 import re, sys, pathlib, collections
 
 TOKEN = re.compile(r'''"(?:\\.|[^"\\])*"|\d+(?:\.\d+)?|[A-Za-z_$][\w$]*|->|[^\s\w]''')
-ACTION = {'click', 'setValue', 'navigate', 'fillIn', 'clickOn'}
+ACTION = {'click', 'setValue', 'navigate', 'fillIn', 'clickOn', 'selectItem'}
 ASSERT = {'assertEquals', 'assertTrue', 'assertFalse'}
-ROLE_FACTORIES = {'textField', 'button', 'notification', 'grid', 'container'}  # style D role nouns
+ROLE_FACTORIES = {'dialog', 'textField', 'button', 'notification', 'grid', 'container'}  # style D role nouns
 
 def methods(src):
-    for m in re.finditer(r'void (\w+)\(UnifiedPage page\) \{', src):
+    for m in re.finditer(r"void (\w+)\(UnifiedPage page[^)]*\) \{", src):
         i, depth = m.end(), 1
         while depth:
             depth += {'{': 1, '}': -1}.get(src[i], 0); i += 1
@@ -45,7 +45,10 @@ root = pathlib.Path(sys.argv[1])
 rows = collections.defaultdict(dict)
 for f in sorted(root.glob('*/Scenarios*.java')):
     style = f.parent.name + ('+steps' if 'WithSteps' in f.name else '')
-    for name, body in methods(f.read_text()):
+    src = re.sub(r'//[^\n]*', '', f.read_text())
+    for name, body in methods(src):
+        if (name.startswith('full') or name == 'editPerson') != (len(sys.argv) > 2):
+            continue
         i = p = n = 0
         for s in statements(body):
             a, b = ratio(s); i += a; p += b; n += 1
@@ -64,5 +67,5 @@ for name, r in rows.items():
         else:
             cells.append('–')
     print(f'| `{name}` | ' + ' | '.join(cells) + ' |')
-print('| **All four tests** | ' + ' | '.join(
+print('| ' + ('**All four tests** | ' if len(sys.argv) < 3 else '**Total** | ') + ' | '.join(
     f'**{100*tot[s][0]//sum(tot[s])}%** ({tot[s][0]}/{sum(tot[s])})' if '+steps' not in s else '(2 tests)' for s in styles) + ' |')

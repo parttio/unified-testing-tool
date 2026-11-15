@@ -49,3 +49,24 @@ final class Assertions {
     static ValueAssert assertThat(UnifiedTextField f) { return null; }
     static RowsAssert assertThat(UnifiedGrid.Rows r) { return null; }
 }
+
+interface UnifiedComboBox extends Findable {
+    UnifiedComboBox withLabel(String label);
+    void selectItem(String item);
+}
+
+interface UnifiedDialog extends Scope, Findable {
+    UnifiedDialog withHeaderTitle(String title);
+}
+
+final class DialogAssertions {
+    private DialogAssertions() {}
+    interface DialogAssert { DialogAssert isClosed(); }
+    static DialogAssert assertThat(UnifiedDialog d) { return null; }
+}
+
+/** One static method: a named group of User Steps in the report. */
+final class Steps {
+    private Steps() {}
+    static void step(String name, Runnable userSteps) { userSteps.run(); }
+}

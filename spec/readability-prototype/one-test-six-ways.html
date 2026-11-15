@@ -1,0 +1,663 @@
+<title>One Test, Six Ways</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: a lab bench. Scenario on top, the code under test on the left, its numbers on the right, then what a run prints. */
+:root {
+  --bg: #f3f5f4; --surface: #ffffff; --surface-2: #e9eeec; --fg: #17201d; --muted: #5b6863;
+  --line: #d3dbd8; --accent: #0b6e5c; --accent-soft: #d8ede7;
+  --pass: #1f7a3a; --fail: #b3261e; --warn: #8a5a00;
+  --code-bg: #fbfcfb; --c-str: #0b6e5c; --c-kw: #6b3fa0; --c-com: #7b8a84; --c-ann: #8a5a00; --c-dim: #b4bfbb;
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111816; --surface: #18211e; --surface-2: #202b27; --fg: #e3ebe8; --muted: #9aa9a3;
+  --line: #2e3b37; --accent: #4cc3a6; --accent-soft: #1d3a33;
+  --pass: #5cc77a; --fail: #ff8a80; --warn: #e2b55a;
+  --code-bg: #141c19; --c-str: #6fd6bb; --c-kw: #c4a2f0; --c-com: #77877f; --c-ann: #e2b55a; --c-dim: #4a5853;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111816; --surface: #18211e; --surface-2: #202b27; --fg: #e3ebe8; --muted: #9aa9a3;
+  --line: #2e3b37; --accent: #4cc3a6; --accent-soft: #1d3a33;
+  --pass: #5cc77a; --fail: #ff8a80; --warn: #e2b55a;
+  --code-bg: #141c19; --c-str: #6fd6bb; --c-kw: #c4a2f0; --c-com: #77877f; --c-ann: #e2b55a; --c-dim: #4a5853;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(28px, 4vw, 40px); }
+h2 { font-size: 22px; }
+h3 { font-size: 15px; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 500 12px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.lede { color: var(--muted); font-size: 16px; }
+header { display: grid; gap: 12px; }
+section { display: grid; gap: 16px; }
+.muted { color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+
+/* the scenario, in the user's words */
+.story { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.story div { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: grid; gap: 4px; }
+.story b { font: 600 12px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+/* variant picker */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { font: 500 13px/1 var(--body); padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.tabs button:focus-visible, .toggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tag { font: 500 11px/1 var(--mono); padding: 3px 6px; border-radius: 4px; margin-left: 6px; vertical-align: 1px; }
+.tag.kept { background: var(--accent-soft); color: var(--accent); }
+.tabs button[aria-selected="true"] .tag.kept { background: color-mix(in srgb, var(--surface) 25%, transparent); color: var(--surface); }
+
+.bench { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.codecard { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.codebar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.codebar .file { font: 500 12px/1 var(--mono); color: var(--muted); }
+pre { margin: 0; padding: 14px 16px; overflow-x: auto; font: 13px/1.6 var(--mono); tab-size: 4; }
+.s { color: var(--c-str); } .k { color: var(--c-kw); } .c { color: var(--c-com); font-style: italic; } .a { color: var(--c-ann); }
+.dimming .p { color: var(--c-dim); }
+.dimming .i { font-weight: 500; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.toggle span { width: 32px; height: 18px; border-radius: 9px; background: var(--line); position: relative; transition: background .15s; }
+.toggle span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
+.toggle input:checked + span { background: var(--accent); }
+.toggle input:checked + span::after { transform: translateX(14px); }
+
+.side { display: grid; gap: 12px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { display: grid; gap: 2px; }
+.stat b { font: 600 22px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+.bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; display: flex; }
+.bar i { display: block; background: var(--accent); }
+.kv { display: grid; gap: 6px; font-size: 13.5px; }
+.kv div { display: grid; gap: 1px; }
+.kv dt { font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.kv dd { margin: 0; }
+.aloud { font-style: italic; }
+.verdict { font-weight: 600; }
+.verdict.yes { color: var(--pass); } .verdict.no { color: var(--fail); } .verdict.mid { color: var(--warn); }
+
+/* comparison table */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 640px; }
+th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); background: var(--surface-2); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); white-space: nowrap; }
+tr.current td { background: var(--accent-soft); }
+
+/* reports */
+.reportgrid { display: grid; gap: 14px; }
+.term { background: #0f1513; color: #d6e2dd; border-radius: 8px; border: 1px solid var(--line); min-width: 0; }
+.term pre { color: #d6e2dd; font-size: 12.5px; }
+.term .ok { color: #6fd08c; } .term .bad { color: #ff8a80; } .term .dim { color: #7e8f88; } .term .hl { color: #f2d27a; } .term .grp { color: #9fd3ff; }
+.report { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+.rhead { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.rhead h3 { font-size: 16px; }
+.badge { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.badge.fail { color: var(--fail); border-color: var(--fail); }
+.badge.pass { color: var(--pass); border-color: var(--pass); }
+.rbody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); }
+@media (max-width: 800px) { .rbody { grid-template-columns: minmax(0, 1fr); } }
+ol.steps { list-style: none; margin: 0; padding: 8px 0; display: grid; }
+ol.steps li { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; padding: 6px 16px; align-items: baseline; font-size: 14px; }
+ol.steps li.group { font-weight: 600; padding-top: 10px; }
+ol.steps li.sub { padding-left: 40px; }
+ol.steps li .n { font: 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.steps li .t { font: 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+ol.steps li.failed { background: color-mix(in srgb, var(--fail) 10%, transparent); }
+ol.steps li.skipped { color: var(--muted); }
+.q { font-family: var(--mono); font-size: 0.9em; }
+.evidence { border-left: 1px solid var(--line); padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+@media (max-width: 800px) { .evidence { border-left: 0; border-top: 1px solid var(--line); } }
+.screen { border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); padding: 10px; display: grid; gap: 8px; font-size: 12px; }
+.dlg { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: grid; gap: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.dlg b { font-family: var(--display); font-size: 13px; }
+.fld { display: grid; gap: 2px; }
+.fld label { color: var(--muted); font-size: 11px; }
+.fld div { border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; background: var(--code-bg); min-height: 24px; }
+.fld.near div { border: 2px dashed var(--warn); }
+.fld.near label { color: var(--warn); font-weight: 600; }
+.btns { display: flex; justify-content: flex-end; gap: 6px; }
+.btns span { border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; }
+.btns span.pri { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+
+.md { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.md h4 { margin: 0; font: 600 15px/1.3 var(--display); }
+.md table { min-width: 0; }
+.md .tablewrap { border: 0; }
+.docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.docs article { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+.docs article h4 { margin: 0; font: 600 14px/1.3 var(--display); }
+.docs ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 2px; }
+.note { font-size: 13.5px; color: var(--muted); }
+.callout { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 14px 16px; display: grid; gap: 6px; }
+.callout h3 { font-size: 15px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Readability prototype · Unified UI Tests</span>
+    <h1>One Test, Six Ways</h1>
+    <p class="lede">The same Vaadin UI scenario written in each candidate style, scored with the noise baseline's rules, followed by what a run could print for the reviewer, the CI log, an agent fixing a failure, and a non-developer reading the suite.</p>
+  </header>
+
+  <section aria-labelledby="h-story">
+    <h2 id="h-story">The scenario</h2>
+    <div class="story">
+      <div><b>Given</b><span>Alan Turing is listed in the People grid</span></div>
+      <div><b>When</b><span>I open him, change his name, email and role in the “Edit person” dialog, and save</span></div>
+      <div><b>Then</b><span>I see “Saved Alan M. Turing”, the dialog closes, and the grid shows the new email and role</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-code">
+    <h2 id="h-code">The test</h2>
+    <div class="tabs" role="tablist" aria-label="Style" id="variantTabs"></div>
+    <div class="bench">
+      <div class="codecard">
+        <div class="codebar">
+          <span class="file" id="fileName"></span>
+          <label class="toggle"><input type="checkbox" id="dimToggle"><span></span>Fade the plumbing</label>
+        </div>
+        <pre id="code"></pre>
+      </div>
+      <aside class="side">
+        <div class="panel">
+          <div class="stats">
+            <div class="stat"><b id="sWords"></b><span>words</span></div>
+            <div class="stat"><b id="sPlumb"></b><span>plumbing</span></div>
+            <div class="stat"><b id="sShare"></b><span>intent</span></div>
+          </div>
+          <div class="bar" aria-hidden="true"><i id="sBar"></i></div>
+          <p class="note" id="sNote"></p>
+        </div>
+        <div class="panel">
+          <dl class="kv">
+            <div><dt>API it costs</dt><dd id="kApi"></dd></div>
+            <div><dt>Read aloud: the Email line</dt><dd class="aloud" id="kAloud"></dd></div>
+            <div><dt>Passes the read-aloud check?</dt><dd id="kVerdict"></dd></div>
+            <div><dt>Reaches the report?</dt><dd id="kReport"></dd></div>
+          </dl>
+        </div>
+      </aside>
+    </div>
+    <p class="note">Words are identifiers and literals in the test method; comments and annotations are not counted. Intent is the label, value, verb, expectation and the component's role, as in the noise baseline. Every variant compiles against a stub API on branch <code>prototype/readable-styles</code>.</p>
+  </section>
+
+  <section aria-labelledby="h-cmp">
+    <h2 id="h-cmp">Side by side</h2>
+    <div class="tablewrap"><table id="cmpTable"></table></div>
+  </section>
+
+  <section aria-labelledby="h-rep">
+    <h2 id="h-rep">What a run could print</h2>
+    <p class="muted">All of this is generated from User Steps: each Wrapper action records what it did, in user terms, whichever style the test was written in. Only <code>@DisplayName</code> and <code>step(..)</code> add structure; comments never reach a report. The run below fails on purpose: the dialog's “Email” field was renamed “E-mail”.</p>
+    <div class="tabs" role="tablist" aria-label="Report" id="reportTabs"></div>
+    <label class="toggle"><input type="checkbox" id="groupToggle" checked><span></span>Test uses <code>step(..)</code> groups</label>
+    <div id="reportView" class="reportgrid"></div>
+  </section>
+
+  <section aria-labelledby="h-take">
+    <h2 id="h-take">What it shows</h2>
+    <div class="two">
+      <div class="callout"><h3>B is the floor</h3><p class="note">Dropping <code>single()</code> removes 9 words here and makes the API smaller: the 33 query types fold into their Wrappers.</p></div>
+      <div class="callout"><h3>Structure beats shortcuts</h3><p class="note">The biggest readability gain is a task method in the test class (27 words for the scenario), and it costs no API. Agents can write them; the rule set can't require them.</p></div>
+      <div class="callout"><h3>Comments read well but stay in the code</h3><p class="note">Given/when/then comments help the reviewer of the diff and cost nothing, but no report sees them. <code>step(..)</code> costs one static method and some lambda noise, and puts the sections into every report.</p></div>
+      <div class="callout"><h3>The report does the reading for non-developers</h3><p class="note">The User Step report names every component and value, so the code doesn't have to read like English for a product owner to follow the run.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const V = [
+{ id: "a", label: "A · today", file: "a_today/ScenariosFull.java", words: 86, plumb: 50, intent: 36,
+  api: "Today's API: 33 Wrappers, each with its own query type, plus single(), all(), exists().",
+  aloud: "dialog find unified text field class with label Email single set value alan@bletchley.uk", verdict: ["no", "No"],
+  report: "Flat list of User Steps, titled from the method name.",
+  note: "The baseline. Every lookup ends in single().",
+  code: `@UnifiedSpringBootTest
+class EditPersonTest {
+
+    @Test
+    void editsAPersonInTheDialog(UnifiedPage page) {
+        page.navigate(PeopleView.class);
+        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+        people.rows().withCellText("Name", "Alan Turing").single().click();
+
+        UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Edit person").single();
+        dialog.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alan M. Turing");
+        dialog.find(UnifiedTextField.class).withLabel("Email").single().setValue("alan@bletchley.uk");
+        dialog.find(UnifiedComboBox.class).withLabel("Role").single().selectItem("Admin");
+        dialog.find(UnifiedButton.class).withText("Save").single().click();
+
+        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alan M. Turing");
+        assertThat(dialog).isClosed();
+        assertThat(people.rows().withCellText("Name", "Alan M. Turing").single())
+                .hasCellText("Email", "alan@bletchley.uk")
+                .hasCellText("Role", "Admin");
+    }
+}` },
+{ id: "b", label: "B · lazy", kept: true, file: "b_lazy/ScenariosFull.java", words: 77, plumb: 41, intent: 36,
+  api: "Smaller than today: the query types fold into the Wrappers. Adds hasCount() and doesNotExist().",
+  aloud: "dialog find unified text field class with label Email set value alan@bletchley.uk", verdict: ["mid", "Almost: the class literal still reads as code"],
+  report: "Flat list of User Steps, titled from @DisplayName.",
+  note: "Same lookups, no single(). “Exactly one match” is checked when the component is used.",
+  code: `@UnifiedSpringBootTest
+class EditPersonTest {
+
+    @Test
+    @DisplayName("Editing a person in the dialog updates the grid")
+    void editsAPersonInTheDialog(UnifiedPage page) {
+        page.navigate(PeopleView.class);
+        UnifiedGrid people = page.find(UnifiedGrid.class);
+        people.rows().withCellText("Name", "Alan Turing").click();
+
+        UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Edit person");
+        dialog.find(UnifiedTextField.class).withLabel("Name").setValue("Alan M. Turing");
+        dialog.find(UnifiedTextField.class).withLabel("Email").setValue("alan@bletchley.uk");
+        dialog.find(UnifiedComboBox.class).withLabel("Role").selectItem("Admin");
+        dialog.find(UnifiedButton.class).withText("Save").click();
+
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
+        assertThat(dialog).isClosed();
+        assertThat(people.rows().withCellText("Name", "Alan M. Turing"))
+                .hasCellText("Email", "alan@bletchley.uk")
+                .hasCellText("Role", "Admin");
+    }
+}` },
+{ id: "gwt", label: "B + given/when/then", kept: true, file: "b_lazy/ScenariosFull.java · fullGwt", words: 77, plumb: 41, intent: 36,
+  api: "None. A convention the guide recommends.",
+  aloud: "when I change his name, email and role … dialog find unified text field class with label Email set value …", verdict: ["mid", "The sections do; the lines are still B"],
+  report: "No: comments never reach a report. The report is the same flat list as B.",
+  note: "B with three comments. Same words, but the reviewer sees the scenario's shape at a glance.",
+  code: `@UnifiedSpringBootTest
+class EditPersonTest {
+
+    @Test
+    @DisplayName("Editing a person in the dialog updates the grid")
+    void editsAPersonInTheDialog(UnifiedPage page) {
+        // given Alan Turing is listed
+        page.navigate(PeopleView.class);
+        UnifiedGrid people = page.find(UnifiedGrid.class);
+
+        // when I change his name, email and role
+        people.rows().withCellText("Name", "Alan Turing").click();
+        UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Edit person");
+        dialog.find(UnifiedTextField.class).withLabel("Name").setValue("Alan M. Turing");
+        dialog.find(UnifiedTextField.class).withLabel("Email").setValue("alan@bletchley.uk");
+        dialog.find(UnifiedComboBox.class).withLabel("Role").selectItem("Admin");
+        dialog.find(UnifiedButton.class).withText("Save").click();
+
+        // then the grid shows the new details
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
+        assertThat(dialog).isClosed();
+        assertThat(people.rows().withCellText("Name", "Alan M. Turing"))
+                .hasCellText("Email", "alan@bletchley.uk")
+                .hasCellText("Role", "Admin");
+    }
+}` },
+{ id: "steps", label: "B + step(..)", kept: true, file: "b_lazy/ScenariosFull.java · fullSteps", words: 86, plumb: 52, intent: 34,
+  api: "One static method: step(String, Runnable).",
+  aloud: "step: when I change Alan Turing's name, email and role … dialog find unified text field class with label Email …", verdict: ["mid", "The sections do; the lines are still B"],
+  report: "Yes: the sections group the User Steps in every report.",
+  note: "The given/when/then sections become real groups. Costs a lambda per section, and the dialog is looked up again inside the second one.",
+  code: `@UnifiedSpringBootTest
+class EditPersonTest {
+
+    @Test
+    @DisplayName("Editing a person in the dialog updates the grid")
+    void editsAPersonInTheDialog(UnifiedPage page) {
+        page.navigate(PeopleView.class);
+        UnifiedGrid people = page.find(UnifiedGrid.class);
+
+        step("When I change Alan Turing's name, email and role", () -> {
+            people.rows().withCellText("Name", "Alan Turing").click();
+            UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Edit person");
+            dialog.find(UnifiedTextField.class).withLabel("Name").setValue("Alan M. Turing");
+            dialog.find(UnifiedTextField.class).withLabel("Email").setValue("alan@bletchley.uk");
+            dialog.find(UnifiedComboBox.class).withLabel("Role").selectItem("Admin");
+            dialog.find(UnifiedButton.class).withText("Save").click();
+        });
+
+        step("Then the grid shows the new details", () -> {
+            assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
+            assertThat(page.find(UnifiedDialog.class).withHeaderTitle("Edit person")).isClosed();
+            assertThat(people.rows().withCellText("Name", "Alan M. Turing"))
+                    .hasCellText("Email", "alan@bletchley.uk")
+                    .hasCellText("Role", "Admin");
+        });
+    }
+}` },
+{ id: "tasks", label: "B + task methods", kept: true, file: "b_lazy/ScenariosFull.java · fullTasks", words: 27, plumb: 11, intent: 16, extra: "+46 words in the two helpers",
+  api: "None. Plain Java methods in the test class.",
+  aloud: "edit person Alan Turing to Alan M. Turing, alan@bletchley.uk, Admin", verdict: ["yes", "Yes"],
+  report: "Not by itself: the helper's name doesn't reach the report. Wrap its body in step(..) to group it.",
+  note: "The scenario reads as one sentence. The lookups move into a helper the reviewer reads once.",
+  code: `@UnifiedSpringBootTest
+class EditPersonTest {
+
+    @Test
+    @DisplayName("Editing a person in the dialog updates the grid")
+    void editsAPersonInTheDialog(UnifiedPage page) {
+        page.navigate(PeopleView.class);
+
+        editPerson(page, "Alan Turing", "Alan M. Turing", "alan@bletchley.uk", "Admin");
+
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
+        assertThat(personRow(page, "Alan M. Turing"))
+                .hasCellText("Email", "alan@bletchley.uk")
+                .hasCellText("Role", "Admin");
+    }
+
+    private static void editPerson(UnifiedPage page, String name, String newName, String email, String role) {
+        personRow(page, name).click();
+        UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Edit person");
+        dialog.find(UnifiedTextField.class).withLabel("Name").setValue(newName);
+        dialog.find(UnifiedTextField.class).withLabel("Email").setValue(email);
+        dialog.find(UnifiedComboBox.class).withLabel("Role").selectItem(role);
+        dialog.find(UnifiedButton.class).withText("Save").click();
+        assertThat(dialog).isClosed();
+    }
+
+    private static UnifiedGrid.Rows personRow(UnifiedPage page, String name) {
+        return page.find(UnifiedGrid.class).rows().withCellText("Name", name);
+    }
+}` },
+{ id: "c", label: "C · by name", file: "c_named/ScenariosFull.java", words: 70, plumb: 34, intent: 36,
+  api: "B + find(type, name), a marker type and rowWhere(..). Two ways to say “labelled Email”.",
+  aloud: "dialog find unified text field class Email set value alan@bletchley.uk", verdict: ["mid", "Borderline"],
+  report: "Flat list of User Steps, titled from @DisplayName.",
+  note: "Shortest lookups that keep the component type. Breaks “one obvious way” unless withLabel goes.",
+  code: `@UnifiedSpringBootTest
+class EditPersonTest {
+
+    @Test
+    @DisplayName("Editing a person in the dialog updates the grid")
+    void editsAPersonInTheDialog(UnifiedPage page) {
+        page.navigate(PeopleView.class);
+        UnifiedGrid people = page.find(UnifiedGrid.class);
+        people.rowWhere("Name", "Alan Turing").click();
+
+        UnifiedDialog dialog = page.find(UnifiedDialog.class, "Edit person");
+        dialog.find(UnifiedTextField.class, "Name").setValue("Alan M. Turing");
+        dialog.find(UnifiedTextField.class, "Email").setValue("alan@bletchley.uk");
+        dialog.find(UnifiedComboBox.class, "Role").selectItem("Admin");
+        dialog.find(UnifiedButton.class, "Save").click();
+
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
+        assertThat(dialog).isClosed();
+        assertThat(people.rowWhere("Name", "Alan M. Turing"))
+                .hasCellText("Email", "alan@bletchley.uk")
+                .hasCellText("Role", "Admin");
+    }
+}` }
+];
+
+const KW = new Set(["class","void","private","static","return","new","final","String"]);
+const VERBS = new Set(["click","setValue","navigate","selectItem","assertThat"]);
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function highlight(src) {
+  return src.split("\n").map(line => {
+    let seenRole = false, out = "";
+    const re = /(\/\/.*$)|("(?:\\.|[^"\\])*")|(@\w+)|([A-Za-z_]\w*)|(\s+)|([^\sA-Za-z_"@\/]+|\/)/g;
+    let m;
+    const toks = [];
+    while ((m = re.exec(line))) toks.push(m);
+    toks.forEach((t, idx) => {
+      const [all, com, str, ann, id, ws] = t;
+      if (com) { out += `<span class="c">${esc(com)}</span>`; return; }
+      if (str) { out += `<span class="s i">${esc(str)}</span>`; return; }
+      if (ann) { out += `<span class="a">${esc(ann)}</span>`; return; }
+      if (ws) { out += ws; return; }
+      if (id) {
+        let next = "";
+        for (let j = idx + 1; j < toks.length; j++) { if (toks[j][5]) continue; next = toks[j][0]; break; }
+        const nextId = (() => { for (let j = idx + 1; j < toks.length; j++) { if (toks[j][4]) return toks[j][4]; if (toks[j][2]) return ""; } return ""; })();
+        let intent = false;
+        if (VERBS.has(id) && id !== "assertThat") intent = true;
+        else if (/^(is|has|shows)[A-Z]/.test(id)) intent = true;
+        else if (/View$/.test(id) && nextId === "class") intent = true;
+        else if (/^Unified[A-Z]/.test(id) && nextId === "class" && !seenRole && !/Page$/.test(id)) { intent = true; seenRole = true; }
+        else if (id === "editPerson" || id === "step") intent = id === "editPerson";
+        const isKw = KW.has(id) && !(id === "class" && false);
+        const cls = (isKw ? "k " : "") + (intent ? "i" : "p");
+        out += `<span class="${cls}">${esc(id)}</span>`;
+        return;
+      }
+      out += `<span class="p">${esc(all)}</span>`;
+    });
+    return out;
+  }).join("\n");
+}
+
+const tabs = document.getElementById("variantTabs");
+let current = "b";
+try { current = localStorage.getItem("variant") || "b"; } catch (e) {}
+if (!V.find(v => v.id === current)) current = "b";
+V.forEach(v => {
+  const b = document.createElement("button");
+  b.type = "button"; b.role = "tab"; b.id = "tab-" + v.id;
+  b.innerHTML = esc(v.label) + (v.kept ? '<span class="tag kept">kept</span>' : "");
+  b.addEventListener("click", () => select(v.id));
+  tabs.appendChild(b);
+});
+function select(id) {
+  current = id;
+  try { localStorage.setItem("variant", id); } catch (e) {}
+  const v = V.find(x => x.id === id);
+  [...tabs.children].forEach(b => b.setAttribute("aria-selected", b.id === "tab-" + id ? "true" : "false"));
+  document.getElementById("fileName").textContent = v.file;
+  document.getElementById("code").innerHTML = highlight(v.code);
+  document.getElementById("sWords").textContent = v.words;
+  document.getElementById("sPlumb").textContent = v.plumb;
+  const share = Math.round(100 * v.intent / v.words);
+  document.getElementById("sShare").textContent = share + "%";
+  document.getElementById("sBar").style.width = share + "%";
+  document.getElementById("sNote").textContent = v.note + (v.extra ? " (" + v.extra + ".)" : "");
+  document.getElementById("kApi").textContent = v.api;
+  document.getElementById("kAloud").textContent = "“" + v.aloud + "”";
+  document.getElementById("kVerdict").innerHTML = `<span class="verdict ${v.verdict[0]}">${esc(v.verdict[1])}</span>`;
+  document.getElementById("kReport").textContent = v.report;
+  renderTable();
+}
+document.getElementById("dimToggle").addEventListener("change", e => {
+  document.getElementById("code").classList.toggle("dimming", e.target.checked);
+});
+
+function renderTable() {
+  const rows = V.map(v => `<tr class="${v.id === current ? "current" : ""}">
+    <td>${esc(v.label)}${v.kept ? '<span class="tag kept">kept</span>' : ""}</td>
+    <td class="num">${v.words}${v.extra ? "*" : ""}</td><td class="num">${v.plumb}</td><td class="num">${Math.round(100 * v.intent / v.words)}%</td>
+    <td>${esc(v.api)}</td><td><span class="verdict ${v.verdict[0]}">${esc(v.verdict[1])}</span></td></tr>`).join("");
+  document.getElementById("cmpTable").innerHTML = `<thead><tr><th>Style</th><th>Words</th><th>Plumbing</th><th>Intent</th><th>API it costs</th><th>Read aloud</th></tr></thead><tbody>${rows}</tbody>
+  <tfoot><tr><td colspan="6" class="note">* the scenario body only; its two helpers add 46 words that the reviewer reads once per test class. Dropped after the first prototype round: D (specs as values, doubles the API) and E (action verbs, hides the component).</td></tr></tfoot>`;
+}
+
+/* ---------------- reports ---------------- */
+const R = [
+  { id: "console", label: "CI log" },
+  { id: "failure", label: "Failure, for an agent" },
+  { id: "html", label: "Run report" },
+  { id: "pr", label: "PR summary" },
+  { id: "docs", label: "Living documentation" }
+];
+const rtabs = document.getElementById("reportTabs");
+let rcur = "console";
+R.forEach(r => {
+  const b = document.createElement("button");
+  b.type = "button"; b.role = "tab"; b.id = "rtab-" + r.id; b.textContent = r.label;
+  b.addEventListener("click", () => { rcur = r.id; renderReport(); });
+  rtabs.appendChild(b);
+});
+document.getElementById("groupToggle").addEventListener("change", renderReport);
+
+const FLAT = [
+  ["open", "People"],
+  ["click", "row where Name is “Alan Turing” in grid"],
+  ["see", "dialog “Edit person”"],
+  ["fill", "text field “Name” with “Alan M. Turing”"],
+  ["fill", "text field “Email” with “alan@bletchley.uk”"],
+  ["choose", "“Admin” in combo box “Role”"],
+  ["click", "button “Save”"],
+  ["see", "notification “Saved Alan M. Turing”"],
+  ["see", "dialog “Edit person” closed"],
+  ["see", "row where Name is “Alan M. Turing” with Email “alan@bletchley.uk”, Role “Admin”"]
+];
+const TIMES = ["0.42", "0.18", "0.09", "0.11", "—", "—", "—", "—", "—", "—"];
+const FAIL_AT = 4; // the Email step
+function grouped() { return document.getElementById("groupToggle").checked; }
+
+function consoleText() {
+  const g = grouped();
+  let n = 0, out = [];
+  out.push(`<span class="dim">[unified] tool=playwright browser=chromium base-url=http://localhost:51234</span>`);
+  out.push(`<span class="bad">✘</span> <span class="hl">EditPersonTest</span> › Editing a person in the dialog updates the grid   <span class="dim">10.8 s</span>`);
+  const line = (i, pad) => {
+    const [v, what] = FLAT[i];
+    const mark = i < FAIL_AT ? '<span class="ok">✔</span>' : i === FAIL_AT ? '<span class="bad">✘</span>' : '<span class="dim">·</span>';
+    const txt = `${v} ${what}`;
+    return `${pad}${mark} ${i > FAIL_AT ? '<span class="dim">' + esc(txt) + ' (not run)</span>' : esc(txt)}`;
+  };
+  if (g) {
+    out.push(`    ${line(0, "")}`);
+    out.push(`    <span class="grp">When I change Alan Turing's name, email and role</span>`);
+    for (let i = 1; i <= 6; i++) out.push(line(i, "      "));
+    out.push(`    <span class="grp dim">Then the grid shows the new details (not run)</span>`);
+  } else {
+    FLAT.forEach((_, i) => out.push(line(i, "    ")));
+  }
+  return out.join("\n");
+}
+
+function failureText() {
+  const g = grouped();
+  const sugg = {
+    a: 'dialog.find(UnifiedTextField.class).withLabel("E-mail").single()',
+    b: 'dialog.find(UnifiedTextField.class).withLabel("E-mail")',
+    gwt: 'dialog.find(UnifiedTextField.class).withLabel("E-mail")',
+    steps: 'dialog.find(UnifiedTextField.class).withLabel("E-mail")',
+    tasks: 'dialog.find(UnifiedTextField.class).withLabel("E-mail")   (in editPerson)',
+    c: 'dialog.find(UnifiedTextField.class, "E-mail")'
+  }[current];
+  const where = current === "tasks" ? "EditPersonTest.editPerson(EditPersonTest.java:24) ← editsAPersonInTheDialog(EditPersonTest.java:13)"
+    : current === "steps" ? "EditPersonTest.java:16" : current === "gwt" ? "EditPersonTest.java:16" : current === "a" ? "EditPersonTest.java:12" : "EditPersonTest.java:13";
+  return [
+    `<span class="bad">UnifiedAssertionError</span>: Editing a person in the dialog updates the grid`,
+    ``,
+    `  Failed at   User Step 5 of 10: fill text field “Email” with “alan@bletchley.uk”`,
+    g ? `  In step    When I change Alan Turing's name, email and role` : null,
+    `  Searched   text fields labelled “Email” in dialog “Edit person”, for 10 s`,
+    `  Found      none`,
+    `  Nearby     text field “Name”, text field “<span class="hl">E-mail</span>”, combo box “Role”`,
+    `  Did you mean`,
+    `             <span class="hl">${esc(sugg)}</span>`,
+    `  Tool       playwright (chromium)`,
+    `  Code       ${esc(where)}`,
+    `  Evidence   target/surefire-reports/unified-evidence/EditPersonTest/editsAPersonInTheDialog/`,
+    `             screenshot.png  page.html  user-steps.txt`
+  ].filter(l => l !== null).join("\n");
+}
+
+function stepsList() {
+  const g = grouped();
+  const li = (i, cls) => {
+    const st = i < FAIL_AT ? "✔" : i === FAIL_AT ? "✘" : "·";
+    const k = i === FAIL_AT ? "failed" : i > FAIL_AT ? "skipped" : "";
+    const [v, what] = FLAT[i];
+    return `<li class="${cls || ""} ${k}"><span class="n">${st}</span><span>${esc(v)} ${esc(what)}</span><span class="t">${TIMES[i]}${TIMES[i] !== "—" ? " s" : ""}</span></li>`;
+  };
+  let h = "";
+  if (g) {
+    h += li(0);
+    h += `<li class="group"><span class="n">✘</span><span>When I change Alan Turing's name, email and role</span><span class="t"></span></li>`;
+    for (let i = 1; i <= 6; i++) h += li(i, "sub");
+    h += `<li class="group skipped"><span class="n">·</span><span>Then the grid shows the new details</span><span class="t">not run</span></li>`;
+    for (let i = 7; i < FLAT.length; i++) h += li(i, "sub");
+  } else {
+    FLAT.forEach((_, i) => h += li(i));
+  }
+  return h;
+}
+
+function renderReport() {
+  [...rtabs.children].forEach(b => b.setAttribute("aria-selected", b.id === "rtab-" + rcur ? "true" : "false"));
+  const el = document.getElementById("reportView");
+  if (rcur === "console") {
+    el.innerHTML = `<p class="note">Printed by the Unified extension as the test runs, so the CI log reads as a script of the session.</p>
+      <div class="term"><pre>${consoleText()}</pre></div>`;
+  } else if (rcur === "failure") {
+    el.innerHTML = `<p class="note">Plain text with a fixed layout, the same in a CI log and in an agent's conversation. The suggestion follows the style of the selected test above (switch styles to compare).</p>
+      <div class="term"><pre>${failureText()}</pre></div>`;
+  } else if (rcur === "html") {
+    el.innerHTML = `<div class="report">
+      <div class="rhead"><h3>Editing a person in the dialog updates the grid</h3>
+        <span><span class="badge fail">failed</span> <span class="badge">Playwright · chromium</span> <span class="badge">10.8 s</span></span></div>
+      <div class="rbody">
+        <ol class="steps">${stepsList()}</ol>
+        <div class="evidence">
+          <h3>At the failed User Step</h3>
+          <div class="screen" role="img" aria-label="Sketch of the Edit person dialog: Name, E-mail highlighted as the near miss, Role, Cancel and Save buttons">
+            <div class="dlg">
+              <b>Edit person</b>
+              <div class="fld"><label>Name</label><div>Alan M. Turing</div></div>
+              <div class="fld near"><label>E-mail ← near miss for “Email”</label><div>alan@example.com</div></div>
+              <div class="fld"><label>Role</label><div>Viewer ▾</div></div>
+              <div class="btns"><span>Cancel</span><span class="pri">Save</span></div>
+            </div>
+          </div>
+          <p class="note">Screenshot in a browser; on Browserless, the component tree at that moment, drawn the same way. Each User Step can open its own snapshot.</p>
+        </div>
+      </div></div>`;
+  } else if (rcur === "pr") {
+    el.innerHTML = `<p class="note">A Markdown summary for the CI job summary or a PR comment: what the reviewer of an agent's PR reads before the diff.</p>
+      <div class="md">
+        <h4>Unified UI Tests · Playwright · 41 passed, 1 failed</h4>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Scenario</th><th>Result</th><th>User Steps</th></tr></thead>
+          <tbody>
+            <tr><td>Editing a person in the dialog updates the grid</td><td><span class="verdict no">✘ step 5</span></td><td>open People → click row “Alan Turing” → … → fill text field “Email” ✘ (nearby: “E-mail”)</td></tr>
+            <tr><td>Billing and shipping each keep their own City</td><td><span class="verdict yes">✔</span></td><td>open Checkout → fill “City” in billing → fill “City” in shipping → click “Save” → see notification</td></tr>
+            <tr><td>Deleting a person asks for confirmation</td><td><span class="verdict yes">✔</span></td><td>open People → click “Delete” on row “Ada Lovelace” → see dialog “Delete Ada?” → click “Delete” → see row gone</td></tr>
+          </tbody></table></div>
+        <p class="note">New in this PR: 2 scenarios. Changed: 1. Each row links to its run report.</p>
+      </div>`;
+  } else {
+    el.innerHTML = `<p class="note">Generated from passing runs: each view lists what its tests prove, in User Steps. A product owner reads this, never the Java.</p>
+      <div class="docs">
+        <article><h4>People</h4>
+          <p class="note">Editing a person in the dialog updates the grid</p>
+          <ul><li>click row where Name is “Alan Turing”</li><li>fill “Name”, “Email”, choose “Role”</li><li>click “Save”</li><li>see “Saved Alan M. Turing” and the new row</li></ul>
+          <p class="note">Deleting a person asks for confirmation</p>
+        </article>
+        <article><h4>Checkout</h4>
+          <p class="note">Billing and shipping each keep their own City</p>
+          <ul><li>fill “City” in billing with “Turku”</li><li>fill “City” in shipping with “Berlin”</li><li>click “Save”</li><li>see “Billing: Turku, shipping: Berlin”</li></ul>
+        </article>
+        <article><h4>Users</h4>
+          <p class="note">A row far beyond the first page is found by what it shows</p>
+          <p class="note">Cell filters combine</p>
+        </article>
+      </div>`;
+  }
+}
+
+select(current);
+renderReport();
+</script>

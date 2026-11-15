@@ -57,3 +57,18 @@ final class Assertions {
     static ValueAssert assertThat(UnifiedTextField f) { return null; }
     static RowsAssert assertThat(UnifiedGrid.Rows r) { return null; }
 }
+
+interface UnifiedComboBox extends Named {
+    UnifiedComboBox withLabel(String label);
+    void selectItem(String item);
+}
+
+interface UnifiedDialog extends Scope, Named {
+    UnifiedDialog withHeaderTitle(String title);
+}
+
+final class DialogAssertions {
+    private DialogAssertions() {}
+    interface DialogAssert { DialogAssert isClosed(); }
+    static DialogAssert assertThat(UnifiedDialog d) { return null; }
+}
