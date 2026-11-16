@@ -20,7 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch the pull request's base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -34,13 +40,27 @@ jobs:
         with:
           name: surefire-reports-browserless
           path: '**/target/surefire-reports/'
+      # summary.md and every test's User Steps and failure evidence, passed or failed
+      - name: Upload Unified evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-evidence-browserless
+          path: '**/target/surefire-reports/unified-evidence/'
+          if-no-files-found: ignore
 
   playwright:
     name: Playwright (Dramafinder)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch the pull request's base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -62,6 +82,14 @@ jobs:
         with:
           name: surefire-reports-playwright
           path: '**/target/surefire-reports/'
+      # summary.md and every test's User Steps and failure evidence, passed or failed
+      - name: Upload Unified evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-evidence-playwright
+          path: '**/target/surefire-reports/unified-evidence/'
+          if-no-files-found: ignore
 
   selenium:
     name: Selenium (TestBench)
@@ -71,7 +99,13 @@ jobs:
       # TestBench checks its license when it loads (Vaadin Commercial License)
       VAADIN_OFFLINE_KEY: ${{ secrets.VAADIN_OFFLINE_KEY }}
     steps:
+      # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch the pull request's base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -87,3 +121,11 @@ jobs:
         with:
           name: surefire-reports-selenium
           path: '**/target/surefire-reports/'
+      # summary.md and every test's User Steps and failure evidence, passed or failed
+      - name: Upload Unified evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-evidence-selenium
+          path: '**/target/surefire-reports/unified-evidence/'
+          if-no-files-found: ignore
