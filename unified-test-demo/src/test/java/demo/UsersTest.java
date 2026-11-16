@@ -43,6 +43,7 @@ class UsersTest {
 
     // ---------------------------------------------------------------- logged in (browsers: test-only login endpoint)
 
+    // --8<-- [start:adminSeesTheAdminArea]
     @Test
     @WithMockUser(username = "alice", roles = "ADMIN")
     @DisplayName("Alice, an admin, sees the admin area")
@@ -52,6 +53,7 @@ class UsersTest {
         assertThat(page).isAt(AdminView.class);
         assertThat(page.findComponent(H2.class).withText("Admin area of alice")).isVisible();
     }
+    // --8<-- [end:adminSeesTheAdminArea]
 
     @Test
     @WithMockUser(username = "bob", roles = "USER")

@@ -1,0 +1,277 @@
+# Reading reports and failures
+
+Every Wrapper action and every retrying assertion is recorded as a **User Step**, worded the way a user would say it: `fill text field “Name” with “Alan M. Turing”`. `page.step(..)` groups User Steps under a **User Task** ([Structuring a scenario](structuring-a-scenario.md)). Recording is always on, on every Testing Tool, and the same steps reach every output below. Spec: [12. Readable tests, Reports](../spec/12-readable-tests.md#reports) and [Failures](../spec/12-readable-tests.md#failures).
+
+| Output | Where | When | For |
+|---|---|---|---|
+| [The CI log](#the-ci-log) | stdout and the test report | failed tests, by default | whoever reads CI |
+| [`user-steps.txt`, `user-steps.json`](#the-user-steps-of-a-test) | the evidence directory, per test | every test | people, agents and tools |
+| [`summary.md`](#the-run-summary) | the evidence directory, per run | every run | the reviewer |
+| [GitHub job summary](#the-github-job-summary) | the job's summary page | every run in GitHub Actions | the reviewer |
+
+The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
+
+```java
+@Test
+@DisplayName("Changing a person's email updates the grid")
+void changesTheEmail(UnifiedPage page) {
+    // given
+    page.navigate(PeopleView.class);
+
+    // when
+    changeEmail(page, "Alan Turing", "alan@bletchley.uk");
+
+    // then
+    assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan Turing");
+}
+
+private static void changeEmail(UnifiedPage page, String name, String email) {
+    page.step("Change the email of " + name, () -> {
+        page.find(UnifiedGrid.class).row().withCellText("Name", name).click();
+        page.find(UnifiedTextField.class).withLabel("E-mail").setValue(email);
+        page.find(UnifiedButton.class).withText("Save").click();
+    });
+}
+```
+
+## The failure message
+
+Every Unified failure throws `UnifiedAssertionError`, an `AssertionError`, so JUnit reports a failure, not an error. Its message has fixed labels in a fixed order, and leaves out the lines with nothing to say. It reads the same on every Testing Tool:
+
+```
+com.vaadin.testing.unified.UnifiedAssertionError:
+Changing a person's email updates the grid
+  Failed at     User Step 3 of 3: fill text field “E-mail” with “alan@bletchley.uk”
+  In step       Change the email of Alan Turing
+  Expected      exactly one text field labelled “E-mail”
+  Found         none
+  Nearby        text field “Email”, text field “Name”
+  Did you mean  find(UnifiedTextField.class).withLabel("Email")
+  Waited        10 s (vaadin.testing.timeout)
+  Tool          browserless
+  Code          EditEmailTest.java:31 (changeEmail) ← EditEmailTest.java:33 (changeEmail)
+  Evidence      target/surefire-reports/unified-evidence/EditEmailTest/changesTheEmail/
+```
+
+| Line | Says |
+|---|---|
+| first line | the scenario: the test's `@DisplayName`, or its method name |
+| `Failed at` | the User Step that failed, and how many the test recorded |
+| `In step` | the `page.step(..)` names it was in, outermost first |
+| `Expected` | what the lookup or assertion wanted, in words |
+| `Found` | `none`; several matches (`2: …`, each with where it is); `1, but disabled` (or hidden, read-only, covered by an open dialog); or, for an assertion, the values it saw while waiting |
+| `Nearby` | the Near Misses: components the lookup almost matched |
+| `Did you mean` | the lookup you probably meant, when one Near Miss is clearly best |
+| `Waited` | how long, and where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` |
+| `Tool` | the Testing Tool, and its browser |
+| `Code` | where it happened: the line that called the step, then the line inside it |
+| `Evidence` | the test's evidence directory: its User Steps, and the screenshot or component tree |
+
+### Near Misses
+
+When a lookup finds nothing, the failure lists what is there instead, so you can see what the test should have asked for:
+
+- components of the same kind in the same scope, with the property the filter matched on: at most 5, closest first (the same text ignoring case, then containing it, then by spelling);
+- then up to 3 components of another kind with the exact name the test wanted (`combo box “Email”`);
+- hidden components, marked `(hidden)`;
+- when the scope itself is missing (a dialog that isn't open), the Near Misses of the scope.
+
+### Did you mean
+
+`Did you mean` appears only when one Near Miss is clearly what the test meant: it differs only in case, spacing or punctuation; or it is a small edit away with no equal rival; or it has the exact name but is another kind. It is written as the lookup to paste, from `find(..)` on. A dialog whose title the test misspelled:
+
+```
+  Failed at     User Step 3 of 3: click button “Close” in dialog “Export Report”
+  Expected      exactly one dialog with header title “Export Report”
+  Found         none
+  Nearby        dialog “Export report”
+  Did you mean  find(UnifiedDialog.class).withHeaderTitle("Export report")
+```
+
+### Other failures
+
+Two components match where the test meant one. They are told apart by their nearest container with a test id or an id, and there is no suggestion:
+
+```
+  Failed at     User Step 2 of 2: fill text field “City” with “Turku”
+  Expected      exactly one text field labelled “City”
+  Found         2: text field “City” in container (test id “billing”), text field “City” in container (id “shipping”)
+```
+
+An assertion that times out lists the values it saw while it waited:
+
+```
+  Failed at     User Step 4 of 4: see span “Saved Alan M. Turing” (id “status”)
+  Expected      span (id “status”) to have text “Saved Alan M. Turing”
+  Found         “Saving…”, then “Saved Alan Turing”
+```
+
+A component that is there but can't be used:
+
+```
+  Failed at     User Step 2 of 2: click button “Save”
+  Expected      a visible and enabled button with text “Save”
+  Found         1, but disabled
+```
+
+### In code
+
+The parts are getters on `UnifiedAssertionError`, for a test that checks a failure with `assertThrows`: `getSummary()`, `getScenario()`, `getFailedStep()`, `getStepChain()`, `getExpected()`, `getFound()`, `getNearMisses()`, `getSuggestion()`, `getWaited()`, `getTool()`, `getCodePath()`, `getEvidenceDir()`.
+
+## The CI log
+
+A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line and where it happened:
+
+```
+✘ EditEmailTest › Changing a person's email updates the grid   browserless · 11.4 s
+   1  open People
+   2  Change the email of Alan Turing
+      2.1  click row where Name is “Alan Turing” in grid
+      2.2  fill text field “E-mail” with “alan@bletchley.uk”   ✘
+   ✘ UnifiedAssertionError: Expected exactly one text field labelled “E-mail”, found none
+     at EditEmailTest.java:31 (changeEmail) ← EditEmailTest.java:33 (changeEmail)
+```
+
+The same text is attached to the failure, so Surefire's report (`target/surefire-reports/<test class>.txt`) and the IDE show it under the stack trace. Set `vaadin.testing.user-steps.log` to `all` to print the steps of passing tests too, or to `none`.
+
+## The User Steps of a test
+
+Every test that injects a `UnifiedPage` writes two files to `<evidence dir>/<test class>/<test method>/`, passed or failed:
+
+- **`user-steps.txt`**, the text above: for people, and for an agent reading why a test failed.
+- **`user-steps.json`**, the same steps as data (`"schemaVersion": 1`), for tools. Each entry has its verb, component kind, name, filters, scope, values, status, duration and the line of code that called it ([schema](../spec/12-readable-tests.md#user-stepsjson-schema-version-1)). A failed test has a `failure` with the same parts as the message:
+
+```
+"failure": {
+  "type": "com.vaadin.testing.unified.UnifiedAssertionError",
+  "stepIndex": "2.2",
+  "stepNumber": 3,
+  "expected": "exactly one text field labelled “E-mail”",
+  "found": "none",
+  "nearMisses": [ "text field “Email”", "text field “Name”" ],
+  "suggestion": "find(UnifiedTextField.class).withLabel(\"Email\")",
+  …
+}
+```
+
+Next to them, a failed test leaves its failure evidence: a screenshot on Playwright and Selenium, the component tree as text on Browserless (`<test class>.<method>.tree.txt` in the evidence directory). The evidence directory is `target/surefire-reports/unified-evidence` by default, so CI can upload it with the test reports.
+
+### Reading a User Step
+
+`<verb> <component kind> “<name>” [with “<value>”] [in <scope>]`
+
+| Part | Comes from |
+|---|---|
+| verb | the action: *open*, *click*, *fill*, *choose*, *check*, *select*, …; *see* or *see no* for an assertion |
+| component kind | the Wrapper in words: `UnifiedComboBox` → *combo box*. An add-on Wrapper can name its own ([Wrappers for your own components](custom-wrappers.md#its-words-in-the-reports)) |
+| name | the main filter: label, text or accessible name. Other filters follow in brackets: `(test id “billing”)` |
+| value | what was typed, chosen or expected. Password fields and `page.secret(..)` values show as `••••`; values over 80 characters are cut with `…` |
+| scope | the container: `in dialog “Edit person”`, `in grid` |
+
+What the recorder can't see is never left out silently. Escape Hatch calls, `page.waitUntil(..)` and a `where(..)` written in the test show as one gap line, such as `… 1 call outside the Unified API (waitUntil)`.
+
+## The run summary
+
+When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the run's scenarios in the words of the reports, for the reviewer of a pull request. In order:
+
+1. a header with the Testing Tool and the counts;
+2. **Changed in this PR**: the scenarios that call code changed against the base branch, with their User Steps unfolded, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. Left out when the run has no base to compare against;
+3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory;
+4. **Passing scenarios**: one line each, User Steps folded.
+
+The demo's run, with the base set to the commit before `UserStepsTest` was added (shortened):
+
+````markdown
+### Unified UI Tests · Browserless · 2 passed, 1 failed, 0 skipped
+
+#### Changed in this PR
+
+3 scenarios call code changed since `5951757~1`.
+
+**✘ Changing a person's email updates the grid (EditEmailTest)** · new
+
+```text
+1  open People
+2  Change the email of Alan Turing
+   2.1  click row where Name is “Alan Turing” in grid
+   2.2  fill text field “E-mail” with “alan@bletchley.uk”   ✘
+```
+
+**✔ The user picks a person in the grid, renames them and saves (EditPersonUnifiedTest)** · changed
+
+```text
+1  open People
+2  click row where Name is “Alan Turing” in grid
+3  fill text field “Name” with “Alan M. Turing”
+4  click button “Save”
+5  see notification “Saved Alan M. Turing”
+6  see row where Name is “Alan M. Turing” with Email “alan@example.com” in grid
+```
+
+**✔ Editing a person in nested steps updates the grid (UserStepsTest)** · new
+
+…
+
+#### Failed scenarios
+
+**✘ Changing a person's email updates the grid (EditEmailTest)**
+
+- Failed at: User Step 3: `fill text field “E-mail” with “alan@bletchley.uk”`
+- Error: `UnifiedAssertionError: Expected exactly one text field labelled “E-mail”, found none`
+- Nearby: text field “Email”, text field “Name”
+- Did you mean: `find(UnifiedTextField.class).withLabel("Email")`
+- Evidence: `target/surefire-reports/unified-evidence/EditEmailTest/changesTheEmail/`
+
+#### Passing scenarios
+
+<details><summary>✔ The user picks a person in the grid, renames them and saves (EditPersonUnifiedTest)</summary>
+…
+</details>
+````
+
+A scenario is *changed* when any of its User Steps or User Tasks is called from a file changed against the base: `git diff` from the merge base of the base ref and `HEAD`, plus uncommitted and untracked files. It is *new* when its test class's file was added, or when its test method wasn't in that file at the base. Without git, or with a base ref git doesn't know, the section is left out and one line is logged.
+
+Skipped scenarios (disabled, aborted, or lacking a Capability) count in the header only.
+
+## The GitHub job summary
+
+In GitHub Actions (`GITHUB_STEP_SUMMARY` is set), `summary.md` is also appended to the job's summary page, so the reviewer reads it on the pull request's checks without downloading anything. In a pull request (`GITHUB_BASE_REF` is set) the base is `origin/<base branch>`, so the checkout needs that branch and its history:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0                 # history, to find the merge base
+- name: Fetch the pull request's base branch
+  if: github.event_name == 'pull_request'
+  run: git fetch --no-tags origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+```
+
+To keep every test's User Steps and failure evidence, upload the evidence directory as an artifact, also when the build passes:
+
+```yaml
+- name: Upload Unified evidence
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: unified-evidence
+    path: '**/target/surefire-reports/unified-evidence/'
+    if-no-files-found: ignore
+```
+
+## Settings
+
+JUnit configuration parameters (`junit-platform.properties`) or system properties:
+
+| Setting | Default |
+|---|---|
+| `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
+| `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
+| `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
+| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
+| `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits, the `Waited` of a failure |
+
+To see the summary for your branch before you push:
+
+```
+mvn test -Dvaadin.testing.user-steps.changed-since=origin/main
+```

@@ -14,12 +14,7 @@ On another Testing Tool, a test with `@RequiresBrowser` or `@RequiresTestingTool
 ## A real browser
 
 ```java
-@Test
-@RequiresBrowser
-void needsARealBrowser(UnifiedPage page) {
-    page.navigate(ProfileView.class);
-    assertThat(page.find(UnifiedButton.class).withText("Save").single()).hasCssValue("cursor", "pointer");
-}
+--8<-- "unified-test-demo/src/test/java/demo/ProfileViewTest.java:needsARealBrowser"
 ```
 
 An optional browser-only step:
@@ -30,9 +25,9 @@ An optional browser-only step:
 
 ## The Escape Hatch
 
-`unwrap(Type.class)` gives the Testing Tool's own object behind a wrapper or a page:
+`unwrap(Type.class)` gives the Testing Tool's own object behind a Wrapper or a page:
 
-| Testing Tool | From a wrapper | From `UnifiedPage` |
+| Testing Tool | From a Wrapper | From `UnifiedPage` |
 |---|---|---|
 | Browserless | the Flow `Component` (e.g. `TextField`), its tester | `BrowserlessUIContext` |
 | Playwright | Dramafinder element (e.g. `TextFieldElement`), `Locator` | `Page` |
@@ -53,7 +48,18 @@ An extra check where it can be made, while the test runs everywhere:
 Without the annotation, `unwrap(..)` on a tool that doesn't have the type fails with a message naming `@RequiresTestingTool`.
 
 !!! warning
-    Inside the Escape Hatch, the Unified API guarantees stop: no Auto-Wait, no lazy lookup, no retrying assertions. Go back to wrappers and `assertThat` as soon as you can.
+    Inside the Escape Hatch, the Unified API guarantees stop: no Auto-Wait, no lazy lookup, no retrying assertions, no User Steps. Go back to Wrappers and `assertThat` as soon as you can.
+
+The reports can't see what runs inside the Escape Hatch, so they show a gap line where the test used it, instead of User Steps:
+
+```
+   2  fill text field “Name” with “Bob”
+   … 1 call outside the Unified API (Escape Hatch)
+```
+
+## Declaring the Capability
+
+`@RequiresTestingTool` is what makes the test skip, not fail, on the other Testing Tools. The opt-in style rule `TOOL_CODE_NEEDS_CAPABILITY` checks that every test reaching a Testing Tool's own code, directly or through a helper in its class, declares it; `tryUnwrap(..)` needs no annotation ([Checking the style](style-rules.md)).
 
 ## Migrated TestBench tests
 
