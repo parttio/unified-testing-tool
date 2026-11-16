@@ -29,13 +29,32 @@ final class PlaywrightElement implements UnifiedElement {
     private final GenericElement generic;
     private final PlaywrightComponents.Support support;
 
+    /** The query's candidates this element is the {@link #index}-th of, or null: one read covers them all. */
+    private final Locator candidates;
+    private final int index;
+
     PlaywrightElement(PlaywrightSession session, Locator locator, VaadinElement dramafinder,
             PlaywrightComponents.Support support) {
+        this(session, locator, dramafinder, support, null, -1);
+    }
+
+    PlaywrightElement(PlaywrightSession session, Locator locator, VaadinElement dramafinder,
+            PlaywrightComponents.Support support, Locator candidates, int index) {
         this.session = session;
         this.locator = locator;
         this.dramafinder = dramafinder;
         this.generic = new GenericElement(locator);
         this.support = support;
+        this.candidates = candidates;
+        this.index = index;
+    }
+
+    Locator candidates() {
+        return candidates;
+    }
+
+    int index() {
+        return index;
     }
 
     /**
@@ -81,6 +100,12 @@ final class PlaywrightElement implements UnifiedElement {
     public String getInlineStyle(String name) {
         // parttio/dramafinder#271
         return (String) locator.evaluate(BrowserQueries.INLINE_STYLE, BrowserQueries.cssName(name));
+    }
+
+    /** The same script as the {@code withAccessibleName(..)} filter. Dramafinder has no read of it yet. */
+    @Override
+    public String getAccessibleName() {
+        return (String) locator.evaluate(BrowserQueries.ACCESSIBLE_NAME);
     }
 
     @Override

@@ -113,10 +113,44 @@ final class PlaywrightSession implements AdapterSession {
         for (int i : indices) {
             Locator locator = candidates.nth(i);
             if (support.include(locator)) {
-                result.add(new PlaywrightElement(this, locator, null, support));
+                result.add(new PlaywrightElement(this, locator, null, support, candidates, i));
             }
         }
         return result;
+    }
+
+    /**
+     * One round trip per query's candidates: elements found together are read by their index in one
+     * {@code evaluateAll}; any other element is read on its own.
+     */
+    @Override
+    public List<com.vaadin.testing.unified.spi.ElementFacts> facts(List<UnifiedElement> elements) {
+        com.vaadin.testing.unified.spi.ElementFacts[] facts = new com.vaadin.testing.unified.spi.ElementFacts[elements.size()];
+        java.util.Map<Locator, List<Integer>> groups = new java.util.IdentityHashMap<>();
+        for (int i = 0; i < elements.size(); i++) {
+            if (elements.get(i) instanceof PlaywrightElement e && e.candidates() != null) {
+                groups.computeIfAbsent(e.candidates(), k -> new ArrayList<>()).add(i);
+            } else if (elements.get(i) instanceof PlaywrightElement e) {
+                facts[i] = BrowserQueries.facts(e.locator().evaluate(BrowserQueries.FACTS));
+            } else {
+                facts[i] = com.vaadin.testing.unified.spi.ElementFacts.read(elements.get(i));
+            }
+        }
+        groups.forEach((candidates, positions) -> {
+            List<Integer> indices = positions.stream().map(p -> ((PlaywrightElement) elements.get(p)).index()).toList();
+            List<?> read = (List<?>) candidates.evaluateAll(
+                    "(els, idx) => idx.map(i => els[i] ? (" + BrowserQueries.FACTS + ")(els[i]) : null)", indices);
+            for (int j = 0; j < positions.size(); j++) {
+                Object one = j < read.size() ? read.get(j) : null;
+                facts[positions.get(j)] = one == null ? null : BrowserQueries.facts(one);
+            }
+        });
+        return java.util.Arrays.asList(facts);
+    }
+
+    @Override
+    public String browserName() {
+        return context.browser() == null ? null : context.browser().browserType().name();
     }
 
     private List<UnifiedElement> findWithDramafinder(PlaywrightComponents.Support support, Locator scope,
@@ -159,7 +193,7 @@ final class PlaywrightSession implements AdapterSession {
         for (int i = 0; i < found.size(); i++) {
             VaadinElement e = found.get(i);
             if (Boolean.TRUE.equals(app.get(i)) && support.include(e.getLocator())) {
-                result.add(new PlaywrightElement(this, e.getLocator(), e, support));
+                result.add(new PlaywrightElement(this, e.getLocator(), e, support, candidates, i));
             }
         }
         return result;

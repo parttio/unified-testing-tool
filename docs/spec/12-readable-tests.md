@@ -171,6 +171,9 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `message` | string, optional | its message, secrets masked |
 | `stepIndex`, `stepNumber` | string, number, optional | the User Step that threw it; left out when the test failed outside any User Step (a plain JUnit assertion) |
 | `codePath` | array of call sites | where it happened, outermost first: the call site of each `page.step(..)` it passed through, then the failed User Step's (or the first line of the failure's stack trace outside the Unified API) |
+| `expected`, `found` | string, optional | a `UnifiedAssertionError`'s `Expected` and `Found` lines (see [Failures](#failures)) |
+| `nearMisses` | array of strings, optional | its Near Misses, closest first: `text field “E-mail”`, `dialog “Help” (hidden)`; left out when there are none |
+| `suggestion` | string, optional | its `Did you mean`: `find(UnifiedTextField.class).withLabel("E-mail")` |
 
 **Entries** (`type` tells them apart)
 
@@ -231,6 +234,11 @@ UnifiedAssertionError: Editing a person in the dialog updates the grid
   - not usable (`Found 1, but disabled`, or hidden, read-only, covered by an open dialog).
 
   The message is the same on every Testing Tool.
+- **When the parts are known.** Expected, Found, Nearby, Did you mean, Waited and Tool are known when the failure is thrown. The failed User Step, the step chain and Code are added when its User Step ends; the scenario and the evidence directory are known from the start of the test. `m` in `User Step n of m` is the number of User Steps the test recorded, read when the message is: after the test, all of them. `getMessage()` renders the message from its parts each time it is read, so the Test Runner, which reads it after the test, reports it whole. A test that catches the failure (`assertThrows`) reads it as it is then.
+- **Without a scenario** (outside a Unified UI Test), the first line is the summary, `Expected …, found …`. The User Step lists, the `error` of a step in `user-steps.json` and the run summary also show the summary, since the scenario is their heading.
+- **Waited** names where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` for a Wrapper's own.
+- **Items a component lacks** (`selectItem`, `selectTab`) fail the same way, with the component's items as Near Misses (`item “Finland”`) and a suggestion such as `selectItem("France")`.
+- **Several matches** are told apart by their nearest ancestor with a test id or an id: `in container (test id “billing”)`.
 - **`UnifiedElement.getAccessibleName()`** reads the accessible name (4. Locating's order), for Near Misses and for tests.
 
 ## Style rules

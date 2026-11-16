@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.internal;
 import com.vaadin.testing.unified.RequiresBrowser;
 import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
@@ -134,6 +135,17 @@ public final class TestLifecycle {
      * {@code steps} (shared by every page the test is given).
      */
     public OpenTest open(AdapterContext context, StepRecorder steps) {
+        return open(context, steps, null);
+    }
+
+    /**
+     * {@link #open(AdapterContext, StepRecorder)} for a known test: its failures name its scenario and evidence
+     * directory from the start.
+     */
+    public OpenTest open(AdapterContext context, StepRecorder steps, TestId test) {
+        if (test != null) {
+            steps.describeTest(test.displayName(), evidenceDirName(test));
+        }
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
         return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)));
@@ -200,6 +212,11 @@ public final class TestLifecycle {
                 : failure.getClass().getName().equals("org.opentest4j.TestAbortedException") ? "aborted" : "failed";
         UserStepsReport report = new UserStepsReport(test.className(), test.methodName(), test.displayName(),
                 settings.tool().name().toLowerCase(Locale.ROOT), status, failure, steps);
+        if (failure instanceof UnifiedAssertionError unified) {
+            // a failure outside any User Step (or before the test was named) gets the rest here, before it is shown
+            steps.describeTest(test.displayName(), evidenceDirName(test));
+            steps.completeFailure(unified, report.codePath());
+        }
         String text = report.text();
         Path directory = testEvidenceDir(test);
         String written;
@@ -230,6 +247,11 @@ public final class TestLifecycle {
         String classDir = className.substring(className.lastIndexOf('.') + 1);
         String methodDir = test.methodName() + (test.invocation() == null ? "" : "[" + test.invocation() + "]");
         return settings.evidenceDir().resolve(classDir).resolve(methodDir);
+    }
+
+    /** The test's evidence directory as a failure shows it: {@code target/…/EditPersonTest/editsAPerson/}. */
+    private String evidenceDirName(TestId test) {
+        return testEvidenceDir(test).toString().replace('\\', '/') + "/";
     }
 
     /** The evidence files as the report shows them: absolute paths, comma-separated. */

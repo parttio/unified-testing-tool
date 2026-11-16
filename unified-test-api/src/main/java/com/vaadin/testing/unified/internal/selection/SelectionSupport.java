@@ -4,6 +4,8 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.LazyElement;
 import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.spi.SelectionAccess;
+import com.vaadin.testing.unified.internal.failures.ItemFailures;
+import com.vaadin.testing.unified.internal.steps.StepTarget;
 import java.util.List;
 
 /** Selection field behaviour shared by the selection wrappers: Auto-Wait, then verify the result. */
@@ -20,8 +22,8 @@ public final class SelectionSupport {
             SelectionAccess access = e.unwrap(SelectionAccess.class);
             List<String> items = access.items();
             if (!items.contains(label)) {
-                throw new IllegalArgumentException("No item \"" + label + "\" in " + element.describe()
-                        + "; items: " + items);
+                throw ItemFailures.missing(element.run(), "item", label, StepTarget.of(element).renderWithScope(),
+                        items, "selectItem");
             }
             access.select(label);
             if (!access.selectedItems().contains(label)) {

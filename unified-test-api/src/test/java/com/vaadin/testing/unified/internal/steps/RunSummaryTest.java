@@ -62,6 +62,10 @@ class RunSummaryTest {
               "failure": {
                 "type": "com.vaadin.testing.unified.UnifiedAssertionError",
                 "message": "A guest pays by card\\n  Failed at     User Step 2 of 2",
+                "expected": "exactly one button with text “Pay now”",
+                "found": "none",
+                "nearMisses": ["button “Pay_now”", "button “Cancel”"],
+                "suggestion": "find(UnifiedButton.class).withText(\\\"Pay_now\\\")",
                 "stepIndex": "1.2",
                 "stepNumber": 2,
                 "codePath": [
@@ -119,7 +123,9 @@ class RunSummaryTest {
                 **✘ A guest pays by card (CheckoutTest.AsGuest)**
 
                 - Failed at: User Step 2: ``click button “Pay `now`”``
-                - Error: `UnifiedAssertionError: A guest pays by card`
+                - Error: `UnifiedAssertionError: Expected exactly one button with text “Pay now”, found none`
+                - Nearby: button “Pay\\_now”, button “Cancel”
+                - Did you mean: `find(UnifiedButton.class).withText("Pay_now")`
                 - Evidence: `target/surefire-reports/unified-evidence/CheckoutTest$AsGuest/paysByCard/`
 
                 **✘ totals (OrderTest)**

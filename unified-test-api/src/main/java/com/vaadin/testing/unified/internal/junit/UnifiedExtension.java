@@ -50,7 +50,8 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
         // one recorder per test, even when it is given more than one page
         StepRecorder steps = context.getStore(NAMESPACE).computeIfAbsent(STEPS, key -> new StepRecorder(),
                 StepRecorder.class);
-        TestLifecycle.OpenTest test = lifecycle.open(new JUnitAdapterContext(context, lifecycle.settings()), steps);
+        TestLifecycle.OpenTest test = lifecycle.open(new JUnitAdapterContext(context, lifecycle.settings()), steps,
+                context.getTestMethod().isPresent() && context.getTestClass().isPresent() ? testId(context) : null);
         context.getStore(NAMESPACE).put(OPEN_TEST, test);
         return test.page();
     }

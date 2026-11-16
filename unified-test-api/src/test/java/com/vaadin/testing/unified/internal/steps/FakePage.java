@@ -80,7 +80,8 @@ final class FakePage {
     private UnifiedElement element(Map<String, String> component) {
         return (UnifiedElement) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { UnifiedElement.class }, (proxy, method, args) -> switch (method.getName()) {
-                    case "isVisible", "isEnabled" -> true;
+                    case "isVisible" -> !"false".equals(component.get("visible"));
+                    case "isEnabled" -> !"false".equals(component.get("enabled"));
                     case "getText" -> component.getOrDefault("text", "");
                     case "getTag" -> component.get("tag");
                     case "getProperty", "getAttribute" -> component.get((String) args[0]);

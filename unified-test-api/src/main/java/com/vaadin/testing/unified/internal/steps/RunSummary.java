@@ -96,9 +96,18 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
         md.append("- Evidence: ").append(code(s.evidencePath())).append('\n');
     }
 
-    /** Near Misses of the failed lookup: not in {@code user-steps.json} yet (#238). */
+    /** The failed lookup's Near Misses and the suggestion, from the {@code failure} object. */
     private void nearMisses(StringBuilder md, ScenarioResult s) {
-        // #238 adds the Near Misses to the failure and renders them here, as "- Near Misses: …"
+        Map<String, Object> failure = s.failure() == null ? Map.of() : s.failure();
+        List<String> nearMisses = failure.get("nearMisses") instanceof List<?> list
+                ? list.stream().filter(String.class::isInstance).map(String.class::cast).toList() : List.of();
+        if (!nearMisses.isEmpty()) {
+            md.append("- Nearby: ").append(markdown(String.join(", ", nearMisses))).append('\n');
+        }
+        String suggestion = ScenarioResult.string(failure, "suggestion");
+        if (suggestion != null) {
+            md.append("- Did you mean: ").append(code(suggestion)).append('\n');
+        }
     }
 
     /** {@code  (EditPersonTest.java:13)}: the last call site of the failure's code path, if any. */
@@ -116,10 +125,18 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
         return ", " + code(at);
     }
 
-    /** {@code AssertionError: first line of the message}. */
+    /**
+     * {@code AssertionError: first line of the message}; for a Unified failure, {@code UnifiedAssertionError:
+     * Expected …, found …} (the first line of its message is the scenario, already the heading).
+     */
     private static String error(Map<String, Object> failure) {
         String type = Optional.ofNullable(ScenarioResult.string(failure, "type")).orElse("failure");
         String simple = type.substring(type.lastIndexOf('.') + 1);
+        String expected = ScenarioResult.string(failure, "expected");
+        if (expected != null) {
+            String found = ScenarioResult.string(failure, "found");
+            return simple + ": Expected " + expected + (found == null ? "" : ", found " + found);
+        }
         String message = ScenarioResult.string(failure, "message");
         String first = message == null ? "" : message.lines().map(String::strip).filter(l -> !l.isEmpty())
                 .findFirst().orElse("");
