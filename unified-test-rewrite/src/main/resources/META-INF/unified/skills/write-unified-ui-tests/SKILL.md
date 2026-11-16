@@ -80,12 +80,15 @@ class EditPersonTest {
 | by what the user can't see | `withTestId(..)`, `withId(..)`: only when no visible name tells it apart |
 | inside a container or dialog | `dialog.find(UnifiedTextField.class).withLabel("Email")`, `page.find(UnifiedContainer.class).withTestId("billing").find(..)` |
 | a component without a Wrapper | `page.findComponent(MyComponent.class)` |
+| a key press | `page.pressKey("Enter")`, sent to the focused component |
 | a grid row | `grid.row().withCellText("Name", "Alan Turing")`; `grid.row(0)` by index; cell components: `row.cell("Actions").find(UnifiedButton.class)` |
 | a check | `assertThat(wrapper).hasText(..)`, `.hasValue(..)`, `.isOpen()`, `.isDisabled()`, `assertThat(row).hasCellText(..)`, `assertThat(page).isAt(View.class)` |
 | present, absent, how many | `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on grid rows |
+| a condition no assertion states | `page.waitUntil(() -> ..)`: a last resort, it shows as a gap in the reports |
 | every match, to act on each | `for (UnifiedButton b : page.find(UnifiedButton.class).withText("Done").all()) { .. }` |
 
-`assertThat` is `import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;`. Its assertions
+Wrappers are the `Unified*` interfaces in `com.vaadin.testing.unified.component`; `assertThat` is
+`import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;`. Its assertions
 retry until the timeout, so a check waits for the server's answer by itself. Check what the user sees with these
 assertions; a plain JUnit `assertEquals` on a Wrapper's getter reads once, without waiting, and shows in the reports
 as a gap. Use `all()` only to loop. When a lookup matches several components, add the filter that names the one

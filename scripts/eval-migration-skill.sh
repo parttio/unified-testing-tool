@@ -50,6 +50,9 @@ echo "Fixtures: $(ls "$out/before" | tr '\n' ' ')"
 # the skill, where Claude Code finds it; the repository's own .claude settings stay as they are
 mkdir -p "$work/.claude/skills/resolve-migration-markers"
 cp "$skill" "$work/.claude/skills/resolve-migration-markers/SKILL.md"
+# the skill it defers to for the shape of Unified code
+mkdir -p "$work/.claude/skills/write-unified-ui-tests"
+cp "$(dirname "$skill")/../write-unified-ui-tests/SKILL.md" "$work/.claude/skills/write-unified-ui-tests/SKILL.md"
 
 echo "Building the worktree..."
 (cd "$work" && mvn -B -q -ntp install -DskipTests) >"$out/build.log" 2>&1

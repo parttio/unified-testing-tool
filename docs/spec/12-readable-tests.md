@@ -274,7 +274,13 @@ The skill covers:
 - reading a failure;
 - when the Escape Hatch is acceptable.
 
-A second `skill-eval` suite scores it: prose scenarios in, tests out, judged on compiling, passing on two Testing Tools, the style rules, intent share and no Escape Hatch. `resolve-migration-markers` defers to it for style.
+How the recipe decides:
+
+- **Stamp.** The shipped skill carries `<!-- unified-test-skill: write-unified-ui-tests <version> -->`, the release it came with (Maven resource filtering). A copy with an older version is replaced; one with the same or a newer version is left as it is; one without the line counts as hand-edited, is kept, and gets an OpenRewrite warning (`Markup.Warn`) naming how to take the shipped one.
+- **`AGENTS.md`.** The pointer is a section between `<!-- unified-test: write-unified-ui-tests -->` and `<!-- /unified-test -->`, added at the end or replaced where it is; the file is created when missing.
+- **Where.** It writes only at a project's root: one with a build file (`pom.xml`, Gradle), an `AGENTS.md` or the skill, and Java sources.
+
+A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `scripts/eval-writing-skill.sh`) scores it: prose scenarios in, tests out, judged on compiling, passing on two Testing Tools, the style rules, intent share and no Escape Hatch. `resolve-migration-markers` defers to it for style.
 
 ## Moving to this chapter
 
