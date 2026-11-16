@@ -89,6 +89,7 @@ public class MigrateDramafinderToUnified extends Recipe {
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
         }
+        list.add(new AddUnifiedTestingSkill()); // the skill for writing Unified UI Tests, on every migration
         return list;
     }
 

@@ -92,6 +92,7 @@ public class MigrateTestBenchToUnified extends Recipe {
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
         }
+        list.add(new AddUnifiedTestingSkill()); // the skill for writing Unified UI Tests, on every migration
         if (Boolean.TRUE.equals(includePageObjects)) {
             list.add(1, new TestBenchPageObjectsToUnified()); // before the test code, which then passes page for this
         }

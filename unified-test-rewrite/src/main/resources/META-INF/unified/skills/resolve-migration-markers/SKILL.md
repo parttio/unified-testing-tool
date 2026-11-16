@@ -24,11 +24,9 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
 
 ## Reference: the Unified API
 
-- A test gets a `UnifiedPage page`. `page.navigate(View.class)`, `page.find(UnifiedX.class).withLabel(..)`, `page.findComponent(Component.class)` for any component without a Wrapper, `page.pressKey("Enter")`.
-- `page.find(UnifiedX.class)` returns the Wrapper itself: filters (`withLabel`, `withText`, `withTestId`, ...) are its methods and each returns a new Wrapper, so `page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice")`. There is no `single()`: every action, read and assertion finds the component again and waits for exactly one match. `all()` is only for looping over matches.
-- Grid rows: `grid.row().withCellText("Name", "Alan Turing").click()` for the row showing that text, `grid.row(i)` by index.
-- Wrappers are `Unified*` interfaces in `com.vaadin.testing.unified.component` (`UnifiedTextField`, `UnifiedButton`, `UnifiedGrid`, `UnifiedDialog`, ...). Read their methods in the `unified-test-api` sources before writing a call.
-- Assertions retry: `import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;`, then `assertThat(wrapper).hasText(..)`, `hasValue(..)`, `isOpen()`, `isDisabled()`, ...; `assertThat(page).hasPath(..)` / `isAt(View.class)`. Counts and absence are assertions too: `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on a grid row (`assertThat(grid.row().withCellText(..)).hasCount(2)`). `page.waitUntil(() -> ...)` for anything else.
+Write the Unified code the way the `write-unified-ui-tests` skill (`.claude/skills/write-unified-ui-tests/SKILL.md`)
+says: its canonical forms for lookups, grid rows and retrying assertions, and how to read a failure. Read it before
+the first marker. Read a Wrapper's methods in the `unified-test-api` sources before writing a call.
 
 ## Reference: the Escape Hatches
 
