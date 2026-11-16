@@ -47,6 +47,11 @@ public interface UnifiedDetails extends UnifiedWrapper, Scope, CommonFilters<Uni
             public String describe() {
                 return details.describe() + ".content()";
             }
+
+            @Override
+            public com.vaadin.testing.unified.internal.steps.StepTarget userTarget() {
+                return com.vaadin.testing.unified.internal.steps.StepTarget.of(details);
+            }
         }, -1, details.run()));
     }
 }

@@ -1,17 +1,32 @@
 package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import java.time.Duration;
 import java.util.function.Supplier;
 
-/** One running test: its Testing Tool, adapter session and timeout. */
-public record TestRun(TestingTool tool, AdapterSession session, Duration timeout) {
+/**
+ * One running test: its Testing Tool, adapter session and timeout, and the recorder of its User Steps, shared by
+ * all its windows. {@code window} names the window the steps run in: null for the test's first window.
+ */
+public record TestRun(TestingTool tool, AdapterSession session, Duration timeout, StepRecorder steps,
+        String window) {
 
     private static final long POLL_MILLIS = 50;
 
+    /** A run of its own, with a fresh recorder: for tests of the Unified API itself. */
+    public TestRun(TestingTool tool, AdapterSession session, Duration timeout) {
+        this(tool, session, timeout, new StepRecorder(), null);
+    }
+
     public TestRun withTimeout(Duration newTimeout) {
-        return new TestRun(tool, session, newTimeout);
+        return new TestRun(tool, session, newTimeout, steps, window);
+    }
+
+    /** Another window of the same test, recording into the same User Steps. */
+    public TestRun inWindow(AdapterSession windowSession, String windowName) {
+        return new TestRun(tool, windowSession, timeout, steps, windowName);
     }
 
     /**

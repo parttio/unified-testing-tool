@@ -24,6 +24,13 @@ public @interface UnifiedComponent {
      */
     String selector() default "";
 
+    /**
+     * The component kind in the User Step reports, e.g. {@code "star rating"}. Empty: the Wrapper's name in
+     * words, without the {@code Unified} prefix ({@code UnifiedComboBox} → "combo box"). For the verbs, see
+     * {@link UserStepVerb}.
+     */
+    String kind() default "";
+
     /** Per-Testing-Tool implementations, for what the Unified Element can't express. */
     ToolImplementation[] overrides() default {};
 }

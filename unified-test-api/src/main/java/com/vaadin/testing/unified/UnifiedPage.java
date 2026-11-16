@@ -35,6 +35,34 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
      */
     boolean hasRealBrowser();
 
+    // reports
+    /**
+     * A named piece of user work, a User Task: the User Steps {@code userSteps} performs show under this name
+     * in the reports. Steps nest without limit. On a failure inside, the report points first at the line that
+     * called this step, then at the line inside it. Works across {@link #openWindow()} and
+     * {@link #openAsUser}: every window records into the test's one list of User Steps.
+     *
+     * <pre>{@code
+     * page.step("Edit " + name, () -> {
+     *     page.find(UnifiedGrid.class).row().withCellText("Name", name).click();
+     *     page.find(UnifiedTextField.class).withLabel("Name").setValue(newName);
+     * });
+     * }</pre>
+     *
+     * Name steps after what the user does ("Edit Alan Turing"), not given/when/then.
+     */
+    void step(String name, Runnable userSteps);
+
+    /**
+     * Marks a value as secret and returns it unchanged: the User Step reports show it as {@code ••••} wherever
+     * it appears, in every window of the test. Values typed into a password field are hidden without it.
+     *
+     * <pre>{@code
+     * page.find(UnifiedTextField.class).withLabel("API key").setValue(page.secret(apiKey));
+     * }</pre>
+     */
+    String secret(String value);
+
     // windows and users: all close at the end of the test
     /** Another window of the same user, in the same session. */
     UnifiedPage openWindow();

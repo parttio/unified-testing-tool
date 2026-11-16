@@ -8,6 +8,7 @@ import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
+import com.vaadin.testing.unified.internal.steps.Phrases;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
@@ -32,6 +33,9 @@ public final class Wrappers {
     private Wrappers() {}
 
     /** The filter mixins: their abstract methods are implemented here, by name. */
+    /** The gap reason for a test's own {@code where(..)} condition. */
+    static final String WHERE = "where(..) condition";
+
     private static final Set<Class<?>> FILTER_MIXINS = Set.of(CommonFilters.class, LabelFilter.class,
             TextFilter.class, PlaceholderFilter.class);
 
@@ -56,8 +60,8 @@ public final class Wrappers {
         String tag = requireTag(annotation.value(), annotation.tag(), wrapperType.getSimpleName());
         List<Filter> filters = annotation.selector().isBlank() ? List.of()
                 : WrapperSelector.filters(annotation.selector(), wrapperType.getName());
-        ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), annotation.value(), tag,
-                filters, List.of(), List.of(), parent);
+        ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), wrapperType, annotation.value(),
+                tag, filters, filters.size(), List.of(), List.of(), parent);
         return wrapperType.cast(newWrapper(wrapperType, new LazyElement(source, -1, run)));
     }
 
@@ -65,8 +69,8 @@ public final class Wrappers {
     public static UnifiedGenericComponent newComponent(TestRun run, Class<? extends Component> componentType,
             LazyElement parent) {
         String name = "findComponent(" + componentType.getSimpleName() + ")";
-        ElementSource source = new ElementSource(run, name, componentType,
-                requireTag(componentType, "", name), List.of(), List.of(), List.of(), parent);
+        ElementSource source = new ElementSource(run, name, null, componentType,
+                requireTag(componentType, "", name), List.of(), 0, List.of(), List.of(), parent);
         return (UnifiedGenericComponent) newWrapper(UnifiedGenericComponent.class, new LazyElement(source, -1, run));
     }
 
@@ -171,17 +175,45 @@ public final class Wrappers {
                     break;
             }
             if (method.isDefault()) {
-                try {
-                    return InvocationHandler.invokeDefault(proxy, method, args);
-                } catch (InvocationTargetException e) {
-                    throw e.getCause();
-                }
+                TestRun run = element.run();
+                boolean voidAction = method.getReturnType() == void.class && !Phrases.isGetterName(method.getName());
+                Object result = run.steps().wrapperCall(
+                        () -> Phrases.forWrapperCall(wrapperType, element, method, args),
+                        () -> Phrases.read(element), voidAction, run.window(), () -> {
+                            try {
+                                return InvocationHandler.invokeDefault(proxy, method, args);
+                            } catch (InvocationTargetException e) {
+                                throw e.getCause();
+                            }
+                        });
+                return named(method, args, result);
             }
             if (FILTER_MIXINS.contains(method.getDeclaringClass())) {
                 return filter(method, args);
             }
             throw new UnsupportedOperationException(wrapperType.getSimpleName() + "." + method.getName()
                     + " has no default implementation (the wrapper must implement it on element())");
+        }
+
+        /**
+         * A custom filter, i.e. a default method returning a Wrapper with one {@code where(..)} more, reads in
+         * failures and reports as itself: {@code withHeaderTitle("Edit person")}, not {@code where(..)}.
+         */
+        private Object named(Method method, Object[] args, Object result) {
+            if (result == null || !Proxy.isProxyClass(result.getClass())
+                    || !(Proxy.getInvocationHandler(result) instanceof WrapperHandler next)
+                    || !(element.source() instanceof ElementSource mine)
+                    || !(next.element.source() instanceof ElementSource theirs)
+                    || theirs.coreFilterNames().size() != mine.coreFilterNames().size() + 1
+                    || !theirs.coreFilterNames().get(theirs.coreFilterNames().size() - 1).isOpaque()) {
+                return result;
+            }
+            List<String> values = Phrases.values(args);
+            String display = method.getName() + "(" + String.join(", ", values.stream()
+                    .map(v -> "\"" + v + "\"").toList()) + ")";
+            ElementSource renamed = theirs.withLastCoreFilterNamed(
+                    new ElementSource.FilterLabel(display, method.getName(), values));
+            return newWrapper(next.wrapperType, next.element.withSource(renamed));
         }
 
         private ElementSource lookup(String method) {
@@ -221,13 +253,17 @@ public final class Wrappers {
                     String property = (String) args[0];
                     Object expected = args[1];
                     yield source.with(e -> Objects.equals(String.valueOf(expected), e.getProperty(property)),
-                            "withProperty(\"" + property + "\", " + expected + ")");
+                            new ElementSource.FilterLabel("withProperty(\"" + property + "\", " + expected + ")",
+                                    "withProperty", List.of(property, String.valueOf(expected))));
                 }
-                case "visible" -> source.with(UnifiedElement::isVisible, "visible()");
+                case "visible" -> source.with(UnifiedElement::isVisible,
+                        new ElementSource.FilterLabel("visible()", "visible", List.of()));
                 case "where" -> {
                     @SuppressWarnings("unchecked")
                     Predicate<UnifiedElement> condition = (Predicate<UnifiedElement>) args[0];
-                    yield source.with(condition, "where(..)");
+                    // called by the test itself, not by a custom filter: a condition the reports can't read
+                    element.run().steps().gap(WHERE, element.run().window());
+                    yield source.with(condition, ElementSource.FilterLabel.opaque());
                 }
                 default -> throw new UnsupportedOperationException(
                         wrapperType.getSimpleName() + "." + name + " is not implemented");

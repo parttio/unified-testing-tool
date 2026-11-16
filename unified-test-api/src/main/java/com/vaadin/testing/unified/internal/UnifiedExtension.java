@@ -14,6 +14,11 @@ import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
+import com.vaadin.testing.unified.internal.steps.UserStepsReport;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
@@ -24,12 +29,14 @@ import org.junit.platform.commons.support.AnnotationSupport;
 
 /**
  * JUnit 6 extension behind {@code @UnifiedUITest}: picks the run's Testing Tool adapter, skips tests whose
- * Capabilities it lacks, injects {@link UnifiedPage} and closes the session after each test.
+ * Capabilities it lacks, injects {@link UnifiedPage}, and after each test reports its User Steps and closes
+ * the session.
  */
 public final class UnifiedExtension implements ExecutionCondition, ParameterResolver, AfterEachCallback {
 
     private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace.create(UnifiedExtension.class);
     private static final String SESSION = "session";
+    private static final String STEPS = "user-steps";
 
     // ---------------------------------------------------------------- Capabilities
 
@@ -74,20 +81,88 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
         TestingToolAdapter adapter = adapterFor(tool);
         AdapterSession session = adapter.open(new JUnitAdapterContext(context, settings));
         context.getStore(NAMESPACE).put(SESSION, session);
-        return new UnifiedPageImpl(new TestRun(tool, session, timeout));
+        StepRecorder steps = context.getStore(NAMESPACE).computeIfAbsent(STEPS, key -> new StepRecorder(),
+                StepRecorder.class);
+        return new UnifiedPageImpl(new TestRun(tool, session, timeout, steps, null));
     }
 
     @Override
     public void afterEach(ExtensionContext context) {
         AdapterSession session = context.getStore(NAMESPACE).remove(SESSION, AdapterSession.class);
-        if (session == null) {
-            return;
-        }
+        StepRecorder steps = context.getStore(NAMESPACE).remove(STEPS, StepRecorder.class);
         try {
-            context.getExecutionException().ifPresent(failure -> writeEvidence(context, session, failure));
+            if (steps != null) {
+                reportUserSteps(context, steps);
+            }
+            if (session != null) {
+                context.getExecutionException().ifPresent(failure -> writeEvidence(context, session, failure));
+            }
         } finally {
-            session.close();
+            if (session != null) {
+                session.close();
+            }
         }
+    }
+
+    // ---------------------------------------------------------------- User Steps
+
+    /**
+     * Writes {@code user-steps.txt} and {@code user-steps.json} into the test's evidence directory, prints the
+     * text to stdout (the CI log) as {@code vaadin.testing.user-steps.log} says, and adds it to a failure.
+     * Problems while writing never hide the test's own failure, nor fail a passing test.
+     */
+    private static void reportUserSteps(ExtensionContext context, StepRecorder steps) {
+        steps.finish();
+        Settings settings = settings(context);
+        Throwable failure = context.getExecutionException().orElse(null);
+        String status = failure == null ? "passed"
+                : failure.getClass().getName().equals("org.opentest4j.TestAbortedException") ? "aborted" : "failed";
+        UserStepsReport report = new UserStepsReport(context.getRequiredTestClass().getName(),
+                context.getRequiredTestMethod().getName(), displayName(context),
+                settings.tool().name().toLowerCase(Locale.ROOT), status, failure, steps);
+        String text = report.text();
+        Path directory = testEvidenceDir(context, settings);
+        String written;
+        try {
+            report.write(directory);
+            written = directory.toAbsolutePath().toString();
+        } catch (Exception | LinkageError e) {
+            written = "not written: " + e;
+            System.err.println("User Steps could not be written to " + directory + ": " + e);
+        }
+        Settings.UserStepsLog log = settings.userStepsLog();
+        if (log == Settings.UserStepsLog.ALL || (log == Settings.UserStepsLog.FAILED && status.equals("failed"))) {
+            System.out.print(text);
+            System.out.flush();
+        }
+        if (failure != null && status.equals("failed")) {
+            failure.addSuppressed(new FailureEvidence("User Steps (" + written + "):\n" + text));
+        }
+    }
+
+    /**
+     * {@code <evidence-dir>/<test class>/<test method>/}: the class without its package (nested classes keep
+     * their {@code $}), and {@code [n]} after the method for the n-th invocation of a parameterized or repeated
+     * test.
+     */
+    static Path testEvidenceDir(ExtensionContext context, Settings settings) {
+        String className = context.getRequiredTestClass().getName();
+        String classDir = className.substring(className.lastIndexOf('.') + 1);
+        String methodDir = context.getRequiredTestMethod().getName();
+        Matcher invocation = INVOCATION.matcher(context.getUniqueId());
+        if (invocation.find()) {
+            methodDir += "[" + invocation.group(1) + "]";
+        }
+        return settings.evidenceDir().resolve(classDir).resolve(methodDir);
+    }
+
+    private static final Pattern INVOCATION = Pattern.compile("-invocation:#(\\d+)\\]$");
+
+    /** {@code @DisplayName}, or the method's name when JUnit's default ({@code name(UnifiedPage)}) is used. */
+    private static String displayName(ExtensionContext context) {
+        String name = context.getDisplayName();
+        String method = context.getRequiredTestMethod().getName();
+        return name.startsWith(method + "(") && name.endsWith(")") ? method : name;
     }
 
     /**
@@ -108,7 +183,7 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
         }
     }
 
-    /** Carries the evidence file names on a failed test; no stack trace of its own. */
+    /** Carries the evidence file names, or the User Steps, on a failed test; no stack trace of its own. */
     static final class FailureEvidence extends RuntimeException {
         FailureEvidence(String message) {
             super(message, null, false, false);
