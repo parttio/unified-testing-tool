@@ -6,6 +6,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Hidden components: queries include them on every Testing Tool; visible() leaves them out. */
@@ -14,6 +15,7 @@ class ApprovalTest {
 
     // --8<-- [start:aHiddenButtonIsStillFoundButNotVisible]
     @Test
+    @DisplayName("After approving, the Approve button is hidden but still on the page")
     void aHiddenButtonIsStillFoundButNotVisible(UnifiedPage page) {
         page.navigate(ApprovalView.class);
         UnifiedButton approve = page.find(UnifiedButton.class).withText("Approve");

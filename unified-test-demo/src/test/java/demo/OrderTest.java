@@ -15,6 +15,7 @@ import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Selection fields; written once, runs on Browserless and Playwright. */
@@ -23,6 +24,7 @@ class OrderTest {
 
     // --8<-- [start:selectsByVisibleLabel]
     @Test
+    @DisplayName("The user orders a large pizza with olives and cheese to Germany")
     void selectsByVisibleLabel(UnifiedPage page) {
         page.navigate(OrderView.class);
         UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country");
@@ -44,12 +46,14 @@ class OrderTest {
 
     /** One group on the page: found without a filter, on every Testing Tool (#133). */
     @Test
+    @DisplayName("The only size choice on the page starts at Medium")
     void findsTheOnlyRadioButtonGroupWithoutFilter(UnifiedPage page) {
         page.navigate(OrderView.class);
         assertThat(page.find(UnifiedRadioButtonGroup.class)).hasSelectedItem("Medium");
     }
 
     @Test
+    @DisplayName("A new order has the SPRING coupon and a medium size, and nothing else chosen")
     void readsInitialSelection(UnifiedPage page) {
         page.navigate(OrderView.class);
 
@@ -61,6 +65,7 @@ class OrderTest {
     }
 
     @Test
+    @DisplayName("The order form offers three countries, three sizes and four toppings")
     void listsItems(UnifiedPage page) {
         page.navigate(OrderView.class);
 
@@ -75,6 +80,7 @@ class OrderTest {
     /** Every item, not only the first page the drop-down loads. */
     @Test
     @RequiresTestingTool({ TestingTool.BROWSERLESS, TestingTool.PLAYWRIGHT }) // Selenium: first page only (#127)
+    @DisplayName("The airport list offers all 120 airports, not only the first ones loaded")
     void listsEveryItemOfALazyComboBox(UnifiedPage page) {
         page.navigate(OrderView.class);
 
@@ -86,6 +92,7 @@ class OrderTest {
     }
 
     @Test
+    @DisplayName("The user removes toppings, clears the coupon and the country, and orders")
     void deselectsAndClears(UnifiedPage page) {
         page.navigate(OrderView.class);
         UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings");
@@ -108,6 +115,7 @@ class OrderTest {
     }
 
     @Test
+    @DisplayName("Choosing a country that isn't offered fails, listing the countries there are")
     void unknownItemFailsWithTheAvailableItems(UnifiedPage page) {
         page.navigate(OrderView.class);
         UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country");

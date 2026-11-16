@@ -7,12 +7,14 @@ import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @UnifiedSpringBootTest
 class DashboardTest {
 
     @Test
+    @DisplayName("The dashboard shows two metric cards, twelve trips on one")
     void findsCardsByTheirWrapper(UnifiedPage page) {
         page.navigate(DashboardView.class);
 
@@ -22,6 +24,7 @@ class DashboardTest {
 
     /** No tag: a browser can't find it, so no Testing Tool accepts the query. */
     @Test
+    @DisplayName("Searching for a component class without a tag is refused")
     void refusesAQueryWithoutTag(UnifiedPage page) {
         page.navigate(DashboardView.class);
 

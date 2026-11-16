@@ -9,6 +9,7 @@ import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Keyboard, DOM events and reload; written once, runs on Browserless (simulated) and Playwright. */
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 class KeyboardTest {
 
     @Test
+    @DisplayName("Pressing Enter in the Search field starts a search")
     void enterInAFieldTriggersItsKeyListener(UnifiedPage page) {
         page.navigate(KeyboardView.class);
         UnifiedTextField search = page.find(UnifiedTextField.class).withLabel("Search");
@@ -27,6 +29,7 @@ class KeyboardTest {
     }
 
     @Test
+    @DisplayName("Pressing Enter in the Comment field sends the comment")
     void enterInAFormClicksItsShortcutButton(UnifiedPage page) {
         page.navigate(KeyboardView.class);
         UnifiedTextField comment = page.find(UnifiedTextField.class).withLabel("Comment");
@@ -38,6 +41,7 @@ class KeyboardTest {
     }
 
     @Test
+    @DisplayName("Pressing Ctrl+S saves")
     void shortcutWithModifier(UnifiedPage page) {
         page.navigate(KeyboardView.class);
 
@@ -48,6 +52,7 @@ class KeyboardTest {
 
     // --8<-- [start:escapeOnThePageClosesTheDialog]
     @Test
+    @DisplayName("Pressing Escape closes the open dialog")
     void escapeOnThePageClosesTheDialog(UnifiedPage page) {
         page.navigate(KeyboardView.class);
         page.find(UnifiedButton.class).withText("Open dialog").click();
@@ -61,6 +66,7 @@ class KeyboardTest {
     // --8<-- [end:escapeOnThePageClosesTheDialog]
 
     @Test
+    @DisplayName("Dropping an item on the drop zone is acknowledged")
     void dispatchesACustomDomEvent(UnifiedPage page) {
         page.navigate(KeyboardView.class);
 
@@ -70,6 +76,7 @@ class KeyboardTest {
     }
 
     @Test
+    @DisplayName("Reloading the page loses an unsaved draft")
     void reloadCreatesTheViewAgain(UnifiedPage page) {
         page.navigate(DraftView.class);
         page.find(UnifiedTextField.class).withLabel("Draft").setValue("unsaved");
@@ -81,6 +88,7 @@ class KeyboardTest {
     }
 
     @Test
+    @DisplayName("Reloading the page keeps the draft of a preserved view")
     void reloadKeepsAPreservedView(UnifiedPage page) {
         page.navigate(PreservedDraftView.class);
         page.find(UnifiedTextField.class).withLabel("Draft").setValue("kept");
