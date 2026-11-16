@@ -4,7 +4,6 @@ import com.vaadin.testing.unified.RequiresBrowser;
 import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
-import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
 import java.lang.reflect.AnnotatedElement;
@@ -36,7 +35,7 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
 
     @Override
     public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
-        TestingTool tool = Settings.tool(context);
+        TestingTool tool = settings(context).tool();
         Optional<AnnotatedElement> element = context.getElement();
         if (element.isEmpty()) {
             return ConditionEvaluationResult.enabled("no element");
@@ -69,14 +68,11 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
 
     @Override
     public Object resolveParameter(ParameterContext parameter, ExtensionContext context) {
-        TestingTool tool = Settings.tool(context);
-        Duration timeout = Settings.timeout(context);
+        Settings settings = settings(context);
+        TestingTool tool = settings.tool();
+        Duration timeout = settings.timeout();
         TestingToolAdapter adapter = adapterFor(tool);
-        AdapterSession session = adapter.open(new AdapterContext() {
-            @Override public ExtensionContext extensionContext() { return context; }
-            @Override public Optional<String> configuration(String key) { return Settings.get(context, key); }
-            @Override public Duration timeout() { return timeout; }
-        });
+        AdapterSession session = adapter.open(new JUnitAdapterContext(context, settings));
         context.getStore(NAMESPACE).put(SESSION, session);
         return new UnifiedPageImpl(new TestRun(tool, session, timeout));
     }
@@ -101,7 +97,7 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
     private static void writeEvidence(ExtensionContext context, AdapterSession session, Throwable failure) {
         String name = context.getRequiredTestClass().getName() + "." + context.getRequiredTestMethod().getName();
         try {
-            List<Path> files = session.writeFailureEvidence(Settings.evidenceDir(context), name);
+            List<Path> files = session.writeFailureEvidence(settings(context).evidenceDir(), name);
             if (!files.isEmpty()) {
                 String list = files.stream().map(p -> p.toAbsolutePath().toString()).collect(Collectors.joining(", "));
                 failure.addSuppressed(new FailureEvidence("Failure evidence: " + list));
@@ -117,6 +113,11 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
         FailureEvidence(String message) {
             super(message, null, false, false);
         }
+    }
+
+    /** The JUnit integration's settings: JUnit configuration parameters, which fall back to system properties. */
+    private static Settings settings(ExtensionContext context) {
+        return Settings.from(context::getConfigurationParameter);
     }
 
     private static TestingToolAdapter adapterFor(TestingTool tool) {

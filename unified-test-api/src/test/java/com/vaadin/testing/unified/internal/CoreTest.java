@@ -12,7 +12,9 @@ import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.query.ComponentQuery;
 import com.vaadin.testing.unified.query.Query;
 import com.vaadin.testing.unified.spi.Filter;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class CoreTest {
@@ -24,6 +26,32 @@ class CoreTest {
         assertEquals(Duration.ofMillis(500), Settings.parseDuration("500ms"));
         assertEquals(Duration.ofMinutes(1), Settings.parseDuration("1m"));
         assertThrows(IllegalArgumentException.class, () -> Settings.parseDuration("soon"));
+    }
+
+    @Test
+    void readsSettingsFromAConfigurationSource() {
+        Settings settings = Settings.from(ConfigurationSource.of(Map.of(
+                Settings.TOOL, " Playwright ", Settings.TIMEOUT, "500ms", Settings.EVIDENCE_DIR, "build/evidence")));
+        assertEquals(TestingTool.PLAYWRIGHT, settings.tool());
+        assertEquals(Duration.ofMillis(500), settings.timeout());
+        assertEquals(Path.of("build/evidence"), settings.evidenceDir());
+    }
+
+    @Test
+    void treatsBlankSettingsAsUnset() {
+        Settings settings = Settings.from(ConfigurationSource.of(Map.of(
+                Settings.TOOL, " ", Settings.TIMEOUT, "", Settings.BASE_URL, "  ")));
+        assertEquals(TestingTool.BROWSERLESS, settings.tool());
+        assertEquals(Duration.ofSeconds(10), settings.timeout());
+        assertEquals(Path.of("target/surefire-reports/unified-evidence"), settings.evidenceDir());
+        assertTrue(settings.get(Settings.BASE_URL).isEmpty());
+    }
+
+    @Test
+    void rejectsAnInvalidTimeoutSetting() {
+        Settings settings = Settings.from(ConfigurationSource.of(Map.of(Settings.TIMEOUT, "soon")));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, settings::timeout);
+        assertTrue(e.getMessage().contains(Settings.TIMEOUT), e.getMessage());
     }
 
     @Test
