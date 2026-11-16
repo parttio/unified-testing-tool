@@ -18,11 +18,12 @@ Write a Vaadin Flow UI test **once**, run it on **any** of three Testing Tools, 
 @UnifiedSpringBootTest
 class ProfileViewTest {
     @Test
+    @DisplayName("The user changes their name and saves")
     void savesName(UnifiedPage page) {
         page.navigate(ProfileView.class);
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
-        page.find(UnifiedButton.class).withText("Save").single().click();
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alice");
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+        page.find(UnifiedButton.class).withText("Save").click();
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alice");
     }
 }
 ```
@@ -82,7 +83,7 @@ Java 21, JUnit 6 (Jupiter) as the Test Runner integration shipped, Vaadin 25, Sp
 | 9 | [09-capabilities.md](09-capabilities.md) | Capabilities and limitations per Testing Tool |
 | 10 | [10-packaging.md](10-packaging.md) | Modules, artifacts, versioning, licenses |
 | 11 | [11-users.md](11-users.md) | Running as a user, several windows and users |
-| 12 | [12-readable-tests.md](12-readable-tests.md) | Readable tests: lookups without `single()`, User Tasks, User Step reports, failures, style rules, the agent skill |
+| 12 | [12-readable-tests.md](12-readable-tests.md) | Readable tests: lookups without a terminal, User Tasks, User Step reports, failures, style rules, the agent skill |
 | A | [appendix-mapping.md](appendix-mapping.md) | Unified API call → each Testing Tool |
 | B | [appendix-gaps.md](appendix-gaps.md) | Gaps to close in the Testing Tools |
 | C | [open-questions.md](open-questions.md) | What is not decided yet |

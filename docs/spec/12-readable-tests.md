@@ -280,16 +280,9 @@ A second `skill-eval` suite scores it: prose scenarios in, tests out, judged on 
 
 A clean break, since the API is alpha: no deprecation release and no Upgrade Recipe. The release that implements ADR 0007 also moves the Migration Recipes and their golden pairs, the demo tests, the custom Wrappers, `resolve-migration-markers`, the guide and chapters 4–9. The Migration Recipes' `first()` rule is amended in [ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md).
 
-### Earlier chapters this amends
+### Earlier chapters
 
-| Chapter | Change |
-|---|---|
-| [4. Locating](04-locating.md) | query shape, terminals, `exists()` and `all()` as in [Lookups](#lookups) |
-| [5. Waiting](05-waiting.md) | counts and absence as retrying assertions; failures as in [Failures](#failures) |
-| [6. Wrappers](06-wrappers.md) | Wrappers declare filter mixins instead of `Findable<Q>` and a nested query; `getAccessibleName()` on the Unified Element |
-| [7. Grid](07-grid.md) | `row()` replaces `rows()`/`RowQuery`; row and column actions get Auto-Wait |
-| [8. Escape Hatch](08-escape-hatch.md) | Escape Hatch calls show as gap lines in reports; the style rule on `@RequiresTestingTool` |
-| [9. Capabilities](09-capabilities.md) | the same style rule |
+[4. Locating](04-locating.md), [5. Waiting](05-waiting.md), [6. Wrappers](06-wrappers.md), [7. Grid](07-grid.md), [8. Escape Hatch](08-escape-hatch.md) and [9. Capabilities](09-capabilities.md) follow this chapter: lookups without a terminal, counts and absence as retrying assertions, filter mixins, `row()`, failures as in [Failures](#failures), gap lines and the style rule for Escape Hatch calls.
 
 ## Settings
 

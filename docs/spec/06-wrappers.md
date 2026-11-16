@@ -1,6 +1,6 @@
 # 6. Wrappers
 
-Decided in [#6](https://github.com/jcgueriaud1/unified-testing-tool/issues/6) (Core Set), [#12](https://github.com/jcgueriaud1/unified-testing-tool/issues/12) (wrapper shape) and [#18](https://github.com/jcgueriaud1/unified-testing-tool/issues/18) (custom and add-on wrappers); see [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md) and [ADR 0003](../adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md).
+Decided in [#6](https://github.com/jcgueriaud1/unified-testing-tool/issues/6) (Core Set), [#12](https://github.com/jcgueriaud1/unified-testing-tool/issues/12) (wrapper shape) and [#18](https://github.com/jcgueriaud1/unified-testing-tool/issues/18) (custom and add-on wrappers) and #199 (filters on the Wrapper); see [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md), [ADR 0003](../adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md).
 
 ## Core Set
 
@@ -46,23 +46,21 @@ flowchart TD
     E --> S[Selenium: DOM]
 ```
 
-A wrapper is an **interface with default methods** over `element()`. The Unified API implements it at runtime. Authors write no implementation class.
+A wrapper is an **interface with default methods** over `element()`. The Unified API implements it at runtime. Authors write no implementation class. A Wrapper carries its own filters: it lists the filter mixins it accepts, with itself as the type parameter, and the Unified API implements them too.
 
 ```java
 @UnifiedComponent(TextField.class)
-public interface UnifiedTextField extends UnifiedWrapper, Findable<UnifiedTextField.TextFieldQuery> {
-
-    interface TextFieldQuery extends Query<UnifiedTextField, TextFieldQuery>,
-            LabelFilter<TextFieldQuery>, PlaceholderFilter<TextFieldQuery> {}
+public interface UnifiedTextField extends UnifiedField,
+        CommonFilters<UnifiedTextField>, LabelFilter<UnifiedTextField>, PlaceholderFilter<UnifiedTextField> {
 
     default void setValue(String value) { element().setValueAsUser(value); }          // action, Auto-Wait
     default String getValue() { return element().getProperty("value"); }             // getter, immediate
-    default boolean isInvalid() { return Boolean.TRUE.equals(element().getPropertyBoolean("invalid")); }
 }
 ```
 
 | Part | Rule |
 |---|---|
+| Filters | Mixins in `com.vaadin.testing.unified.query`: `CommonFilters<W>` (every Wrapper: accessible name, test id, id, `visible()`, `where(..)`, `all()`, …), `LabelFilter<W>`, `TextFilter<W>`, `PlaceholderFilter<W>`. Each filter returns a new Wrapper of type `W` and leaves the one it was called on unchanged. Type-specific filters are default methods built from `where(..)` or `withProperty(..)` ([Custom filters](#custom-filters)). |
 | Actions | Auto-Wait (`setValue`, `clear`, `click`, …) |
 | Getters | Immediate, no retry |
 | Assertions | Static `assertThat(wrapper)` in `UnifiedAssertions`, retrying |
@@ -75,7 +73,7 @@ The portable layer every wrapper is written on:
 
 | Group | Operations |
 |---|---|
-| Read | `getTag`, `getText`, `getProperty…`, `getAttribute`, `getInlineStyle`, `isVisible`, `isEnabled`, `getVisibleText` and `getCssValue` (browser only) |
+| Read | `getTag`, `getText`, `getAccessibleName`, `getProperty…`, `getAttribute`, `getInlineStyle`, `isVisible`, `isEnabled`, `getVisibleText` and `getCssValue` (browser only) |
 | Write | `setProperty` |
 | User actions (Auto-Wait) | `click`, `setValueAsUser`, `focus`, `blur`, `pressKey`, `dispatchEvent` |
 | Structure | `findChildren(tag)`, `children()`, `findDescendants(tag)` |
@@ -84,6 +82,7 @@ The portable layer every wrapper is written on:
 |---|---|
 | `getText()` | the DOM text (`textContent`), whitespace collapsed and trimmed. CSS doesn't change it: `text-transform`, hidden descendants and line breaks between flex items don't count. Browserless reads the same text from the server-side elements. |
 | `getVisibleText()` | the text as rendered (`innerText`); browser only |
+| `getAccessibleName()` | what a screen reader announces, in [4. Locating](04-locating.md#filters)'s order: what `withAccessibleName(..)` matches. Read for Near Misses and by tests |
 | `getInlineStyle(name)` | the value the inline style declares, as written (`var(--gap)`), or null |
 | `findChildren(tag)` | direct light-DOM children with this tag (`*`: any), in order; text nodes don't count; never a web component's shadow DOM. `children()` is `findChildren("*")`. |
 | `findDescendants(tag)` | every light-DOM element below, in document order. Web components add light DOM of their own in a browser (a text field's input and label), which Browserless doesn't have. |
@@ -101,7 +100,8 @@ A component built from a common one (`MetricCard extends VerticalLayout`) has th
 
 ```java
 @UnifiedComponent(value = MetricCard.class, selector = ".metric-card")
-public interface UnifiedMetricCard extends UnifiedWrapper, Findable<MetricCardQuery> { … }
+public interface UnifiedMetricCard extends UnifiedWrapper, CommonFilters<UnifiedMetricCard>,
+        TextFilter<UnifiedMetricCard> { … }
 ```
 
 `selector` is a compound CSS selector of `.class`, `#id`, `[attribute="value"]` and `[theme~="value"]`, without spaces. Wrapper interfaces must be public, and so must the classes they are nested in.
@@ -113,7 +113,7 @@ When the Unified Element is not enough (canvas, overlays, content written by cli
 ```java
 @UnifiedComponent(value = Badge.class,
         overrides = @ToolImplementation(tool = TestingTool.BROWSERLESS, value = UnifiedBadgeBrowserless.class))
-public interface UnifiedBadge extends UnifiedWrapper, Findable<BadgeQuery> {
+public interface UnifiedBadge extends UnifiedWrapper, CommonFilters<UnifiedBadge> {
     default int getCount() { return Integer.parseInt(element().getText().split(" ")[0]); }  // "3 new"
 }
 
@@ -133,13 +133,27 @@ Implemented; demo: `demo.addon` (component) and `demo.addon.testing` (wrappers, 
 
 ### Custom filters
 
-Default methods on the query, built from `withProperty`, `withAttribute` or `where(Predicate<UnifiedElement>)`:
+Default methods on the Wrapper, returning the Wrapper, built from `withProperty`, `withAttribute` or `where(Predicate<UnifiedElement>)`:
 
 ```java
-interface RatingQuery extends Query<UnifiedRating, RatingQuery>, LabelFilter<RatingQuery> {
-    default RatingQuery withRating(int value) { return withProperty("value", value); }
+@UnifiedComponent(Rating.class)
+public interface UnifiedRating extends UnifiedWrapper, CommonFilters<UnifiedRating>, LabelFilter<UnifiedRating> {
+    default UnifiedRating withValue(int stars) {
+        return where(e -> Integer.valueOf(stars).equals(e.getPropertyInteger("value")));
+    }
 }
 ```
+
+A custom filter reads as itself in User Steps and failures (`dialog with header title “Edit person”`, `Did you mean find(UnifiedDialog.class).withHeaderTitle("Edit person")`), not as `where(..)`. A `where(..)` the test calls directly is opaque: it shows as a gap line in the reports ([12. Readable tests](12-readable-tests.md#user-steps)).
+
+### In the reports
+
+Every action of an add-on Wrapper is a User Step ([12. Readable tests](12-readable-tests.md#user-steps)). Its wording comes from the Wrapper:
+
+| Part | Default | Override |
+|---|---|---|
+| Component kind | the Wrapper's name in words, without `Unified` (`UnifiedRating` → “rating”) | `@UnifiedComponent(value = Rating.class, kind = "star rating")` |
+| Verb | the core verb table (`click`, `setValue` → “fill”, …), else the method name in words (`setRating(4)` → `set rating rating “Food” with “4”`) | `@UserStepVerb("rate")` on the method: `rate star rating “Food” with “4”`; `{value}` places the arguments: `@UserStepVerb("give {value} stars to")` reads `give “4” stars to star rating “Food”` |
 
 ### Three ways to test an add-on
 
@@ -154,5 +168,6 @@ The Core Set is built with this same mechanism, with overrides where needed.
 ## Requirements on Testing Tool adapters
 
 - Implement every Unified Element operation with the same meaning.
-- Implement wrapper and query interfaces at runtime (`InvocationHandler.invokeDefault`) and honour `@ToolImplementation` overrides.
+- Implement Wrapper interfaces and their filter mixins at runtime (`InvocationHandler.invokeDefault`) and honour `@ToolImplementation` overrides.
+- Expose the accessible name through the Unified Element (`getAccessibleName()`).
 - Read the tag from `@Tag` unless `@UnifiedComponent.tag` is set.
