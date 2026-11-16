@@ -30,8 +30,8 @@ class ProfileDramafinderMigratedTest {
         // TODO unified: Dramafinder Escape Hatch: playwright.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save")).click()
         playwright.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save")).click();
 
-        // TODO unified: was getByText(..), a substring and first match; single() fails when several components match
-        assertThat(page.find(UnifiedNotification.class).withTextContaining("Saved Alice").single()).isOpen();
+        // TODO unified: was getByText(..), a substring and first match; the lookup fails when several components match
+        assertThat(page.find(UnifiedNotification.class).withTextContaining("Saved Alice")).isOpen();
     }
 
     @Test

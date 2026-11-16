@@ -1,7 +1,6 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
@@ -19,15 +18,15 @@ class CheckoutTest {
     @Test
     void picksTheFieldThroughItsContainer(UnifiedPage page) {
         page.navigate(CheckoutView.class);
-        UnifiedContainer billing = page.find(UnifiedContainer.class).withTestId("billing").single();
-        UnifiedContainer shipping = page.find(UnifiedContainer.class).withId("shipping").single();
+        UnifiedContainer billing = page.find(UnifiedContainer.class).withTestId("billing");
+        UnifiedContainer shipping = page.find(UnifiedContainer.class).withId("shipping");
 
-        billing.find(UnifiedTextField.class).withLabel("City").single().setValue("Turku");
-        shipping.find(UnifiedTextField.class).withLabel("City").single().setValue("Berlin");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        billing.find(UnifiedTextField.class).withLabel("City").setValue("Turku");
+        shipping.find(UnifiedTextField.class).withLabel("City").setValue("Berlin");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Billing: Turku, shipping: Berlin");
-        assertThat(billing.find(UnifiedTextField.class).withLabel("City").single()).hasValue("Turku");
+        assertThat(page.find(UnifiedNotification.class)).hasText("Billing: Turku, shipping: Berlin");
+        assertThat(billing.find(UnifiedTextField.class).withLabel("City")).hasValue("Turku");
     }
     // --8<-- [end:picksTheFieldThroughItsContainer]
 
@@ -35,9 +34,9 @@ class CheckoutTest {
     void sameLabelOutsideAContainerIsAmbiguous(UnifiedPage page) {
         page.navigate(CheckoutView.class);
 
-        assertEquals(2, page.find(UnifiedTextField.class).withLabel("City").all().size());
-        assertEquals(2, page.find(UnifiedContainer.class).withTestId("billing").single()
-                .find(UnifiedTextField.class).all().size());
+        assertThat(page.find(UnifiedTextField.class).withLabel("City")).hasCount(2);
+        assertThat(page.find(UnifiedContainer.class).withTestId("billing")
+                .find(UnifiedTextField.class)).hasCount(2);
     }
 
     // --8<-- [start:containersNest]
@@ -45,13 +44,13 @@ class CheckoutTest {
     void containersNest(UnifiedPage page) {
         page.navigate(CheckoutView.class);
 
-        UnifiedContainer buttons = page.find(UnifiedContainer.class).withTestId("footer").single()
-                .find(UnifiedContainer.class).withTestId("buttons").single();
+        UnifiedContainer buttons = page.find(UnifiedContainer.class).withTestId("footer")
+                .find(UnifiedContainer.class).withTestId("buttons");
 
-        assertEquals(2, buttons.find(UnifiedButton.class).all().size());
+        assertThat(buttons.find(UnifiedButton.class)).hasCount(2);
         assertThat(buttons).isVisible();
-        assertEquals(0, page.find(UnifiedContainer.class).withTestId("billing").single()
-                .find(UnifiedButton.class).all().size());
+        assertThat(page.find(UnifiedContainer.class).withTestId("billing")
+                .find(UnifiedButton.class)).doesNotExist();
     }
     // --8<-- [end:containersNest]
 }

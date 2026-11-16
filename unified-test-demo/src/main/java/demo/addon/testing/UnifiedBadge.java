@@ -1,11 +1,10 @@
 package demo.addon.testing;
 
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.ToolImplementation;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
-import com.vaadin.testing.unified.query.Query;
+import com.vaadin.testing.unified.query.CommonFilters;
 import demo.addon.Badge;
 
 /**
@@ -14,9 +13,7 @@ import demo.addon.Badge;
  */
 @UnifiedComponent(value = Badge.class,
         overrides = @ToolImplementation(tool = TestingTool.BROWSERLESS, value = UnifiedBadgeBrowserless.class))
-public interface UnifiedBadge extends UnifiedWrapper, Findable<UnifiedBadge.BadgeQuery> {
-
-    interface BadgeQuery extends Query<UnifiedBadge, BadgeQuery> {}
+public interface UnifiedBadge extends UnifiedWrapper, CommonFilters<UnifiedBadge> {
 
     /** From the text "3 new". */
     default int getCount() {

@@ -24,9 +24,11 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
 
 ## Reference: the Unified API
 
-- A test gets a `UnifiedPage page`. `page.navigate(View.class)`, `page.find(UnifiedX.class).withLabel(..).single()`, `page.findComponent(Component.class)` for any component without a Wrapper, `page.pressKey("Enter")`.
+- A test gets a `UnifiedPage page`. `page.navigate(View.class)`, `page.find(UnifiedX.class).withLabel(..)`, `page.findComponent(Component.class)` for any component without a Wrapper, `page.pressKey("Enter")`.
+- `page.find(UnifiedX.class)` returns the Wrapper itself: filters (`withLabel`, `withText`, `withTestId`, ...) are its methods and each returns a new Wrapper, so `page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice")`. There is no `single()`: every action, read and assertion finds the component again and waits for exactly one match. `all()` is only for looping over matches.
+- Grid rows: `grid.row().withCellText("Name", "Alan Turing").click()` for the row showing that text, `grid.row(i)` by index.
 - Wrappers are `Unified*` interfaces in `com.vaadin.testing.unified.component` (`UnifiedTextField`, `UnifiedButton`, `UnifiedGrid`, `UnifiedDialog`, ...). Read their methods in the `unified-test-api` sources before writing a call.
-- Assertions retry: `import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;`, then `assertThat(wrapper).hasText(..)`, `hasValue(..)`, `isOpen()`, `isDisabled()`, ...; `assertThat(page).hasPath(..)` / `isAt(View.class)`. `page.waitUntil(() -> ...)` for anything else.
+- Assertions retry: `import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;`, then `assertThat(wrapper).hasText(..)`, `hasValue(..)`, `isOpen()`, `isDisabled()`, ...; `assertThat(page).hasPath(..)` / `isAt(View.class)`. Counts and absence are assertions too: `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on a grid row (`assertThat(grid.row().withCellText(..)).hasCount(2)`). `page.waitUntil(() -> ...)` for anything else.
 
 ## Reference: the Escape Hatches
 
@@ -43,18 +45,18 @@ When a method no longer uses its Escape Hatch variable, delete that line. When a
 
 ## Reference: marker kinds of all recipes
 
-**`was first(); single() fails when several components match`** (also `waitForFirst()`, `last()`, `atIndex(n)`, `getCell(..)`). Run the test. When it passes, delete the marker. When it fails with "several components match", add the filter that picks the intended one (`withLabel`, `withText`, `withId`, ...), then delete the marker.
+**`was first(); the lookup fails when several components match`** (also `waitForFirst()`, `last()`, `atIndex(n)`, `getCell(..)`). Run the test. When it passes, delete the marker. When it fails with "several components match", add the filter that picks the intended one (`withLabel`, `withText`, `withId`, ...), then delete the marker.
 
 **`was withCaption(..)` / `was withLabel(..)` on a button.** Read the view: when the button shows that text, delete the marker. When it is an icon-only button, the text is its accessible name: use `withAccessibleName(..)`, then delete the marker.
 
-**`..., no Wrapper for X: write one (ADR 0003)` / `..., a custom element: write a Wrapper for it (ADR 0003)`.** Look for an existing Wrapper first: search for `@UnifiedComponent(` naming the same Flow component (a TestBench element's `@Element` tag is the component's `@Tag`). Use it when found. Otherwise write one next to the tests: an interface with `@UnifiedComponent(TheComponent.class)`, extending `UnifiedWrapper` and `Findable<..Query>`, with `default` methods written on `element()` (`getProperty`, `getText`, `findChildren(..)`, `click()`). Translate each call the test makes, then replace the lookup and delete the Escape Hatch. Keep it when the component's state lives only on the server (Browserless) or needs real browser rendering (Selenium).
+**`..., no Wrapper for X: write one (ADR 0003)` / `..., a custom element: write a Wrapper for it (ADR 0003)`.** Look for an existing Wrapper first: search for `@UnifiedComponent(` naming the same Flow component (a TestBench element's `@Element` tag is the component's `@Tag`). Use it when found. Otherwise write one next to the tests: an interface with `@UnifiedComponent(TheComponent.class)`, extending `UnifiedWrapper` and the filter mixins it needs with itself as the type argument (`CommonFilters<UnifiedX>`, and `LabelFilter<UnifiedX>`, `TextFilter<UnifiedX>` or `PlaceholderFilter<UnifiedX>`), with `default` methods written on `element()` (`getProperty`, `getText`, `findChildren(..)`, `click()`). Translate each call the test makes, then replace the lookup and delete the Escape Hatch. Keep it when the component's state lives only on the server (Browserless) or needs real browser rendering (Selenium).
 
 ## Reference: marker kinds of the Dramafinder recipe
 
 **`Dramafinder Escape Hatch: <call>`.** Try to say it with the Unified API, then run the test on Browserless and Playwright:
-- a Dramafinder lookup, `XElement.getByLabel(playwright, ..)` or `find(playwright, XElement.class)...`, becomes `page.find(UnifiedX.class).withLabel(..).single()`; an element call becomes the Wrapper's method, an `assert...` a retrying `assertThat(wrapper)...`;
+- a Dramafinder lookup, `XElement.getByLabel(playwright, ..)` or `find(playwright, XElement.class)...`, becomes `page.find(UnifiedX.class).withLabel(..)`; an element call becomes the Wrapper's method, an `assert...` a retrying `assertThat(wrapper)...`;
 - a raw Playwright locator names a component: `getByRole(AriaRole.BUTTON, ..setName("Save"))` is `page.find(UnifiedButton.class).withText("Save")` (or `withAccessibleName` for an icon button), `getByRole(AriaRole.TEXTBOX, ..setName("Name"))` and `getByLabel("Name")` are `page.find(UnifiedTextField.class).withLabel("Name")` (read the view for the field's type), `locator("vaadin-x")` is the Wrapper for that tag; `fill(..)` is `setValue(..)`, `click()` is `click()`, `PlaywrightAssertions.assertThat(locator).hasText(..)` is `assertThat(wrapper).hasText(..)`;
-- a row of a grid, `findRow`, `getCell`, sorting: `UnifiedGrid`'s `rows()`, `row(i)`, `column(..)`.
+- a row of a grid, `findRow`, `getCell`, sorting: `UnifiedGrid`'s `row()` with its filters, `row(i)`, `column(..)`.
 
 Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning: `route(..)` and network mocking, tracing, `evaluate(..)` and other JavaScript, CSS selectors into a component's shadow DOM. When no statement uses `playwright` any more, delete its line.
 
@@ -62,7 +64,7 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 
 **`was 1.x getByLabel(..), a case-insensitive substring and first match; tighten it to withLabel(..) once the test passes`** (also `getByText`, `withText`). Dramafinder 1.x matched a substring of the label, `aria-label` or placeholder. Replace `withAccessibleNameContaining(s)` with `withLabel(s)` (or `withTextContaining` with `withText`) and run the test: keep the exact filter when it passes, else use the filter that names the component exactly (read the view). Then delete the marker.
 
-**`was findRowIndexesWithColumnText(n, ..).get(0): any column matches now; ...`.** Dramafinder matched the text in column `n` only. Read the view for that column's header and write `rows().withCellText("<header>", text)`; run the test, then delete the marker.
+**`was findRowIndexesWithColumnText(n, ..).get(0): any column matches now; ...`.** Dramafinder matched the text in column `n` only. Read the view for that column's header and write `row().withCellText("<header>", text)`; run the test, then delete the marker.
 
 **`was getCell(..).click(); a row's click() clicks the row, not that cell`.** Read the view: when the cell holds nothing clickable of its own, the row click does the same; delete the marker. When it holds a component (a button, a checkbox), find it in the cell: `row.cell("<header>").find(UnifiedButton.class)...`.
 
@@ -78,7 +80,7 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 
 ## Reference: marker kinds of the Browserless recipe
 
-**`Browserless Escape Hatch: <call>`** (also on a window, `window.findGrid(..)`). Say the same thing with the Unified API when it can: a locator such as `window.findTextField().withLabel(..)` becomes `page.find(UnifiedTextField.class).withLabel(..).single()`, `navigate(View.class)` becomes `page.navigate(View.class)` (when the test reads the view it returns, find what it reads with a locator instead), a tester call becomes the Wrapper's method, a component getter becomes a Wrapper getter or a retrying assertion. Keep it when it needs the server-side Java objects only Browserless has (a view's fields, beans, `UI` or `VaadinSession` state).
+**`Browserless Escape Hatch: <call>`** (also on a window, `window.findGrid(..)`). Say the same thing with the Unified API when it can: a locator such as `window.findTextField().withLabel(..)` becomes `page.find(UnifiedTextField.class).withLabel(..)`, `navigate(View.class)` becomes `page.navigate(View.class)` (when the test reads the view it returns, find what it reads with a locator instead), a tester call becomes the Wrapper's method, a component getter becomes a Wrapper getter or a retrying assertion. Keep it when it needs the server-side Java objects only Browserless has (a view's fields, beans, `UI` or `VaadinSession` state).
 
 **`Component Reference: <call>: replace it with a locator that finds the same component`.** The test holds a component's Java object (a view field, `view.getChildren()...`) instead of finding it. Read the view to see how it builds that component, write the locator that finds it and nothing else (`withLabel`, `withText`, `withTestId`, ...), and use the Wrapper. Prove the locator is unique by running the test. Delete the local variable or view lookup that only served the reference.
 
@@ -86,7 +88,7 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 
 **`was fireShortcut(..); pressKey also reaches the focused component and an open dialog`.** `page.pressKey(..)` dispatches the key from the focused component, or from an open dialog, where `fireShortcut` only fired the shortcut on the UI. Run the test on Browserless and Playwright: when it passes, delete the marker. When a dialog now reacts to the key (Escape closes it), check what the test meant and adjust it.
 
-**`was a scan of column <col>; withCellText(text) matches any column: name the column, withCellText(header, text), if another column can hold the text`.** The test scanned one column's cells for a text; `rows().withCellText(text)` looks in every column. Read the view: when no other column can hold that text, delete the marker. Otherwise find column `<col>`'s header (the view's `addColumn(..).setHeader(..)`, or `grid.getColumnHeaders()`) and write `rows().withCellText("<header>", text)`, then delete the marker. Run the test to prove the row is found.
+**`was a scan of column <col>; withCellText(text) matches any column: name the column, withCellText(header, text), if another column can hold the text`.** The test scanned one column's cells for a text; `row().withCellText(text)` looks in every column. Read the view: when no other column can hold that text, delete the marker. Otherwise find column `<col>`'s header (the view's `addColumn(..).setHeader(..)`, or `grid.getColumnHeaders()`) and write `row().withCellText("<header>", text)`, then delete the marker. Run the test to prove the row is found.
 
 **`Browserless-only pattern: @Transactional ...`.** The test's transaction reaches the views only on Browserless. Keep it, with `// Escape Hatch kept: test data rolled back by @Transactional`, unless the test can commit its data and clean up after itself; then remove `@Transactional` and `@RequiresTestingTool(TestingTool.BROWSERLESS)`.
 

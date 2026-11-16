@@ -56,7 +56,7 @@ final class Wrappers {
     static final Map<String, String> BUTTON_FILTER_RENAMES = Map.of("withLabel", "withText", "withCaption", "withText");
     static final String BUTTON_ELEMENT = "com.vaadin.flow.component.button.testbench.ButtonElement";
 
-    /** TestBench query terminals; {@code first()} and {@code waitForFirst()} become {@code single()}. */
+    /** TestBench query terminals; the conversion drops them, as the Wrapper is the lookup (ADR 0007). */
     static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst");
 
     private static final Set<String> COMMON_FILTERS = Set.of("withId", "withClassName", "withTheme");
@@ -120,8 +120,8 @@ final class Wrappers {
                     TabSheets::converts)),
             Map.entry("com.vaadin.flow.component.grid.testbench.GridElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedGrid",
                     COMMON_FILTERS,
-                    // row and rows are what GridCells writes for getCell(..)
-                    Set.of("getRowCount", "row", "rows"),
+                    // row is what GridCells writes for getCell(..)
+                    Set.of("getRowCount", "row"),
                     GridCells::converts)));
 
     private Wrappers() {

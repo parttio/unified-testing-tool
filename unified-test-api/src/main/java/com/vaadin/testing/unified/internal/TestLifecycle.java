@@ -4,6 +4,8 @@ import com.vaadin.testing.unified.RequiresBrowser;
 import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
+import com.vaadin.testing.unified.internal.steps.UserStepsReport;
 import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
@@ -14,6 +16,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -22,14 +25,28 @@ import java.util.stream.Collectors;
 
 /**
  * What {@code @UnifiedUITest} does for each test, with no Test Runner types (ADR 0008): decide whether the
- * test runs on this run's Testing Tool, open it to get its {@link UnifiedPage}, and close it, writing the
- * failure evidence when it failed. A Test Runner integration (the JUnit extension, {@code internal.junit.UnifiedExtension})
+ * test runs on this run's Testing Tool, open it to get its {@link UnifiedPage}, and close it, reporting its
+ * User Steps and writing the failure evidence when it failed. A Test Runner integration (the JUnit extension, {@code internal.junit.UnifiedExtension})
  * only translates its own test context into these calls.
  */
 public final class TestLifecycle {
 
     /** Whether a test runs, and why. */
     public record Decision(boolean runs, String reason) {}
+
+    /**
+     * Which test this is, as its reports name it.
+     *
+     * @param displayName the name the Test Runner shows, or {@code methodName}
+     * @param invocation the n-th run of a parameterized or repeated test, or null
+     */
+    public record TestId(String className, String methodName, String displayName, Integer invocation) {
+
+        /** The name of its failure evidence files, such as {@code com.example.LoginTest.logsIn}. */
+        String evidenceName() {
+            return className + "." + methodName;
+        }
+    }
 
     private final Settings settings;
     private final Function<TestingTool, TestingToolAdapter> adapters;
@@ -112,20 +129,25 @@ public final class TestLifecycle {
 
     // ---------------------------------------------------------------- open and close
 
-    /** Opens one test on this run's Testing Tool: a fresh session and its page. */
-    public OpenTest open(AdapterContext context) {
+    /**
+     * Opens one test on this run's Testing Tool: a fresh session and its page, recording its User Steps into
+     * {@code steps} (shared by every page the test is given).
+     */
+    public OpenTest open(AdapterContext context, StepRecorder steps) {
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
-        return new OpenTest(session, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout())));
+        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)));
     }
 
     /** One open test. Close it exactly once, when the test ends. */
     public final class OpenTest {
         private final AdapterSession session;
+        private final StepRecorder steps;
         private final UnifiedPage page;
 
-        private OpenTest(AdapterSession session, UnifiedPage page) {
+        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page) {
             this.session = session;
+            this.steps = steps;
             this.page = page;
         }
 
@@ -134,16 +156,18 @@ public final class TestLifecycle {
         }
 
         /**
-         * Closes the test's session. When {@code failure} is not null, first writes the failure evidence
-         * and names the files on the failure itself (a suppressed exception), so they show in the test
-         * report. Problems while writing never hide the test's own failure.
+         * Ends the test: reports its User Steps, writes the failure evidence when {@code failure} is not null,
+         * and closes its session. A failed test gets its User Steps and the evidence file names on the failure
+         * itself (suppressed exceptions), so they show in the test report. Problems while writing never hide
+         * the test's own failure, nor fail a passing test.
          *
-         * @param name the test's name for the evidence files, such as {@code com.example.LoginTest.logsIn}
+         * @param failure what the test threw, or null when it passed
          * @return the evidence files written, empty when the test passed or nothing was written
          */
-        public List<Path> close(Throwable failure, String name) {
+        public List<Path> close(Throwable failure, TestId test) {
             try {
-                return failure == null ? List.of() : writeEvidence(failure, name);
+                reportUserSteps(steps, failure, test);
+                return failure == null ? List.of() : writeEvidence(failure, test.evidenceName());
             } finally {
                 session.close();
             }
@@ -163,12 +187,57 @@ public final class TestLifecycle {
         }
     }
 
+    // ---------------------------------------------------------------- User Steps
+
+    /**
+     * Writes {@code user-steps.txt} and {@code user-steps.json} into the test's evidence directory, prints the
+     * text to stdout (the CI log) as {@code vaadin.testing.user-steps.log} says, and adds it to a failure.
+     * Problems while writing never hide the test's own failure, nor fail a passing test.
+     */
+    private void reportUserSteps(StepRecorder steps, Throwable failure, TestId test) {
+        steps.finish();
+        String status = failure == null ? "passed"
+                : failure.getClass().getName().equals("org.opentest4j.TestAbortedException") ? "aborted" : "failed";
+        UserStepsReport report = new UserStepsReport(test.className(), test.methodName(), test.displayName(),
+                settings.tool().name().toLowerCase(Locale.ROOT), status, failure, steps);
+        String text = report.text();
+        Path directory = testEvidenceDir(test);
+        String written;
+        try {
+            report.write(directory);
+            written = directory.toAbsolutePath().toString();
+        } catch (Exception | LinkageError e) {
+            written = "not written: " + e;
+            System.err.println("User Steps could not be written to " + directory + ": " + e);
+        }
+        Settings.UserStepsLog log = settings.userStepsLog();
+        if (log == Settings.UserStepsLog.ALL || (log == Settings.UserStepsLog.FAILED && status.equals("failed"))) {
+            System.out.print(text);
+            System.out.flush();
+        }
+        if (failure != null && status.equals("failed")) {
+            failure.addSuppressed(new FailureEvidence("User Steps (" + written + "):\n" + text));
+        }
+    }
+
+    /**
+     * {@code <evidence-dir>/<test class>/<test method>/}: the class without its package (nested classes keep
+     * their {@code $}), and {@code [n]} after the method for the n-th invocation of a parameterized or repeated
+     * test.
+     */
+    Path testEvidenceDir(TestId test) {
+        String className = test.className();
+        String classDir = className.substring(className.lastIndexOf('.') + 1);
+        String methodDir = test.methodName() + (test.invocation() == null ? "" : "[" + test.invocation() + "]");
+        return settings.evidenceDir().resolve(classDir).resolve(methodDir);
+    }
+
     /** The evidence files as the report shows them: absolute paths, comma-separated. */
     public static String describe(List<Path> files) {
         return files.stream().map(p -> p.toAbsolutePath().toString()).collect(Collectors.joining(", "));
     }
 
-    /** Carries the evidence file names on a failed test; no stack trace of its own. */
+    /** Carries the evidence file names, or the User Steps, on a failed test; no stack trace of its own. */
     static final class FailureEvidence extends RuntimeException {
         FailureEvidence(String message) {
             super(message, null, false, false);

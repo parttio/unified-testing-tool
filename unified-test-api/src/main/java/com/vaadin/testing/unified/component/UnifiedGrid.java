@@ -3,11 +3,10 @@ package com.vaadin.testing.unified.component;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.testing.unified.Scope;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
-import com.vaadin.testing.unified.query.Query;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.GridAccess;
 import java.util.List;
 
@@ -17,12 +16,15 @@ import java.util.List;
  * Values are rendered text; the item is reachable only through the Escape Hatch.
  */
 @UnifiedComponent(Grid.class)
-public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQuery> {
-
-    interface GridQuery extends Query<UnifiedGrid, GridQuery> {}
+public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> {
 
     // rows
-    default RowQuery rows() { return GridSupport.rows(this); }
+    /**
+     * A lazy row found by what it shows: {@code row().withCellText("Name", "Alan Turing")}. Every use finds the
+     * row again and waits up to the timeout for exactly one match.
+     */
+    default UnifiedGridRow row() { return GridSupport.row(this); }
+    /** The row at this index. */
     default UnifiedGridRow row(int index) { return GridSupport.row(this, index); }
     /** All rows, not only the rendered ones. Immediate; use assertThat(grid).hasRowCount(n) to wait. */
     default int getRowCount() { return element().unwrap(GridAccess.class).rowCount(); }
@@ -36,22 +38,29 @@ public interface UnifiedGrid extends UnifiedWrapper, Findable<UnifiedGrid.GridQu
     default UnifiedGridColumn column(int index) { return GridSupport.columnByIndex(this, index); }
     default List<String> getColumnHeaders() { return element().unwrap(GridAccess.class).columnHeaders(); }
 
-    // selection
-    default void selectAll() { element().unwrap(GridAccess.class).selectAll(); }
-    default void deselectAll() { element().unwrap(GridAccess.class).deselectAll(); }
+    // selection (Auto-Wait)
+    default void selectAll() { GridSupport.selectAll(this); }
+    default void deselectAll() { GridSupport.deselectAll(this); }
 
-    interface RowQuery {
-        RowQuery withCellText(String columnHeader, String text);
-        /** Rows with a cell showing exactly this text, in any column. */
-        RowQuery withCellText(String text);
-        RowQuery withCellTextContaining(String columnHeader, String part);
-        RowQuery selected();
-        UnifiedGridRow single();
-        List<UnifiedGridRow> all();
-        boolean exists();
-    }
-
+    /**
+     * A lazy row. From {@link #row()}, its filters narrow the rows it stands for; each returns a new row and
+     * leaves this one unchanged. Actions Auto-Wait for the grid and for exactly one matching row.
+     */
     interface UnifiedGridRow {
+        // filters
+        /** Rows whose cell in this column shows exactly this text. */
+        UnifiedGridRow withCellText(String columnHeader, String text);
+        /** Rows with a cell showing exactly this text, in any column. */
+        UnifiedGridRow withCellText(String text);
+        UnifiedGridRow withCellTextContaining(String columnHeader, String part);
+        /** Selected rows only. */
+        UnifiedGridRow selected();
+        /**
+         * Every matching row right now, by its index. Only for looping over rows; to check a count, use
+         * {@code assertThat(row).hasCount(n)}, which waits.
+         */
+        List<UnifiedGridRow> all();
+
         UnifiedGrid grid();
         int getIndex();
         String getCellText(String columnHeader);

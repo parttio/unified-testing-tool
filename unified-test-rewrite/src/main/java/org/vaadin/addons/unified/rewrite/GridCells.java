@@ -10,7 +10,7 @@ import org.openrewrite.java.tree.TypeUtils;
 /**
  * TestBench's {@code GridElement.getCell(..)} in Unified terms: {@code getCell(row, column).getText()} reads
  * {@code row(row).getCellText(column)}; {@code getCell(text)}, used for its row ({@code getRow()},
- * {@code click()}), finds {@code rows().withCellText(text).single()}.
+ * {@code click()}), finds {@code row().withCellText(text)}.
  */
 final class GridCells {
 

@@ -2,38 +2,54 @@ package com.vaadin.testing.unified.internal;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.ToolImplementation;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
-import com.vaadin.testing.unified.query.ComponentQuery;
-import com.vaadin.testing.unified.query.Query;
+import com.vaadin.testing.unified.internal.steps.Phrases;
+import com.vaadin.testing.unified.query.CommonFilters;
+import com.vaadin.testing.unified.query.LabelFilter;
+import com.vaadin.testing.unified.query.PlaceholderFilter;
+import com.vaadin.testing.unified.query.TextFilter;
 import com.vaadin.testing.unified.spi.Filter;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
-import java.lang.reflect.Type;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 
-/** Implements wrapper and query interfaces at runtime (ADR 0003). */
+/**
+ * Implements Wrapper interfaces at runtime (ADR 0003): their default methods, and the filters their mixins
+ * declare (ADR 0007). A filter returns a new Wrapper over the lookup with one filter more.
+ */
 public final class Wrappers {
     private Wrappers() {}
 
+    /** The filter mixins: their abstract methods are implemented here, by name. */
+    /** The gap reason for a test's own {@code where(..)} condition. */
+    static final String WHERE = "where(..) condition";
+
+    private static final Set<Class<?>> FILTER_MIXINS = Set.of(CommonFilters.class, LabelFilter.class,
+            TextFilter.class, PlaceholderFilter.class);
+
     // ---------------------------------------------------------------- entry points
 
-    public static <Q> Q newQuery(TestRun run, Class<? extends Findable<Q>> wrapperType, LazyElement parent) {
+    /** {@code find(wrapperType)}: the Wrapper over a lookup without user filters. */
+    public static <W> W newWrapper(TestRun run, Class<W> wrapperType, LazyElement parent) {
         UnifiedComponent annotation = wrapperType.getAnnotation(UnifiedComponent.class);
         if (annotation == null) {
             throw new IllegalArgumentException(wrapperType.getName() + " has no @UnifiedComponent annotation");
+        }
+        if (!CommonFilters.class.isAssignableFrom(wrapperType)) {
+            throw new IllegalArgumentException(wrapperType.getName() + " must extend CommonFilters<"
+                    + wrapperType.getSimpleName() + "> to be found");
         }
         for (Class<?> c = wrapperType; c != null; c = c.getEnclosingClass()) {
             if (!java.lang.reflect.Modifier.isPublic(c.getModifiers())) {
@@ -41,23 +57,21 @@ public final class Wrappers {
                         + " it is nested in: the Unified API implements it at runtime");
             }
         }
-        Class<?> queryType = typeArgument(wrapperType, Findable.class, 0);
         String tag = requireTag(annotation.value(), annotation.tag(), wrapperType.getSimpleName());
         List<Filter> filters = annotation.selector().isBlank() ? List.of()
                 : WrapperSelector.filters(annotation.selector(), wrapperType.getName());
-        ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), annotation.value(), tag,
-                filters, List.of(), List.of(), parent);
-        @SuppressWarnings("unchecked")
-        Q query = (Q) newQueryProxy(queryType, source);
-        return query;
+        ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), wrapperType, annotation.value(),
+                tag, filters, filters.size(), List.of(), List.of(), parent);
+        return wrapperType.cast(newWrapper(wrapperType, new LazyElement(source, -1, run)));
     }
 
-    public static ComponentQuery newComponentQuery(TestRun run, Class<? extends Component> componentType,
+    /** {@code findComponent(componentType)}: a lazy {@link UnifiedGenericComponent} with the shared filters. */
+    public static UnifiedGenericComponent newComponent(TestRun run, Class<? extends Component> componentType,
             LazyElement parent) {
         String name = "findComponent(" + componentType.getSimpleName() + ")";
-        ElementSource source = new ElementSource(run, name, componentType,
-                requireTag(componentType, "", name), List.of(), List.of(), List.of(), parent);
-        return (ComponentQuery) newQueryProxy(ComponentQuery.class, source);
+        ElementSource source = new ElementSource(run, name, null, componentType,
+                requireTag(componentType, "", name), List.of(), 0, List.of(), List.of(), parent);
+        return (UnifiedGenericComponent) newWrapper(UnifiedGenericComponent.class, new LazyElement(source, -1, run));
     }
 
     /** The lazy element behind a wrapper created by this class. */
@@ -93,77 +107,6 @@ public final class Wrappers {
         }
         Tag tag = componentType.getAnnotation(Tag.class);
         return tag == null ? null : tag.value();
-    }
-
-    // ---------------------------------------------------------------- queries
-
-    private static Object newQueryProxy(Class<?> queryType, ElementSource source) {
-        Class<?> wrapperType = typeArgument(queryType, Query.class, 0);
-        return Proxy.newProxyInstance(queryType.getClassLoader(), new Class<?>[] { queryType },
-                new QueryHandler(queryType, wrapperType, source));
-    }
-
-    private record QueryHandler(Class<?> queryType, Class<?> wrapperType, ElementSource source)
-            implements InvocationHandler {
-
-        @Override
-        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            String name = method.getName();
-            switch (name) {
-                case "single":
-                    return newWrapper(wrapperType, new LazyElement(source, -1, source.run()));
-                case "all": {
-                    int count = source.resolve().size();
-                    List<Object> wrappers = new ArrayList<>();
-                    for (int i = 0; i < count; i++) {
-                        wrappers.add(newWrapper(wrapperType, new LazyElement(source, i, source.run())));
-                    }
-                    return List.copyOf(wrappers);
-                }
-                case "exists":
-                    return !source.resolve().isEmpty();
-                case "toString":
-                    return source.describe();
-                case "hashCode":
-                    return System.identityHashCode(proxy);
-                case "equals":
-                    return proxy == args[0];
-                default:
-                    break;
-            }
-            if (method.isDefault()) {
-                return InvocationHandler.invokeDefault(proxy, method, args);
-            }
-            ElementSource next = switch (name) {
-                case "withLabel" -> source.with(new Filter(Filter.Kind.LABEL, null, (String) args[0], true));
-                case "withLabelContaining" -> source.with(new Filter(Filter.Kind.LABEL, null, (String) args[0], false));
-                case "withAccessibleName" -> source.with(new Filter(Filter.Kind.ACCESSIBLE_NAME, null, (String) args[0], true));
-                case "withAccessibleNameContaining" -> source.with(new Filter(Filter.Kind.ACCESSIBLE_NAME, null, (String) args[0], false));
-                case "withText" -> source.with(new Filter(Filter.Kind.TEXT, null, (String) args[0], true));
-                case "withTextContaining" -> source.with(new Filter(Filter.Kind.TEXT, null, (String) args[0], false));
-                case "withPlaceholder" -> source.with(new Filter(Filter.Kind.PLACEHOLDER, null, (String) args[0], true));
-                case "withTestId" -> source.with(new Filter(Filter.Kind.TEST_ID, null, (String) args[0], true));
-                case "withId" -> source.with(new Filter(Filter.Kind.ID, null, (String) args[0], true));
-                case "withClassName" -> source.with(new Filter(Filter.Kind.CLASS_NAME, null, (String) args[0], true));
-                case "withTheme" -> source.with(new Filter(Filter.Kind.THEME, null, (String) args[0], true));
-                case "withAttribute" -> source.with(new Filter(Filter.Kind.ATTRIBUTE, (String) args[0], (String) args[1], true));
-                case "withProperty" -> {
-                    String property = (String) args[0];
-                    Object expected = args[1];
-                    yield source.with(e -> Objects.equals(String.valueOf(expected), e.getProperty(property)),
-                            "withProperty(\"" + property + "\", " + expected + ")");
-                }
-                case "visible" -> source.with(UnifiedElement::isVisible, "visible()");
-                case "where" -> {
-                    @SuppressWarnings("unchecked")
-                    Predicate<UnifiedElement> condition = (Predicate<UnifiedElement>) args[0];
-                    yield source.with(condition, "where(..)");
-                }
-                default -> throw new UnsupportedOperationException(
-                        queryType.getSimpleName() + "." + name + " is not implemented");
-            };
-            return newQueryProxy(queryType, next);
-        }
     }
 
     // ---------------------------------------------------------------- wrappers
@@ -212,16 +155,14 @@ public final class Wrappers {
                     return newWrapper(wrapperType, element.withRun(element.run().withTimeout((Duration) args[0])));
                 case "find":
                     if (args != null && args.length == 1 && args[0] instanceof Class<?> type) {
-                        @SuppressWarnings({ "unchecked", "rawtypes" })
-                        Object query = newQuery(element.run(), (Class) type, element);
-                        return query;
+                        return newWrapper(element.run(), type, element);
                     }
                     break;
                 case "findComponent":
                     if (args != null && args.length == 1 && args[0] instanceof Class<?> type) {
                         @SuppressWarnings("unchecked")
                         Class<? extends Component> componentType = (Class<? extends Component>) type;
-                        return newComponentQuery(element.run(), componentType, element);
+                        return newComponent(element.run(), componentType, element);
                     }
                     break;
                 case "toString":
@@ -234,46 +175,100 @@ public final class Wrappers {
                     break;
             }
             if (method.isDefault()) {
-                try {
-                    return InvocationHandler.invokeDefault(proxy, method, args);
-                } catch (InvocationTargetException e) {
-                    throw e.getCause();
-                }
+                TestRun run = element.run();
+                boolean voidAction = method.getReturnType() == void.class && !Phrases.isGetterName(method.getName());
+                Object result = run.steps().wrapperCall(
+                        () -> Phrases.forWrapperCall(wrapperType, element, method, args),
+                        () -> Phrases.read(element), voidAction, run.window(), () -> {
+                            try {
+                                return InvocationHandler.invokeDefault(proxy, method, args);
+                            } catch (InvocationTargetException e) {
+                                throw e.getCause();
+                            }
+                        });
+                return named(method, args, result);
+            }
+            if (FILTER_MIXINS.contains(method.getDeclaringClass())) {
+                return filter(method, args);
             }
             throw new UnsupportedOperationException(wrapperType.getSimpleName() + "." + method.getName()
                     + " has no default implementation (the wrapper must implement it on element())");
         }
-    }
 
-    // ---------------------------------------------------------------- generics
-
-    /** The {@code index}-th type argument with which {@code type} implements {@code generic}. */
-    static Class<?> typeArgument(Class<?> type, Class<?> generic, int index) {
-        for (Type candidate : type.getGenericInterfaces()) {
-            if (candidate instanceof ParameterizedType p && p.getRawType() == generic) {
-                return raw(p.getActualTypeArguments()[index]);
+        /**
+         * A custom filter, i.e. a default method returning a Wrapper with one {@code where(..)} more, reads in
+         * failures and reports as itself: {@code withHeaderTitle("Edit person")}, not {@code where(..)}.
+         */
+        private Object named(Method method, Object[] args, Object result) {
+            if (result == null || !Proxy.isProxyClass(result.getClass())
+                    || !(Proxy.getInvocationHandler(result) instanceof WrapperHandler next)
+                    || !(element.source() instanceof ElementSource mine)
+                    || !(next.element.source() instanceof ElementSource theirs)
+                    || theirs.coreFilterNames().size() != mine.coreFilterNames().size() + 1
+                    || !theirs.coreFilterNames().get(theirs.coreFilterNames().size() - 1).isOpaque()) {
+                return result;
             }
-            Class<?> parent = raw(candidate);
-            if (parent != null && generic.isAssignableFrom(parent) && parent != generic) {
-                Class<?> found = typeArgument(parent, generic, index);
-                if (found != null) {
-                    return found;
+            List<String> values = Phrases.values(args);
+            String display = method.getName() + "(" + String.join(", ", values.stream()
+                    .map(v -> "\"" + v + "\"").toList()) + ")";
+            ElementSource renamed = theirs.withLastCoreFilterNamed(
+                    new ElementSource.FilterLabel(display, method.getName(), values));
+            return newWrapper(next.wrapperType, next.element.withSource(renamed));
+        }
+
+        private ElementSource lookup(String method) {
+            if (element.source() instanceof ElementSource source) {
+                return source;
+            }
+            throw new UnsupportedOperationException(method + " needs a Wrapper from find(..) or findComponent(..);"
+                    + " this one is " + element.describe());
+        }
+
+        /** A filter returns a new Wrapper; {@code all()} the matches by position. */
+        private Object filter(Method method, Object[] args) {
+            String name = method.getName();
+            ElementSource source = lookup(name + "(..)");
+            if (name.equals("all")) {
+                int count = source.resolve().size();
+                List<Object> wrappers = new ArrayList<>();
+                for (int i = 0; i < count; i++) {
+                    wrappers.add(newWrapper(wrapperType, new LazyElement(source, i, element.run())));
                 }
+                return List.copyOf(wrappers);
             }
+            ElementSource next = switch (name) {
+                case "withLabel" -> source.with(new Filter(Filter.Kind.LABEL, null, (String) args[0], true));
+                case "withLabelContaining" -> source.with(new Filter(Filter.Kind.LABEL, null, (String) args[0], false));
+                case "withAccessibleName" -> source.with(new Filter(Filter.Kind.ACCESSIBLE_NAME, null, (String) args[0], true));
+                case "withAccessibleNameContaining" -> source.with(new Filter(Filter.Kind.ACCESSIBLE_NAME, null, (String) args[0], false));
+                case "withText" -> source.with(new Filter(Filter.Kind.TEXT, null, (String) args[0], true));
+                case "withTextContaining" -> source.with(new Filter(Filter.Kind.TEXT, null, (String) args[0], false));
+                case "withPlaceholder" -> source.with(new Filter(Filter.Kind.PLACEHOLDER, null, (String) args[0], true));
+                case "withTestId" -> source.with(new Filter(Filter.Kind.TEST_ID, null, (String) args[0], true));
+                case "withId" -> source.with(new Filter(Filter.Kind.ID, null, (String) args[0], true));
+                case "withClassName" -> source.with(new Filter(Filter.Kind.CLASS_NAME, null, (String) args[0], true));
+                case "withTheme" -> source.with(new Filter(Filter.Kind.THEME, null, (String) args[0], true));
+                case "withAttribute" -> source.with(new Filter(Filter.Kind.ATTRIBUTE, (String) args[0], (String) args[1], true));
+                case "withProperty" -> {
+                    String property = (String) args[0];
+                    Object expected = args[1];
+                    yield source.with(e -> Objects.equals(String.valueOf(expected), e.getProperty(property)),
+                            new ElementSource.FilterLabel("withProperty(\"" + property + "\", " + expected + ")",
+                                    "withProperty", List.of(property, String.valueOf(expected))));
+                }
+                case "visible" -> source.with(UnifiedElement::isVisible,
+                        new ElementSource.FilterLabel("visible()", "visible", List.of()));
+                case "where" -> {
+                    @SuppressWarnings("unchecked")
+                    Predicate<UnifiedElement> condition = (Predicate<UnifiedElement>) args[0];
+                    // called by the test itself, not by a custom filter: a condition the reports can't read
+                    element.run().steps().gap(WHERE, element.run().window());
+                    yield source.with(condition, ElementSource.FilterLabel.opaque());
+                }
+                default -> throw new UnsupportedOperationException(
+                        wrapperType.getSimpleName() + "." + name + " is not implemented");
+            };
+            return newWrapper(wrapperType, element.withSource(next));
         }
-        if (type == ComponentQuery.class && generic == Query.class) {
-            return UnifiedGenericComponent.class;
-        }
-        throw new IllegalArgumentException(type.getName() + " does not declare " + generic.getSimpleName() + "<..>");
-    }
-
-    private static Class<?> raw(Type type) {
-        if (type instanceof Class<?> c) {
-            return c;
-        }
-        if (type instanceof ParameterizedType p) {
-            return (Class<?>) p.getRawType();
-        }
-        return null;
     }
 }

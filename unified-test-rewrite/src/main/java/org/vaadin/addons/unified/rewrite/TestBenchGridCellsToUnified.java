@@ -18,7 +18,7 @@ import org.openrewrite.marker.Markers;
 /**
  * Rewrites TestBench's {@code GridElement.getCell(..)} on a Grid that becomes a {@code UnifiedGrid}:
  * {@code getCell(row, column).getText()} → {@code row(row).getCellText(column)}, and a cell found by text,
- * used for its row, → {@code rows().withCellText(text).single()} (a {@code UnifiedGridRow}, with a Migration
+ * used for its row, → {@code row().withCellText(text)} (a {@code UnifiedGridRow}, with a Migration
  * Marker: it was the first match, it is now the only one).
  */
 public class TestBenchGridCellsToUnified extends Recipe {
@@ -57,8 +57,8 @@ public class TestBenchGridCellsToUnified extends Recipe {
                 Set<String> cellRows = getCursor().getNearestMessage(CELL_ROWS);
                 if (cellRows != null && v.getVariables().size() == 1 && v.getTypeExpression() != null
                         && v.getVariables().get(0).getInitializer() instanceof J.MethodInvocation init
-                        && init.getSimpleName().equals("single") && init.getSelect() instanceof J.MethodInvocation withText
-                        && withText.getSimpleName().equals("withCellText")
+                        && init.getSimpleName().equals("withCellText") && init.getSelect() instanceof J.MethodInvocation row
+                        && row.getSimpleName().equals("row")
                         && cellRows.contains(v.getVariables().get(0).getSimpleName())) {
                     maybeAddImport(UNIFIED_GRID);
                     return v.withTypeExpression(new J.Identifier(Tree.randomId(), v.getTypeExpression().getPrefix(),
@@ -94,8 +94,8 @@ public class TestBenchGridCellsToUnified extends Recipe {
                         cellRows.add(variable.getSimpleName());
                     }
                     MigrationMarkers.add(getCursor(), "was getCell(" + method.getArguments().get(0).printTrimmed(getCursor())
-                            + "); single() fails when several rows match");
-                    return template("#{any(" + UNIFIED_GRID + ")}.rows().withCellText(#{any(String)}).single()",
+                            + "); the row lookup fails when several rows match");
+                    return template("#{any(" + UNIFIED_GRID + ")}.row().withCellText(#{any(String)})",
                             m.getSelect(), m.getArguments().get(0));
                 }
                 // getCell(text).getRow() / .click() inline

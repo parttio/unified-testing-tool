@@ -1,19 +1,16 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.datepicker.DatePicker;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
-import com.vaadin.testing.unified.query.Query;
 import java.time.LocalDate;
 
 /** A {@link DatePicker}: the value is a {@link LocalDate}, {@code null} when empty. */
 @UnifiedComponent(DatePicker.class)
-public interface UnifiedDatePicker extends UnifiedField, Findable<UnifiedDatePicker.DatePickerQuery> {
-
-    interface DatePickerQuery extends Query<UnifiedDatePicker, DatePickerQuery>,
-            LabelFilter<DatePickerQuery>, PlaceholderFilter<DatePickerQuery> {}
+public interface UnifiedDatePicker extends UnifiedField,
+        CommonFilters<UnifiedDatePicker>, LabelFilter<UnifiedDatePicker>, PlaceholderFilter<UnifiedDatePicker> {
 
     // actions (Auto-Wait)
     /** Enters the date as a user would; {@code null} empties the field. */

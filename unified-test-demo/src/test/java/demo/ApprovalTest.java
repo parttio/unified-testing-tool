@@ -1,8 +1,6 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.UnifiedPage;
@@ -18,14 +16,14 @@ class ApprovalTest {
     @Test
     void aHiddenButtonIsStillFoundButNotVisible(UnifiedPage page) {
         page.navigate(ApprovalView.class);
-        UnifiedButton approve = page.find(UnifiedButton.class).withText("Approve").single();
+        UnifiedButton approve = page.find(UnifiedButton.class).withText("Approve");
 
         approve.click();
 
-        assertThat(page.findComponent(Span.class).withId("approval-status").single()).hasText("Approved");
+        assertThat(page.findComponent(Span.class).withId("approval-status")).hasText("Approved");
         assertThat(approve).isHidden();
-        assertTrue(page.find(UnifiedButton.class).withText("Approve").exists());
-        assertFalse(page.find(UnifiedButton.class).withText("Approve").visible().exists());
+        assertThat(page.find(UnifiedButton.class).withText("Approve")).exists();
+        assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist();
     }
     // --8<-- [end:aHiddenButtonIsStillFoundButNotVisible]
 }

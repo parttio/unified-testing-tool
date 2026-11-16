@@ -2,6 +2,7 @@ package demo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UnifiedPage;
@@ -15,8 +16,8 @@ class DashboardTest {
     void findsCardsByTheirWrapper(UnifiedPage page) {
         page.navigate(DashboardView.class);
 
-        assertEquals(2, page.find(UnifiedMetricCard.class).all().size());
-        assertEquals("12", page.find(UnifiedMetricCard.class).withTextContaining("Trips").single().getValue());
+        assertThat(page.find(UnifiedMetricCard.class)).hasCount(2);
+        assertEquals("12", page.find(UnifiedMetricCard.class).withTextContaining("Trips").getValue());
     }
 
     /** No tag: a browser can't find it, so no Testing Tool accepts the query. */

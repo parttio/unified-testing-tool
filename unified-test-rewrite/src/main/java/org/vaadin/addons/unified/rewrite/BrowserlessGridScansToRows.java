@@ -13,7 +13,7 @@ import org.openrewrite.java.tree.TypeUtils;
 /**
  * The row scan Browserless tests write for want of a row lookup by text, once its Grid calls are converted:
  * {@code IntStream.range(0, grid.getRowCount()).filter(i -> grid.row(i).getCellText(col).equals(text)).findFirst()
- * .orElseThrow()} becomes {@code grid.rows().withCellText(text).single().getIndex()}. {@code withCellText(text)}
+ * .orElseThrow()} becomes {@code grid.row().withCellText(text).getIndex()}. {@code withCellText(text)}
  * matches any column, the scan one; the Unified API names a column by its header, which the recipe doesn't know,
  * so a Migration Marker says so.
  */
@@ -30,7 +30,7 @@ public class BrowserlessGridScansToRows extends Recipe {
     @Override
     public String getDescription() {
         return "Turns `IntStream.range(0, grid.getRowCount()).filter(i -> grid.row(i).getCellText(col).equals(text))"
-                + ".findFirst()` into `grid.rows().withCellText(text).single().getIndex()`.";
+                + ".findFirst()` into `grid.row().withCellText(text).getIndex()`.";
     }
 
     @Override
@@ -52,7 +52,7 @@ public class BrowserlessGridScansToRows extends Recipe {
                     return m;
                 }
                 maybeRemoveImport("java.util.stream.IntStream");
-                return JavaTemplate.builder("#{any(" + GRID + ")}.rows().withCellText(#{any(java.lang.String)}).single().getIndex()")
+                return JavaTemplate.builder("#{any(" + GRID + ")}.row().withCellText(#{any(java.lang.String)}).getIndex()")
                         .javaParser(Stubs.parser())
                         .build()
                         .apply(getCursor(), m.getCoordinates().replace(), scan.grid(), scan.text());

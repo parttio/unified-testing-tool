@@ -1,11 +1,10 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.menubar.MenuBar;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.Wrappers;
-import com.vaadin.testing.unified.query.Query;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import java.util.List;
 
@@ -16,13 +15,11 @@ import java.util.List;
  * Taxi" is {@code clickItem("Actions for Taxi", "Edit")}.
  */
 @UnifiedComponent(MenuBar.class)
-public interface UnifiedMenuBar extends UnifiedWrapper, Findable<UnifiedMenuBar.MenuBarQuery> {
+public interface UnifiedMenuBar extends UnifiedWrapper, CommonFilters<UnifiedMenuBar> {
 
-    interface MenuBarQuery extends Query<UnifiedMenuBar, MenuBarQuery> {
-        /** Menu bars with a top-level item of this Item Name. */
-        default MenuBarQuery withItem(String text) {
-            return where(e -> e.unwrap(MenuBarAccess.class).items(List.of()).contains(text));
-        }
+    /** Menu bars with a top-level item of this Item Name. */
+    default UnifiedMenuBar withItem(String text) {
+        return where(e -> e.unwrap(MenuBarAccess.class).items(List.of()).contains(text));
     }
 
     // actions (Auto-Wait): opens the menus along the path, as a user would

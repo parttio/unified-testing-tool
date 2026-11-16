@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.RequiresBrowser;
 import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
@@ -19,6 +20,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -27,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Drives {@link TestLifecycle} the way any Test Runner integration would, with no JUnit context: plain
@@ -65,8 +68,14 @@ class TestLifecycleTest {
     final FakeSession session = new FakeSession();
     final List<AdapterContext> opened = new ArrayList<>();
 
+    @TempDir
+    Path evidenceDir;
+
+    static final TestLifecycle.TestId SAVES = new TestLifecycle.TestId("demo.ProfileTest", "saves", "saves", null);
+
     private TestLifecycle lifecycle(String tool) {
-        Settings settings = Settings.from(ConfigurationSource.of(Map.of(Settings.TOOL, tool, Settings.EVIDENCE_DIR, "build/evidence")));
+        Settings settings = Settings.from(ConfigurationSource.of(Map.of(Settings.TOOL, tool,
+                Settings.EVIDENCE_DIR, evidenceDir.toString(), Settings.USER_STEPS_LOG, "none")));
         return new TestLifecycle(settings, t -> new TestingToolAdapter() {
             @Override
             public TestingTool tool() {
@@ -161,51 +170,64 @@ class TestLifecycleTest {
     @Test
     void opensATestAndClosesItWithoutEvidenceWhenItPasses() throws Exception {
         PlainContext context = new PlainContext(Plain.class, method(Plain.class, "anyTool"));
-        TestLifecycle.OpenTest test = lifecycle("playwright").open(context);
+        TestLifecycle.OpenTest test = lifecycle("playwright").open(context, new StepRecorder());
 
         assertSame(context, opened.get(0));
         UnifiedPage page = test.page();
         assertNotNull(page);
         page.navigate("profile");
 
-        assertEquals(List.of(), test.close(null, "Plain.anyTool"));
+        assertEquals(List.of(), test.close(null, SAVES));
         assertEquals(List.of("navigate[profile]", "close"), session.calls);
+        // a passing test still gets its User Steps report
+        assertTrue(Files.exists(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("user-steps.txt")));
+        assertTrue(Files.exists(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("user-steps.json")));
     }
 
     @Test
     void writesTheFailureEvidenceOnAFailedTestAndNamesItOnTheFailure() throws Exception {
-        TestLifecycle.OpenTest test = lifecycle("playwright").open(new PlainContext(Plain.class, null));
+        TestLifecycle.OpenTest test = lifecycle("playwright").open(new PlainContext(Plain.class, null), new StepRecorder());
         AssertionError failure = new AssertionError("expected 'Saved'");
 
-        List<Path> evidence = test.close(failure, "demo.ProfileTest.saves");
+        List<Path> evidence = test.close(failure, SAVES);
 
         assertEquals(List.of(Path.of("evidence", "page.png")), evidence);
-        assertEquals(List.of("writeFailureEvidence[" + Path.of("build/evidence") + ", demo.ProfileTest.saves]", "close"),
+        assertEquals(List.of("writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves]", "close"),
                 session.calls);
-        assertEquals("Failure evidence: " + Path.of("evidence", "page.png").toAbsolutePath(),
-                failure.getSuppressed()[0].getMessage());
-        assertEquals(0, failure.getSuppressed()[0].getStackTrace().length);
+        Throwable[] suppressed = failure.getSuppressed();
+        assertEquals(2, suppressed.length);
+        assertTrue(suppressed[0].getMessage().startsWith("User Steps ("
+                + evidenceDir.resolve("ProfileTest").resolve("saves").toAbsolutePath() + "):\n"), suppressed[0].getMessage());
+        assertEquals("Failure evidence: " + Path.of("evidence", "page.png").toAbsolutePath(), suppressed[1].getMessage());
+        assertEquals(0, suppressed[1].getStackTrace().length);
     }
 
     @Test
     void keepsTheTestsOwnFailureWhenTheEvidenceCannotBeWritten() {
         session.evidenceFailure = new IOException("disk full");
-        TestLifecycle.OpenTest test = lifecycle("selenium").open(new PlainContext(Plain.class, null));
+        TestLifecycle.OpenTest test = lifecycle("selenium").open(new PlainContext(Plain.class, null), new StepRecorder());
         AssertionError failure = new AssertionError("expected 'Saved'");
 
-        assertEquals(List.of(), test.close(failure, "demo.ProfileTest.saves"));
+        assertEquals(List.of(), test.close(failure, SAVES));
 
         assertEquals("expected 'Saved'", failure.getMessage());
         assertEquals("Failure evidence could not be written: java.io.IOException: disk full",
-                failure.getSuppressed()[0].getMessage());
+                failure.getSuppressed()[1].getMessage());
         assertTrue(session.calls.contains("close"));
+    }
+
+    @Test
+    void namesTheEvidenceDirectoryOfARepeatedTest() {
+        TestLifecycle.TestId third = new TestLifecycle.TestId("demo.ProfileTest$Nested", "saves", "saves", 3);
+        assertEquals(evidenceDir.resolve("ProfileTest$Nested").resolve("saves[3]"),
+                lifecycle("browserless").testEvidenceDir(third));
     }
 
     @Test
     void namesTheMissingAdapterDependency() {
         TestLifecycle lifecycle = TestLifecycle.create(Settings.from(ConfigurationSource.of(Map.of(Settings.TOOL, "selenium"))));
         IllegalStateException e = assertThrows(IllegalStateException.class,
-                () -> lifecycle.open(new PlainContext(Plain.class, null)));
+                () -> lifecycle.open(new PlainContext(Plain.class, null), new StepRecorder()));
         assertEquals("No adapter for vaadin.testing.tool=selenium. Add the test dependency"
                 + " com.vaadin:unified-test-selenium.", e.getMessage());
     }

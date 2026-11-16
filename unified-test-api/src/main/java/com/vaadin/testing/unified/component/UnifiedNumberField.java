@@ -1,18 +1,15 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.textfield.NumberField;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
-import com.vaadin.testing.unified.query.Query;
 
 /** A {@link NumberField}: the value is a {@link Double}, {@code null} when empty. */
 @UnifiedComponent(NumberField.class)
-public interface UnifiedNumberField extends UnifiedField, Findable<UnifiedNumberField.NumberFieldQuery> {
-
-    interface NumberFieldQuery extends Query<UnifiedNumberField, NumberFieldQuery>,
-            LabelFilter<NumberFieldQuery>, PlaceholderFilter<NumberFieldQuery> {}
+public interface UnifiedNumberField extends UnifiedField,
+        CommonFilters<UnifiedNumberField>, LabelFilter<UnifiedNumberField>, PlaceholderFilter<UnifiedNumberField> {
 
     // actions (Auto-Wait)
     /** Types the value as a user would; {@code null} empties the field. */

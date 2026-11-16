@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.assertion.UnifiedAssertions;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.QuerySpec;
@@ -46,10 +47,10 @@ class StaleRetryTest {
                 });
         UnifiedPageImpl page = new UnifiedPageImpl(new TestRun(TestingTool.SELENIUM, session, Duration.ofSeconds(2)));
 
-        boolean exists = page.find(UnifiedButton.class).withText("Reject").exists();
-        page.find(UnifiedButton.class).withText("Reject").single().click();
+        UnifiedButton reject = page.find(UnifiedButton.class).withText("Reject");
+        UnifiedAssertions.assertThat(reject).exists();
+        reject.click();
 
-        assertEquals(true, exists);
         assertEquals(2, clicks.get());
     }
 }

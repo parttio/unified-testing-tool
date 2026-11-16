@@ -23,6 +23,9 @@ import com.vaadin.testing.unified.internal.LazyElement;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
 import com.vaadin.testing.unified.internal.Wrappers;
+import com.vaadin.testing.unified.internal.steps.Phrase;
+import com.vaadin.testing.unified.internal.steps.Phrases;
+import com.vaadin.testing.unified.internal.steps.StepTarget;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -69,15 +72,41 @@ public final class UnifiedAssertions {
 
     // ---------------------------------------------------------------- shared retry
 
-    static void check(TestRun run, String subject, String expectation, Object expected, Supplier<?> actual,
-            Predicate<Object> ok) {
-        Object[] last = { "<not available>" };
-        run.poll(() -> {
-            Object value = actual.get();
-            last[0] = value;
-            return ok.test(value) ? Boolean.TRUE : null;
-        }, () -> "Expected " + subject + " " + expectation
-                + (expected == null ? "" : " <" + expected + ">") + " but was <" + last[0] + ">");
+    /** Every retrying assertion ends here, and records one User Step: "see …" or "see no …". */
+    static void check(TestRun run, Supplier<Phrase> step, String subject, String expectation, Object expected,
+            Supplier<?> actual, Predicate<Object> ok) {
+        run.steps().check(step, run.window(), () -> {
+            Object[] last = { "<not available>" };
+            return run.poll(() -> {
+                Object value = actual.get();
+                last[0] = value;
+                return ok.test(value) ? Boolean.TRUE : null;
+            }, () -> "Expected " + subject + " " + expectation
+                    + (expected == null ? "" : " <" + expected + ">") + " but was <" + last[0] + ">");
+        });
+    }
+
+    /** {@link #check} with the step worded from the expectation: "see text field “Name” with value “Alan”". */
+    static void checkTarget(TestRun run, Supplier<StepTarget> target, String subject, String expectation,
+            Object expected, Supplier<?> actual, Predicate<Object> ok) {
+        check(run, () -> Phrases.forCheck(target.get(), expectation, expected), subject, expectation, expected,
+                actual, ok);
+    }
+
+    /** A match count, read as "2 matches" in a failure. */
+    private record Matches(int count) {
+        @Override
+        public String toString() {
+            return count + (count == 1 ? " match" : " matches");
+        }
+    }
+
+    static Object matches(int count) {
+        return new Matches(count);
+    }
+
+    static int count(Object matches) {
+        return ((Matches) matches).count();
     }
 
     // ---------------------------------------------------------------- page
@@ -88,19 +117,21 @@ public final class UnifiedAssertions {
         PageAssert(TestRun run) { this.run = run; }
 
         public PageAssert isAt(Class<? extends Component> view) {
-            check(run, "the page", "to show", view.getSimpleName(),
-                    () -> run.session().currentPath(), any -> run.session().isAt(view));
+            check(run, () -> Phrases.page("see", "see " + Phrases.viewName(view)), "the page", "to show",
+                    view.getSimpleName(), () -> run.session().currentPath(), any -> run.session().isAt(view));
             return this;
         }
 
         public PageAssert hasPath(String path) {
             String expected = path.startsWith("/") ? path.substring(1) : path;
-            check(run, "the page", "to have path", expected, () -> run.session().currentPath(), expected::equals);
+            check(run, () -> Phrase.template("see", "see path {value}", null, List.of(expected)), "the page",
+                    "to have path", expected, () -> run.session().currentPath(), expected::equals);
             return this;
         }
 
         public PageAssert hasQueryParameter(String name, String value) {
-            check(run, "query parameter " + name, "to be", value,
+            check(run, () -> Phrase.template("see", "see query parameter “" + name + "” with {value}", null,
+                            value == null ? List.of() : List.of(value)), "query parameter " + name, "to be", value,
                     () -> run.session().queryParameter(name).orElse(null), v -> Objects.equals(v, value));
             return this;
         }
@@ -123,8 +154,26 @@ public final class UnifiedAssertions {
         SELF self() { return (SELF) this; }
 
         SELF check(String expectation, Object expected, Supplier<?> actual, Predicate<Object> ok) {
-            UnifiedAssertions.check(run, element.describe(), expectation, expected, actual, ok);
+            UnifiedAssertions.checkTarget(run, () -> StepTarget.of(element), element.describe(), expectation, expected,
+                    actual, ok);
             return self();
+        }
+
+        /** At least one component matches the lookup (for a Wrapper from {@code all()}: one at its position). */
+        public SELF exists() {
+            int needed = Math.max(element.index(), 0) + 1;
+            return check("to exist", null, () -> matches(element.countNow()), v -> count(v) >= needed);
+        }
+
+        /** No component matches the lookup, e.g. after it was removed. */
+        public SELF doesNotExist() {
+            int needed = Math.max(element.index(), 0) + 1;
+            return check("not to exist", null, () -> matches(element.countNow()), v -> count(v) < needed);
+        }
+
+        /** Exactly this many components match the lookup. */
+        public SELF hasCount(int expected) {
+            return check("to have count", expected, element::countNow, v -> Objects.equals(v, expected));
         }
 
         public SELF isVisible() { return check("to be visible", null, wrapper::isVisible, Boolean.TRUE::equals); }
@@ -358,7 +407,29 @@ public final class UnifiedAssertions {
         GridRowAssert(UnifiedGrid.UnifiedGridRow row) { this.row = row; this.run = GridSupport.runOf(row.grid()); }
 
         private GridRowAssert check(String expectation, Supplier<?> actual, Predicate<Object> ok) {
-            UnifiedAssertions.check(run, row.toString(), expectation, null, actual, ok);
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), expectation, null, actual,
+                    ok);
+            return this;
+        }
+
+        /** At least one row matches. */
+        public GridRowAssert exists() {
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "to exist", null,
+                    () -> matches(GridSupport.countNow(row)), v -> count(v) > 0);
+            return this;
+        }
+
+        /** No row matches, e.g. after it was deleted. */
+        public GridRowAssert doesNotExist() {
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "not to exist", null,
+                    () -> matches(GridSupport.countNow(row)), v -> count(v) == 0);
+            return this;
+        }
+
+        /** Exactly this many rows match. */
+        public GridRowAssert hasCount(int expected) {
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "to have count", expected,
+                    () -> GridSupport.countNow(row), v -> Objects.equals(v, expected));
             return this;
         }
 
@@ -368,7 +439,9 @@ public final class UnifiedAssertions {
         public GridRowAssert hasDetailsClosed() { return check("to have details closed", row::isDetailsOpen, Boolean.FALSE::equals); }
 
         public GridRowAssert hasCellText(String columnHeader, String expected) {
-            UnifiedAssertions.check(run, row + " cell \"" + columnHeader + "\"", "to have text", expected,
+            UnifiedAssertions.check(run,
+                    () -> Phrase.of("see", GridSupport.targetOf(row), List.of(expected)).withValueLabel("with " + columnHeader),
+                    row + " cell \"" + columnHeader + "\"", "to have text", expected,
                     () -> row.getCellText(columnHeader), v -> Objects.equals(v, expected));
             return this;
         }
@@ -384,21 +457,23 @@ public final class UnifiedAssertions {
         }
 
         public GridColumnAssert isSortedAscending() {
-            UnifiedAssertions.check(run, column.toString(), "to be sorted", "ASCENDING", column::getSortDirection,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to be sorted",
+                    "ASCENDING", column::getSortDirection,
                     v -> v == com.vaadin.flow.data.provider.SortDirection.ASCENDING);
             return this;
         }
 
         public GridColumnAssert isSortedDescending() {
-            UnifiedAssertions.check(run, column.toString(), "to be sorted", "DESCENDING", column::getSortDirection,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to be sorted",
+                    "DESCENDING", column::getSortDirection,
                     v -> v == com.vaadin.flow.data.provider.SortDirection.DESCENDING);
             return this;
         }
 
         public GridColumnAssert hasCellTexts(String... expected) {
             List<String> list = List.of(expected);
-            UnifiedAssertions.check(run, column.toString(), "to have cell texts", list, column::getCellTexts,
-                    v -> Objects.equals(v, list));
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to have cell texts",
+                    list, column::getCellTexts, v -> Objects.equals(v, list));
             return this;
         }
     }

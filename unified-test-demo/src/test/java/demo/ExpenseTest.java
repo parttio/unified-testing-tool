@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 class ExpenseTest {
 
     private static void assertStatus(UnifiedPage page, String text) {
-        assertThat(page.findComponent(Span.class).withId("status").single()).hasText(text);
+        assertThat(page.findComponent(Span.class).withId("status")).hasText(text);
     }
 
     // --8<-- [start:fillsTheValueFields]
@@ -43,25 +43,25 @@ class ExpenseTest {
         page.navigate(ExpenseView.class);
         LocalDateTime departure = LocalDateTime.of(2026, 11, 8, 10, 30);
 
-        page.find(UnifiedTextArea.class).withLabel("Notes").single().setValue("Taxi to the airport");
-        page.find(UnifiedIntegerField.class).withLabel("Nights").single().setValue(3);
-        page.find(UnifiedBigDecimalField.class).withLabel("Amount").single().setValue(new BigDecimal("54.20"));
-        page.find(UnifiedDateTimePicker.class).withLabel("Departure").single().setValue(departure);
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedTextArea.class).withLabel("Notes").setValue("Taxi to the airport");
+        page.find(UnifiedIntegerField.class).withLabel("Nights").setValue(3);
+        page.find(UnifiedBigDecimalField.class).withLabel("Amount").setValue(new BigDecimal("54.20"));
+        page.find(UnifiedDateTimePicker.class).withLabel("Departure").setValue(departure);
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single())
+        assertThat(page.find(UnifiedNotification.class))
                 .hasText("Saved: Taxi to the airport / 3 nights / 54.20 / 2026-11-08T10:30 / null /");
-        assertThat(page.find(UnifiedTextArea.class).withLabel("Notes").single()).hasValue("Taxi to the airport");
-        assertThat(page.find(UnifiedIntegerField.class).withLabel("Nights").single()).hasValue(3);
-        assertThat(page.find(UnifiedBigDecimalField.class).withLabel("Amount").single()).hasValue(new BigDecimal("54.2"));
-        assertThat(page.find(UnifiedDateTimePicker.class).withLabel("Departure").single()).hasValue(departure);
+        assertThat(page.find(UnifiedTextArea.class).withLabel("Notes")).hasValue("Taxi to the airport");
+        assertThat(page.find(UnifiedIntegerField.class).withLabel("Nights")).hasValue(3);
+        assertThat(page.find(UnifiedBigDecimalField.class).withLabel("Amount")).hasValue(new BigDecimal("54.2"));
+        assertThat(page.find(UnifiedDateTimePicker.class).withLabel("Departure")).hasValue(departure);
     }
     // --8<-- [end:fillsTheValueFields]
 
     @Test
     void typesTextADatePickerCantParse(UnifiedPage page) {
         page.navigate(ExpenseView.class);
-        UnifiedDatePicker returnDate = page.find(UnifiedDatePicker.class).withLabel("Return date").single();
+        UnifiedDatePicker returnDate = page.find(UnifiedDatePicker.class).withLabel("Return date");
 
         returnDate.typeText("dsdds");
 
@@ -72,7 +72,7 @@ class ExpenseTest {
     @Test
     void typesTextADateTimePickerCantParse(UnifiedPage page) {
         page.navigate(ExpenseView.class);
-        UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure").single();
+        UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure");
 
         departure.typeText("dsdds", "10:00");
 
@@ -88,7 +88,7 @@ class ExpenseTest {
     @Test
     void typesAnIncompleteDateTime(UnifiedPage page) {
         page.navigate(ExpenseView.class);
-        UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure").single();
+        UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure");
         departure.setValue(LocalDateTime.of(2026, 11, 8, 10, 30));
 
         departure.typeText("", "10:00");
@@ -100,7 +100,7 @@ class ExpenseTest {
     @Test
     void selectsATab(UnifiedPage page) {
         page.navigate(ExpenseView.class);
-        UnifiedTabs filter = page.find(UnifiedTabs.class).withTab("Approved").single();
+        UnifiedTabs filter = page.find(UnifiedTabs.class).withTab("Approved");
 
         filter.selectTab("Rejected");
 
@@ -112,14 +112,14 @@ class ExpenseTest {
     @Test
     void opensDetails(UnifiedPage page) {
         page.navigate(ExpenseView.class);
-        UnifiedDetails advanced = page.find(UnifiedDetails.class).withSummaryText("Advanced").single();
+        UnifiedDetails advanced = page.find(UnifiedDetails.class).withSummaryText("Advanced");
 
         advanced.open();
-        advanced.content().find(UnifiedTextField.class).withLabel("Cost center").single().setValue("CC-7");
+        advanced.content().find(UnifiedTextField.class).withLabel("Cost center").setValue("CC-7");
 
         assertThat(advanced).isOpen();
-        page.find(UnifiedButton.class).withText("Save").single().click();
-        assertThat(page.find(UnifiedNotification.class).single()).hasTextContaining("/ CC-7");
+        page.find(UnifiedButton.class).withText("Save").click();
+        assertThat(page.find(UnifiedNotification.class)).hasTextContaining("/ CC-7");
     }
     // --8<-- [end:opensDetails]
 
@@ -127,7 +127,7 @@ class ExpenseTest {
     @Test
     void clicksNestedMenuItems(UnifiedPage page) {
         page.navigate(ExpenseView.class);
-        UnifiedMenuBar menu = page.find(UnifiedMenuBar.class).withItem("File").single();
+        UnifiedMenuBar menu = page.find(UnifiedMenuBar.class).withItem("File");
 
         assertEquals(List.of("File", "Help"), menu.getItems());
         menu.clickItem("File", "Export", "CSV");
@@ -143,7 +143,7 @@ class ExpenseTest {
     void uploadsAFile(UnifiedPage page) {
         page.navigate(ExpenseView.class);
 
-        page.find(UnifiedUpload.class).withId("receipt").single().upload("receipt.txt", "text/plain",
+        page.find(UnifiedUpload.class).withId("receipt").upload("receipt.txt", "text/plain",
                 "Taxi 54.20".getBytes(StandardCharsets.UTF_8));
 
         assertStatus(page, "Received receipt.txt: Taxi 54.20");
@@ -156,11 +156,11 @@ class ExpenseTest {
         page.navigate(ExpenseView.class);
 
         for (int i = 1; i <= 3; i++) {
-            page.find(UnifiedUpload.class).withId("attachment").single().upload("receipt-" + i + ".txt", "text/plain",
+            page.find(UnifiedUpload.class).withId("attachment").upload("receipt-" + i + ".txt", "text/plain",
                     "Taxi".getBytes(StandardCharsets.UTF_8));
         }
 
-        assertThat(page.findComponent(Span.class).withId("attachments").single())
+        assertThat(page.findComponent(Span.class).withId("attachments"))
                 .hasText("receipt-1.txt, receipt-2.txt, receipt-3.txt");
     }
 
@@ -169,13 +169,13 @@ class ExpenseTest {
     void searchesInPlainHtmlContainers(UnifiedPage page) {
         page.navigate(ExpenseView.class);
 
-        assertEquals("Total120.50", page.find(UnifiedDiv.class).withClassName("summary").single().getText());
-        assertEquals("120.50", page.find(UnifiedDiv.class).withClassName("summary").single()
-                .findComponent(Span.class).withText("120.50").single().getText());
-        assertThat(page.find(UnifiedSection.class).single()).hasText("Expenses are paid monthly.");
+        assertEquals("Total120.50", page.find(UnifiedDiv.class).withClassName("summary").getText());
+        assertEquals("120.50", page.find(UnifiedDiv.class).withClassName("summary")
+                .findComponent(Span.class).withText("120.50").getText());
+        assertThat(page.find(UnifiedSection.class)).hasText("Expenses are paid monthly.");
         // a component found with findComponent is a Scope too
-        assertEquals(1, page.findComponent(VerticalLayout.class).single()
-                .find(UnifiedSection.class).all().size());
+        assertThat(page.findComponent(VerticalLayout.class)
+                .find(UnifiedSection.class)).hasCount(1);
     }
     // --8<-- [end:searchesInPlainHtmlContainers]
 }

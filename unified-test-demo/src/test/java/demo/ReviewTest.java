@@ -17,13 +17,13 @@ class ReviewTest {
         page.navigate(ReviewView.class);
 
         for (int i = 0; i < 5; i++) {
-            page.find(UnifiedButton.class).withText("Submit").single().click();
-            page.find(UnifiedButton.class).withText("Reject").single().click();
+            page.find(UnifiedButton.class).withText("Submit").click();
+            page.find(UnifiedButton.class).withText("Reject").click();
         }
-        page.find(UnifiedButton.class).withText("Submit").single().click();
-        page.find(UnifiedButton.class).withText("Approve").single().click();
+        page.find(UnifiedButton.class).withText("Submit").click();
+        page.find(UnifiedButton.class).withText("Approve").click();
 
-        assertThat(page.findComponent(com.vaadin.flow.component.html.Span.class).withId("status").single())
+        assertThat(page.findComponent(com.vaadin.flow.component.html.Span.class).withId("status"))
                 .hasText("Approved");
     }
 
@@ -31,12 +31,12 @@ class ReviewTest {
     @Test
     void showsTheErrorDialogWhenAnActionFails(UnifiedPage page) {
         page.navigate(ReviewView.class);
-        page.find(UnifiedButton.class).withText("Submit").single().click();
-        page.find(UnifiedButton.class).withText("Approve").single().click();
+        page.find(UnifiedButton.class).withText("Submit").click();
+        page.find(UnifiedButton.class).withText("Approve").click();
 
-        page.find(UnifiedButton.class).withText("Archive").single().click();
+        page.find(UnifiedButton.class).withText("Archive").click();
 
-        UnifiedDialog error = page.find(UnifiedDialog.class).withHeaderTitle("Something went wrong").single();
+        UnifiedDialog error = page.find(UnifiedDialog.class).withHeaderTitle("Something went wrong");
         assertThat(error).isOpen().hasTextContaining("The archive is not available");
     }
 }

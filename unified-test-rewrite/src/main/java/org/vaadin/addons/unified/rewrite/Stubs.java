@@ -32,14 +32,11 @@ final class Stubs {
             package com.vaadin.testing.unified.component;
             public interface UnifiedGrid {
                 UnifiedGridRow row(int index);
-                RowQuery rows();
+                UnifiedGridRow row();
                 int getRowCount();
-                interface RowQuery {
-                    RowQuery withCellText(String text);
-                    RowQuery withCellText(String columnHeader, String text);
-                    UnifiedGridRow single();
-                }
                 interface UnifiedGridRow {
+                    UnifiedGridRow withCellText(String text);
+                    UnifiedGridRow withCellText(String columnHeader, String text);
                     int getIndex();
                     String getCellText(int columnIndex);
                     String getCellText(String columnHeader);

@@ -20,11 +20,11 @@ public class JUnit4MigratedTest {
     @Test
     public void savesTheName(UnifiedPage page) {
         openProfile(page);
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
-        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("alice@example.com");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        // TODO unified: was waitForFirst(); single() fails when several components match
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alice");
+        // TODO unified: was waitForFirst(); the lookup fails when several components match
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alice");
     }
 }

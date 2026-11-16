@@ -25,10 +25,10 @@ class MockedServiceTest {
         when(service.save(anyString(), anyString())).thenReturn("Saved by the mock");
         page.navigate(ProfileView.class);
 
-        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("a@b.c");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedTextField.class).withLabel("Email").setValue("a@b.c");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved by the mock");
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved by the mock");
     }
     // --8<-- [end:usesTheMock]
 }

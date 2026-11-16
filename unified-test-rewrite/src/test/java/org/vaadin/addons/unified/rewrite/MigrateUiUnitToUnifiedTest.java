@@ -46,9 +46,9 @@ class MigrateUiUnitToUnifiedTest implements RewriteTest {
                 class ProfileTest {
                     @Test
                     void saves(UnifiedPage page) {
-                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
-                        page.find(UnifiedButton.class).withText("Save").single().click();
-                        assertThat(page.find(UnifiedTextField.class).withLabel("Name").single()).hasValue("Alice");
+                        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+                        page.find(UnifiedButton.class).withText("Save").click();
+                        assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Alice");
                     }
                 }
                 """));
@@ -92,7 +92,7 @@ class MigrateUiUnitToUnifiedTest implements RewriteTest {
                     @Test
                     public void saves(UnifiedPage page) {
                         open(page);
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));

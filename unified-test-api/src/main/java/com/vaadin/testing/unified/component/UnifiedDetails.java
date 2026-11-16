@@ -1,7 +1,6 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.details.Details;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedElement;
@@ -10,7 +9,7 @@ import com.vaadin.testing.unified.internal.ElementResolver;
 import com.vaadin.testing.unified.internal.LazyElement;
 import com.vaadin.testing.unified.internal.LazyScope;
 import com.vaadin.testing.unified.internal.Wrappers;
-import com.vaadin.testing.unified.query.Query;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import java.util.List;
 
@@ -19,13 +18,11 @@ import java.util.List;
  * the content.
  */
 @UnifiedComponent(Details.class)
-public interface UnifiedDetails extends UnifiedWrapper, Scope, Findable<UnifiedDetails.DetailsQuery> {
+public interface UnifiedDetails extends UnifiedWrapper, Scope, CommonFilters<UnifiedDetails> {
 
-    interface DetailsQuery extends Query<UnifiedDetails, DetailsQuery> {
-        /** Details whose summary is this text, exactly. */
-        default DetailsQuery withSummaryText(String text) {
-            return where(e -> text.equals(e.unwrap(DetailsAccess.class).summaryText()));
-        }
+    /** Details whose summary is this text, exactly. */
+    default UnifiedDetails withSummaryText(String text) {
+        return where(e -> text.equals(e.unwrap(DetailsAccess.class).summaryText()));
     }
 
     // actions (Auto-Wait); clicking the summary, as a user would
@@ -49,6 +46,11 @@ public interface UnifiedDetails extends UnifiedWrapper, Scope, Findable<UnifiedD
             @Override
             public String describe() {
                 return details.describe() + ".content()";
+            }
+
+            @Override
+            public com.vaadin.testing.unified.internal.steps.StepTarget userTarget() {
+                return com.vaadin.testing.unified.internal.steps.StepTarget.of(details);
             }
         }, -1, details.run()));
     }

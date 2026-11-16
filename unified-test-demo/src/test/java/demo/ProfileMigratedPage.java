@@ -14,11 +14,11 @@ class ProfileMigratedPage {
     }
 
     void fill(String name, String email) {
-        test.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
-        test.find(UnifiedTextField.class).withLabel("Email").single().setValue(email);
+        test.find(UnifiedTextField.class).withLabel("Name").setValue(name);
+        test.find(UnifiedTextField.class).withLabel("Email").setValue(email);
     }
 
     UnifiedButton saveButton() {
-        return test.find(UnifiedButton.class).withText("Save").single();
+        return test.find(UnifiedButton.class).withText("Save");
     }
 }

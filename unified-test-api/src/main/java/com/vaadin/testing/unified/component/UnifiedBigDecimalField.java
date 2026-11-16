@@ -1,19 +1,17 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.textfield.BigDecimalField;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
-import com.vaadin.testing.unified.query.Query;
 import java.math.BigDecimal;
 
 /** A {@link BigDecimalField}: the value is a {@link BigDecimal}, {@code null} when empty. */
 @UnifiedComponent(BigDecimalField.class)
-public interface UnifiedBigDecimalField extends UnifiedField, Findable<UnifiedBigDecimalField.BigDecimalFieldQuery> {
-
-    interface BigDecimalFieldQuery extends Query<UnifiedBigDecimalField, BigDecimalFieldQuery>,
-            LabelFilter<BigDecimalFieldQuery>, PlaceholderFilter<BigDecimalFieldQuery> {}
+public interface UnifiedBigDecimalField extends UnifiedField,
+        CommonFilters<UnifiedBigDecimalField>, LabelFilter<UnifiedBigDecimalField>,
+        PlaceholderFilter<UnifiedBigDecimalField> {
 
     // actions (Auto-Wait)
     /** Types the value as a user would; {@code null} empties the field. */
