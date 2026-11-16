@@ -21,11 +21,11 @@ flowchart TD
 
 | Artifact (`com.vaadin`) | Contains | Depends on | License |
 |---|---|---|---|
-| `unified-test-api` | annotations, `UnifiedPage`, Unified Element, Core Set wrapper interfaces, `UnifiedAssertions` | `flow-server`, JUnit 6 API | Apache-2.0 |
+| `unified-test-api` | annotations, `UnifiedPage`, Unified Element, Core Set wrapper interfaces, `UnifiedAssertions`, the JUnit 6 integration | `flow-server`; JUnit 6 API optional, only for the JUnit integration | Apache-2.0 |
 | `unified-test-browserless` | Browserless adapter + its Core Set overrides | Browserless Test | Apache-2.0 |
 | `unified-test-playwright` | Playwright adapter + its Core Set overrides | Dramafinder, `vaadin-dev` | Apache-2.0 |
 | `unified-test-selenium` | Selenium adapter + its Core Set overrides | TestBench, `vaadin-dev` | Apache-2.0 code; TestBench core is **Vaadin Commercial** |
-| `unified-test-spring` | `@UnifiedSpringBootTest` | Spring Boot test | Apache-2.0 |
+| `unified-test-spring` | `@UnifiedSpringBootTest` | Spring Boot test, JUnit 6 API | Apache-2.0 |
 | `unified-test-bom` | versions of all of the above and of the Testing Tools | | Apache-2.0 |
 
 Packages: `com.vaadin.testing.unified…`.
@@ -64,7 +64,7 @@ Add the adapters a build uses as test dependencies. No Maven profiles: the run's
 | Core Set overrides | Live inside each adapter, registered by the adapter. `unified-test-api` never depends on adapter classes. |
 | Add-on overrides | `@ToolImplementation` in the add-on's own jar ([06-wrappers.md](06-wrappers.md)). |
 | Versioning | Follows Vaadin: one release line per Vaadin minor (`25.3.x`). The BOM pins matching Dramafinder, Browserless Test and TestBench versions. |
-| Baseline | Java 21, Vaadin 25, JUnit 6, Spring Boot 4; Dramafinder 2.0+ for the Playwright adapter. |
+| Baseline | Java 21, Vaadin 25, Spring Boot 4; JUnit 6 as the Test Runner integration shipped ([ADR 0008](../adr/0008-adapter-spi-is-test-runner-neutral.md)); Dramafinder 2.0+ for the Playwright adapter. |
 
 ## Community bundle
 
@@ -75,3 +75,4 @@ Add the adapters a build uses as test dependencies. No Maven profiles: the run's
 - Register through `ServiceLoader` under their `TestingTool` value.
 - Register their Core Set overrides themselves.
 - Load nothing of their Testing Tool unless selected for the run.
+- Depend on no Test Runner: everything about the running test comes from `AdapterContext` ([ADR 0008](../adr/0008-adapter-spi-is-test-runner-neutral.md)).

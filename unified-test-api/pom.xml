@@ -10,9 +10,11 @@
     <name>Unified API</name>
     <description>Annotations, UnifiedPage, Wrappers, assertions and the adapter SPI. No Testing Tool dependency.</description>
     <dependencies>
+        <!-- only the JUnit integration (internal.junit) needs it; a JUnit test brings its own (ADR 0008) -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <optional>true</optional>
         </dependency>
         <!-- the run summary's end-of-run listener; the test runner (Surefire, the IDE) brings the launcher -->
         <dependency>

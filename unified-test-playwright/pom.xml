@@ -37,6 +37,13 @@
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-spring</artifactId>
             <optional>true</optional>
+            <!-- the adapter itself never uses JUnit (ADR 0008): keep it off the compile classpath -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>junit-jupiter-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>

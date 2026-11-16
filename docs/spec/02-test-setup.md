@@ -6,10 +6,10 @@ Decided in [#9](https://github.com/jcgueriaud1/unified-testing-tool/issues/9) (c
 
 | Annotation | Use for |
 |---|---|
-| `@UnifiedUITest` | Any app. JUnit 6 extension, no base class. |
+| `@UnifiedUITest` | Any app. No base class. On JUnit 6 it registers the Unified API's extension. |
 | `@UnifiedSpringBootTest` | Spring Boot apps. `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `@UnifiedUITest`. |
 
-The extension injects `UnifiedPage` as a test method or constructor parameter.
+On JUnit, the extension injects `UnifiedPage` as a test method or constructor parameter. JUnit 6 is the Test Runner integration the Unified API ships; nothing else in it depends on JUnit, so other Test Runners can be integrated later ([ADR 0008](../adr/0008-adapter-spi-is-test-runner-neutral.md)).
 
 ```java
 @UnifiedUITest
@@ -23,13 +23,13 @@ class LoginViewTest {
 
 One Testing Tool per **run**. Test code never names it.
 
-| Setting (JUnit configuration parameter) | Values | Default |
+| Setting | Values | Default |
 |---|---|---|
 | `vaadin.testing.tool` | `browserless`, `playwright`, `selenium` | `browserless` |
 | `vaadin.testing.base-url` | URL of the running app (browser Testing Tools) | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | Auto-Wait and assertion timeout | `10s` |
 
-Set them in `src/test/resources/junit-platform.properties` or with `-D` from Maven, Gradle or the IDE.
+On JUnit, set them as JUnit configuration parameters, in `src/test/resources/junit-platform.properties`, or as system properties with `-D` from Maven, Gradle or the IDE.
 
 A build runs the suite once per Testing Tool it wants:
 
@@ -85,7 +85,7 @@ copy taken once after the context started (with Testcontainers, a fresh schema p
 
 ## Requirements on Testing Tool adapters
 
-- Read the Testing Tool and timeout only from the JUnit configuration parameters above.
+- Read settings only through `AdapterContext.configuration(...)` and `timeout()`, and the test class, run-wide instances (such as a shared browser) and the Spring context only through `AdapterContext`. No Test Runner types: the build fails on a JUnit import in an adapter ([ADR 0008](../adr/0008-adapter-spi-is-test-runner-neutral.md)).
 - Browser adapters: own the browser lifecycle; one fresh page per test, signed out with fresh storage. Selenium reuses one browser per run (a fresh tab with no cookies or storage per test) unless `vaadin.testing.selenium.reuse-browser=false`.
 - Browserless adapter: build the app per test, from the Spring context if there is one.
 - Close everything after each test.

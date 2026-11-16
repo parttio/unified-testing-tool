@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # The adapter SPI is Test Runner-neutral; JUnit is one integration on top
@@ -31,3 +31,7 @@ Today the Testing Tool adapters get JUnit's `ExtensionContext` through `AdapterC
 - `browserless-test-junit6` stays the Browserless dependency for now. If Browserless Test publishes an artifact without JUnit, the adapter switches to it.
 - The Migration Recipes are unaffected: they read and write JUnit tests on purpose.
 - The spec ([02 Test setup](../spec/02-test-setup.md), [10 Packaging](../spec/10-packaging.md)) stops calling the API a "JUnit 6 extension" and lists JUnit 6 as the default Test Runner integration, not as a dependency of the Unified API.
+- The lifecycle core is `TestLifecycle`, and it also reports the test's User Steps. The JUnit integration (`UnifiedExtension`, its `AdapterContext`, finding the Spring context) lives in `internal.junit`.
+- The build enforces the decision: it fails on a JUnit import in the Unified API outside `internal.junit` and `@UnifiedUITest`, and in the adapters' main code. With `junit-jupiter-api` optional, the adapters do not have JUnit on their compile classpath either.
+
+Implemented under #219: settings (#221), the neutral `AdapterContext` (#222), the adapters (#223), the lifecycle core (#224), removing `extensionContext()` (#225) and making JUnit optional (#226).
