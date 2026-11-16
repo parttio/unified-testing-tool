@@ -19,7 +19,7 @@ import org.openqa.selenium.firefox.FirefoxOptions;
  * storage, so signed out and in a new session; {@code openAsUser} starts a browser of its own. TestBench checks its license when it loads: on CI, set the
  * {@code VAADIN_OFFLINE_KEY} environment variable.
  * <p>
- * Settings (JUnit configuration parameters or system properties):
+ * Settings (from the Test Runner's configuration; on JUnit, configuration parameters or system properties):
  * <ul>
  * <li>{@code vaadin.testing.base-url}: app URL when the test has no Spring context; default
  * {@code http://localhost:8080}</li>
@@ -53,9 +53,7 @@ public final class SeleniumAdapter implements TestingToolAdapter {
         };
         SeleniumSession session = null;
         if (!"false".equalsIgnoreCase(context.configuration(REUSE_BROWSER).orElse("true"))) {
-            SharedBrowser shared = context.extensionContext().getRoot()
-                    .getStore(org.junit.jupiter.api.extension.ExtensionContext.Namespace.GLOBAL)
-                    .computeIfAbsent(SharedBrowser.class, key -> new SharedBrowser(browsers), SharedBrowser.class);
+            SharedBrowser shared = context.runScoped(SharedBrowser.class, () -> new SharedBrowser(browsers));
             TestBenchDriverProxy driver = shared.acquire(baseUrl);
             if (driver != null) { // null: in use by a test running in parallel
                 session = new SeleniumSession(browsers, driver, shared::release, baseUrl, context.timeout());
@@ -92,16 +90,14 @@ public final class SeleniumAdapter implements TestingToolAdapter {
     }
 
     private static String baseUrl(AdapterContext context) {
-        Optional<String> fromSpring = SpringSupport.isAvailable()
-                ? SpringSupport.baseUrl(context.extensionContext())
-                : Optional.empty();
+        Optional<String> fromSpring = context.springContext().flatMap(SpringSupport::baseUrl);
         String url = fromSpring.or(() -> context.configuration(BASE_URL)).orElse("http://localhost:8080");
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 
     /**
-     * The run's browser, closed by JUnit at the end of the run. A test takes it, and gives it back with one
+     * The run's browser, closed when the run ends. A test takes it, and gives it back with one
      * blank tab and no cookies or storage left, so the next test starts signed out with fresh storage.
      */
     static final class SharedBrowser implements AutoCloseable {
