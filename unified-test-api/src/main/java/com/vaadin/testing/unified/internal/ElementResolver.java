@@ -8,4 +8,9 @@ public interface ElementResolver {
     List<UnifiedElement> resolve();
 
     String describe();
+
+    /** What it finds in user words, for the User Step reports; null to use {@link #describe()}. */
+    default com.vaadin.testing.unified.internal.steps.StepTarget userTarget() {
+        return null;
+    }
 }
