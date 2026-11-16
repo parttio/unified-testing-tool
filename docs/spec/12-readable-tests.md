@@ -128,6 +128,17 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 3. **Failed scenarios:** `@DisplayName`, the failed User Step, Near Misses, evidence path.
 4. **Passing scenarios:** one line each, User Steps folded in `<details>`.
 
+Skipped scenarios count in the header only: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
+
+How `summary.md` is made:
+
+- **Where and when.** `<vaadin.testing.evidence-dir>/summary.md`, written when the JUnit Platform has run the test plan (a `TestExecutionListener` registered through `META-INF/services`). A run without Unified UI Tests writes none. Tests that launch other tests through the JUnit launcher don't write one.
+- **Which files.** The `user-steps.json` under the evidence directory whose `startedAt` is not before the run's start: the Maven JVM that started the Surefire forks, else the test JVM. Each fork rewrites the summary when it ends, from the files of all forks, so the last one writes the whole run.
+- **Changed files.** `git diff --name-status --no-renames <merge base of the ref and HEAD>` plus untracked files, run in the project's directory. In CI that equals `git diff <ref>...HEAD`; locally, uncommitted changes count too. Without git, or with an unknown ref, the section is left out and one line is logged.
+- **Matching.** A call site matches a changed file whose path ends with `<package as directories>/<callSite.file>` (the outermost class's name plus `.java` when `file` is missing). A change anywhere in a file marks every scenario calling from it.
+- **New or changed.** New when the test class's file was added (renamed files count as added), or when that file at the merge base has no `<test method>(`. Otherwise changed.
+- **GitHub job summary.** Put in a marked block, one per evidence directory and run: a later fork replaces the block an earlier one wrote.
+
 Later outputs, built from the same `user-steps.json`: an HTML run report with per-step evidence, living documentation per view, and a step-level diff against the base branch's last run.
 
 ### `user-steps.json`, schema version 1
