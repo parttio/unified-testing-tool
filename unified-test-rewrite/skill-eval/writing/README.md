@@ -63,3 +63,13 @@ tests and the guide in the worktree, which a real project has fewer of; the scor
 test checks what the scenario asked beyond its passing (read `user-steps.txt` in the run directory for that).
 
 ## Baselines
+
+First baseline (2026-11-16), an agent run (Claude Code, `claude -p`, one run per fixture) with the first version of
+the skill: all 6 tests compile, pass on Browserless and on Playwright and follow the style rules; no Escape Hatch,
+no file changed outside the demo's tests; intent share 39% (114/296). The agent used a User Task where the scenario
+had several steps of one piece of work (`ChangeEmailTest`, `RenamePersonTest`), scoped lookups by container and
+dialog, and found the grids by test id after reading the view. Its `FilterUsersTest` checks each of User 110..119 in
+a loop, more than the scenario asked; its `EditUserFromGridTest` checks the notification with
+`withText(..)` + `isOpen()` rather than `hasText(..)`.
+
+The reference tests, scored with `--reference` on the same day, also pass everything, at 39% (103/263).
