@@ -53,8 +53,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <vaadin.version>25.3.5</vaadin.version>
         <spring-boot.version>4.1.1</spring-boot.version>
-        <!-- where the no-junit-imports check applies, in modules that run it (ADR 0008) -->
-        <no-junit.base-package>com.vaadin.testing.unified.**</no-junit.base-package>
     </properties>
 
     <dependencyManagement>
@@ -91,8 +89,9 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.4</version>
                 </plugin>
-                <!-- ADR 0008: the adapter SPI and the adapters stay Test Runner-neutral. Modules that list this
-                     plugin fail the build on a JUnit import in their main code under no-junit.base-package. -->
+                <!-- ADR 0008: the Unified API and the adapters stay Test Runner-neutral. Modules that list this
+                     plugin fail the build on a JUnit import in their main code, outside the JUnit integration
+                     (internal.junit) and @UnifiedUITest, which registers it. -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
@@ -113,8 +112,12 @@
                             <configuration>
                                 <rules>
                                     <RestrictImports>
-                                        <reason>The adapter SPI and the Testing Tool adapters must not depend on a Test Runner (ADR 0008). Use AdapterContext's testClass(), testMethod(), runScoped() and springContext().</reason>
-                                        <basePackage>${no-junit.base-package}</basePackage>
+                                        <reason>The Unified API and the Testing Tool adapters must not depend on a Test Runner (ADR 0008). Adapters use AdapterContext's testClass(), testMethod(), runScoped() and springContext(); JUnit-only code goes in com.vaadin.testing.unified.internal.junit.</reason>
+                                        <basePackage>com.vaadin.testing.unified.**</basePackage>
+                                        <exclusions>
+                                            <exclusion>com.vaadin.testing.unified.internal.junit.**</exclusion>
+                                            <exclusion>com.vaadin.testing.unified.UnifiedUITest</exclusion>
+                                        </exclusions>
                                         <!-- also fully qualified references, not only imports -->
                                         <parseFullCompilationUnit>true</parseFullCompilationUnit>
                                         <!-- tests may use JUnit -->

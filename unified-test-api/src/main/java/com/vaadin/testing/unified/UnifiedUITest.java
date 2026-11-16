@@ -1,6 +1,6 @@
 package com.vaadin.testing.unified;
 
-import com.vaadin.testing.unified.internal.UnifiedExtension;
+import com.vaadin.testing.unified.internal.junit.UnifiedExtension;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
