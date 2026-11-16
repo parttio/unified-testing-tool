@@ -12,6 +12,10 @@ _Avoid_: Testing tool, framework, facade
 One of the existing tools a test written against the Unified API can run on: Dramafinder (Playwright), Browserless, or TestBench Selenium.
 _Avoid_: Engine, backend, driver, runner
 
+**Test Runner**:
+The framework that discovers and runs Unified UI Tests and reports their results, such as JUnit; separate from the Testing Tool that drives the application.
+_Avoid_: Test framework, engine, Testing Tool
+
 **Escape Hatch**:
 A deliberate way out of the Unified API to call a specific Testing Tool directly, for behaviour the tools don't share.
 _Avoid_: Workaround, native access
