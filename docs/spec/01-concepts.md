@@ -18,8 +18,8 @@ Definitions are in [GLOSSARY.md](../../GLOSSARY.md). This page shows how the ter
 ```mermaid
 flowchart LR
     Test[Unified UI Test] -->|injected| Page[UnifiedPage]
-    Page -->|find| Query
-    Query -->|single / all| Wrapper
+    Page -->|find| Wrapper
+    Wrapper -->|"filters (withLabel, …)"| Wrapper
     Wrapper -->|element| Element[Unified Element]
     Wrapper -->|assertThat| Assert[Retrying assertion]
     Page -. unwrap .-> Tool[Testing Tool object]
