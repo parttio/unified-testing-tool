@@ -1,0 +1,257 @@
+package com.vaadin.testing.unified.internal;
+
+import com.vaadin.testing.unified.RequiresBrowser;
+import com.vaadin.testing.unified.RequiresTestingTool;
+import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
+import com.vaadin.testing.unified.internal.steps.UserStepsReport;
+import com.vaadin.testing.unified.spi.AdapterContext;
+import com.vaadin.testing.unified.spi.AdapterSession;
+import com.vaadin.testing.unified.spi.TestingToolAdapter;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Inherited;
+import java.lang.reflect.AnnotatedElement;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * What {@code @UnifiedUITest} does for each test, with no Test Runner types (ADR 0008): decide whether the
+ * test runs on this run's Testing Tool, open it to get its {@link UnifiedPage}, and close it, reporting its
+ * User Steps and writing the failure evidence when it failed. A Test Runner integration (the JUnit extension, {@code internal.junit.UnifiedExtension})
+ * only translates its own test context into these calls.
+ */
+public final class TestLifecycle {
+
+    /** Whether a test runs, and why. */
+    public record Decision(boolean runs, String reason) {}
+
+    /**
+     * Which test this is, as its reports name it.
+     *
+     * @param displayName the name the Test Runner shows, or {@code methodName}
+     * @param invocation the n-th run of a parameterized or repeated test, or null
+     */
+    public record TestId(String className, String methodName, String displayName, Integer invocation) {
+
+        /** The name of its failure evidence files, such as {@code com.example.LoginTest.logsIn}. */
+        String evidenceName() {
+            return className + "." + methodName;
+        }
+    }
+
+    private final Settings settings;
+    private final Function<TestingTool, TestingToolAdapter> adapters;
+
+    TestLifecycle(Settings settings, Function<TestingTool, TestingToolAdapter> adapters) {
+        this.settings = settings;
+        this.adapters = adapters;
+    }
+
+    /** The lifecycle for a run with these settings, using the adapters registered with {@link ServiceLoader}. */
+    public static TestLifecycle create(Settings settings) {
+        return new TestLifecycle(settings, TestLifecycle::registeredAdapter);
+    }
+
+    public Settings settings() {
+        return settings;
+    }
+
+    // ---------------------------------------------------------------- Capabilities
+
+    /**
+     * Whether the test runs on this run's Testing Tool, from its Capabilities ({@link RequiresTestingTool},
+     * {@link RequiresBrowser}) on {@code element} (a test method or class) or else on {@code testClass}.
+     */
+    public Decision decide(AnnotatedElement element, Class<?> testClass) {
+        TestingTool tool = settings.tool();
+        Optional<RequiresTestingTool> requiredTool = find(element, testClass, RequiresTestingTool.class);
+        if (requiredTool.isPresent() && Arrays.stream(requiredTool.get().value()).noneMatch(t -> t == tool)) {
+            return new Decision(false, "Requires " + Arrays.toString(requiredTool.get().value())
+                    + ", this run uses " + tool);
+        }
+        if (find(element, testClass, RequiresBrowser.class).isPresent() && !tool.hasRealBrowser()) {
+            return new Decision(false, "Requires a real browser, this run uses " + tool);
+        }
+        return new Decision(true, "Runs on " + tool);
+    }
+
+    private static <A extends Annotation> Optional<A> find(AnnotatedElement element, Class<?> testClass, Class<A> type) {
+        Optional<A> onElement = element == null ? Optional.empty() : findAnnotation(element, type, new HashSet<>());
+        if (onElement.isPresent() || testClass == null) {
+            return onElement;
+        }
+        return findAnnotation(testClass, type, new HashSet<>());
+    }
+
+    /**
+     * {@code type} present on {@code element}, or meta-present through its annotations; on a class, also on its
+     * interfaces, and on its superclass when {@code type} is {@link Inherited}.
+     */
+    static <A extends Annotation> Optional<A> findAnnotation(AnnotatedElement element, Class<A> type, Set<Object> visited) {
+        if (!visited.add(element)) {
+            return Optional.empty();
+        }
+        A direct = element.getDeclaredAnnotation(type);
+        if (direct != null) {
+            return Optional.of(direct);
+        }
+        for (Annotation annotation : element.getDeclaredAnnotations()) {
+            Class<? extends Annotation> annotationType = annotation.annotationType();
+            if (!annotationType.getName().startsWith("java.lang.annotation.")) {
+                Optional<A> meta = findAnnotation(annotationType, type, visited);
+                if (meta.isPresent()) {
+                    return meta;
+                }
+            }
+        }
+        if (element instanceof Class<?> c) {
+            for (Class<?> i : c.getInterfaces()) {
+                Optional<A> onInterface = findAnnotation(i, type, visited);
+                if (onInterface.isPresent()) {
+                    return onInterface;
+                }
+            }
+            if (type.isAnnotationPresent(Inherited.class) && c.getSuperclass() != null) {
+                return findAnnotation(c.getSuperclass(), type, visited);
+            }
+        }
+        return Optional.empty();
+    }
+
+    // ---------------------------------------------------------------- open and close
+
+    /**
+     * Opens one test on this run's Testing Tool: a fresh session and its page, recording its User Steps into
+     * {@code steps} (shared by every page the test is given).
+     */
+    public OpenTest open(AdapterContext context, StepRecorder steps) {
+        TestingTool tool = settings.tool();
+        AdapterSession session = adapters.apply(tool).open(context);
+        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)));
+    }
+
+    /** One open test. Close it exactly once, when the test ends. */
+    public final class OpenTest {
+        private final AdapterSession session;
+        private final StepRecorder steps;
+        private final UnifiedPage page;
+
+        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page) {
+            this.session = session;
+            this.steps = steps;
+            this.page = page;
+        }
+
+        public UnifiedPage page() {
+            return page;
+        }
+
+        /**
+         * Ends the test: reports its User Steps, writes the failure evidence when {@code failure} is not null,
+         * and closes its session. A failed test gets its User Steps and the evidence file names on the failure
+         * itself (suppressed exceptions), so they show in the test report. Problems while writing never hide
+         * the test's own failure, nor fail a passing test.
+         *
+         * @param failure what the test threw, or null when it passed
+         * @return the evidence files written, empty when the test passed or nothing was written
+         */
+        public List<Path> close(Throwable failure, TestId test) {
+            try {
+                reportUserSteps(steps, failure, test);
+                return failure == null ? List.of() : writeEvidence(failure, test.evidenceName());
+            } finally {
+                session.close();
+            }
+        }
+
+        private List<Path> writeEvidence(Throwable failure, String name) {
+            try {
+                List<Path> files = session.writeFailureEvidence(settings.evidenceDir(), name);
+                if (!files.isEmpty()) {
+                    failure.addSuppressed(new FailureEvidence("Failure evidence: " + describe(files)));
+                }
+                return files;
+            } catch (Exception | LinkageError e) {
+                failure.addSuppressed(new FailureEvidence("Failure evidence could not be written: " + e));
+                return List.of();
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- User Steps
+
+    /**
+     * Writes {@code user-steps.txt} and {@code user-steps.json} into the test's evidence directory, prints the
+     * text to stdout (the CI log) as {@code vaadin.testing.user-steps.log} says, and adds it to a failure.
+     * Problems while writing never hide the test's own failure, nor fail a passing test.
+     */
+    private void reportUserSteps(StepRecorder steps, Throwable failure, TestId test) {
+        steps.finish();
+        String status = failure == null ? "passed"
+                : failure.getClass().getName().equals("org.opentest4j.TestAbortedException") ? "aborted" : "failed";
+        UserStepsReport report = new UserStepsReport(test.className(), test.methodName(), test.displayName(),
+                settings.tool().name().toLowerCase(Locale.ROOT), status, failure, steps);
+        String text = report.text();
+        Path directory = testEvidenceDir(test);
+        String written;
+        try {
+            report.write(directory);
+            written = directory.toAbsolutePath().toString();
+        } catch (Exception | LinkageError e) {
+            written = "not written: " + e;
+            System.err.println("User Steps could not be written to " + directory + ": " + e);
+        }
+        Settings.UserStepsLog log = settings.userStepsLog();
+        if (log == Settings.UserStepsLog.ALL || (log == Settings.UserStepsLog.FAILED && status.equals("failed"))) {
+            System.out.print(text);
+            System.out.flush();
+        }
+        if (failure != null && status.equals("failed")) {
+            failure.addSuppressed(new FailureEvidence("User Steps (" + written + "):\n" + text));
+        }
+    }
+
+    /**
+     * {@code <evidence-dir>/<test class>/<test method>/}: the class without its package (nested classes keep
+     * their {@code $}), and {@code [n]} after the method for the n-th invocation of a parameterized or repeated
+     * test.
+     */
+    Path testEvidenceDir(TestId test) {
+        String className = test.className();
+        String classDir = className.substring(className.lastIndexOf('.') + 1);
+        String methodDir = test.methodName() + (test.invocation() == null ? "" : "[" + test.invocation() + "]");
+        return settings.evidenceDir().resolve(classDir).resolve(methodDir);
+    }
+
+    /** The evidence files as the report shows them: absolute paths, comma-separated. */
+    public static String describe(List<Path> files) {
+        return files.stream().map(p -> p.toAbsolutePath().toString()).collect(Collectors.joining(", "));
+    }
+
+    /** Carries the evidence file names, or the User Steps, on a failed test; no stack trace of its own. */
+    static final class FailureEvidence extends RuntimeException {
+        FailureEvidence(String message) {
+            super(message, null, false, false);
+        }
+    }
+
+    private static TestingToolAdapter registeredAdapter(TestingTool tool) {
+        for (TestingToolAdapter adapter : ServiceLoader.load(TestingToolAdapter.class)) {
+            if (adapter.tool() == tool) {
+                return adapter;
+            }
+        }
+        throw new IllegalStateException("No adapter for vaadin.testing.tool=" + tool.name().toLowerCase()
+                + ". Add the test dependency com.vaadin:unified-test-" + tool.name().toLowerCase()
+                + ".");
+    }
+}
