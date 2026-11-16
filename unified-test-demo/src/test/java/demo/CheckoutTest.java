@@ -32,6 +32,7 @@ class CheckoutTest {
     }
     // --8<-- [end:picksTheFieldThroughItsContainer]
 
+    // --8<-- [start:countsMatches]
     @Test
     @DisplayName("Two City fields match until the search is limited to one section")
     void sameLabelOutsideAContainerIsAmbiguous(UnifiedPage page) {
@@ -41,6 +42,7 @@ class CheckoutTest {
         assertThat(page.find(UnifiedContainer.class).withTestId("billing")
                 .find(UnifiedTextField.class)).hasCount(2);
     }
+    // --8<-- [end:countsMatches]
 
     // --8<-- [start:containersNest]
     @Test

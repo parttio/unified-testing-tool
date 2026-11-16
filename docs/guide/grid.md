@@ -3,13 +3,14 @@
 Rows are found by **what they show**, like any other component. Spec: [7. Grid](../spec/07-grid.md).
 
 ```java
-UnifiedGrid users = page.find(UnifiedGrid.class).withTestId("users").single();
-UnifiedGrid.UnifiedGridRow alice = users.rows().withCellText("Name", "Alice").single();
+UnifiedGrid users = page.find(UnifiedGrid.class).withTestId("users");
+UnifiedGrid.UnifiedGridRow alice = users.row().withCellText("Name", "Alice");
+alice.click();
 ```
 
 ## Finding rows
 
-`rows()` starts a row query, with the same terminals as a component query:
+`row()` returns a lazy row, and its filters narrow it down, the way `find(..)` and its filters do for components. Each filter returns a new row. Every use of the row finds it again and waits until exactly one row matches:
 
 | Filter | Matches |
 |---|---|
@@ -33,6 +34,10 @@ Filters add up:
 ```
 
 `row(i)` reaches a row by index, for tests where the order is the point (after sorting, for example).
+
+Whether a row is there, and how many match, are retrying assertions: `assertThat(row).exists()`, `doesNotExist()`, `hasCount(n)`. To loop over the matching rows, `row().withCellText(..).all()` returns them by index, read now.
+
+Row actions (`click()`, `select()`, `toggleDetails()`) are actions like any other: they wait for the grid and the row (Auto-Wait), and show in the reports as `click row where Name is “Alan Turing” in grid`.
 
 ## Reading and checking rows
 
@@ -85,7 +90,7 @@ users.row(4).doubleClick();
 
 row.toggleDetails();             // clicks the row, as a user does
 assertThat(row).hasDetailsOpen();
-row.details().find(UnifiedButton.class).withText("Reset password").single().click();   // browser only for now
+row.details().find(UnifiedButton.class).withText("Reset password").click();   // browser only for now
 ```
 
 The multi-select checkbox column is not a column: column indexes count only the application's columns.

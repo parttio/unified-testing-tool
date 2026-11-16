@@ -10,8 +10,9 @@ import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 
 /**
- * Retrying assertions: each check retries until the timeout (10 s default), then fails with the
- * expected and actual values. On Browserless, UI.access tasks and signals are flushed between tries.
+ * Retrying assertions: each check retries until the timeout (10 s default), then fails with a
+ * {@link com.vaadin.testing.unified.UnifiedAssertionError}. On Browserless, UI.access tasks and signals are
+ * flushed between tries. Counts and absence are assertions too: there is no boolean {@code exists()} (ADR 0007).
  */
 public final class UnifiedAssertions {
     private UnifiedAssertions() {}
@@ -33,6 +34,12 @@ public final class UnifiedAssertions {
     }
 
     public interface WrapperAssert<SELF> {
+        /** At least one component matches the lookup. */
+        SELF exists();
+        /** No component matches the lookup. */
+        SELF doesNotExist();
+        /** Exactly this many components match the lookup. */
+        SELF hasCount(int expected);
         SELF isVisible();
         SELF isHidden();
         SELF isEnabled();
@@ -72,14 +79,18 @@ public final class UnifiedAssertions {
         GridAssert isEmpty();
     }
 
-    public interface GridRowAssert extends WrapperAssert<GridRowAssert> {
+    public interface GridRowAssert {
+        GridRowAssert exists();
+        GridRowAssert doesNotExist();
+        GridRowAssert hasCount(int expected);
         GridRowAssert isSelected();
         GridRowAssert isNotSelected();
         GridRowAssert hasCellText(String columnHeader, String expected);
         GridRowAssert hasDetailsOpen();
+        GridRowAssert hasDetailsClosed();
     }
 
-    public interface GridColumnAssert extends WrapperAssert<GridColumnAssert> {
+    public interface GridColumnAssert {
         GridColumnAssert hasCellTexts(String... expected);
         GridColumnAssert isSortedAscending();
         GridColumnAssert isSortedDescending();

@@ -92,4 +92,4 @@ The rules read bytecode. They don't see:
 - whether the sentence is a good one: only that it has more than one word;
 - Testing Tool code reached through another class, such as a shared `…Tasks` class or a page object: the rule follows the test class's own methods only;
 - whether the Testing Tool in `@RequiresTestingTool` is the one the code needs;
-- the rest of the style, which stays in this guide: `all()` only in loops, no plain JUnit assertions on what the user sees, shared User Tasks rather than copies.
+- the rest of the style, which stays in this guide: `all()` only in loops ([Finding components](finding-components.md#several-matches)), no plain JUnit assertions on what the user sees, shared User Tasks rather than copies ([Structuring a scenario](structuring-a-scenario.md#where-user-tasks-live)).

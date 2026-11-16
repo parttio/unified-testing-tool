@@ -35,7 +35,7 @@ list yet; no Escape Hatch and no single-tool test left; 16 tests passing on Brow
 
 Previous baseline (2026-11-14), totals only, with the context API (#142): all 24 markers resolved across 12 fixtures, including
 `EditPersonBrowserlessMigratedTest` (a context-API test whose Grid locator stayed on `page.unwrap(BrowserlessUIContext.class)`;
-the agent rewrote it with `rows().withCellText(..)`); no Escape Hatch left; 16 tests passing on Browserless and on Playwright.
+the agent rewrote it with the row lookup of the time, `rows().withCellText(..)`, today `row().withCellText(..)`); no Escape Hatch left; 16 tests passing on Browserless and on Playwright.
 
 Previous baseline (2026-11-14), for the skill covering both Migration Recipes (#140): all 23 markers resolved across
 11 fixtures, including the Browserless ones (`ProfileBrowserlessMigratedTest`, `ProfileBrowserlessLeftoversMigratedTest`

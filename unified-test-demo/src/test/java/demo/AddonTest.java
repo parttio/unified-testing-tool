@@ -62,6 +62,19 @@ class AddonTest {
         assertEquals(browserless, inbox instanceof UnifiedBadgeBrowserless);
     }
 
+    // --8<-- [start:wrapperWithItsOwnWords]
+    @Test
+    @DisplayName("The user gives the food three stars")
+    void wrapperWithItsOwnWords(UnifiedPage page) {
+        page.navigate(AddonView.class);
+        UnifiedStarRating food = page.find(UnifiedStarRating.class).withLabel("Food");
+
+        food.rate(3);
+
+        assertThat(food.withStars(3)).exists();
+    }
+    // --8<-- [end:wrapperWithItsOwnWords]
+
     // --8<-- [start:anyComponentWithoutAWrapper]
     @Test
     @DisplayName("The service rating is read without a wrapper of its own")

@@ -17,7 +17,7 @@ flowchart TD
     U -->|no| R[runs]
 ```
 
-Handled at **runtime**, not compile time, so tests stay written once.
+Handled at **runtime**, not compile time, so tests stay written once. The opt-in style rule `TOOL_CODE_NEEDS_CAPABILITY` checks at build time that a test reaching a Testing Tool's own code declares `@RequiresTestingTool` ([8. Escape Hatch, Style rule](08-escape-hatch.md#style-rule), [12. Readable tests, Style rules](12-readable-tests.md#style-rules)).
 
 ## Browser-only features in the Unified API
 
@@ -25,9 +25,11 @@ Each needs `@RequiresBrowser`:
 
 ```java
 @Test
+@DisplayName("The save button looks clickable")
 @RequiresBrowser
 void looksRight(UnifiedPage page) {
-    assertThat(saveButton).hasCssValue("cursor", "pointer");
+    page.navigate(ProfileView.class);
+    assertThat(page.find(UnifiedButton.class).withText("Save")).hasCssValue("cursor", "pointer");
     page.screenshot(Path.of("target/profile.png"));
 }
 ```
@@ -40,6 +42,7 @@ A test that runs on every Testing Tool but has a browser-only step asks `page.ha
 
 ```java
 @Test
+@DisplayName("The user edits their profile")
 void editProfile(UnifiedPage page) {
     page.navigate(ProfileView.class);
     // ... steps and assertions, on every Testing Tool ...
@@ -86,10 +89,10 @@ Differences in meaning are documented, not banned. Tests that depend on the brow
 | Playwright, Selenium | full-page screenshot: `<test class>.<method>.png` |
 | Browserless | location and component tree as text: `<test class>.<method>.tree.txt` |
 
-Written to `vaadin.testing.evidence-dir` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes. The failure names the files (a suppressed exception), so they show in the test report.
+Written to `vaadin.testing.evidence-dir` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes. The failure names the files (a suppressed exception), so they show in the test report. Next to them, every test writes its User Steps (`<test class>/<test method>/user-steps.txt` and `user-steps.json`), and the run writes `summary.md`; the failure's `Evidence` line names that directory ([12. Readable tests, Reports](12-readable-tests.md#reports)).
 
 ## Requirements on Testing Tool adapters
 
 - Report missing Capabilities as skipped tests.
 - Unsupported calls without the annotation fail with a message naming it.
-- Capture failure evidence as in the table.
+- Capture failure evidence as in the table, for the failed User Step.

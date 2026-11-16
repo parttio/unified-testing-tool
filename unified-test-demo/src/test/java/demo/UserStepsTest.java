@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 @UnifiedSpringBootTest
 class UserStepsTest {
 
+    // --8<-- [start:scenario]
     @Test
     @DisplayName("Editing a person in nested steps updates the grid")
     void editsAPersonInNestedSteps(UnifiedPage page) {
@@ -43,4 +44,5 @@ class UserStepsTest {
             page.find(UnifiedButton.class).withText("Save").click();
         });
     }
+    // --8<-- [end:scenario]
 }
