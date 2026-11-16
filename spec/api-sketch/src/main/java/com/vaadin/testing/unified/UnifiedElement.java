@@ -12,6 +12,12 @@ public interface UnifiedElement extends HasEscapeHatch {
     String getTag();
     String getText();
 
+    /**
+     * What a screen reader announces, the same on every Testing Tool, in spec chapter 4's order: what
+     * {@code withAccessibleName(..)} matches, and what Near Misses show.
+     */
+    String getAccessibleName();
+
     String getProperty(String name);
     Integer getPropertyInteger(String name);
     Boolean getPropertyBoolean(String name);
