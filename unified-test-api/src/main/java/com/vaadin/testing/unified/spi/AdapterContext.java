@@ -4,23 +4,12 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Supplier;
-import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * What an adapter gets when a test starts. Supplied by the Test Runner integration; nothing here but
- * {@link #extensionContext()} is tied to a Test Runner (ADR 0008).
+ * What an adapter gets when a test starts. Supplied by the Test Runner integration, and tied to none
+ * (ADR 0008): the build fails on a JUnit import in this package or in an adapter.
  */
 public interface AdapterContext {
-
-    /**
-     * The JUnit context of the running test.
-     *
-     * @deprecated ties the adapter to JUnit. Use {@link #testClass()}, {@link #testMethod()},
-     *             {@link #runScoped(Class, Supplier)} and {@link #springContext()}; this method is removed once
-     *             no adapter calls it.
-     */
-    @Deprecated(forRemoval = true)
-    ExtensionContext extensionContext();
 
     /** A setting of the Unified API, from the Test Runner's configuration (JUnit: configuration parameters or system properties). */
     Optional<String> configuration(String key);
