@@ -1,5 +1,6 @@
-package com.vaadin.testing.unified.internal;
+package com.vaadin.testing.unified.internal.junit;
 
+import com.vaadin.testing.unified.internal.Settings;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;

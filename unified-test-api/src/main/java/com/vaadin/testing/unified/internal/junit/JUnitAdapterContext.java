@@ -1,5 +1,6 @@
-package com.vaadin.testing.unified.internal;
+package com.vaadin.testing.unified.internal.junit;
 
+import com.vaadin.testing.unified.internal.Settings;
 import com.vaadin.testing.unified.spi.AdapterContext;
 import java.lang.reflect.Method;
 import java.time.Duration;

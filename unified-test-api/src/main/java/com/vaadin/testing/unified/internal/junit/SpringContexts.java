@@ -1,4 +1,4 @@
-package com.vaadin.testing.unified.internal;
+package com.vaadin.testing.unified.internal.junit;
 
 import java.util.Optional;
 import org.junit.jupiter.api.extension.ExtensionContext;

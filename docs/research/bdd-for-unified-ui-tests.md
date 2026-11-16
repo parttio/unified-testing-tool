@@ -34,7 +34,7 @@ they do, it happens above the UI layer, so it is not a reason for the Unified AP
 ## How a Unified UI Test runs today
 
 What any BDD layer has to keep working is in
-[`UnifiedExtension`](../../unified-test-api/src/main/java/com/vaadin/testing/unified/internal/UnifiedExtension.java),
+[`UnifiedExtension`](../../unified-test-api/src/main/java/com/vaadin/testing/unified/internal/junit/UnifiedExtension.java),
 a JUnit Jupiter extension:
 
 | Mechanism | Jupiter callback | What a BDD layer needs |
