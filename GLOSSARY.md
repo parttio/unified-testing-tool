@@ -67,3 +67,7 @@ _Avoid_: Step method, log line, trace, keyword
 **User Task**:
 A named piece of user work in a Unified UI Test ("edit Alan Turing's name"), shown in the reports as one heading over the User Steps it performs.
 _Avoid_: Task, step method, keyword, flow, journey, page object
+
+**Near Miss**:
+A component a failed lookup almost matched (the same kind with a similar name, or another kind with the exact name), listed in the failure so the reader can see what the test should have asked for.
+_Avoid_: Candidate, suggestion, fuzzy match
