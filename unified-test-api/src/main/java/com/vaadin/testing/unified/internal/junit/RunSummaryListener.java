@@ -1,4 +1,7 @@
-package com.vaadin.testing.unified.internal;
+package com.vaadin.testing.unified.internal.junit;
+
+import com.vaadin.testing.unified.internal.RunSummaryWriter;
+import com.vaadin.testing.unified.internal.Settings;
 
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;

@@ -1,1 +1,1 @@
-com.vaadin.testing.unified.internal.RunSummaryListener
+com.vaadin.testing.unified.internal.junit.RunSummaryListener
