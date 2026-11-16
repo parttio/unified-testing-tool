@@ -10,6 +10,7 @@ import com.vaadin.testing.unified.RequiresBrowser;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedContainer;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @UnifiedSpringBootTest
@@ -17,6 +18,7 @@ class TripTest {
 
     /** getText() is the DOM text: CSS doesn't change it, so it is the same on every Testing Tool. */
     @Test
+    @DisplayName("The attention note and the trip total read the same on every Testing Tool")
     void readsTheSameTextOnEveryTool(UnifiedPage page) {
         page.navigate(TripView.class);
 
@@ -27,6 +29,7 @@ class TripTest {
     /** getVisibleText() is what the browser renders. */
     @Test
     @RequiresBrowser
+    @DisplayName("A real browser renders the attention note in capitals and the total on two lines")
     void readsTheRenderedText(UnifiedPage page) {
         page.navigate(TripView.class);
 
@@ -37,6 +40,7 @@ class TripTest {
     }
 
     @Test
+    @DisplayName("The trip total's inline styles read as the view declares them")
     void readsInlineStylesAsDeclared(UnifiedPage page) {
         page.navigate(TripView.class);
         var total = page.findComponent(HorizontalLayout.class).withId("total").element();
@@ -49,6 +53,7 @@ class TripTest {
     // --8<-- [start:filtersByClassName]
     /** A class filter on the any-tag container: one selector query, not a check per element of the page. */
     @Test
+    @DisplayName("Sixty trip cards are shown and Trip 42 is selected")
     void filtersByClassName(UnifiedPage page) {
         page.navigate(TripView.class);
 

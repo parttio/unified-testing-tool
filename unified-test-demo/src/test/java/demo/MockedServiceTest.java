@@ -9,6 +9,7 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -21,6 +22,7 @@ class MockedServiceTest {
 
     // --8<-- [start:usesTheMock]
     @Test
+    @DisplayName("Saving the profile shows what the mocked service returns")
     void usesTheMock(UnifiedPage page) {
         when(service.save(anyString(), anyString())).thenReturn("Saved by the mock");
         page.navigate(ProfileView.class);

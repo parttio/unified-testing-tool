@@ -13,6 +13,7 @@ import com.vaadin.testing.unified.component.UnifiedTabSheet;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.time.Duration;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** TabSheet; written once, runs on Browserless and Playwright. */
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 class AccountTest {
 
     @Test
+    @DisplayName("Switching to the Security tab lets the user change the password there")
     void switchesTabsAndWorksInside(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
@@ -35,6 +37,7 @@ class AccountTest {
 
     // --8<-- [start:contentFollowsTheSelectedTab]
     @Test
+    @DisplayName("The tab sheet's content shows the fields of whichever tab is selected")
     void contentFollowsTheSelectedTab(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class).withTab("Security");
@@ -53,6 +56,7 @@ class AccountTest {
     // --8<-- [end:contentFollowsTheSelectedTab]
 
     @Test
+    @DisplayName("Selecting a tab that doesn't exist fails, listing the tabs there are")
     void unknownTabFailsWithTheTabs(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
@@ -63,6 +67,7 @@ class AccountTest {
     }
 
     @Test
+    @DisplayName("The user can't select the disabled Billing tab")
     void disabledTabCantBeSelected(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);

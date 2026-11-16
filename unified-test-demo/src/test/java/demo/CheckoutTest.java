@@ -8,6 +8,7 @@ import com.vaadin.testing.unified.component.UnifiedContainer;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Narrowing a search to a layout; written once, runs on Browserless and Playwright. */
@@ -16,6 +17,7 @@ class CheckoutTest {
 
     // --8<-- [start:picksTheFieldThroughItsContainer]
     @Test
+    @DisplayName("The user fills the billing and the shipping city, each in its own section")
     void picksTheFieldThroughItsContainer(UnifiedPage page) {
         page.navigate(CheckoutView.class);
         UnifiedContainer billing = page.find(UnifiedContainer.class).withTestId("billing");
@@ -31,6 +33,7 @@ class CheckoutTest {
     // --8<-- [end:picksTheFieldThroughItsContainer]
 
     @Test
+    @DisplayName("Two City fields match until the search is limited to one section")
     void sameLabelOutsideAContainerIsAmbiguous(UnifiedPage page) {
         page.navigate(CheckoutView.class);
 
@@ -41,6 +44,7 @@ class CheckoutTest {
 
     // --8<-- [start:containersNest]
     @Test
+    @DisplayName("The footer's button bar holds the two buttons, the billing section none")
     void containersNest(UnifiedPage page) {
         page.navigate(CheckoutView.class);
 

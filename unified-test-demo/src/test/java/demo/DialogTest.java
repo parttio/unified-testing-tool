@@ -8,6 +8,7 @@ import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @UnifiedSpringBootTest
@@ -22,6 +23,7 @@ class DialogTest {
     // --8<-- [end:helpers]
 
     @Test
+    @DisplayName("Clicking Change email opens a dialog titled Change email")
     void opensWithHeaderTitle(UnifiedPage page) {
         UnifiedDialog dialog = openDialog(page);
 
@@ -30,6 +32,7 @@ class DialogTest {
 
     // --8<-- [start:searchesInsideTheDialog]
     @Test
+    @DisplayName("The user changes the email in the dialog, and the profile shows the new one")
     void searchesInsideTheDialog(UnifiedPage page) {
         UnifiedDialog dialog = openDialog(page);
 
@@ -44,6 +47,7 @@ class DialogTest {
     // --8<-- [end:searchesInsideTheDialog]
 
     @Test
+    @DisplayName("Cancel closes the Change email dialog")
     void closesWithCancel(UnifiedPage page) {
         UnifiedDialog dialog = openDialog(page);
 
@@ -53,6 +57,7 @@ class DialogTest {
     }
 
     @Test
+    @DisplayName("Pressing Escape closes the Change email dialog")
     void closesWithEscape(UnifiedPage page) {
         UnifiedDialog dialog = openDialog(page);
 

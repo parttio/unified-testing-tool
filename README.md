@@ -39,6 +39,7 @@ class ProfileViewTest {
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
 | `unified-test-selenium` | Selenium adapter on TestBench 25.3 (needs a TestBench license) |
 | `unified-test-spring` | `@UnifiedSpringBootTest`, test-only login endpoint for browsers |
+| `unified-test-archunit` | `UnifiedStyleRules`: the Unified UI Test style as ArchUnit rules, opt-in at test scope ([Checking the style](docs/guide/style-rules.md)) |
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
 | `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench and Browserless to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)); not published before `spec-v1` |

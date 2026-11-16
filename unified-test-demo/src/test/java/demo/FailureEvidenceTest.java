@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -33,6 +34,7 @@ class FailureEvidenceTest {
     @Tag("launched-only")
     static class Failing {
         @Test
+        @DisplayName("The user fills the name, then the test fails on purpose")
         void fails(UnifiedPage page) {
             page.navigate(ProfileView.class);
             page.find(UnifiedTextField.class).withLabel("Name").setValue("Evidence");

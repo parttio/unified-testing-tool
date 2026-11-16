@@ -59,6 +59,7 @@ nav:
       - Navigation, users and windows: guide/navigation-and-users.md
       - When a test needs one Testing Tool: guide/tool-specific.md
       - Wrappers for your own components: guide/custom-wrappers.md
+      - Checking the style: guide/style-rules.md
   - One test, four ways: comparison.md
   - Migrating from TestBench: migrating-from-testbench.md
   - Migrating from Browserless: migrating-from-browserless.md

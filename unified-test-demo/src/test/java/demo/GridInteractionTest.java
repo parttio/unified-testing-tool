@@ -10,6 +10,7 @@ import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @UnifiedSpringBootTest
@@ -28,6 +29,7 @@ class GridInteractionTest {
 
     // --8<-- [start:clicksAComponentInACell]
     @Test
+    @DisplayName("The user clicks Edit in User 3's row")
     void clicksAComponentInACell(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -40,6 +42,7 @@ class GridInteractionTest {
 
     /** A page-wide find reaches components rendered in grid cells, as in a browser. */
     @Test
+    @DisplayName("The user clicks User 3's Edit button without going through the grid")
     void findsACellComponentPageWide(UnifiedPage page) {
         grid(page, "users");
 
@@ -50,6 +53,7 @@ class GridInteractionTest {
 
     // --8<-- [start:filtersThroughAHeaderField]
     @Test
+    @DisplayName("The user filters the users by name in the column header")
     void filtersThroughAHeaderField(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -63,6 +67,7 @@ class GridInteractionTest {
     // --8<-- [end:filtersThroughAHeaderField]
 
     @Test
+    @DisplayName("The user sorts the roles descending, then ascending")
     void sortsAColumn(UnifiedPage page) {
         UnifiedGrid roles = grid(page, "roles");
 
@@ -75,6 +80,7 @@ class GridInteractionTest {
 
     // --8<-- [start:selectsRows]
     @Test
+    @DisplayName("The user selects one role, then all of them, then none")
     void selectsRows(UnifiedPage page) {
         UnifiedGrid roles = grid(page, "roles");
 
@@ -95,6 +101,7 @@ class GridInteractionTest {
     // --8<-- [end:selectsRows]
 
     @Test
+    @DisplayName("Clicking a row and double-clicking another each notify the user")
     void clicksAndDoubleClicksRows(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -107,6 +114,7 @@ class GridInteractionTest {
 
     /** A row click lands beside the button the first cell holds, as a user clicking the row would. */
     @Test
+    @DisplayName("Clicking a task's row doesn't press the Done button in it")
     void clicksARowWithoutClickingTheButtonInItsFirstCell(UnifiedPage page) {
         UnifiedGrid tasks = grid(page, "tasks");
 
@@ -117,6 +125,7 @@ class GridInteractionTest {
     }
 
     @Test
+    @DisplayName("The user opens and closes a row's details")
     void togglesRowDetails(UnifiedPage page) {
         UnifiedGrid.UnifiedGridRow row = grid(page, "users").row(2);
 
@@ -129,6 +138,7 @@ class GridInteractionTest {
 
     @Test
     @RequiresBrowser // Browserless can't search inside row details yet (gap ticket)
+    @DisplayName("The user resets a password from the row details")
     void clicksAButtonInRowDetails(UnifiedPage page) {
         UnifiedGrid.UnifiedGridRow row = grid(page, "users").row(2);
 

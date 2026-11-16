@@ -7,6 +7,7 @@ import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedContainer;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** findChildren, children and findDescendants: light DOM only, the same on every Testing Tool. */
@@ -23,6 +24,7 @@ class TreeTest {
     }
 
     @Test
+    @DisplayName("The tree's direct children are listed in order")
     void listsDirectChildrenInOrder(UnifiedPage page) {
         UnifiedElement tree = tree(page);
 
@@ -32,6 +34,7 @@ class TreeTest {
     }
 
     @Test
+    @DisplayName("The tree's descendants are found at every level")
     void findsDescendantsAtEveryLevel(UnifiedPage page) {
         UnifiedElement tree = tree(page);
 

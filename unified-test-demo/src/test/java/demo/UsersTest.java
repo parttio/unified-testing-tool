@@ -6,6 +6,7 @@ import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -18,6 +19,7 @@ class UsersTest {
     // ---------------------------------------------------------------- both Testing Tools
 
     @Test
+    @DisplayName("An anonymous user opening the admin area is sent to the login view")
     void anonymousIsSentToLogin(UnifiedPage page) {
         page.navigate(AdminView.class);
 
@@ -26,6 +28,7 @@ class UsersTest {
 
     // --8<-- [start:openWindowSharesTheSession]
     @Test
+    @DisplayName("A second window shares the anonymous user's session")
     void openWindowSharesTheSession(UnifiedPage page) {
         page.navigate(WhoAmIView.class);
         assertThat(page.findComponent(Span.class).withText("Visits in this session: 1")).isVisible();
@@ -42,6 +45,7 @@ class UsersTest {
 
     @Test
     @WithMockUser(username = "alice", roles = "ADMIN")
+    @DisplayName("Alice, an admin, sees the admin area")
     void adminSeesTheAdminArea(UnifiedPage page) {
         page.navigate(AdminView.class);
 
@@ -51,6 +55,7 @@ class UsersTest {
 
     @Test
     @WithMockUser(username = "bob", roles = "USER")
+    @DisplayName("Bob, without the admin role, is kept out of the admin area")
     void userWithoutTheRoleIsKeptOut(UnifiedPage page) {
         page.navigate(AdminView.class);
 
@@ -61,6 +66,7 @@ class UsersTest {
 
     @Test
     @WithUserDetails("alice") // from the app's UserDetailsService
+    @DisplayName("Alice, loaded from the app's user details, opens the admin area")
     void userFromUserDetailsService(UnifiedPage page) {
         page.navigate(AdminView.class);
 
@@ -73,6 +79,7 @@ class UsersTest {
     class AsAlice {
 
         @Test
+        @DisplayName("Bob, in his own session, sees his name while Alice keeps hers")
         void openAsUserIsAnotherSession(UnifiedPage alice) {
             UnifiedPage bob = alice.openAsUser("bob", "USER");
             alice.navigate(WhoAmIView.class);
@@ -89,6 +96,7 @@ class UsersTest {
         }
 
         @Test
+        @DisplayName("A second window is still signed in as Alice")
         void openWindowKeepsTheUser(UnifiedPage alice) {
             UnifiedPage second = alice.openWindow();
             second.navigate(WhoAmIView.class);
