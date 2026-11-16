@@ -1,18 +1,15 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.textfield.TextField;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
-import com.vaadin.testing.unified.query.Query;
 
 @UnifiedComponent(TextField.class)
-public interface UnifiedTextField extends UnifiedWrapper, Findable<UnifiedTextField.TextFieldQuery> {
-
-    interface TextFieldQuery extends Query<UnifiedTextField, TextFieldQuery>,
-            LabelFilter<TextFieldQuery>, PlaceholderFilter<TextFieldQuery> {}
+public interface UnifiedTextField extends UnifiedWrapper,
+        CommonFilters<UnifiedTextField>, LabelFilter<UnifiedTextField>, PlaceholderFilter<UnifiedTextField> {
 
     // actions (Auto-Wait)
     default void setValue(String value) { element().setValueAsUser(value); }

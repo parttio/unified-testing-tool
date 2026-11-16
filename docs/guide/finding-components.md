@@ -1,18 +1,18 @@
 # Finding components
 
-Every lookup is a **query** with three parts:
+`find(..)` returns the **Wrapper** for a kind of component, and its filters narrow it down:
 
 ```java
-page.find(UnifiedTextField.class)   // 1. start: which kind of component
-    .withLabel("Name")              // 2. filters: zero or more, all must match
-    .single();                      // 3. terminal: single(), all() or exists()
+page.find(UnifiedTextField.class)   // which kind of component: the Wrapper
+    .withLabel("Name")              // filters: zero or more, all must match
+    .setValue("Alan M. Turing");    // use it: an action, a read or assertThat(..)
 ```
 
-Spec: [4. Locating components](../spec/04-locating.md).
+There is nothing to end the lookup with: the Wrapper is the lookup. Each time you use it, it finds its component again and waits until exactly one matches. Spec: [4. Locating components](../spec/04-locating.md).
 
-## 1. Start: the wrapper class
+## 1. The Wrapper class
 
-The wrapper class is the component type, like a role in Playwright's `getByRole`. Each wrapper has its own query type, which offers only the filters that make sense for it:
+The Wrapper class is the component type, like a role in Playwright's `getByRole`. Each Wrapper has only the filters that make sense for it:
 
 ```java
 page.find(UnifiedButton.class).withText("Save");      // a button has text
@@ -20,9 +20,9 @@ page.find(UnifiedTextField.class).withLabel("Name");  // a field has a label
 page.find(UnifiedButton.class).withLabel("Save");     // does not compile: a button has no label
 ```
 
-So your IDE's completion after `find(UnifiedX.class).` lists exactly what you can filter by.
+So your IDE's completion after `find(UnifiedX.class).` lists what you can filter by, next to what you can do with the component.
 
-Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedContainer` and the plain HTML wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a wrapper](#components-without-a-wrapper).
+Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedContainer` and the plain HTML Wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a Wrapper](#components-without-a-wrapper).
 
 ## 2. Filters
 
@@ -62,7 +62,7 @@ page.find(UnifiedTextField.class).withLabelContaining("phone");       // "Phone"
 page.find(UnifiedButton.class).withAccessibleNameContaining("Edit");  // "Edit User 3", "Edit User 4", …
 ```
 
-Prefer the exact form: a test that matches more than you meant breaks on `single()` the day someone adds a "Save draft" button.
+Prefer the exact form: a lookup that matches more than you meant fails with "found 2" the day someone adds a "Save draft" button.
 
 ### By technical attributes (fallback)
 
@@ -85,67 +85,80 @@ When a component has nothing a user can read, give it a test id in the view (`co
 
 ### Combining filters
 
-Filters add up: a component must match all of them.
+Filters add up: a component must match all of them. Each filter returns a new Wrapper and leaves the one it was called on as it was, so one Wrapper can be narrowed in several ways:
 
 ```java
-page.find(UnifiedButton.class).withText("Delete").withTheme("error").single();
-page.findComponent(Div.class).withClassName("trip-card").withText("Trip 7").all();
+UnifiedButton delete = page.find(UnifiedButton.class).withText("Delete");
+delete.withTheme("error").click();              // the red one
+assertThat(delete).hasCount(2);                 // `delete` itself is unchanged
 ```
 
 ### Only visible components
 
-A query includes hidden components (`setVisible(false)`), as a browser's page does. Add `.visible()` when visibility is the point, for example "the button is gone after the click":
+A lookup includes hidden components (`setVisible(false)`), as a browser's page does. Add `.visible()` when visibility is the point, for example "the button is gone after the click":
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ApprovalTest.java:aHiddenButtonIsStillFoundButNotVisible"
 ```
 
-## 3. Terminals
+## 3. Using the Wrapper
 
-| Terminal | Returns | Fails |
-|---|---|---|
-| `single()` | one lazy wrapper | when it is first used, if zero or several components match |
-| `all()` | `List` of lazy wrappers, in page order | never; the list may be empty |
-| `exists()` | `boolean`, at once, no waiting | never |
+### Exactly one, every time
 
-```java
-UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
-List<UnifiedMetricCard> cards = page.find(UnifiedMetricCard.class).all();
-boolean canArchive = page.find(UnifiedButton.class).withText("Archive").visible().exists();
-```
+Every action (`setValue`, `click`), read (`getValue()`) and assertion finds the component again and waits up to the timeout (10 s by default) until **exactly one** component matches. So:
 
-There is no `first()`: when several components match, either the filter is not precise enough (add a filter or a [scope](#scopes)), or the order is the point, and `all().get(i)` says so.
-
-### Wrappers are lazy
-
-`single()` does not search yet. The wrapper searches every time you use it, and waits until the component is there. So:
-
-- you can find a component **before** it appears, and use the wrapper once it does;
-- a wrapper **never goes stale**: after the view re-renders, it finds the new component;
-- keep the wrapper in a variable and reuse it for the whole test.
+- you can declare a Wrapper **before** its component appears, and use it once it does;
+- a Wrapper **never goes stale**: after the view re-renders, it finds the new component;
+- keep a Wrapper in a variable and reuse it for the whole test.
 
 ```java
-UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();  // no search yet
+UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");  // no search yet
 name.setValue("Alice");                  // searches, waits until it is there and enabled, types
 assertThat(name).hasValue("Alice");      // searches again
 ```
 
-A missing or ambiguous component is reported where it is used, with the query in the message.
+When no component or several match, the call fails with a `UnifiedAssertionError` that says what it expected, what it found, and the components that nearly matched, with a suggestion when one is clearly what you meant ([Reading reports and failures](reports-and-failures.md#the-failure-message)).
+
+### Is it there? How many?
+
+Checks are retrying assertions, like any other check. There is no boolean `exists()`:
+
+| I want to check… | Write |
+|---|---|
+| it is there | `assertThat(wrapper).exists()` |
+| it is gone | `assertThat(wrapper).doesNotExist()` |
+| how many match | `assertThat(wrapper).hasCount(2)` |
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/CheckoutTest.java:countsMatches"
+```
+
+### Several matches
+
+There is no `first()`. When several components match, either the filter is not precise enough (add a filter or a [scope](#scopes)), or you mean all of them: `all()` returns them as lazy Wrappers by position, for a loop.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/DashboardTest.java:loopsOverTheMatches"
+```
+
+`all()` reads the matches **now**, without waiting: check the count with `hasCount(n)` first, and use `all()` only to loop.
 
 ## Scopes
 
-A page has many "City" fields, "Save" buttons and "Email" fields. Narrow the search to a part of the page by starting the query from a **Scope** instead of from the page:
+A page has many "City" fields, "Save" buttons and "Email" fields. Narrow the search to a part of the page by calling `find(..)` on a **Scope** instead of on the page:
 
 | Scope | Reach it with | Contains |
 |---|---|---|
 | `UnifiedPage` | the test parameter | the whole page |
-| `UnifiedDialog` | `page.find(UnifiedDialog.class)…single()` | the dialog's content |
-| `UnifiedContainer` | `page.find(UnifiedContainer.class).withTestId("billing").single()` | any layout or component, by test id or id |
-| plain HTML wrappers | `page.find(UnifiedSection.class)…`, `UnifiedDiv`, … | that element |
-| `findComponent(..)` result | `page.findComponent(VerticalLayout.class)…single()` | that component |
+| `UnifiedDialog` | `page.find(UnifiedDialog.class).withHeaderTitle(..)` | the dialog's content |
+| `UnifiedContainer` | `page.find(UnifiedContainer.class).withTestId("billing")` | any layout or component, by test id or id |
+| plain HTML Wrappers | `page.find(UnifiedSection.class)…`, `UnifiedDiv`, … | that element |
+| `findComponent(..)` result | `page.findComponent(VerticalLayout.class)…` | that component |
 | `UnifiedDetails.content()` | `details.content()` | the Details content |
 | `UnifiedTabSheet.content()` | `tabs.content()` | the selected tab's content |
 | Grid cells, header, row details | `row.cell("Actions")`, `column.header()`, `row.details()` | see [Grid](grid.md) |
+
+A Scope is a Wrapper too: a lookup inside it finds the Scope again first, so a missing dialog fails with the dialogs that are there.
 
 ### A dialog
 
@@ -187,9 +200,9 @@ A TabSheet's `content()` follows the selected tab: the same Scope searches the n
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:searchesInPlainHtmlContainers"
 ```
 
-## Components without a wrapper
+## Components without a Wrapper
 
-`findComponent(FlowClass.class)` finds any Flow component with a `@Tag`, without writing a wrapper. It has the shared filters (label, text, accessible name, test id, …) and gives a generic wrapper with the [Unified Element](../spec/06-wrappers.md#unified-element) underneath:
+`findComponent(FlowClass.class)` finds any Flow component with a `@Tag`, without writing a Wrapper. It returns a `UnifiedGenericComponent` with the shared filters (label, text, accessible name, test id, …) and the [Unified Element](../spec/06-wrappers.md#unified-element) underneath:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/AddonTest.java:anyComponentWithoutAWrapper"
@@ -198,11 +211,11 @@ A TabSheet's `content()` follows the selected tab: the same Scope searches the n
 It is handy for reading text from a `Span`, `H2` or `Paragraph`:
 
 ```java
-assertThat(page.findComponent(Span.class).withId("status").single()).hasText("Approved");
-assertThat(page.findComponent(H2.class).withText("Admin area of alice").single()).isVisible();
+assertThat(page.findComponent(Span.class).withId("status")).hasText("Approved");
+assertThat(page.findComponent(H2.class).withText("Admin area of alice")).isVisible();
 ```
 
-A component without a tag (a `Composite`, `Component.class`) can't be found by a browser, so `findComponent` refuses it at once on every Testing Tool. Find its root component instead, or write a [wrapper](custom-wrappers.md) with `tag = "…"`.
+A component without a tag (a `Composite`, `Component.class`) can't be found by a browser, so `findComponent` refuses it at once on every Testing Tool. Find its root component instead, or write a [Wrapper](custom-wrappers.md) with `tag = "…"`.
 
 ## Custom filters
 
@@ -212,20 +225,20 @@ When a filter you need doesn't exist, build it from `withProperty(name, value)` 
 --8<-- "unified-test-demo/src/test/java/demo/AddonTest.java:customFilters"
 ```
 
-`withValue(4)` is a default method on the wrapper's query, written once with `where(..)`; see [Wrappers for your own components](custom-wrappers.md#custom-filters).
+`withValue(4)` is a default method on the Wrapper, written once with `where(..)`; see [Wrappers for your own components](custom-wrappers.md#custom-filters). Prefer a named filter on the Wrapper to a `where(..)` in the test: the reports can't read a condition the test writes inline, and show it as a gap.
 
 ## Cheat sheet
 
 | I want… | Write |
 |---|---|
-| the field labelled *Name* | `page.find(UnifiedTextField.class).withLabel("Name").single()` |
-| the *Save* button | `page.find(UnifiedButton.class).withText("Save").single()` |
-| an icon button | `page.find(UnifiedButton.class).withAccessibleName("Delete account").single()` |
-| the *Save* button of the dialog | `dialog.find(UnifiedButton.class).withText("Save").single()` |
-| the *City* field of the billing form | `page.find(UnifiedContainer.class).withTestId("billing").single().find(UnifiedTextField.class).withLabel("City").single()` |
-| the open dialog | `page.find(UnifiedDialog.class).single()` |
-| the notification saying *Saved* | `page.find(UnifiedNotification.class).withText("Saved").single()` |
-| how many cards there are | `page.find(UnifiedMetricCard.class).all().size()` |
-| whether a button is shown right now | `page.find(UnifiedButton.class).withText("Archive").visible().exists()` |
-| text in a `Span` | `page.findComponent(Span.class).withId("status").single().getText()` |
-| a Grid row | `grid.rows().withCellText("Name", "Alice").single()` ([Grid](grid.md)) |
+| the field labelled *Name* | `page.find(UnifiedTextField.class).withLabel("Name")` |
+| the *Save* button | `page.find(UnifiedButton.class).withText("Save")` |
+| an icon button | `page.find(UnifiedButton.class).withAccessibleName("Delete account")` |
+| the *Save* button of the dialog | `dialog.find(UnifiedButton.class).withText("Save")` |
+| the *City* field of the billing form | `page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("City")` |
+| the open dialog | `page.find(UnifiedDialog.class)` |
+| the notification saying *Saved* | `page.find(UnifiedNotification.class).withText("Saved")` |
+| check there are two cards | `assertThat(page.find(UnifiedMetricCard.class)).hasCount(2)` |
+| check a button is gone | `assertThat(page.find(UnifiedButton.class).withText("Archive").visible()).doesNotExist()` |
+| text in a `Span` | `page.findComponent(Span.class).withId("status").getText()` |
+| a Grid row | `grid.row().withCellText("Name", "Alice")` ([Grid](grid.md)) |

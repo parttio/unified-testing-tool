@@ -1,26 +1,26 @@
 # Working with components
 
-Once [found](finding-components.md), a wrapper acts like a user: it waits until the component is visible and enabled, acts, then waits until the server has answered (Auto-Wait). Spec: [6. Wrappers](../spec/06-wrappers.md).
+Once [found](finding-components.md), a Wrapper acts like a user: it finds its component, waits until exactly one is there, visible and enabled, acts, then waits until the server has answered (Auto-Wait). Every action is reported as a User Step, such as `fill text field “Name” with “Alice”` ([Reading reports and failures](reports-and-failures.md)). Spec: [6. Wrappers](../spec/06-wrappers.md).
 
-Every wrapper has:
+Every Wrapper has:
 
 | Method | Does |
 |---|---|
 | `isVisible()`, `isEnabled()` | reads the state now |
-| `withTimeout(Duration)` | the same wrapper with its own timeout |
+| `withTimeout(Duration)` | the same Wrapper with its own timeout |
 | `element()` | the [Unified Element](../spec/06-wrappers.md#unified-element) underneath: text, properties, attributes, `click()`, `pressKey(..)` |
 | `unwrap(..)`, `tryUnwrap(..)` | the Testing Tool's own object ([Escape Hatch](tool-specific.md)) |
 
 ## Text fields
 
 ```java
-UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
 name.setValue("Alice");     // types as a user: fires input and change
 name.clear();
 String value = name.getValue();
 
 assertThat(name).hasValue("Alice").isValid().hasLabel("Name");
-assertThat(page.find(UnifiedTextField.class).withLabel("Email").single())
+assertThat(page.find(UnifiedTextField.class).withLabel("Email"))
         .isInvalid()
         .hasErrorMessage("Email is required");
 ```
@@ -46,7 +46,7 @@ Number and date fields take and return Java types, `null` when empty:
 To check how the field handles text it can't parse, type it:
 
 ```java
-UnifiedDatePicker returnDate = page.find(UnifiedDatePicker.class).withLabel("Return date").single();
+UnifiedDatePicker returnDate = page.find(UnifiedDatePicker.class).withLabel("Return date");
 returnDate.typeText("dsdds");
 assertThat(returnDate).isInvalid();
 
@@ -81,8 +81,8 @@ Selecting an item that doesn't exist fails with the list of items there are, e.g
 ## Buttons and menus
 
 ```java
-page.find(UnifiedButton.class).withText("Save").single().click();
-assertThat(page.find(UnifiedButton.class).withText("Archive").single()).isDisabled();
+page.find(UnifiedButton.class).withText("Save").click();
+assertThat(page.find(UnifiedButton.class).withText("Archive")).isDisabled();
 ```
 
 A MenuBar opens its sub-menus as a user does: give the path of item names.
@@ -96,17 +96,17 @@ An icon-only item is named by its `aria-label`. `isItemEnabled("Actions for Hote
 ## Tabs and Details
 
 ```java
-UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class).single();
+UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
 tabs.selectTab("Security");
 assertThat(tabs).hasTabs("Profile", "Security", "Billing").hasSelectedTab("Security");
-tabs.content().find(UnifiedButton.class).withText("Change password").single().click();
+tabs.content().find(UnifiedButton.class).withText("Change password").click();
 
-UnifiedTabs filter = page.find(UnifiedTabs.class).withTab("Approved").single();   // Tabs without content
+UnifiedTabs filter = page.find(UnifiedTabs.class).withTab("Approved");   // Tabs without content
 filter.selectTab("Rejected");
 
-UnifiedDetails advanced = page.find(UnifiedDetails.class).withSummaryText("Advanced").single();
+UnifiedDetails advanced = page.find(UnifiedDetails.class).withSummaryText("Advanced");
 advanced.open();
-advanced.content().find(UnifiedTextField.class).withLabel("Cost center").single().setValue("CC-7");
+advanced.content().find(UnifiedTextField.class).withLabel("Cost center").setValue("CC-7");
 ```
 
 A tab holding a `RouterLink` is named by the link's text.
@@ -116,19 +116,19 @@ A tab holding a `RouterLink` is named by the link's text.
 Only open dialogs and notifications are found. A dialog is a [Scope](finding-components.md#scopes):
 
 ```java
-page.find(UnifiedButton.class).withText("Change email").single().click();
-UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Change email").single();
-dialog.find(UnifiedTextField.class).withLabel("Email").single().setValue("new@example.com");
-dialog.find(UnifiedButton.class).withText("Save").single().click();
+page.find(UnifiedButton.class).withText("Change email").click();
+UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Change email");
+dialog.find(UnifiedTextField.class).withLabel("Email").setValue("new@example.com");
+dialog.find(UnifiedButton.class).withText("Save").click();
 assertThat(dialog).isClosed();
 
 dialog.close();                  // as pressing Escape
 
-assertThat(page.find(UnifiedNotification.class).single()).isOpen().hasText("Saved Alice");
-assertThat(page.find(UnifiedNotification.class).withText("Account deleted").single()).isOpen();
+assertThat(page.find(UnifiedNotification.class)).isOpen().hasText("Saved Alice");
+assertThat(page.find(UnifiedNotification.class).withText("Account deleted")).isOpen();
 ```
 
-When several notifications can be open at once, filter by text rather than relying on `single()`.
+When several notifications can be open at once, filter by text: an unfiltered `find(UnifiedNotification.class)` fails with "found 2".
 
 ## Upload
 
@@ -142,7 +142,7 @@ When several notifications can be open at once, filter by text rather than relyi
 
 ```java
 search.element().pressKey("Enter");                          // to a component
-page.find(UnifiedTextField.class).withLabel("Search").single().element().pressKey("Control+s");
+page.find(UnifiedTextField.class).withLabel("Search").element().pressKey("Control+s");
 page.pressKey("Escape");                                     // to the focused component or the open dialog
 dropZone.element().dispatchEvent("item-dropped");            // a custom DOM event, for a Flow listener
 ```
@@ -156,9 +156,9 @@ On Browserless, key presses fire the server-side listeners and shortcuts; client
 ## Plain HTML and text
 
 ```java
-assertThat(page.findComponent(Span.class).withId("status").single()).hasText("Approved");
-String total = page.find(UnifiedDiv.class).withClassName("summary").single().getText();
-page.findComponent(Input.class).withTestId("code").single().element().setValueAsUser("ABC");
+assertThat(page.findComponent(Span.class).withId("status")).hasText("Approved");
+String total = page.find(UnifiedDiv.class).withClassName("summary").getText();
+page.findComponent(Input.class).withTestId("code").element().setValueAsUser("ABC");
 ```
 
 `getText()` is the DOM text, the same on every Testing Tool: CSS such as `text-transform` doesn't change it. In a browser, `element().getVisibleText()` gives the text as rendered.

@@ -9,15 +9,16 @@ through TestBench, chosen per run.
 class ProfileViewTest {
 
     @Test
+    @DisplayName("The user saves a name and an email and sees a confirmation")
     void savesName(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
-        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
         name.setValue("Alice");
-        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("alice@example.com");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single()).isOpen().hasText("Saved Alice");
+        assertThat(page.find(UnifiedNotification.class)).isOpen().hasText("Saved Alice");
         assertThat(name).hasValue("Alice").isValid();
     }
 }
@@ -26,7 +27,7 @@ class ProfileViewTest {
 - **Documentation site:** https://parttio.github.io/unified-testing-tool/
 - **Migrating from TestBench:** [docs/migrating-from-testbench.md](docs/migrating-from-testbench.md), OpenRewrite Migration Recipes.
 - **Migrating from Browserless:** [docs/migrating-from-browserless.md](docs/migrating-from-browserless.md), the same for Browserless Test and TestBench UI Unit tests.
-- **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, with examples of the query API.
+- **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, structure scenarios and read their reports, with examples from the demo.
 - **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
 - **Status:** first version. Spec draft, not yet `spec-v1`.
 
@@ -34,7 +35,7 @@ class ProfileViewTest {
 
 | Module | Contains |
 |---|---|
-| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, Capabilities, Escape Hatch, adapter SPI |
+| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, User Step reports (`page.step(..)`, `user-steps.txt`, `summary.md`) and `UnifiedAssertionError`, Capabilities, Escape Hatch, adapter SPI |
 | `unified-test-browserless` | Browserless Test adapter |
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
 | `unified-test-selenium` | Selenium adapter on TestBench 25.3 (needs a TestBench license) |
@@ -121,6 +122,9 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | `10s` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
+| `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`): whose User Steps go to the CI log |
+| `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary |
+| `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; the base for "Changed in this PR" ([Reading reports and failures](docs/guide/reports-and-failures.md)) |
 | `vaadin.testing.browserless.view-packages` | in a Spring test, the `@SpringBootApplication`'s packages and the test's package; otherwise the test's package |
 | `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends an exception thrown by a listener to the session's `ErrorHandler`, as in a browser |
 | `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |

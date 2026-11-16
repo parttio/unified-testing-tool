@@ -22,6 +22,7 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @UnifiedSpringBootTest          // @UnifiedUITest for an app without Spring Boot
@@ -44,15 +45,20 @@ mvn test -Dvaadin.testing.tool=playwright        # the same test in a real brows
 
 ```mermaid
 flowchart LR
-    N["navigate<br/>page.navigate(View.class)"] --> F["find<br/>page.find(UnifiedX.class)…single()"] --> A["act<br/>setValue, click, selectItem"] --> C["check<br/>assertThat(wrapper).has…"]
+    N["navigate<br/>page.navigate(View.class)"] --> F["find<br/>page.find(UnifiedX.class).withLabel(..)"] --> A["act<br/>setValue, click, selectItem"] --> C["check<br/>assertThat(wrapper).has…"]
 ```
 
 | Step | API | Guide page |
 |---|---|---|
 | Open a view | `page.navigate(View.class)` | [Navigation, users and windows](navigation-and-users.md) |
-| Find a component | `page.find(Wrapper.class)`, filters, `single()` / `all()` / `exists()` | [Finding components](finding-components.md) |
+| Find a component | `page.find(Wrapper.class)` and its filters: it returns the Wrapper | [Finding components](finding-components.md) |
 | Act on it | the wrapper's methods: `setValue`, `click`, `selectItem`, … | [Working with components](components.md), [Grid](grid.md) |
-| Check the result | `assertThat(wrapper)` | [Assertions and waiting](assertions-and-waiting.md) |
+| Check the result | `assertThat(wrapper)`, also `exists()`, `doesNotExist()`, `hasCount(n)` | [Assertions and waiting](assertions-and-waiting.md) |
+
+Every action and assertion is reported as a User Step, in the user's words. To make a test read as its scenario, and to read what it reports:
+
+- [Structuring a scenario](structuring-a-scenario.md): `@DisplayName`, given/when/then, User Tasks with `page.step(..)`, page objects.
+- [Reading reports and failures](reports-and-failures.md): the CI log, `user-steps.txt`, the run summary, the failure message with its Near Misses.
 
 Then, when you need more:
 
@@ -64,5 +70,6 @@ Then, when you need more:
 
 - **Find components the way a user does:** by type and label, accessible name or text. Use a test id only when there is nothing the user can read.
 - **Check state with `assertThat`**, not with getters and `assertEquals`: getters don't retry, and in a browser the update may arrive a moment later.
-- **Keep wrappers, not values.** A wrapper finds its component again on every call, so it never goes stale: find a field once, use it for the whole test.
+- **Keep Wrappers, not values.** A Wrapper finds its component again on every call, so it never goes stale: declare a field's Wrapper once, use it for the whole test.
+- **Name the scenario and the user's work:** `@DisplayName` with a sentence, `page.step(..)` around a piece of user work ([Structuring a scenario](structuring-a-scenario.md)).
 - **Never name a Testing Tool in a test**, unless it needs one ([When a test needs one Testing Tool](tool-specific.md)).

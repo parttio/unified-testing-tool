@@ -137,6 +137,7 @@ class ProfileViewTest {
     }
     // --8<-- [end:readsServerSideState]
 
+    // --8<-- [start:needsARealBrowser]
     @Test
     @RequiresBrowser
     @DisplayName("The Save button shows a pointer cursor in a real browser")
@@ -144,6 +145,7 @@ class ProfileViewTest {
         page.navigate(ProfileView.class);
         assertThat(page.find(UnifiedButton.class).withText("Save")).hasCssValue("cursor", "pointer");
     }
+    // --8<-- [end:needsARealBrowser]
 
     // --8<-- [start:screenshotOnlyWithARealBrowser]
     @Test

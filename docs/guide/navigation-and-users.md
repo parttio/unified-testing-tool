@@ -32,14 +32,7 @@ assertThat(page).isAt(LoginView.class);     // anonymous user sent to login
 With Spring Security, put Spring's own `@WithMockUser` or `@WithUserDetails` on the test or the class. On Browserless it sets the security context; on Playwright and Selenium the browser logs in through a test-only endpoint. The test is the same:
 
 ```java
-@Test
-@WithMockUser(username = "alice", roles = "ADMIN")
-void adminSeesTheAdminArea(UnifiedPage page) {
-    page.navigate(AdminView.class);
-
-    assertThat(page).isAt(AdminView.class);
-    assertThat(page.findComponent(H2.class).withText("Admin area of alice").single()).isVisible();
-}
+--8<-- "unified-test-demo/src/test/java/demo/UsersTest.java:adminSeesTheAdminArea"
 ```
 
 ## Several windows and users
@@ -56,7 +49,7 @@ void adminSeesTheAdminArea(UnifiedPage page) {
 ```java
 UnifiedPage bob = alice.openAsUser("bob", "USER");   // starts on no view: navigate first
 bob.navigate(WhoAmIView.class);
-assertThat(bob.findComponent(Span.class).withText("Signed in as bob").single()).isVisible();
+assertThat(bob.findComponent(Span.class).withText("Signed in as bob")).isVisible();
 ```
 
 Each page is used on its own; there is no switching. All windows close at the end of the test.

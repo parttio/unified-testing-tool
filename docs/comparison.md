@@ -52,26 +52,26 @@ All four tests are real tests in `unified-test-demo` and run in CI. The code on 
 |---|---|---|---|---|
 | Setup | `@UnifiedSpringBootTest`, `UnifiedPage` parameter | `@SpringBootTest`, a `BrowserlessApplicationContext` bean, a user and a window per test | `@SpringBootTest(RANDOM_PORT)`, `extends SpringPlaywrightIT` | `@SpringBootTest(RANDOM_PORT)`, `extends BrowserTestBase`, `@BrowserTest` instead of `@Test` |
 | Open the view | `page.navigate(PeopleView.class)` | `window.navigate(PeopleView.class)` | `navigate(PeopleView.class)` | `getDriver().get("http://localhost:" + port + "/people")` |
-| Find the grid | `page.find(UnifiedGrid.class).single()` | `window.findGrid(Person.class)` | `GridElement.get(page)` | `$(GridElement.class).waitForFirst()` |
-| Find the row | `rows().withCellText("Name", "Alan Turing").single()` | loop over `getCellText(i, 0)` | `findRow(findRowIndexesWithColumnText(0, "Alan Turing").get(0))` | `getCell("Alan Turing")`, any column |
+| Find the grid | `page.find(UnifiedGrid.class)` | `window.findGrid(Person.class)` | `GridElement.get(page)` | `$(GridElement.class).waitForFirst()` |
+| Find the row | `row().withCellText("Name", "Alan Turing")` | loop over `getCellText(i, 0)` | `findRow(findRowIndexesWithColumnText(0, "Alan Turing").get(0))` | `getCell("Alan Turing")`, any column |
 | Click the row | `row.click()` | `clickRow(row)` | `alan.getCell("Name").click()` | `alan.click()` |
-| Fill a field | `find(UnifiedTextField.class).withLabel("Name").single().setValue(…)` | `window.findTextField().withLabel("Name").setValue(…)` | `TextFieldElement.getByLabel(page, "Name").setValue(…)` | `$(TextFieldElement.class).withLabel("Name").single().setValue(…)` |
-| Click a button | `find(UnifiedButton.class).withText("Save").single().click()` | `window.findButton().withText("Save").click()` | `ButtonElement.getByText(page, "Save").click()` | `$(ButtonElement.class).withText("Save").single().click()` |
+| Fill a field | `find(UnifiedTextField.class).withLabel("Name").setValue(…)` | `window.findTextField().withLabel("Name").setValue(…)` | `TextFieldElement.getByLabel(page, "Name").setValue(…)` | `$(TextFieldElement.class).withLabel("Name").single().setValue(…)` |
+| Click a button | `find(UnifiedButton.class).withText("Save").click()` | `window.findButton().withText("Save").click()` | `ButtonElement.getByText(page, "Save").click()` | `$(ButtonElement.class).withText("Save").single().click()` |
 | Check the notification | `assertThat(notification).hasText(…)` (retries) | `assertEquals(…, window.findNotification().getText())` | `NotificationElement.getByText(page, …).assertOpen()` (retries) | `assertEquals(…, $(NotificationElement.class).waitForFirst().getText())` |
-| Check the grid | `assertThat(rows().withCellText("Name", "Alan M. Turing").single()).hasCellText("Email", …)` (retries) | `assertEquals(…, getCellText(row, 0))` | `alan.getCell("Name").assertText(…)` (retries) | `assertEquals(…, getCell(row, 0).getText())` |
+| Check the grid | `assertThat(row().withCellText("Name", "Alan M. Turing")).hasCellText("Email", …)` (retries) | `assertEquals(…, getCellText(row, 0))` | `alan.getCell("Name").assertText(…)` (retries) | `assertEquals(…, getCell(row, 0).getText())` |
 
 ## What differs
 
 **Which one looks like the Unified API?** Browserless and TestBench. All three start from a page or window, filter by label or text, and act on the result:
 
 ```java
-page.find(UnifiedTextField.class).withLabel("Name").single().setValue("…")   // Unified API
+page.find(UnifiedTextField.class).withLabel("Name").setValue("…")           // Unified API
 window.findTextField().withLabel("Name").setValue("…")                      // Browserless locator
 $(TextFieldElement.class).withLabel("Name").single().setValue("…")          // TestBench
 TextFieldElement.getByLabel(page, "Name").setValue("…")                     // Dramafinder
 ```
 
-The Unified API is closest to Browserless's application context API: a page is like a Browserless window, `openWindow()` and `openAsUser(…)` are like `newWindow()` and `newUser(…)` (see [Several users and windows](#several-users-and-windows)), and both use `find` with the same filter names. The differences: a Browserless locator has one method per component (`findTextField()`), while the Unified API takes the wrapper class (`find(UnifiedTextField.class)`), and a Browserless locator picks the single match when it acts, while the Unified API says `single()`. TestBench has the same query style, but with `$(…)` instead of `find(…)`: it has no `find`. Like Dramafinder, the Unified API waits on actions and its assertions retry.
+The Unified API is closest to Browserless's application context API: a page is like a Browserless window, `openWindow()` and `openAsUser(…)` are like `newWindow()` and `newUser(…)` (see [Several users and windows](#several-users-and-windows)), and both use `find` with the same filter names. The differences: a Browserless locator has one method per component (`findTextField()`), while the Unified API takes the wrapper class (`find(UnifiedTextField.class)`), and both pick the single match when they act: the Unified API checks, on every use, that exactly one component matches. TestBench has the same query style, but with `$(…)` instead of `find(…)`, and ends a query with `single()` or `first()`. Like Dramafinder, the Unified API waits on actions and its assertions retry.
 
 **Components.** A Browserless locator finds the Flow component (`TextField`) and acts on it like a user; with the older API, the test wraps the component in a tester (`test(find(TextField.class).single())`). TestBench and Dramafinder find a browser element class (`TextFieldElement`), and each tool has its own class. The Unified API has one wrapper, `UnifiedTextField`, that works on every tool.
 
