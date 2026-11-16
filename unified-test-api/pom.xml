@@ -14,6 +14,12 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
         </dependency>
+        <!-- the run summary's end-of-run listener; the test runner (Surefire, the IDE) brings the launcher -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <!-- Flow types in signatures; the application under test provides them -->
         <dependency>
             <groupId>com.vaadin</groupId>

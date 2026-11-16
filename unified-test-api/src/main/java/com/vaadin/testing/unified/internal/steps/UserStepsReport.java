@@ -81,21 +81,39 @@ public record UserStepsReport(String testClass, String testMethod, String displa
     }
 
     private void text(StringBuilder sb, List<Entry> entries, int depth) {
-        String indent = INDENT.repeat(depth);
+        String indent = indent(depth);
         for (Entry entry : entries) {
             switch (entry) {
-                case Step step -> sb.append(indent).append(step.index()).append("  ")
-                        .append(window(step.window())).append(oneLine(steps.mask(step.phrase().render())))
-                        .append(step.status() == Status.FAILED ? INDENT + FAILED_MARK : "").append('\n');
+                case Step step -> sb.append(indent).append(line(step.index(), step.window(),
+                        steps.mask(step.phrase().render()), step.status() == Status.FAILED)).append('\n');
                 case Group group -> {
-                    sb.append(indent).append(group.index()).append("  ").append(window(group.window()))
-                            .append(oneLine(steps.mask(group.name()))).append('\n');
+                    sb.append(indent).append(line(group.index(), group.window(), steps.mask(group.name()), false))
+                            .append('\n');
                     text(sb, group.children(), depth + 1);
                 }
-                case Gap gap -> sb.append(indent).append(window(gap.window())).append(gap.text())
-                        .append(gap.status() == Status.FAILED ? INDENT + FAILED_MARK : "").append('\n');
+                case Gap gap -> sb.append(indent)
+                        .append(line(null, gap.window(), gap.text(), gap.status() == Status.FAILED)).append('\n');
             }
         }
+    }
+
+    /**
+     * One entry of the list, without its indent: {@code 2.1  [window 2] fill text field “Name” with “Alan”   ✘}.
+     * The run summary renders the entries it reads back from {@code user-steps.json} with it, so both read alike.
+     *
+     * @param index the entry's index, or null for a gap
+     * @param window the window, or null for the test's first window
+     * @param text the step's text, the group's name or the gap's text, already masked
+     * @param failed whether to mark it failed; groups are not marked, their failed entry is
+     */
+    static String line(String index, String window, String text, boolean failed) {
+        return (index == null ? "" : index + "  ") + window(window) + oneLine(text)
+                + (failed ? INDENT + FAILED_MARK : "");
+    }
+
+    /** The indent of the list at a nesting depth. */
+    static String indent(int depth) {
+        return INDENT.repeat(depth);
     }
 
     /** Line breaks in a value or step name would break the list: they read as spaces. */
