@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.testing.unified.Scope;
+import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedNotification;
@@ -13,6 +14,7 @@ import com.vaadin.testing.unified.component.UnifiedTabSheet;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.time.Duration;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** TabSheet; written once, runs on Browserless and Playwright. */
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.Test;
 class AccountTest {
 
     @Test
+    @DisplayName("Switching to the Security tab lets the user change the password there")
     void switchesTabsAndWorksInside(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
@@ -35,6 +38,7 @@ class AccountTest {
 
     // --8<-- [start:contentFollowsTheSelectedTab]
     @Test
+    @DisplayName("The tab sheet's content shows the fields of whichever tab is selected")
     void contentFollowsTheSelectedTab(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class).withTab("Security");
@@ -53,16 +57,20 @@ class AccountTest {
     // --8<-- [end:contentFollowsTheSelectedTab]
 
     @Test
+    @DisplayName("Selecting a tab that doesn't exist fails, listing the tabs there are")
     void unknownTabFailsWithTheTabs(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> tabs.selectTab("Admin"));
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class, () -> tabs.selectTab("Admin"));
 
-        assertTrue(e.getMessage().contains("[Profile, Security, Billing]"), e.getMessage());
+        assertEquals("tab “Admin” in tab sheet", e.getExpected());
+        assertEquals(java.util.Set.of("tab “Profile”", "tab “Security”", "tab “Billing”"),
+                java.util.Set.copyOf(e.getNearMisses()), e.getMessage());
     }
 
     @Test
+    @DisplayName("The user can't select the disabled Billing tab")
     void disabledTabCantBeSelected(UnifiedPage page) {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);

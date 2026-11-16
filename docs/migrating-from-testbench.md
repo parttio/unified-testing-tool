@@ -85,13 +85,13 @@ Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `
 |---|---|
 | `extends BrowserTestBase`, `TestBenchTestCase` or `ParallelTest`; `@BrowserTest` | `@UnifiedSpringBootTest` (from `@SpringBootTest`) or `@UnifiedUITest`; `@Test` with a `UnifiedPage page` parameter |
 | `getDriver().get("http://localhost:" + port + "/people")` | `page.navigate(PeopleView.class)` when one view has the route, else `page.navigate("people")` |
-| `$(TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name").single()` |
-| `first()`, `waitForFirst()` | `single()`, with a Migration Marker: `single()` fails when several components match |
+| `$(TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
+| `first()`, `waitForFirst()` | the same lookup, with a `was first()` Migration Marker: the lookup fails when several components match |
 | `Assertions.assertEquals(x, el.getValue())`, `getText()`, `assertTrue(cb.isChecked())`, ... | retrying `assertThat(el).hasValue(x)`, `hasText(x)`, `isChecked()`, ... |
 | a local `TextFieldElement name = ...` | `UnifiedTextField name = ...` |
 | `@BeforeEach` and helper methods that use TestBench | helpers taking `UnifiedPage page`; a `@BeforeEach` becomes a call at the start of each test |
 | a project base class extending `BrowserTestBase` | a plain base class with `@UnifiedSpringBootTest`; its tests and helpers convert as above |
-| Grid `getCell("text")`, `getCell(row, col).getText()` | `rows().withCellText("text").single()`, `row(row).getCellText(col)` |
+| Grid `getCell("text")`, `getCell(row, col).getText()` | `row().withCellText("text")`, `row(row).getCellText(col)` |
 | ComboBox / RadioButtonGroup / MultiSelectComboBox `selectByText`, `getSelectedText`, ... | `selectItem`, `getSelectedItem`, ... |
 | DatePicker `setDate`, `getDate` | `setValue`, `getValue` |
 | NumberField `setValue("42")` | `setValue(42.0)` (numeric string literals only) |
@@ -131,7 +131,7 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 |---|---|
 | `TestBench Escape Hatch: <call>` | Rewrite the call with the Unified API if it can express it, then drop the Escape Hatch and `@RequiresTestingTool` |
 | `..., a custom element: write a Wrapper for it (ADR 0003)` | Write a [Wrapper](spec/06-wrappers.md) for the component |
-| `was first(); single() fails when several components match` | If the test now fails with "several match", add a filter |
+| `was first(); the lookup fails when several components match` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `TestBench page object: new LoginPage(this)` | Convert the page object by hand, or rerun with `includePageObjects` |
 | `browser setup removed (@RunLocally, ...)` | Configure the Selenium adapter with `vaadin.testing.*` settings |
@@ -147,6 +147,8 @@ Add `addAgentSkill: true` to the recipe's options (see **Run it**): the migratio
 ```text
 /resolve-migration-markers
 ```
+
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 Review its changes like any other. The skill's source is in [`unified-test-rewrite`](https://github.com/parttio/unified-testing-tool/blob/main/unified-test-rewrite/src/main/resources/META-INF/unified/skills/resolve-migration-markers/SKILL.md).
 

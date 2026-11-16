@@ -1,5 +1,7 @@
 package com.vaadin.testing.unified.internal.steps;
 
+import com.vaadin.testing.unified.UnifiedAssertionError;
+import com.vaadin.testing.unified.internal.failures.FailureParts;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -147,6 +149,8 @@ public final class StepRecorder {
     private final long start = System.nanoTime();
     private int steps;
     private int windows = 1;
+    private volatile String scenario;
+    private volatile String evidenceDir;
     private long durationNanos = -1;
 
     // ---------------------------------------------------------------- recording
@@ -310,8 +314,48 @@ public final class StepRecorder {
                 path.add(f.callSite);
             }
             step.codePath = List.copyOf(path);
+            if (error instanceof UnifiedAssertionError unified && !unified.parts().hasFailedStep()) {
+                FailureParts parts = unified.parts();
+                parts.failedStep(step.number, this::stepCount, phrase.render());
+                List<String> chain = new ArrayList<>();
+                for (Iterator<Group> it = open.descendingIterator(); it.hasNext();) {
+                    chain.add(it.next().name);
+                }
+                parts.stepChain(chain);
+                completeFailure(unified, step.codePath);
+            }
         }
         container.children.add(step);
+    }
+
+    // ---------------------------------------------------------------- failures
+
+    /**
+     * Names the test the recorder belongs to, for the failures it completes: the scenario, and the test's evidence
+     * directory as the failure shows it.
+     */
+    public void describeTest(String scenario, String evidenceDir) {
+        this.scenario = scenario;
+        this.evidenceDir = evidenceDir;
+    }
+
+    /**
+     * Adds what the recording knows to a Unified failure that lacks it: the scenario, the evidence directory, the
+     * code path, and the masking of secret values. Called when its User Step fails, and when the test ends for a
+     * failure outside any User Step.
+     */
+    public void completeFailure(UnifiedAssertionError failure, List<CallSite> codePath) {
+        FailureParts parts = failure.parts();
+        parts.mask(this::mask);
+        if (parts.scenario() == null && scenario != null) {
+            parts.scenario(scenario);
+        }
+        if (parts.evidenceDir() == null && evidenceDir != null) {
+            parts.evidenceDir(evidenceDir);
+        }
+        if (parts.codePath().isEmpty() && codePath != null) {
+            parts.codePath(codePath.stream().map(String::valueOf).toList());
+        }
     }
 
     private Group current() {

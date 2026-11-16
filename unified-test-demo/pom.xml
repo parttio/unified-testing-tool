@@ -77,6 +77,12 @@
             <artifactId>unified-test-selenium</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- the style rules, checked by UnifiedStyleTest -->
+        <dependency>
+            <groupId>org.vaadin.addons</groupId>
+            <artifactId>unified-test-archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- JUnit 4, only to compile JUnit4TestBenchTest, the golden JUnit 4 migration input; without the vintage
              engine no JUnit 4 test runs -->
         <dependency>

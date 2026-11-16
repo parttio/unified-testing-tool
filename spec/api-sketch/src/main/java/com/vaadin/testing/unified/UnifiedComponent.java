@@ -16,6 +16,15 @@ public @interface UnifiedComponent {
     /** Web component tag for browser Testing Tools. Empty: read from the component's {@code @Tag}. */
     String tag() default "";
 
+    /** What tells this component apart from others with the same tag, e.g. {@code ".metric-card"}. */
+    String selector() default "";
+
+    /**
+     * The component kind in the User Step reports, e.g. {@code "star rating"}. Empty: the Wrapper's name in
+     * words, without the {@code Unified} prefix. For the verbs, see {@link UserStepVerb}.
+     */
+    String kind() default "";
+
     /** Per-Testing-Tool implementations, for what the Unified Element can't express. */
     ToolImplementation[] overrides() default {};
 }

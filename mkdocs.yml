@@ -56,9 +56,12 @@ nav:
       - Working with components: guide/components.md
       - Grid: guide/grid.md
       - Assertions and waiting: guide/assertions-and-waiting.md
+      - Structuring a scenario: guide/structuring-a-scenario.md
+      - Reading reports and failures: guide/reports-and-failures.md
       - Navigation, users and windows: guide/navigation-and-users.md
       - When a test needs one Testing Tool: guide/tool-specific.md
       - Wrappers for your own components: guide/custom-wrappers.md
+      - Checking the style: guide/style-rules.md
   - One test, four ways: comparison.md
   - Migrating from TestBench: migrating-from-testbench.md
   - Migrating from Browserless: migrating-from-browserless.md
@@ -88,4 +91,6 @@ nav:
       - adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md
       - adr/0005-browserless-migration-recipes.md
       - adr/0006-dramafinder-migration-recipes.md
+      - adr/0007-wrappers-carry-their-filters.md
+      - adr/0008-adapter-spi-is-test-runner-neutral.md
   - Glossary: GLOSSARY.md

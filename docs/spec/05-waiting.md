@@ -1,6 +1,6 @@
 # 5. Waiting
 
-Decided in [#8](https://github.com/jcgueriaud1/unified-testing-tool/issues/8). Term: **Auto-Wait**.
+Decided in [#8](https://github.com/jcgueriaud1/unified-testing-tool/issues/8); lookups and checks as in [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). Term: **Auto-Wait**.
 
 ## Auto-Wait
 
@@ -12,7 +12,7 @@ sequenceDiagram
     participant W as Wrapper
     participant A as App
     T->>W: click()
-    W->>W: wait: present, visible, enabled
+    W->>W: wait: exactly one match, visible, enabled
     W->>A: user action
     W->>A: wait: server round-trip finished
     W-->>T: returns
@@ -24,9 +24,11 @@ sequenceDiagram
 | Playwright (Dramafinder) | Playwright actionability | **adapter adds** wait for Vaadin idle |
 | Selenium (TestBench) | **adapter adds** element-state wait | `waitForVaadin` |
 
-## Lazy wrappers
+Grid row and column actions (`row().withCellText(..).click()`, `column(..).sort(..)`) are Wrapper actions and get the same Auto-Wait ([7. Grid](07-grid.md)).
 
-`single()` returns a wrapper that finds its component again on every action or assertion. It waits for components that appear later and never goes stale.
+## Lazy Wrappers
+
+`find(..)` returns a Wrapper that finds its component again on every action, read or assertion, and waits up to the timeout for exactly one match. It waits for components that appear later and never goes stale. A Wrapper never holds a component instance.
 
 ## Assertions and getters
 
@@ -39,6 +41,27 @@ sequenceDiagram
 assertThat(name).hasValue("Alice").isValid();          // good
 assertEquals("Alice", name.getValue());                 // flaky in a browser after async updates
 ```
+
+## Counts and absence
+
+Whether a component is there, and how many are, are retrying assertions like any other. There is no boolean check:
+
+| Assertion | Holds when |
+|---|---|
+| `assertThat(wrapper).exists()` | at least one component matches |
+| `assertThat(wrapper).doesNotExist()` | no component matches |
+| `assertThat(wrapper).hasCount(n)` | `n` components match |
+
+```java
+assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist();
+assertThat(users.row().withCellTextContaining("Email", "user11")).hasCount(11);
+```
+
+`all()` reads the matches now, without waiting: only for looping over them ([4. Locating](04-locating.md#checks-and-several-matches)).
+
+## Failures
+
+A lookup that finds no component or several, an action on a component that stays disabled or hidden, and an assertion that times out all throw `UnifiedAssertionError`, an `AssertionError`. Its message is the same on every Testing Tool: the User Step that failed, what was expected and found, the Near Misses, how long it waited and where the timeout came from ([12. Readable tests, Failures](12-readable-tests.md#failures)). An assertion timeout lists the distinct values it saw while waiting (`Found “Saving…”, then “Saved Alan Turing”`).
 
 ## Background work
 
@@ -57,5 +80,6 @@ Not part of the Unified API. Use the Escape Hatch and the tool's own switch (e.g
 ## Requirements on Testing Tool adapters
 
 - Guarantee both halves of Auto-Wait for every action.
-- Re-resolve wrappers on every call.
+- Re-resolve Wrappers on every call, and count the matches for `exists()`, `doesNotExist()` and `hasCount(n)`.
 - Retry assertions until the timeout; on Browserless flush `UI.access` tasks and signals between attempts.
+- Give grid row and column actions the same Auto-Wait as every other action.

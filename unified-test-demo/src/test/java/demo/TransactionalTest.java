@@ -6,6 +6,7 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.launcher.Launcher;
@@ -23,6 +24,7 @@ class TransactionalTest {
     @Tag("launched-only")
     static class TransactionalUiTest {
         @Test
+        @DisplayName("The user opens the home view inside a transaction")
         void usesTheDatabase(UnifiedPage page) {
             page.navigate(HomeView.class);
         }

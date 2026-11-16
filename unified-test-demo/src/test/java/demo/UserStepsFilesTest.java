@@ -132,7 +132,8 @@ class UserStepsFilesTest {
                 "   2  Edit Alan Turing",
                 "      2.1  click row where Name is “Alan Turing” in grid",
                 "      2.2  fill text field “Nmae” with “Alan M. Turing”   ✘"), lines.subList(1, 5));
-        assertTrue(lines.get(5).startsWith("   ✘ AssertionError: "), text);
+        assertEquals("   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Nmae”, found none",
+                lines.get(5), text);
         assertTrue(lines.get(6).matches("     at UserStepsFilesTest\\.java:\\d+ \\(fails\\)"
                 + " ← UserStepsFilesTest\\.java:\\d+ \\(fails\\)"), text);
         assertEquals(7, lines.size(), text);

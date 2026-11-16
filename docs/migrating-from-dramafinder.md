@@ -88,16 +88,16 @@ Without another adapter the migrated suite keeps running on Playwright only, as 
 | `@EnabledIfSystemProperty(named = "vaadin.testing.tool", ..)` | removed: the run's Testing Tool decides |
 | test methods, `@BeforeEach` and helper methods that use the base class | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test |
 | `navigate(View.class)`, `assertAt(View.class)`, `assertPath(..)`, `assertQueryParameter(..)` | `page.navigate(View.class)`, `assertThat(page).isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)` |
-| `TextFieldElement.getByLabel(page, "Name")`, `getByText`, `getById`, `getByTestId`, `…Containing` | `page.find(UnifiedTextField.class).withLabel("Name").single()`, `withText`, `withId`, `withTestId`, `…Containing` |
-| `find(page, TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name").single()` |
-| query `first()` / `get(i)` | `single()`, with a Migration Marker / `all().get(i)` |
-| `NotificationElement.getByText(page, s)` (a substring, the first match) | `withTextContaining(s).single()`, with a Migration Marker |
+| `TextFieldElement.getByLabel(page, "Name")`, `getByText`, `getById`, `getByTestId`, `…Containing` | `page.find(UnifiedTextField.class).withLabel("Name")`, `withText`, `withId`, `withTestId`, `…Containing` |
+| `find(page, TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
+| query `first()` / `get(i)` | the same lookup, with a `was first()` Migration Marker / `all().get(i)` |
+| `NotificationElement.getByText(page, s)` (a substring, the first match) | `withTextContaining(s)`, with a Migration Marker |
 | element actions: `setValue`, `click`, `check`, `closeWithEscape`, ... | the Wrapper's: `setValue`, `click`, `check`, `close`, ... |
 | element assertions: `assertValue`, `assertOpen`, `assertEnabled`, `assertChecked`, `assertContent`, ... | retrying `assertThat(w).hasValue(..)`, `isOpen()`, `isEnabled()`, `isChecked()`, `hasTextContaining(..)`, ... |
 | a local `TextFieldElement name = ...` | `UnifiedTextField name = page.find(..)...` |
-| `GridElement.get(page)` | `page.find(UnifiedGrid.class).single()` |
+| `GridElement.get(page)` | `page.find(UnifiedGrid.class)` |
 | `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
-| `grid.findRowIndexesWithColumnText(0, s).get(0)` | `grid.rows().withCellText(s).single().getIndex()`, with a Migration Marker: any column matches now |
+| `grid.findRowIndexesWithColumnText(0, s).get(0)` | `grid.row().withCellText(s).getIndex()`, with a Migration Marker: any column matches now |
 | `row.getCell(col).getText()`, `row.getCell("Header").assertText(s)`, `row.getCell(col).click()` | `row.getCellText(col)`, `assertThat(row).hasCellText("Header", s)`, `row.click()` with a Migration Marker |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()`, `waitForGridToStopLoading()`, `scrollToRow(i)` | removed: Auto-Wait |
 
@@ -109,7 +109,7 @@ A test class that uses a base class member the recipe doesn't convert (`loginAs(
 
 Dramafinder 1.x and 2.x share their class and method names, but not what a lookup finds: a 1.x `getByLabel` or `getByText` matched a case-insensitive substring of the label, `aria-label` or placeholder and took the first match, where 2.x matches the whole value and fails on several. So the recipe first finds the version: the one your Maven build resolves; else the API on the classpath; else the API of the base class your tests were compiled against. A version it can't find counts as 1.x, since a wrong 1.x guess only adds Migration Markers.
 
-In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s).single()` and `getByText(page, s)` `withTextContaining(s).single()`, each with a Migration Marker to tighten it to `withLabel`/`withText` once the test passes. A 1.x `getByHeaderText` stays behind the Escape Hatch: the Unified API has no substring header filter.
+In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)` and `getByText(page, s)` `withTextContaining(s)`, each with a Migration Marker to tighten it to `withLabel`/`withText` once the test passes. A 1.x `getByHeaderText` stays behind the Escape Hatch: the Unified API has no substring header filter.
 
 1.x projects copied `SpringPlaywrightIT` from Dramafinder's template into their own package. The recipe recognises such a copy (an abstract class extending `AbstractBasePlaywrightIT` with `@SpringBootTest`), migrates the tests that extend it as if they extended Dramafinder's, and deletes the copy once nothing extends it any more.
 
@@ -167,7 +167,7 @@ void savesTheProfile(UnifiedPage page) {
 | `was 1.x getByLabel(..), ...; tighten it to withLabel(..) once the test passes` | Replace the `…Containing` filter with the exact one and run the test |
 | `was findRowIndexesWithColumnText(n, ..).get(0): any column matches now; ...` | Name the column: `withCellText("Header", text)` |
 | `was getCell(..).click(); a row's click() clicks the row, not that cell` | Fine when the cell holds nothing clickable; else find the component in the cell, `row.cell("Header").find(..)` |
-| `was first(); single() fails when several components match`, `was getByText(..), a substring and first match; ...` | If the test now fails with "several match", add a filter |
+| `was first(); the lookup fails when several components match`, `was getByText(..), a substring and first match; ...` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
@@ -186,5 +186,7 @@ The same `resolve-migration-markers` skill works through the Dramafinder Migrati
 ```text
 /resolve-migration-markers
 ```
+
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 How it is evaluated, and what it scores: [Migrating from TestBench](migrating-from-testbench.md#the-agent-skill).

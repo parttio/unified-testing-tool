@@ -17,6 +17,7 @@ import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 
@@ -26,6 +27,7 @@ class ProfileViewTest {
 
     // --8<-- [start:savesName]
     @Test
+    @DisplayName("The user saves a name and an email and sees a confirmation")
     void savesName(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
@@ -40,6 +42,7 @@ class ProfileViewTest {
     // --8<-- [end:savesName]
 
     @Test
+    @DisplayName("Saving without an email marks the Email field as required")
     void requiresEmail(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
@@ -52,6 +55,7 @@ class ProfileViewTest {
 
     // --8<-- [start:findsIconButtonByAccessibleName]
     @Test
+    @DisplayName("The user deletes the account with the icon-only button")
     void findsIconButtonByAccessibleName(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
@@ -62,6 +66,7 @@ class ProfileViewTest {
     // --8<-- [end:findsIconButtonByAccessibleName]
 
     @Test
+    @DisplayName("The user types a nickname into the field with the Nickname placeholder")
     void findsByTestIdAndPlaceholder(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
@@ -71,6 +76,7 @@ class ProfileViewTest {
     }
 
     @Test
+    @DisplayName("Archive is disabled and Save is enabled")
     void knowsDisabledButtons(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
@@ -80,6 +86,7 @@ class ProfileViewTest {
 
     // --8<-- [start:escapeHatchIsOptional]
     @Test
+    @DisplayName("The Name field's label is checked where the Testing Tool has the Flow component")
     void escapeHatchIsOptional(UnifiedPage page) {
         page.navigate(ProfileView.class);
         UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
@@ -92,6 +99,7 @@ class ProfileViewTest {
     // --8<-- [end:escapeHatchIsOptional]
 
     @Test
+    @DisplayName("Unwrapping a type no Testing Tool has fails, naming @RequiresTestingTool")
     void unwrapNamesTheMissingAnnotation(UnifiedPage page) {
         page.navigate(ProfileView.class);
         UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
@@ -103,6 +111,7 @@ class ProfileViewTest {
 
     @Test
     @RequiresTestingTool(TestingTool.SELENIUM)
+    @DisplayName("The user types a name through TestBench's own element")
     void escapeHatchToTestBench(UnifiedPage page) {
         page.navigate(ProfileView.class);
         UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
@@ -118,6 +127,7 @@ class ProfileViewTest {
     // --8<-- [start:readsServerSideState]
     @Test
     @RequiresTestingTool(TestingTool.BROWSERLESS)
+    @DisplayName("The name the user types is in the server-side field")
     void readsServerSideState(UnifiedPage page) {
         page.navigate(ProfileView.class);
         page.find(UnifiedTextField.class).withLabel("Name").setValue("Bob");
@@ -127,15 +137,19 @@ class ProfileViewTest {
     }
     // --8<-- [end:readsServerSideState]
 
+    // --8<-- [start:needsARealBrowser]
     @Test
     @RequiresBrowser
+    @DisplayName("The Save button shows a pointer cursor in a real browser")
     void needsARealBrowser(UnifiedPage page) {
         page.navigate(ProfileView.class);
         assertThat(page.find(UnifiedButton.class).withText("Save")).hasCssValue("cursor", "pointer");
     }
+    // --8<-- [end:needsARealBrowser]
 
     // --8<-- [start:screenshotOnlyWithARealBrowser]
     @Test
+    @DisplayName("After typing a name, a real browser takes a screenshot of the profile")
     void screenshotOnlyWithARealBrowser(UnifiedPage page) throws Exception {
         page.navigate(ProfileView.class);
         page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");

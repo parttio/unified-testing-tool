@@ -88,26 +88,26 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 | `extends BrowserlessTest` | `@UnifiedUITest`; `@ViewPackages` stays |
 | test methods, `@BeforeEach` and helper methods that use Browserless | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test; a project base class converts too |
 | `navigate(ProfileView.class)`, `UI.getCurrent().navigate(..)` | `page.navigate(ProfileView.class)` |
-| `$(TextField.class).withCaption("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name").single()` |
+| `$(TextField.class).withCaption("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | `test(component).setValue("x")`, `.click()`, `.check()` | `component.setValue("x")`, `.click()`, `.check()` |
 | component getters: `getValue()`, `getText()`, `isEnabled()`, Checkbox `getValue()`, Dialog `isOpened()` | Wrapper getters: `getValue()`, `getText()`, `isEnabled()`, `isChecked()`, `isOpen()` |
 | a local `TextField name = $(..)...` | `UnifiedTextField name = page.find(..)...` |
-| `first()`, `last()`, `atIndex(n)` | `single()`, with a Migration Marker: `single()` fails when several components match |
+| `first()`, `last()`, `atIndex(n)` | the same lookup, with a `was first()` Migration Marker: the lookup fails when several components match |
 | Button `withCaption(..)` | `withText(..)`, with a Migration Marker suggesting `withAccessibleName(..)` for a button without text |
 | `Assertions.assertEquals(x, c.getValue())`, `test(c).getText()`, `assertTrue(c.isEnabled())`, ... | retrying `assertThat(c).hasValue(x)`, `hasText(x)`, `isEnabled()`, ... |
 | `assertTrue(getCurrentView() instanceof V)`, `assertInstanceOf(V.class, getCurrentView())` | `assertThat(page).isAt(V.class)` |
 | `roundTrip()`, `runPendingSignalsTasks()` | removed: Auto-Wait |
 | `fireShortcut(Key.KEY_S, KeyModifier.CONTROL)` | `page.pressKey("Control+s")`, with a Migration Marker (see below) |
 | Grid `size()`, `getCellText(row, col)`, `clickRow(row)`, `select(row)` | `getRowCount()`, `row(row).getCellText(col)`, `row(row).click()`, `row(row).select()` |
-| a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class).single()` |
-| the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.rows().withCellText(text).single().getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
+| a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class)` |
+| the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.row().withCellText(text).getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
 | ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
 
 A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details and Grid; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
 
 ### Context API and extension tests
 
-Tests written against Browserless Test's context API (a `BrowserlessUIContext` window from `BrowserlessApplicationContext`, often built in a `@TestConfiguration`) or with `@RegisterExtension BrowserlessExtension` convert the same way. Their wiring goes: the context and extension fields, the `@TestConfiguration` that builds the application, and the `@BeforeEach`/`@AfterEach` methods that only open and close the window. Calls on the window or extension convert like the base-class calls above, and its locators become lookups: `window.findTextField().withLabel("Name").setValue("x")` becomes `page.find(UnifiedTextField.class).withLabel("Name").single().setValue("x")`. Views the wiring named (`create(View.class)`, `withViewPackages(..)`) become `@ViewPackages` on a plain test. A test that uses the application or user context beyond opening its window (a second user, a second window) is left as it is, with a Migration Marker.
+Tests written against Browserless Test's context API (a `BrowserlessUIContext` window from `BrowserlessApplicationContext`, often built in a `@TestConfiguration`) or with `@RegisterExtension BrowserlessExtension` convert the same way. Their wiring goes: the context and extension fields, the `@TestConfiguration` that builds the application, and the `@BeforeEach`/`@AfterEach` methods that only open and close the window. Calls on the window or extension convert like the base-class calls above, and its locators become lookups: `window.findTextField().withLabel("Name").setValue("x")` becomes `page.find(UnifiedTextField.class).withLabel("Name").setValue("x")`. Views the wiring named (`create(View.class)`, `withViewPackages(..)`) become `@ViewPackages` on a plain test. A test that uses the application or user context beyond opening its window (a second user, a second window) is left as it is, with a Migration Marker.
 
 The demo's `EditPersonBrowserlessTest` and what the recipe makes of it. Nothing is left behind the Escape Hatch, so CI runs the result on Browserless, Playwright and Selenium.
 
@@ -169,7 +169,7 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `..., no Wrapper for X: write one (ADR 0003)` | Write a [Wrapper](guide/custom-wrappers.md) for the component |
 | `Component Reference: <call>: replace it with a locator ...` | The test holds a component's Java object (a view field, `view.getChildren()...`): find the component with a locator instead |
 | `filter runs Java on the component: <call>: replace withCondition(..) with a locator` | `withCondition(..)` and `withPropertyValue(..)` run Java on each component: pick a label, text or test id that finds the same one |
-| `was first(); single() fails when several components match` | If the test now fails with "several match", add a filter |
+| `was first(); the lookup fails when several components match` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `was a scan of column <col>; withCellText(text) matches any column ...` | If another column can hold the text, name the column: `withCellText("Header", text)` |
 | `was fireShortcut(..); pressKey also reaches the focused component and an open dialog` | `fireShortcut` fired the shortcut on the UI only; `pressKey` also reaches the focused component and an open dialog (Escape closes it). Check the test still means the same |
@@ -199,5 +199,7 @@ The same `resolve-migration-markers` skill works through the Browserless Migrati
 ```text
 /resolve-migration-markers
 ```
+
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 How it is evaluated, and what it scores: [Migrating from TestBench](migrating-from-testbench.md#the-agent-skill).

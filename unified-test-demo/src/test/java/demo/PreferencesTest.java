@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.time.LocalDate;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Typed value fields; written once, runs on Browserless and Playwright. */
@@ -22,6 +23,7 @@ class PreferencesTest {
 
     // --8<-- [start:savesTypedValues]
     @Test
+    @DisplayName("The user saves a height, a birthday and a newsletter subscription")
     void savesTypedValues(UnifiedPage page) {
         page.navigate(PreferencesView.class);
 
@@ -45,6 +47,7 @@ class PreferencesTest {
     // --8<-- [end:savesTypedValues]
 
     @Test
+    @DisplayName("A height of 170.0 reads as 170")
     void wholeNumbers(UnifiedPage page) {
         page.navigate(PreferencesView.class);
         UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
@@ -55,6 +58,7 @@ class PreferencesTest {
     }
 
     @Test
+    @DisplayName("The user clears the height and the birthday")
     void clearsValues(UnifiedPage page) {
         page.navigate(PreferencesView.class);
         UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
@@ -71,6 +75,7 @@ class PreferencesTest {
     }
 
     @Test
+    @DisplayName("A height of 300 cm and a birthday in the future are invalid")
     void outOfRangeValuesAreInvalid(UnifiedPage page) {
         page.navigate(PreferencesView.class);
         UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
@@ -84,6 +89,7 @@ class PreferencesTest {
     }
 
     @Test
+    @DisplayName("The height field accepts 50 to 250 cm in half steps")
     void readsNumberFieldLimits(UnifiedPage page) {
         page.navigate(PreferencesView.class);
         UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
@@ -95,6 +101,7 @@ class PreferencesTest {
     }
 
     @Test
+    @DisplayName("The user turns Remember me off and subscribes to the newsletter")
     void checksAndUnchecks(UnifiedPage page) {
         page.navigate(PreferencesView.class);
         UnifiedCheckbox remember = page.find(UnifiedCheckbox.class).withLabel("Remember me");
@@ -113,6 +120,7 @@ class PreferencesTest {
     }
 
     @Test
+    @DisplayName("Accept terms starts neither checked nor unchecked")
     void readsIndeterminate(UnifiedPage page) {
         page.navigate(PreferencesView.class);
 

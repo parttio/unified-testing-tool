@@ -12,6 +12,7 @@ import demo.addon.Rating;
 import demo.addon.testing.UnifiedBadge;
 import demo.addon.testing.UnifiedBadgeBrowserless;
 import demo.addon.testing.UnifiedRating;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Add-on wrappers (spec 06, ADR 0003); written once, runs on Browserless and Playwright. */
@@ -20,6 +21,7 @@ class AddonTest {
 
     // --8<-- [start:wrapperWithoutOverride]
     @Test
+    @DisplayName("The user rates the food 3 and the service keeps its 4")
     void wrapperWithoutOverride(UnifiedPage page) {
         page.navigate(AddonView.class);
         UnifiedRating food = page.find(UnifiedRating.class).withLabel("Food");
@@ -33,6 +35,7 @@ class AddonTest {
 
     // --8<-- [start:customFilters]
     @Test
+    @DisplayName("The two ratings are found by their value and by their label")
     void customFilters(UnifiedPage page) {
         page.navigate(AddonView.class);
 
@@ -45,6 +48,7 @@ class AddonTest {
     // --8<-- [end:customFilters]
 
     @Test
+    @DisplayName("The inbox badge counts a received message")
     void wrapperWithToolOverride(UnifiedPage page) {
         page.navigate(AddonView.class);
         UnifiedBadge inbox = page.find(UnifiedBadge.class).withTestId("inbox");
@@ -54,12 +58,26 @@ class AddonTest {
 
         page.waitUntil(() -> inbox.getCount() == 3);
         // the override is what runs on Browserless; elsewhere the wrapper's own default methods
-        boolean browserless = page.unwrap(Object.class).getClass().getName().contains("browserless");
+        boolean browserless = !page.hasRealBrowser();
         assertEquals(browserless, inbox instanceof UnifiedBadgeBrowserless);
     }
 
+    // --8<-- [start:wrapperWithItsOwnWords]
+    @Test
+    @DisplayName("The user gives the food three stars")
+    void wrapperWithItsOwnWords(UnifiedPage page) {
+        page.navigate(AddonView.class);
+        UnifiedStarRating food = page.find(UnifiedStarRating.class).withLabel("Food");
+
+        food.rate(3);
+
+        assertThat(food.withStars(3)).exists();
+    }
+    // --8<-- [end:wrapperWithItsOwnWords]
+
     // --8<-- [start:anyComponentWithoutAWrapper]
     @Test
+    @DisplayName("The service rating is read without a wrapper of its own")
     void anyComponentWithoutAWrapper(UnifiedPage page) {
         page.navigate(AddonView.class);
 

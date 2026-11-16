@@ -7,6 +7,7 @@ import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedContainer;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** setValueAsUser on a native input: the server sees the value on every Testing Tool. */
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 class CodeTest {
 
     @Test
+    @DisplayName("The user types a code into a plain Flow input")
     void typesIntoFlowInput(UnifiedPage page) {
         page.navigate(CodeView.class);
 
@@ -23,6 +25,7 @@ class CodeTest {
     }
 
     @Test
+    @DisplayName("The user types into a bare HTML input element")
     void typesIntoBareInputElement(UnifiedPage page) {
         page.navigate(CodeView.class);
         UnifiedContainer holder = page.find(UnifiedContainer.class).withTestId("raw");

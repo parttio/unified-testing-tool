@@ -171,6 +171,9 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `message` | string, optional | its message, secrets masked |
 | `stepIndex`, `stepNumber` | string, number, optional | the User Step that threw it; left out when the test failed outside any User Step (a plain JUnit assertion) |
 | `codePath` | array of call sites | where it happened, outermost first: the call site of each `page.step(..)` it passed through, then the failed User Step's (or the first line of the failure's stack trace outside the Unified API) |
+| `expected`, `found` | string, optional | a `UnifiedAssertionError`'s `Expected` and `Found` lines (see [Failures](#failures)) |
+| `nearMisses` | array of strings, optional | its Near Misses, closest first: `text field “E-mail”`, `dialog “Help” (hidden)`; left out when there are none |
+| `suggestion` | string, optional | its `Did you mean`: `find(UnifiedTextField.class).withLabel("E-mail")` |
 
 **Entries** (`type` tells them apart)
 
@@ -231,6 +234,11 @@ UnifiedAssertionError: Editing a person in the dialog updates the grid
   - not usable (`Found 1, but disabled`, or hidden, read-only, covered by an open dialog).
 
   The message is the same on every Testing Tool.
+- **When the parts are known.** Expected, Found, Nearby, Did you mean, Waited and Tool are known when the failure is thrown. The failed User Step, the step chain and Code are added when its User Step ends; the scenario and the evidence directory are known from the start of the test. `m` in `User Step n of m` is the number of User Steps the test recorded, read when the message is: after the test, all of them. `getMessage()` renders the message from its parts each time it is read, so the Test Runner, which reads it after the test, reports it whole. A test that catches the failure (`assertThrows`) reads it as it is then.
+- **Without a scenario** (outside a Unified UI Test), the first line is the summary, `Expected …, found …`. The User Step lists, the `error` of a step in `user-steps.json` and the run summary also show the summary, since the scenario is their heading.
+- **Waited** names where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` for a Wrapper's own.
+- **Items a component lacks** (`selectItem`, `selectTab`) fail the same way, with the component's items as Near Misses (`item “Finland”`) and a suggestion such as `selectItem("France")`.
+- **Several matches** are told apart by their nearest ancestor with a test id or an id: `in container (test id “billing”)`.
 - **`UnifiedElement.getAccessibleName()`** reads the accessible name (4. Locating's order), for Near Misses and for tests.
 
 ## Style rules
@@ -266,22 +274,21 @@ The skill covers:
 - reading a failure;
 - when the Escape Hatch is acceptable.
 
-A second `skill-eval` suite scores it: prose scenarios in, tests out, judged on compiling, passing on two Testing Tools, the style rules, intent share and no Escape Hatch. `resolve-migration-markers` defers to it for style.
+How the recipe decides:
+
+- **Stamp.** The shipped skill carries `<!-- unified-test-skill: write-unified-ui-tests <version> -->`, the release it came with (Maven resource filtering). A copy with an older version is replaced; one with the same or a newer version is left as it is; one without the line counts as hand-edited, is kept, and gets an OpenRewrite warning (`Markup.Warn`) naming how to take the shipped one.
+- **`AGENTS.md`.** The pointer is a section between `<!-- unified-test: write-unified-ui-tests -->` and `<!-- /unified-test -->`, added at the end or replaced where it is; the file is created when missing.
+- **Where.** It writes only at a project's root: one with a build file (`pom.xml`, Gradle), an `AGENTS.md` or the skill, and Java sources.
+
+A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `scripts/eval-writing-skill.sh`) scores it: prose scenarios in, tests out, judged on compiling, passing on two Testing Tools, the style rules, intent share and no Escape Hatch. `resolve-migration-markers` defers to it for style.
 
 ## Moving to this chapter
 
 A clean break, since the API is alpha: no deprecation release and no Upgrade Recipe. The release that implements ADR 0007 also moves the Migration Recipes and their golden pairs, the demo tests, the custom Wrappers, `resolve-migration-markers`, the guide and chapters 4–9. The Migration Recipes' `first()` rule is amended in [ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md).
 
-### Earlier chapters this amends
+### Earlier chapters
 
-| Chapter | Change |
-|---|---|
-| [4. Locating](04-locating.md) | query shape, terminals, `exists()` and `all()` as in [Lookups](#lookups) |
-| [5. Waiting](05-waiting.md) | counts and absence as retrying assertions; failures as in [Failures](#failures) |
-| [6. Wrappers](06-wrappers.md) | Wrappers declare filter mixins instead of `Findable<Q>` and a nested query; `getAccessibleName()` on the Unified Element |
-| [7. Grid](07-grid.md) | `row()` replaces `rows()`/`RowQuery`; row and column actions get Auto-Wait |
-| [8. Escape Hatch](08-escape-hatch.md) | Escape Hatch calls show as gap lines in reports; the style rule on `@RequiresTestingTool` |
-| [9. Capabilities](09-capabilities.md) | the same style rule |
+[4. Locating](04-locating.md), [5. Waiting](05-waiting.md), [6. Wrappers](06-wrappers.md), [7. Grid](07-grid.md), [8. Escape Hatch](08-escape-hatch.md) and [9. Capabilities](09-capabilities.md) follow this chapter: lookups without a terminal, counts and absence as retrying assertions, filter mixins, `row()`, failures as in [Failures](#failures), gap lines and the style rule for Escape Hatch calls.
 
 ## Settings
 

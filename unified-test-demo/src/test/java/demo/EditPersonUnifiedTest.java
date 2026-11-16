@@ -8,6 +8,7 @@ import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Unified API: runs on every Testing Tool. Shown in docs/comparison.md. */
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 class EditPersonUnifiedTest {
 
     @Test
+    @DisplayName("The user picks a person in the grid, renames them and saves")
     void editsAPersonFromTheGrid(UnifiedPage page) {
         page.navigate(PeopleView.class);
         UnifiedGrid people = page.find(UnifiedGrid.class);

@@ -17,6 +17,7 @@ import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Browserless Test's test base API on a Unified Page, as a migrated Browserless test uses it. */
@@ -25,6 +26,7 @@ class BrowserlessEscapeHatchTest {
 
     @Test
     @RequiresTestingTool(TestingTool.BROWSERLESS)
+    @DisplayName("The user saves a name through Browserless Test's own API")
     void runsBrowserlessTestBaseCalls(UnifiedPage page) {
         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
 
@@ -46,6 +48,7 @@ class BrowserlessEscapeHatchTest {
 
     @Test
     @RequiresTestingTool(TestingTool.BROWSERLESS)
+    @DisplayName("Browserless Test's own API works on the window of the page it was given")
     void followsTheWindowTheUnifiedPageUses(UnifiedPage page) {
         UnifiedPage second = page.openWindow();
         second.navigate(ProfileView.class);
@@ -66,6 +69,7 @@ class BrowserlessEscapeHatchTest {
 
     @Test
     @RequiresTestingTool({ TestingTool.PLAYWRIGHT, TestingTool.SELENIUM })
+    @DisplayName("Browserless Test's own API in a browser fails, naming @RequiresTestingTool")
     void failsInABrowserNamingTheAnnotation(UnifiedPage page) {
         Exception failure = assertThrows(RuntimeException.class, () -> BrowserlessEscapeHatch.of(page));
         assertTrue(failure.getMessage().contains("RequiresTestingTool"), failure.getMessage());

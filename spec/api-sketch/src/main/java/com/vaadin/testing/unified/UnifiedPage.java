@@ -25,6 +25,16 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
 
     void pressKey(String key);
 
+    // reports (spec chapter 12)
+    /**
+     * A User Task: the User Steps {@code userSteps} performs show under this name in the reports. Steps nest.
+     * Name it after what the user does ("Edit Alan Turing"), not given/when/then.
+     */
+    void step(String name, Runnable userSteps);
+
+    /** Marks a value as secret and returns it unchanged: the reports show it as {@code ••••}. */
+    String secret(String value);
+
     /** Another window of the same user, same session. Closed at the end of the test. */
     UnifiedPage openWindow();
 

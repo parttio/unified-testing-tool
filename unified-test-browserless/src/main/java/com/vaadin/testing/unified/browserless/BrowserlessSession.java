@@ -143,6 +143,27 @@ final class BrowserlessSession implements AdapterSession {
         return found.stream().map(c -> (UnifiedElement) new BrowserlessElement(this, c)).toList();
     }
 
+    /** In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id. */
+    @Override
+    public List<com.vaadin.testing.unified.spi.ElementFacts> facts(List<UnifiedElement> elements) {
+        return elements.stream().map(e -> {
+            com.vaadin.testing.unified.spi.ElementFacts own = com.vaadin.testing.unified.spi.ElementFacts.read(e);
+            String testId = null;
+            String id = null;
+            if (e instanceof BrowserlessElement b) {
+                for (Component c = b.component().getParent().orElse(null); c != null; c = c.getParent().orElse(null)) {
+                    testId = c.getElement().getAttribute("data-testid");
+                    id = c.getElement().getAttribute("id");
+                    if (testId != null || id != null) {
+                        break;
+                    }
+                }
+            }
+            return new com.vaadin.testing.unified.spi.ElementFacts(own.label(), own.text(), own.placeholder(),
+                    own.testId(), own.accessibleName(), testId, testId == null ? id : null);
+        }).toList();
+    }
+
     /** Matching components under {@code root}, and {@code root} itself when {@code includeRoot}. */
     private List<Component> findIn(Component root, QuerySpec spec, boolean includeRoot) {
         BrowserlessComponents.Support support = BrowserlessComponents.of(spec.componentType());

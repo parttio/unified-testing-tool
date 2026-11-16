@@ -44,6 +44,7 @@
         <module>unified-test-playwright</module>
         <module>unified-test-selenium</module>
         <module>unified-test-spring</module>
+        <module>unified-test-archunit</module>
         <module>unified-test-demo</module>
         <module>unified-test-rewrite</module>
     </modules>
@@ -53,6 +54,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <vaadin.version>25.3.5</vaadin.version>
         <spring-boot.version>4.1.1</spring-boot.version>
+        <archunit.version>1.5.1</archunit.version>
     </properties>
 
     <dependencyManagement>
@@ -77,6 +79,12 @@
                 <version>${spring-boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- ArchUnit core, for unified-test-archunit's style rules -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit</artifactId>
+                <version>${archunit.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

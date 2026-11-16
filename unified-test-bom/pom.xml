@@ -63,6 +63,11 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.vaadin.addons</groupId>
+                <artifactId>unified-test-archunit</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.vaadin</groupId>
                 <artifactId>browserless-test-junit6</artifactId>
                 <version>${browserless-test.version}</version>

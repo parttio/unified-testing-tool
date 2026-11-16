@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.component.UnifiedMenuBar;
 import com.vaadin.testing.unified.component.UnifiedTabs;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 class ItemNameTest {
 
     @Test
+    @DisplayName("The user opens the Lodging Rates tab, named by the link inside it")
     void namesATabByTheTextOfTheLinkItHolds(UnifiedPage page) {
         page.navigate(RatesView.class);
         UnifiedTabs tabs = page.find(UnifiedTabs.class).withTab("Mileage Rates");
@@ -34,6 +36,7 @@ class ItemNameTest {
     }
 
     @Test
+    @DisplayName("The user edits the taxi expense from its icon-only actions menu")
     void namesAnIconOnlyMenuItemByItsAriaLabel(UnifiedPage page) {
         page.navigate(ExpenseListView.class);
         UnifiedMenuBar taxi = page.find(UnifiedMenuBar.class).withItem("Actions for Taxi");
@@ -47,6 +50,7 @@ class ItemNameTest {
     }
 
     @Test
+    @DisplayName("The hotel expense can be edited but not deleted")
     void readsWhetherAMenuItemIsEnabled(UnifiedPage page) {
         page.navigate(ExpenseListView.class);
         UnifiedMenuBar taxi = page.find(UnifiedMenuBar.class).withItem("Actions for Taxi");

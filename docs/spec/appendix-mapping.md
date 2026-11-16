@@ -21,7 +21,7 @@ How each Unified API call maps onto the three Testing Tools: Browserless Test 25
 | `.withAccessibleName("x")` | `withLabel` / `withAriaLabel` combined (adapter) | `withAccessibleName` | label or `aria-label` (adapter) |
 | `.withText("Save")` | `withText` | `withText` | `withText` |
 | `.withTestId("x")` | `withTestId` | `withTestId` | `withTestId` (25.4+) or `data-testid` attribute |
-| `.single()` | `single()` | `single()` (strict, lazy) | `single()`, re-resolved per call (adapter) |
+| each use of the Wrapper, `assertThat(w).exists()` / `doesNotExist()` / `hasCount(n)`, `.all()` | every match in the component tree, then the core counts (adapter) | every match of a locator, filters checked in the page in one call, then the core counts (adapter) | every match of an element query in one script call, then the core counts (adapter) |
 | `dialog.find(…)` | `inside(dialog)` | `dialog.find(…)` | `dialog.$(…)` |
 | `findComponent(Rating.class)` | `find(Rating.class)` | locator on `@Tag` | `$("tag")` |
 
@@ -40,8 +40,8 @@ How each Unified API call maps onto the three Testing Tools: Browserless Test 25
 
 | Unified API | Browserless | Dramafinder | TestBench |
 |---|---|---|---|
-| `rows().withCellText(col, text)` | scan `getCellText(row, col)` | `findRowIndexesWithColumnText` | scan `getCell(row, col).getText()` |
-| `rows().withCellText(text)`, any column | the same, over every column | the same, over every column | `getCell(text)` (first match) |
+| `row().withCellText(col, text)` | scan `getCellText(row, col)` | `findRowIndexesWithColumnText` | scan `getCell(row, col).getText()` |
+| `row().withCellText(text)`, any column | the same, over every column | the same, over every column | `getCell(text)` (first match) |
 | `row.getCellText(col)` | `getCellText(row, col)` | `getCell(..).getText()` | `getCell(row, col).getText()` |
 | `row.getCellText(index)` | `getCellText(row, index)` | `getCell(..).getText()` | `getCell(row, index).getText()` |
 | `row.cell(col).find(..)` | `getCellComponent(row, col)` | cell content locator | cell element `$(..)` |
@@ -56,20 +56,20 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 
 | Dramafinder | Unified API |
 |---|---|
-| `XElement.getByLabel(page, s)` / `getByText` / `getById` / `getByTestId` / `…Containing` | `page.find(UnifiedX.class).withLabel(s).single()` / `withText` / `withId` / `withTestId` / `…Containing` |
-| `ButtonElement.getByLabel(page, s)` | `.withAccessibleName(s).single()` |
-| `DialogElement.getByHeaderText(page, s)` | `.withHeaderTitle(s).single()` |
-| `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s).single()` + Migration Marker |
-| query `first()` / `get(i)` | `single()` + Migration Marker / `all().get(i)` |
+| `XElement.getByLabel(page, s)` / `getByText` / `getById` / `getByTestId` / `…Containing` | `page.find(UnifiedX.class).withLabel(s)` / `withText` / `withId` / `withTestId` / `…Containing` |
+| `ButtonElement.getByLabel(page, s)` | `.withAccessibleName(s)` |
+| `DialogElement.getByHeaderText(page, s)` | `.withHeaderTitle(s)` |
+| `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s)` + Migration Marker |
+| query `first()` / `get(i)` | the plain lookup + `was first()` Migration Marker / `all().get(i)` |
 | `assertVisible` / `assertHidden` / `assertEnabled` / `assertDisabled` | `assertThat(w).isVisible()` / `isHidden()` / `isEnabled()` / `isDisabled()` |
 | `assertValue` / `assertLabel` / `assertValid` / `assertInvalid` / `assertErrorMessage` | `hasValue` / `hasLabel` / `isValid` / `isInvalid` / `hasErrorMessage` |
 | `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |
 | dialog `assertOpen` / `assertClosed` / `assertHeaderText`, `getHeaderText()`, `closeWithEscape()` | `isOpen` / `isClosed` / `hasHeaderTitle`, `getHeaderTitle()`, `close()` |
 | notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
-| `GridElement.get(page)` | `page.find(UnifiedGrid.class).single()` (no marker: a second grid fails loudly) |
+| `GridElement.get(page)` | `page.find(UnifiedGrid.class)` (no marker: a second grid fails loudly) |
 | `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
-| `grid.findRowIndexesWithColumnText(col, s).get(0)` | `grid.rows().withCellText(s).single().getIndex()` + Migration Marker (any column matches) |
+| `grid.findRowIndexesWithColumnText(col, s).get(0)` | `grid.row().withCellText(s).getIndex()` + Migration Marker (any column matches) |
 | `row.getCell(col).getText()` / `row.getCell("Header").assertText(s)` | `row.getCellText(col)` / `assertThat(row).hasCellText("Header", s)` |
 | `row.getCell(col).click()` | `row.click()` + Migration Marker (the row, not that cell) |
 | `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |

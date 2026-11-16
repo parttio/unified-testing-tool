@@ -219,6 +219,7 @@ class GoldenMigrationTest implements RewriteTest {
         sources.add(org.openrewrite.maven.Assertions.pomXml(dramafinderPom(true), dramafinderPom(false)));
         sources.add(java(resource("/golden/dramafinder1/SpringPlaywrightIT.java"), (String) null));
         sources.add(java(before, after));
+        sources.add(InstalledSkill.files());
         rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified()),
                 sources.toArray(org.openrewrite.test.SourceSpecs[]::new));
     }

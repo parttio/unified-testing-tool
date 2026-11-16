@@ -226,12 +226,12 @@ public final class GridSupport {
                 return fixedIndex;
             }
             int[] last = { 0 };
-            return runOf(grid).poll(() -> {
+            return runOf(grid).pollFor(() -> {
                 List<Integer> rows = matching(access(grid));
                 last[0] = rows.size();
                 return rows.size() == 1 ? rows.get(0) : null;
-            }, () -> (last[0] == 0 ? "No row matches " : last[0] + " rows match ") + this
-                    + (last[0] == 0 ? "" : ", expected exactly one"));
+            }, () -> com.vaadin.testing.unified.internal.failures.FailureParts.of(
+                    "exactly one " + target().renderWithScope(), last[0] == 0 ? "none" : String.valueOf(last[0])));
         }
 
         // ------------------------------------------------------------ actions (Auto-Wait)
