@@ -80,6 +80,22 @@ public final class UnifiedAssertions {
                 + (expected == null ? "" : " <" + expected + ">") + " but was <" + last[0] + ">");
     }
 
+    /** A match count, read as "2 matches" in a failure. */
+    private record Matches(int count) {
+        @Override
+        public String toString() {
+            return count + (count == 1 ? " match" : " matches");
+        }
+    }
+
+    static Object matches(int count) {
+        return new Matches(count);
+    }
+
+    static int count(Object matches) {
+        return ((Matches) matches).count();
+    }
+
     // ---------------------------------------------------------------- page
 
     public static final class PageAssert {
@@ -125,6 +141,23 @@ public final class UnifiedAssertions {
         SELF check(String expectation, Object expected, Supplier<?> actual, Predicate<Object> ok) {
             UnifiedAssertions.check(run, element.describe(), expectation, expected, actual, ok);
             return self();
+        }
+
+        /** At least one component matches the lookup (for a Wrapper from {@code all()}: one at its position). */
+        public SELF exists() {
+            int needed = Math.max(element.index(), 0) + 1;
+            return check("to exist", null, () -> matches(element.countNow()), v -> count(v) >= needed);
+        }
+
+        /** No component matches the lookup, e.g. after it was removed. */
+        public SELF doesNotExist() {
+            int needed = Math.max(element.index(), 0) + 1;
+            return check("not to exist", null, () -> matches(element.countNow()), v -> count(v) < needed);
+        }
+
+        /** Exactly this many components match the lookup. */
+        public SELF hasCount(int expected) {
+            return check("to have count", expected, element::countNow, v -> Objects.equals(v, expected));
         }
 
         public SELF isVisible() { return check("to be visible", null, wrapper::isVisible, Boolean.TRUE::equals); }
@@ -359,6 +392,27 @@ public final class UnifiedAssertions {
 
         private GridRowAssert check(String expectation, Supplier<?> actual, Predicate<Object> ok) {
             UnifiedAssertions.check(run, row.toString(), expectation, null, actual, ok);
+            return this;
+        }
+
+        /** At least one row matches. */
+        public GridRowAssert exists() {
+            UnifiedAssertions.check(run, row.toString(), "to exist", null,
+                    () -> matches(GridSupport.countNow(row)), v -> count(v) > 0);
+            return this;
+        }
+
+        /** No row matches, e.g. after it was deleted. */
+        public GridRowAssert doesNotExist() {
+            UnifiedAssertions.check(run, row.toString(), "not to exist", null,
+                    () -> matches(GridSupport.countNow(row)), v -> count(v) == 0);
+            return this;
+        }
+
+        /** Exactly this many rows match. */
+        public GridRowAssert hasCount(int expected) {
+            UnifiedAssertions.check(run, row.toString(), "to have count", expected,
+                    () -> GridSupport.countNow(row), v -> Objects.equals(v, expected));
             return this;
         }
 

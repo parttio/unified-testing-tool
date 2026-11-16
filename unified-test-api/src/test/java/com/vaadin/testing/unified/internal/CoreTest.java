@@ -6,11 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.testing.unified.TestingTool;
-import com.vaadin.testing.unified.component.UnifiedButton;
-import com.vaadin.testing.unified.component.UnifiedGenericComponent;
-import com.vaadin.testing.unified.component.UnifiedTextField;
-import com.vaadin.testing.unified.query.ComponentQuery;
-import com.vaadin.testing.unified.query.Query;
 import com.vaadin.testing.unified.spi.Filter;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -68,14 +63,6 @@ class CoreTest {
         assertFalse(exact.matches("Nickname"));
         assertTrue(new Filter(Filter.Kind.LABEL, null, "Name", false).matches("Nickname"));
         assertEquals("withLabelContaining(\"Name\")", new Filter(Filter.Kind.LABEL, null, "Name", false).toString());
-    }
-
-    @Test
-    void readsQueryAndWrapperTypesFromGenerics() {
-        assertEquals(UnifiedTextField.TextFieldQuery.class,
-                Wrappers.typeArgument(UnifiedTextField.class, com.vaadin.testing.unified.Findable.class, 0));
-        assertEquals(UnifiedButton.class, Wrappers.typeArgument(UnifiedButton.ButtonQuery.class, Query.class, 0));
-        assertEquals(UnifiedGenericComponent.class, Wrappers.typeArgument(ComponentQuery.class, Query.class, 0));
     }
 
     @Test

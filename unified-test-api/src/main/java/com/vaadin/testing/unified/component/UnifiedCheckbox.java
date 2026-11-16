@@ -1,16 +1,13 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.checkbox.Checkbox;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
-import com.vaadin.testing.unified.query.Query;
 
 @UnifiedComponent(Checkbox.class)
-public interface UnifiedCheckbox extends UnifiedWrapper, Findable<UnifiedCheckbox.CheckboxQuery> {
-
-    interface CheckboxQuery extends Query<UnifiedCheckbox, CheckboxQuery>, LabelFilter<CheckboxQuery> {}
+public interface UnifiedCheckbox extends UnifiedWrapper, CommonFilters<UnifiedCheckbox>, LabelFilter<UnifiedCheckbox> {
 
     // actions (Auto-Wait); no-ops when already in that state
     default void check() { setChecked(true); }

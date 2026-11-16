@@ -1,20 +1,17 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.internal.Wrappers;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
-import com.vaadin.testing.unified.query.Query;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import java.time.LocalDateTime;
 
 /** A {@link DateTimePicker}: the value is a {@link LocalDateTime}, {@code null} when empty. */
 @UnifiedComponent(DateTimePicker.class)
-public interface UnifiedDateTimePicker extends UnifiedField, Findable<UnifiedDateTimePicker.DateTimePickerQuery> {
-
-    interface DateTimePickerQuery extends Query<UnifiedDateTimePicker, DateTimePickerQuery>,
-            LabelFilter<DateTimePickerQuery> {}
+public interface UnifiedDateTimePicker extends UnifiedField,
+        CommonFilters<UnifiedDateTimePicker>, LabelFilter<UnifiedDateTimePicker> {
 
     // actions (Auto-Wait)
     /** Enters the date and time as a user would; {@code null} empties the field. */

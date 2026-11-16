@@ -3,9 +3,10 @@ package com.vaadin.testing.unified.internal;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.RouteParameters;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedPage;
-import com.vaadin.testing.unified.query.ComponentQuery;
+import com.vaadin.testing.unified.UnifiedWrapper;
+import com.vaadin.testing.unified.component.UnifiedGenericComponent;
+import com.vaadin.testing.unified.query.CommonFilters;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
@@ -24,13 +25,13 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
-    public <Q> Q find(Class<? extends Findable<Q>> wrapperType) {
-        return Wrappers.newQuery(run, wrapperType, null);
+    public <W extends UnifiedWrapper & CommonFilters<W>> W find(Class<W> wrapperType) {
+        return Wrappers.newWrapper(run, wrapperType, null);
     }
 
     @Override
-    public <C extends Component> ComponentQuery findComponent(Class<C> componentType) {
-        return Wrappers.newComponentQuery(run, componentType, null);
+    public <C extends Component> UnifiedGenericComponent findComponent(Class<C> componentType) {
+        return Wrappers.newComponent(run, componentType, null);
     }
 
     @Override
