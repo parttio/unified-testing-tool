@@ -13,6 +13,11 @@
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-api</artifactId>
         </dependency>
+        <!-- @UnifiedSpringBootTest is JUnit-only: it registers a JUnit ExecutionCondition (ADR 0008) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-test</artifactId>
