@@ -20,10 +20,40 @@
             <artifactId>vaadin-core</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- the JUnit integration finds a Spring test's context; only when the test has Spring's test support -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- runs sample tests to check what the JUnit integration gives adapters -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-testkit</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- sample tests; run by other tests through the JUnit test kit -->
+                    <excludedGroups>launched-only</excludedGroups>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
