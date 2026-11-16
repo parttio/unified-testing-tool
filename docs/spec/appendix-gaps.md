@@ -4,7 +4,7 @@ Where a Testing Tool lacks something the Unified API needs, its adapter fills th
 
 ## Dramafinder
 
-The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, field and Tabs gaps in **2.0.1**, the rest in **2.0.2**. The Playwright adapter delegates to Dramafinder for each.
+The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, field and Tabs gaps in **2.0.1**, the Upload to Details gaps in **2.0.2**, the rest in **2.1.0**. The Playwright adapter delegates to Dramafinder for each.
 
 | Gap | Issue |
 |---|---|
@@ -30,12 +30,25 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | ComboBox / MultiSelectComboBox: `clear()` doesn't clear the selection | [parttio/dramafinder#245](https://github.com/parttio/dramafinder/issues/245) |
 | TabSheet: content locator matches nested TabSheets | [parttio/dramafinder#246](https://github.com/parttio/dramafinder/issues/246) |
 | Details: content only while open; summary matches nested Details | [parttio/dramafinder#247](https://github.com/parttio/dramafinder/issues/247) |
+| No element for a component without an element class of its own | [parttio/dramafinder#269](https://github.com/parttio/dramafinder/issues/269) |
+| No way to read an element's tag name | [parttio/dramafinder#270](https://github.com/parttio/dramafinder/issues/270) |
+| No inline or computed style property | [parttio/dramafinder#271](https://github.com/parttio/dramafinder/issues/271) |
+| No light-DOM children or descendants by tag | [parttio/dramafinder#272](https://github.com/parttio/dramafinder/issues/272) |
+| No query by tag for components without an element class | [parttio/dramafinder#273](https://github.com/parttio/dramafinder/issues/273) |
+| No theme variant filter | [parttio/dramafinder#274](https://github.com/parttio/dramafinder/issues/274) |
+| No placeholder-containing filter | [parttio/dramafinder#275](https://github.com/parttio/dramafinder/issues/275) |
+| Queries match inside the shadow DOM of Vaadin's components and dev tools (e.g. Copilot's radio group) | [parttio/dramafinder#276](https://github.com/parttio/dramafinder/issues/276) |
+| Route navigation: no reading of the current path, `isAt` or query parameters, only assertions | [parttio/dramafinder#279](https://github.com/parttio/dramafinder/issues/279) |
+| No way to read the Vaadin UI id of the page | [parttio/dramafinder#280](https://github.com/parttio/dramafinder/issues/280) |
+| Grid: column indexes count the selection column (Flow's `getColumns()` doesn't) | [parttio/dramafinder#281](https://github.com/parttio/dramafinder/issues/281) |
+| Grid: no single locator for a column's header content across header rows | [parttio/dramafinder#282](https://github.com/parttio/dramafinder/issues/282) |
 
 Open:
 
 | Gap | Issue | Workaround in the adapter |
 |---|---|---|
-| Queries match inside the shadow DOM of Vaadin's components and dev tools (e.g. Copilot's radio group) | [parttio/dramafinder#276](https://github.com/parttio/dramafinder/issues/276) | Leaves those candidates out, as tag queries do ([#133](https://github.com/parttio/unified-testing-tool/issues/133)) |
+| A tag query takes a tag name only, not `*` for any element (`UnifiedContainer`) | to be filed in `parttio/dramafinder` | Builds the any-tag `TagQuery` on a `css:light=*` locator |
+| `GenericElement` has no focus or enabled state | to be filed in `parttio/dramafinder` | Subclasses it with `FocusableElement` and `HasDisabledAttributeElement` |
 
 ## TestBench
 

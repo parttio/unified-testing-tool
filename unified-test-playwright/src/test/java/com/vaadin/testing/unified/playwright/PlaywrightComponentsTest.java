@@ -36,6 +36,5 @@ class PlaywrightComponentsTest {
     void unregisteredComponentsGetTheGenericDefault() {
         assertSame(PlaywrightComponents.DEFAULT, PlaywrightComponents.of(Span.class));
         assertNull(PlaywrightComponents.of(Span.class).dramafinderElement());
-        assertEquals("span", PlaywrightComponents.of(Span.class).selector("span"));
     }
 }

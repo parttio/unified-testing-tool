@@ -17,8 +17,6 @@ import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
  * component has one. Reads and actions go through Dramafinder: the component's own element where it exists,
  * else a generic Dramafinder element on the locator. Dramafinder's actions wait for the server round-trip;
  * actions on a raw locator wait here.
- * <p>
- * The scripts left here have no Dramafinder API yet; each names the Dramafinder issue that would replace it.
  */
 final class PlaywrightElement implements UnifiedElement {
 
@@ -39,11 +37,10 @@ final class PlaywrightElement implements UnifiedElement {
     }
 
     /**
-     * A Dramafinder element for any component: the generic {@code VaadinElement} API, focus, and enabled
-     * state from the {@code disabled} attribute. To be replaced by Dramafinder's own factory
-     * (parttio/dramafinder#269).
+     * Dramafinder's element for any component, plus focus and enabled state from the {@code disabled}
+     * attribute: Vaadin components reflect the property to it.
      */
-    private static final class GenericElement extends VaadinElement
+    private static final class GenericElement extends org.vaadin.addons.dramafinder.element.GenericElement
             implements FocusableElement, HasDisabledAttributeElement {
         GenericElement(Locator locator) {
             super(locator);
@@ -62,7 +59,7 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public String getTag() {
-        return (String) locator.evaluate("e => e.localName"); // parttio/dramafinder#270
+        return generic.getTagName();
     }
 
     /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
@@ -79,8 +76,8 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public String getInlineStyle(String name) {
-        // parttio/dramafinder#271
-        return (String) locator.evaluate(BrowserQueries.INLINE_STYLE, BrowserQueries.cssName(name));
+        String value = generic.getInlineStyle(BrowserQueries.cssName(name));
+        return value == null ? null : value.strip();
     }
 
     @Override
@@ -126,8 +123,7 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public String getCssValue(String property) {
-        // parttio/dramafinder#271
-        return (String) locator.evaluate("(e, p) => getComputedStyle(e).getPropertyValue(p)", property);
+        return generic.getComputedStyle(property);
     }
 
     @Override
@@ -143,18 +139,17 @@ final class PlaywrightElement implements UnifiedElement {
 
     @Override
     public List<UnifiedElement> findChildren(String tag) {
-        return lightDom(BrowserQueries.lightDomXPath(tag, false));
+        return wrap(generic.getLightDomChildren(tag));
     }
 
     @Override
     public List<UnifiedElement> findDescendants(String tag) {
-        return lightDom(BrowserQueries.lightDomXPath(tag, true));
+        return wrap(generic.getLightDomDescendants(tag));
     }
 
-    /** Light DOM only: CSS would pierce shadow roots. parttio/dramafinder#272 */
-    private List<UnifiedElement> lightDom(String xpath) {
-        return locator.locator("xpath=" + xpath).all().stream()
-                .map(l -> (UnifiedElement) new PlaywrightElement(session, l, null, PlaywrightComponents.DEFAULT)).toList();
+    private List<UnifiedElement> wrap(List<VaadinElement> elements) {
+        return elements.stream().map(e -> (UnifiedElement) new PlaywrightElement(session, e.getLocator(), null,
+                PlaywrightComponents.DEFAULT)).toList();
     }
 
     // ---------------------------------------------------------------- acting
@@ -180,8 +175,7 @@ final class PlaywrightElement implements UnifiedElement {
             return;
         }
         // the element itself when it is the native input, else the input inside it
-        boolean isInput = Boolean.TRUE.equals(
-                locator.evaluate("e => e.matches('input, textarea')")); // parttio/dramafinder#270
+        boolean isInput = List.of("input", "textarea").contains(generic.getTagName());
         Locator input = isInput ? locator : locator.locator("input, textarea").first();
         input.fill(text); // fires input
         input.dispatchEvent("change");
