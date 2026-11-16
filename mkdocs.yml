@@ -91,4 +91,6 @@ nav:
       - adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md
       - adr/0005-browserless-migration-recipes.md
       - adr/0006-dramafinder-migration-recipes.md
+      - adr/0007-wrappers-carry-their-filters.md
+      - adr/0008-adapter-spi-is-test-runner-neutral.md
   - Glossary: GLOSSARY.md
