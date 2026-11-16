@@ -79,6 +79,12 @@ final class BrowserlessElement implements UnifiedElement {
         return value == null || value.isBlank() ? null : value.strip();
     }
 
+    /** The same computation as the {@code withAccessibleName(..)} filter: {@link #accessibleName(Component)}. */
+    @Override
+    public String getAccessibleName() {
+        return accessibleName(component);
+    }
+
     @Override
     public String getProperty(String name) {
         if ("value".equals(name) && component instanceof HasValue<?, ?> hasValue) {

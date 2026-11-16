@@ -47,6 +47,20 @@ public interface AdapterSession extends AutoCloseable {
     /** A window of another user, in a session of its own. This session closes it when it closes. */
     AdapterSession openAsUser(String username, String... roles);
 
+    /**
+     * For failure messages only (Near Misses, several matches): what each element shows a user, in the order
+     * given. Testing Tools with a round trip per read should read them all at once. The default reads each value
+     * through the Unified Element and knows no ancestors.
+     */
+    default List<ElementFacts> facts(List<UnifiedElement> elements) {
+        return elements.stream().map(ElementFacts::read).toList();
+    }
+
+    /** The browser, as a failure message names it ({@code chromium}), or null without one. */
+    default String browserName() {
+        return null;
+    }
+
     /** The Testing Tool's own page-level object of the given type, if it has one. */
     <T> Optional<T> unwrap(Class<T> type);
 

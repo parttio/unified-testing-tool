@@ -72,17 +72,14 @@ public final class LazyElement implements UnifiedElement {
     /** The adapter's element, waiting until it can be singled out. */
     public UnifiedElement concrete() {
         int[] lastCount = {0};
-        return run.poll(() -> {
+        return run.pollFor(() -> {
             List<UnifiedElement> found = source.resolve();
             lastCount[0] = found.size();
             if (index < 0) {
                 return found.size() == 1 ? found.get(0) : null;
             }
             return index < found.size() ? found.get(index) : null;
-        }, () -> index < 0
-                ? (lastCount[0] == 0 ? "No component matches " : lastCount[0] + " components match ") + describe()
-                        + (lastCount[0] == 0 ? "" : ", expected exactly one")
-                : "No component at index " + index + " for " + describe() + " (found " + lastCount[0] + ")");
+        }, () -> LookupFailures.notSingledOut(this, lastCount[0]));
     }
 
     /** The adapter's element if it can be singled out right now; no waiting. */
@@ -104,10 +101,10 @@ public final class LazyElement implements UnifiedElement {
 
     private void act(Supplier<Phrase> phrase, String action, Consumer<UnifiedElement> body) {
         run.steps().action(phrase, run.window(), () -> StaleRetry.call(run, () -> {
-            UnifiedElement element = run.poll(() -> {
+            UnifiedElement element = run.pollFor(() -> {
                 UnifiedElement e = concrete();
                 return e.isVisible() && e.isEnabled() ? e : null;
-            }, () -> "Can't " + action + ": " + describe() + " is not visible and enabled");
+            }, () -> LookupFailures.notUsable(this));
             body.accept(element);
             return null;
         }));
@@ -125,6 +122,7 @@ public final class LazyElement implements UnifiedElement {
         return read(UnifiedElement::getVisibleText);
     }
     @Override public String getInlineStyle(String name) { return read(e -> e.getInlineStyle(name)); }
+    @Override public String getAccessibleName() { return read(UnifiedElement::getAccessibleName); }
     @Override public String getProperty(String name) { return read(e -> e.getProperty(name)); }
     @Override public Integer getPropertyInteger(String name) { return read(e -> e.getPropertyInteger(name)); }
     @Override public Boolean getPropertyBoolean(String name) { return read(e -> e.getPropertyBoolean(name)); }

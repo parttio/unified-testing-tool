@@ -124,7 +124,7 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
         return !words.isEmpty() && NAMING_WORDS.contains(words.get(words.size() - 1).toLowerCase(Locale.ROOT));
     }
 
-    static String words(Filter f) {
+    public static String words(Filter f) {
         String what = switch (f.kind()) {
             case LABEL -> "label";
             case ACCESSIBLE_NAME -> "accessible name";
@@ -139,7 +139,7 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
         return what + (f.exact() ? " " : " containing ") + Phrase.quote(f.value());
     }
 
-    static String words(FilterLabel label) {
+    public static String words(FilterLabel label) {
         return switch (label.method()) {
             case "where" -> "matching a condition";
             case "visible" -> "visible";
@@ -156,7 +156,7 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
 
     // ---------------------------------------------------------------- kind
 
-    static String kindOf(ElementSource source) {
+    public static String kindOf(ElementSource source) {
         Class<?> wrapperType = source.wrapperType();
         if (wrapperType == null) {
             return kindOf(source.componentType());
@@ -235,7 +235,7 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
         return render(false) + (scope == null ? "" : " in " + scope);
     }
 
-    static String ordinal(int n) {
+    public static String ordinal(int n) {
         int mod100 = n % 100;
         String suffix = mod100 >= 11 && mod100 <= 13 ? "th" : switch (n % 10) {
             case 1 -> "st";

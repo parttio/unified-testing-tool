@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedComboBox;
@@ -120,8 +121,10 @@ class OrderTest {
         page.navigate(OrderView.class);
         UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country");
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> country.selectItem("Spain"));
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class, () -> country.selectItem("Spain"));
 
-        assertEquals(true, e.getMessage().contains("[Finland, Germany, France]"), e.getMessage());
+        assertEquals("item “Spain” in combo box “Country”", e.getExpected());
+        assertEquals(java.util.Set.of("item “Finland”", "item “Germany”", "item “France”"),
+                java.util.Set.copyOf(e.getNearMisses()), e.getMessage());
     }
 }

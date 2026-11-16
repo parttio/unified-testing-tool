@@ -158,6 +158,33 @@ public final class BrowserQueries {
             }""".formatted(TEXT);
 
     /**
+     * Browser function {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId]}:
+     * what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages. The ancestor is the
+     * nearest one with a {@code data-testid} or an {@code id}, crossing shadow roots to their hosts.
+     */
+    public static final String FACTS = """
+            e => {
+              const text = %s;
+              const accessibleName = %s;
+              const str = v => v == null ? null : String(v);
+              const up = n => n.parentElement || (n.getRootNode() instanceof ShadowRoot ? n.getRootNode().host : null);
+              let a = up(e);
+              while (a && !a.getAttribute('data-testid') && !a.getAttribute('id')) a = up(a);
+              return [str(e.label), text(e), str(e.placeholder), e.getAttribute('data-testid'), accessibleName(e),
+                  a ? a.getAttribute('data-testid') : null, a && !a.getAttribute('data-testid') ? a.getAttribute('id') : null];
+            }""".formatted(TEXT, ACCESSIBLE_NAME);
+
+    /** {@link #FACTS}' result as {@link com.vaadin.testing.unified.spi.ElementFacts}. */
+    public static com.vaadin.testing.unified.spi.ElementFacts facts(Object result) {
+        List<?> values = (List<?>) result;
+        String[] s = new String[7];
+        for (int i = 0; i < s.length && i < values.size(); i++) {
+            s[i] = values.get(i) == null ? null : String.valueOf(values.get(i));
+        }
+        return new com.vaadin.testing.unified.spi.ElementFacts(s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
+    }
+
+    /**
      * Whether an element is the app's content. CSS in Playwright enters shadow roots: this leaves out what
      * Vaadin's own components and dev tools (Copilot) render there. An app's own template keeps its shadow DOM
      * searchable.

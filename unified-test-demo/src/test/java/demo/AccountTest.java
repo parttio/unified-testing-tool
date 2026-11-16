@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.testing.unified.Scope;
+import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedNotification;
@@ -61,9 +62,11 @@ class AccountTest {
         page.navigate(AccountView.class);
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> tabs.selectTab("Admin"));
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class, () -> tabs.selectTab("Admin"));
 
-        assertTrue(e.getMessage().contains("[Profile, Security, Billing]"), e.getMessage());
+        assertEquals("tab “Admin” in tab sheet", e.getExpected());
+        assertEquals(java.util.Set.of("tab “Profile”", "tab “Security”", "tab “Billing”"),
+                java.util.Set.copyOf(e.getNearMisses()), e.getMessage());
     }
 
     @Test
