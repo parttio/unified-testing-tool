@@ -37,20 +37,20 @@ public final class BrowserlessAdapter implements TestingToolAdapter {
     }
 
     private BrowserlessSession openSession(AdapterContext context) {
-        Class<?> testClass = context.extensionContext().getRequiredTestClass();
+        Class<?> testClass = context.testClass().orElseThrow(() -> new IllegalStateException(
+                "The Browserless adapter needs a test class, to find the views next to it"));
         Optional<String[]> configured = context.configuration(VIEW_PACKAGES)
                 .map(v -> Arrays.stream(v.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new));
 
-        if (SpringSupport.hasSpringTest()) {
-            if (SpringSupport.isSpringTest(context.extensionContext())) {
-                if (!SpringSupport.hasBrowserlessSpring()) {
-                    throw new IllegalStateException("This is a Spring test, but com.vaadin:browserless-test-spring is"
-                            + " not on the test classpath: without it Browserless builds the views without Spring and"
-                            + " nothing is injected into them. Add the test dependency"
-                            + " com.vaadin:browserless-test-spring (its version is in unified-test-bom).");
-                }
-                return BrowserlessSpringSupport.open(context.extensionContext(), configured.orElse(null), testClass);
+        Optional<Object> spring = context.springContext();
+        if (spring.isPresent()) {
+            if (!SpringSupport.hasBrowserlessSpring()) {
+                throw new IllegalStateException("This is a Spring test, but com.vaadin:browserless-test-spring is"
+                        + " not on the test classpath: without it Browserless builds the views without Spring and"
+                        + " nothing is injected into them. Add the test dependency"
+                        + " com.vaadin:browserless-test-spring (its version is in unified-test-bom).");
             }
+            return BrowserlessSpringSupport.open(spring.get(), configured.orElse(null), testClass);
         }
         String[] viewPackages = configured.orElse(new String[] { testClass.getPackageName() });
         BrowserlessApplicationContext app = BrowserlessApplicationContext.create(viewPackages);

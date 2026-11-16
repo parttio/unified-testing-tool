@@ -3,19 +3,14 @@ package com.vaadin.testing.unified.browserless;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.context.ApplicationContext;
 
 /**
- * Spring-only code. {@link #hasSpringTest()} guards every other method: they run only when Spring's test
- * support is on the classpath. {@link BrowserlessSpringSupport} needs browserless-test-spring too.
+ * Spring-only code: {@link #applicationPackages} runs only for a test with a Spring context
+ * ({@code AdapterContext.springContext()}). {@link BrowserlessSpringSupport} needs browserless-test-spring too.
  */
 final class SpringSupport {
     private SpringSupport() {}
-
-    static boolean hasSpringTest() {
-        return present("org.springframework.test.context.junit.jupiter.SpringExtension");
-    }
 
     static boolean hasBrowserlessSpring() {
         return present("com.vaadin.browserless.SpringBrowserlessApplicationContext");
@@ -53,18 +48,5 @@ final class SpringSupport {
         } catch (ReflectiveOperationException | LinkageError e) {
             return List.of(); // not a Spring Boot app: only the test's package
         }
-    }
-
-    /** The test class or, for a {@code @Nested} class, an enclosing one is a Spring test. */
-    static boolean isSpringTest(ExtensionContext context) {
-        for (Class<?> c = context.getRequiredTestClass(); c != null; c = c.getEnclosingClass()) {
-            if (org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(c,
-                    org.springframework.test.context.BootstrapWith.class)
-                    || org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(c,
-                            org.springframework.test.context.ContextConfiguration.class)) {
-                return true;
-            }
-        }
-        return false;
     }
 }

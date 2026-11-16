@@ -12,13 +12,12 @@ import com.vaadin.testing.unified.spi.TestingToolAdapter;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
  * Playwright adapter on Dramafinder 2.0. One browser per test run (JVM), one fresh browser context and page
  * per test.
  * <p>
- * Settings (JUnit configuration parameters or system properties):
+ * Settings (from the Test Runner's configuration; on JUnit, configuration parameters or system properties):
  * <ul>
  * <li>{@code vaadin.testing.base-url}: app URL when the test has no Spring context; default
  * {@code http://localhost:8080}</li>
@@ -42,10 +41,7 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
 
     @Override
     public AdapterSession open(AdapterContext context) {
-        ExtensionContext extension = context.extensionContext();
-        Browser browser = extension.getRoot().getStore(ExtensionContext.Namespace.GLOBAL)
-                .computeIfAbsent(SharedBrowser.class, key -> SharedBrowser.launch(context), SharedBrowser.class)
-                .browser();
+        Browser browser = context.runScoped(SharedBrowser.class, () -> SharedBrowser.launch(context)).browser();
         String baseUrl = baseUrl(context);
         BrowserContext browserContext = browser.newContext();
         browserContext.setDefaultTimeout(context.timeout().toMillis()); // also for windows opened later
@@ -59,14 +55,12 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
     }
 
     private static String baseUrl(AdapterContext context) {
-        Optional<String> fromSpring = SpringSupport.isAvailable()
-                ? SpringSupport.baseUrl(context.extensionContext())
-                : Optional.empty();
+        Optional<String> fromSpring = context.springContext().flatMap(SpringSupport::baseUrl);
         String url = fromSpring.or(() -> context.configuration(BASE_URL)).orElse("http://localhost:8080");
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
-    /** Playwright and its browser, closed by JUnit at the end of the run. */
+    /** Playwright and its browser, shared by the run's tests and closed when the run ends. */
     record SharedBrowser(Playwright playwright, Browser browser) implements AutoCloseable {
 
         static SharedBrowser launch(AdapterContext context) {
