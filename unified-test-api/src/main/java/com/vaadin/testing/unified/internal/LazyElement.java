@@ -30,11 +30,37 @@ public final class LazyElement implements UnifiedElement {
         return run;
     }
 
+    /** What this element finds: a lookup, or a part of a component such as a grid cell. */
+    public ElementResolver source() {
+        return source;
+    }
+
+    /** The position among the matches, or {@code -1} for "exactly one". */
+    public int index() {
+        return index;
+    }
+
+    /** The same position in another lookup, e.g. one with a filter more. */
+    public LazyElement withSource(ElementResolver newSource) {
+        return new LazyElement(newSource, index, run);
+    }
+
     public String describe() {
         if (!(source instanceof ElementSource)) {
             return source.describe();
         }
-        return source.describe() + (index < 0 ? ".single()" : ".all().get(" + index + ")");
+        return source.describe() + (index < 0 ? "" : ".all().get(" + index + ")");
+    }
+
+    /**
+     * How many components the lookup matches right now, ignoring {@link #index()}; no waiting. A parent scope
+     * that can't be singled out right now counts as no match.
+     */
+    public int countNow() {
+        if (source instanceof ElementSource s) {
+            return s.resolveNow().size();
+        }
+        return StaleRetry.call(run, () -> source.resolve().size());
     }
 
     /** The adapter's element, waiting until it can be singled out. */

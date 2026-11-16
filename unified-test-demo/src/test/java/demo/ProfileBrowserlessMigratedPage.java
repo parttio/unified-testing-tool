@@ -20,13 +20,13 @@ class ProfileBrowserlessMigratedPage {
     }
 
     void save(String name, String email) {
-        test.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
-        test.find(UnifiedTextField.class).withLabel("Email").single().setValue(email);
-        test.find(UnifiedButton.class).withText("Save").single().click();
+        test.find(UnifiedTextField.class).withLabel("Name").setValue(name);
+        test.find(UnifiedTextField.class).withLabel("Email").setValue(email);
+        test.find(UnifiedButton.class).withText("Save").click();
     }
 
     UnifiedNotification notification() {
-        return test.find(UnifiedNotification.class).single();
+        return test.find(UnifiedNotification.class);
     }
 }
 // --8<-- [end:page]

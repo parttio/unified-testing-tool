@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 /**
@@ -36,12 +37,33 @@ public record ElementSource(TestRun run, String wrapperName, Class<? extends Com
     public List<UnifiedElement> resolve() {
         return StaleRetry.call(run, () -> {
             UnifiedElement parentElement = parent == null ? null : parent.concrete();
-            List<UnifiedElement> found = run.session().find(new QuerySpec(componentType, tag, filters, parentElement));
-            if (coreFilters.isEmpty()) {
-                return found;
-            }
-            return found.stream().filter(e -> coreFilters.stream().allMatch(f -> f.test(e))).toList();
+            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement)));
         });
+    }
+
+    /**
+     * Matching adapter elements now, without waiting for the parent scope: none when the parent can't be
+     * singled out right now. For the retrying assertions on counts and absence.
+     */
+    public List<UnifiedElement> resolveNow() {
+        return StaleRetry.call(run, () -> {
+            UnifiedElement parentElement = null;
+            if (parent != null) {
+                Optional<UnifiedElement> found = parent.tryConcrete();
+                if (found.isEmpty()) {
+                    return List.of();
+                }
+                parentElement = found.get();
+            }
+            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement)));
+        });
+    }
+
+    private List<UnifiedElement> filter(List<UnifiedElement> found) {
+        if (coreFilters.isEmpty()) {
+            return found;
+        }
+        return found.stream().filter(e -> coreFilters.stream().allMatch(f -> f.test(e))).toList();
     }
 
     public String describe() {

@@ -21,10 +21,10 @@ import org.openrewrite.marker.Markers;
 /**
  * Turns Browserless lookups into Unified Page lookups, in methods that have the {@code UnifiedPage page}
  * parameter: {@code $(TextField.class).withCaption("Name").single()} becomes
- * {@code page.find(UnifiedTextField.class).withLabel("Name").single()}, {@code test(component).setValue(..)} becomes
+ * {@code page.find(UnifiedTextField.class).withLabel("Name")}, {@code test(component).setValue(..)} becomes
  * {@code component.setValue(..)}, component getters take their Wrapper names, and locals the Wrapper's type. A
  * lookup converts only when the Wrapper has every call made on what it finds; {@code first()}, {@code last()} and
- * {@code atIndex(..)} become {@code single()} with a Migration Marker.
+ * {@code atIndex(..)} become the plain lookup with a Migration Marker.
  */
 public class BrowserlessLookupsToUnified extends Recipe {
 
@@ -153,24 +153,20 @@ public class BrowserlessLookupsToUnified extends Recipe {
                                 .build()
                                 .apply(getCursor(), m.getCoordinates().replace(), receiver(method));
                     } else {
-                        converted = unifiedCall(m, QUERY, w.filters().get(method.getSimpleName()),
-                                JavaType.ShallowClass.build(QUERY));
+                        converted = unifiedCall(m, w.fqn(), w.filters().get(method.getSimpleName()),
+                                JavaType.ShallowClass.build(w.fqn()));
                     }
-                    // a locator is lazy and unique; a Unified lookup ends in single()
-                    Object locatorParent = locator.getParentTreeCursor().getValue();
-                    boolean asserted = locator.getValue() == method
-                            && (TestBenchAssertionsToUnified.isUnifiedAssertion(locatorParent)
-                                    || locatorParent instanceof J.VariableDeclarations.NamedVariable);
-                    return asserted ? single(converted, w) : converted;
+                    // a locator is lazy and unique, like the Wrapper it becomes
+                    return converted;
                 }
-                // ..locator.setValue(..) → ..single().setValue(..)
+                // ..locator.setValue(..) → ..setValue(..) on the Wrapper
                 if (method.getSelect() != null && Browserless.ofLocator(method.getSelect()) != null) {
                     Browserless.Wrapper w = Browserless.convertibleLocator(new Cursor(getCursor(), method.getSelect()));
                     String unified = w == null ? null : Browserless.operation(w, method);
                     if (unified == null) {
                         return m;
                     }
-                    return operation(m, single(m.getSelect(), w), w, method, unified);
+                    return operation(m, m.getSelect(), w, method, unified);
                 }
                 Cursor terminal = Browserless.terminalOf(getCursor());
                 Browserless.Wrapper wrapper = terminal == null ? null : Browserless.convertibleLookup(terminal);
@@ -190,31 +186,25 @@ public class BrowserlessLookupsToUnified extends Recipe {
                             .apply(getCursor(), m.getCoordinates().replace(), receiver(method));
                 }
                 // the query's calls keep no Browserless types, so their imports go
-                boolean isTerminal = terminal.getValue() == method;
-                m = unifiedCall(m, QUERY, m.getSimpleName(),
-                        JavaType.ShallowClass.build(isTerminal ? wrapper.fqn() : QUERY));
-                if (isTerminal) {
-                    if (method.getSimpleName().equals("single")
-                            || !MigrationMarkers.add(getCursor(), "was " + printCall(method)
-                                    + "; single() fails when several components match")) {
+                if (terminal.getValue() == method) {
+                    // the Wrapper is the lookup: no terminal (ADR 0007)
+                    if (!(m.getSelect() instanceof J.MethodInvocation lookup)
+                            || !method.getSimpleName().equals("single")
+                            && !MigrationMarkers.add(getCursor(), "was " + printCall(method)
+                                    + "; the lookup fails when several components match")) {
                         return m;
                     }
-                    J.MethodInvocation single = unifiedCall(m, QUERY, "single", JavaType.ShallowClass.build(wrapper.fqn()));
-                    if (single.getMethodType() != null) {
-                        single = single.withMethodType(single.getMethodType().withParameterTypes(List.of())
-                                .withParameterNames(List.of()));
-                        single = single.withName(single.getName().withType(single.getMethodType()));
-                    }
-                    return single.withArguments(List.of(new J.Empty(
-                            Tree.randomId(), Space.EMPTY, Markers.EMPTY)));
+                    return lookup.withPrefix(m.getPrefix());
                 }
+                m = unifiedCall(m, wrapper.fqn(), m.getSimpleName(), JavaType.ShallowClass.build(wrapper.fqn()));
                 String filter = wrapper.filters().get(method.getSimpleName());
                 if (wrapper.isButton() && method.getSimpleName().equals("withCaption")
                         && !MigrationMarkers.add(getCursor(), "was " + printCall(method)
                                 + "; use withAccessibleName(..) for a button without text")) {
                     return m;
                 }
-                return filter == null ? m : unifiedCall(m, QUERY, filter, JavaType.ShallowClass.build(QUERY));
+                return filter == null ? m
+                        : unifiedCall(m, wrapper.fqn(), filter, JavaType.ShallowClass.build(wrapper.fqn()));
             }
 
             /**
@@ -275,21 +265,6 @@ public class BrowserlessLookupsToUnified extends Recipe {
                 return Stubs.page();
             }
         };
-    }
-
-    private static final String QUERY = "com.vaadin.testing.unified.query.Query";
-
-    /** {@code query.single()}, typed as returning the Wrapper. */
-    private static J.MethodInvocation single(Expression query, Browserless.Wrapper wrapper) {
-        JavaType.Method type = new JavaType.Method(null, 1L, JavaType.ShallowClass.build(QUERY), "single",
-                JavaType.ShallowClass.build(wrapper.fqn()), List.of(), List.of(), null, null, null, null);
-        return new J.MethodInvocation(Tree.randomId(), query.getPrefix(), Markers.EMPTY,
-                JRightPadded.build(query.withPrefix(Space.EMPTY)), null,
-                new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), "single", type, null),
-                org.openrewrite.java.tree.JContainer.build(Space.EMPTY,
-                        List.of(JRightPadded.<Expression>build(new J.Empty(Tree.randomId(), Space.EMPTY, Markers.EMPTY))),
-                        Markers.EMPTY),
-                type);
     }
 
     /**

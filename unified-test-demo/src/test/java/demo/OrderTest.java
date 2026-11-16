@@ -25,16 +25,16 @@ class OrderTest {
     @Test
     void selectsByVisibleLabel(UnifiedPage page) {
         page.navigate(OrderView.class);
-        UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country").single();
-        UnifiedRadioButtonGroup size = page.find(UnifiedRadioButtonGroup.class).withLabel("Size").single();
-        UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").single();
+        UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country");
+        UnifiedRadioButtonGroup size = page.find(UnifiedRadioButtonGroup.class).withLabel("Size");
+        UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings");
 
         country.selectItem("Germany");
         size.selectItem("Large");
         toppings.selectItems("Olives", "Cheese");
-        page.find(UnifiedButton.class).withText("Order").single().click();
+        page.find(UnifiedButton.class).withText("Order").click();
 
-        assertThat(page.find(UnifiedNotification.class).single())
+        assertThat(page.find(UnifiedNotification.class))
                 .hasText("Order: DE, LARGE, Cheese+Olives, coupon SPRING");
         assertThat(country).hasSelectedItem("Germany");
         assertThat(size).hasSelectedItem("Large");
@@ -46,30 +46,30 @@ class OrderTest {
     @Test
     void findsTheOnlyRadioButtonGroupWithoutFilter(UnifiedPage page) {
         page.navigate(OrderView.class);
-        assertThat(page.find(UnifiedRadioButtonGroup.class).single()).hasSelectedItem("Medium");
+        assertThat(page.find(UnifiedRadioButtonGroup.class)).hasSelectedItem("Medium");
     }
 
     @Test
     void readsInitialSelection(UnifiedPage page) {
         page.navigate(OrderView.class);
 
-        assertThat(page.find(UnifiedComboBox.class).withLabel("Country").single()).hasNoSelectedItem();
-        assertThat(page.find(UnifiedComboBox.class).withLabel("Coupon").single()).hasSelectedItem("SPRING");
-        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Size").single()).hasSelectedItem("Medium");
-        assertThat(page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").single()).hasNoSelectedItems();
-        assertNull(page.find(UnifiedComboBox.class).withLabel("Country").single().getSelectedItem());
+        assertThat(page.find(UnifiedComboBox.class).withLabel("Country")).hasNoSelectedItem();
+        assertThat(page.find(UnifiedComboBox.class).withLabel("Coupon")).hasSelectedItem("SPRING");
+        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Size")).hasSelectedItem("Medium");
+        assertThat(page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings")).hasNoSelectedItems();
+        assertNull(page.find(UnifiedComboBox.class).withLabel("Country").getSelectedItem());
     }
 
     @Test
     void listsItems(UnifiedPage page) {
         page.navigate(OrderView.class);
 
-        assertThat(page.find(UnifiedComboBox.class).withLabel("Country").single())
+        assertThat(page.find(UnifiedComboBox.class).withLabel("Country"))
                 .hasItems("Finland", "Germany", "France");
-        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Size").single())
+        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Size"))
                 .hasItems("Small", "Medium", "Large");
         assertEquals(List.of("Cheese", "Ham", "Mushrooms", "Olives"),
-                page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").single().getItems());
+                page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").getItems());
     }
 
     /** Every item, not only the first page the drop-down loads. */
@@ -78,7 +78,7 @@ class OrderTest {
     void listsEveryItemOfALazyComboBox(UnifiedPage page) {
         page.navigate(OrderView.class);
 
-        List<String> airports = page.find(UnifiedComboBox.class).withLabel("Airport").single().getItems();
+        List<String> airports = page.find(UnifiedComboBox.class).withLabel("Airport").getItems();
 
         assertEquals(OrderView.AIRPORT_COUNT, airports.size());
         assertEquals("Airport 1", airports.get(0));
@@ -88,9 +88,9 @@ class OrderTest {
     @Test
     void deselectsAndClears(UnifiedPage page) {
         page.navigate(OrderView.class);
-        UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").single();
-        UnifiedComboBox coupon = page.find(UnifiedComboBox.class).withLabel("Coupon").single();
-        UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country").single();
+        UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings");
+        UnifiedComboBox coupon = page.find(UnifiedComboBox.class).withLabel("Coupon");
+        UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country");
         toppings.selectItems("Ham", "Mushrooms", "Olives");
         country.selectItem("France");
 
@@ -103,14 +103,14 @@ class OrderTest {
         assertThat(country).hasNoSelectedItem();
 
         toppings.clear();
-        page.find(UnifiedButton.class).withText("Order").single().click();
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Order: -, MEDIUM, , coupon null");
+        page.find(UnifiedButton.class).withText("Order").click();
+        assertThat(page.find(UnifiedNotification.class)).hasText("Order: -, MEDIUM, , coupon null");
     }
 
     @Test
     void unknownItemFailsWithTheAvailableItems(UnifiedPage page) {
         page.navigate(OrderView.class);
-        UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country").single();
+        UnifiedComboBox country = page.find(UnifiedComboBox.class).withLabel("Country");
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> country.selectItem("Spain"));
 

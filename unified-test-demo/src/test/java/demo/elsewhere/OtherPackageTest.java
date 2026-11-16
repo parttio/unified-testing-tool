@@ -16,7 +16,7 @@ class OtherPackageTest {
     @Test
     void navigatesToViewsOfTheApplication(UnifiedPage page) {
         page.navigate(HomeView.class);
-        page.find(UnifiedButton.class).withText("Go to profile").single().click();
+        page.find(UnifiedButton.class).withText("Go to profile").click();
 
         assertThat(page).isAt(ProfileView.class);
     }

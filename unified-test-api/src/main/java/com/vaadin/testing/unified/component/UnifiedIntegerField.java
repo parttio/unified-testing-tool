@@ -1,18 +1,15 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.textfield.IntegerField;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
-import com.vaadin.testing.unified.query.Query;
 
 /** An {@link IntegerField}: the value is an {@link Integer}, {@code null} when empty. */
 @UnifiedComponent(IntegerField.class)
-public interface UnifiedIntegerField extends UnifiedField, Findable<UnifiedIntegerField.IntegerFieldQuery> {
-
-    interface IntegerFieldQuery extends Query<UnifiedIntegerField, IntegerFieldQuery>,
-            LabelFilter<IntegerFieldQuery>, PlaceholderFilter<IntegerFieldQuery> {}
+public interface UnifiedIntegerField extends UnifiedField,
+        CommonFilters<UnifiedIntegerField>, LabelFilter<UnifiedIntegerField>, PlaceholderFilter<UnifiedIntegerField> {
 
     // actions (Auto-Wait)
     /** Types the value as a user would; {@code null} empties the field. */

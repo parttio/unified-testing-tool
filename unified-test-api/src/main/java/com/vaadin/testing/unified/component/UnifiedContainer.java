@@ -1,23 +1,21 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
-import com.vaadin.testing.unified.query.Query;
+import com.vaadin.testing.unified.query.CommonFilters;
 
 /**
  * Any component used to narrow a search, typically a layout (FormLayout, VerticalLayout, Div, …), which has
  * no wrapper of its own. Find it by test id or id, then search inside it:
  *
  * <pre>{@code
- * UnifiedContainer billing = page.find(UnifiedContainer.class).withTestId("billing").single();
- * billing.find(UnifiedTextField.class).withLabel("City").single().setValue("Turku");
+ * UnifiedContainer billing = page.find(UnifiedContainer.class).withTestId("billing");
+ * billing.find(UnifiedTextField.class).withLabel("City").setValue("Turku");
  * }</pre>
  */
 @UnifiedComponent(value = Component.class, tag = "*")
-public interface UnifiedContainer extends UnifiedWrapper, Scope, Findable<UnifiedContainer.ContainerQuery> {
+public interface UnifiedContainer extends UnifiedWrapper, Scope, CommonFilters<UnifiedContainer> {
 
-    interface ContainerQuery extends Query<UnifiedContainer, ContainerQuery> {}
 }

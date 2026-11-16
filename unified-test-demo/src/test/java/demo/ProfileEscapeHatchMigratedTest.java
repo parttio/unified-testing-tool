@@ -24,8 +24,8 @@ class ProfileEscapeHatchMigratedTest {
     @Test
     void savesTheName(UnifiedPage page) {
         open(page);
-        // TODO unified: was first(); single() fails when several components match
-        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+        // TODO unified: was first(); the lookup fails when several components match
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
         name.setValue("Alice");
         save(page);
 
@@ -44,6 +44,6 @@ class ProfileEscapeHatchMigratedTest {
     }
 
     private void save(UnifiedPage page) {
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedButton.class).withText("Save").click();
     }
 }

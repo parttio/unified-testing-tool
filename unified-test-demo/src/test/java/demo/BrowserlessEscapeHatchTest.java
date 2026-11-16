@@ -39,8 +39,8 @@ class BrowserlessEscapeHatchTest {
         browserless.runPendingSignalsTasks();
 
         // Unified API and Escape Hatch see the same window
-        assertThat(page.find(UnifiedTextField.class).withLabel("Name").single()).hasValue("Alice");
-        assertThat(page.find(UnifiedNotification.class).single()).hasTextContaining("Alice");
+        assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Alice");
+        assertThat(page.find(UnifiedNotification.class)).hasTextContaining("Alice");
         assertEquals("Alice", browserless.$(TextField.class).withCaption("Name").single().getValue());
     }
 
@@ -50,13 +50,13 @@ class BrowserlessEscapeHatchTest {
         UnifiedPage second = page.openWindow();
         second.navigate(ProfileView.class);
         page.navigate(ProfileView.class);
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("First");
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("First");
 
         BrowserlessEscapeHatch secondWindow = BrowserlessEscapeHatch.of(second);
         assertEquals("", secondWindow.$(TextField.class).withCaption("Name").single().getValue());
         UI secondUi = secondWindow.context().getUI();
         // and back: the Unified API finds the first window's field again
-        assertThat(page.find(UnifiedTextField.class).withLabel("Name").single()).hasValue("First");
+        assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("First");
         // view code and testers read UI.getCurrent(): the Escape Hatch makes its window the current one
         secondWindow.context();
         assertSame(secondUi, UI.getCurrent());

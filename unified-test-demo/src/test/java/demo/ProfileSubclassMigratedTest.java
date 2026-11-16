@@ -16,7 +16,7 @@ class ProfileSubclassMigratedTest extends AbstractProfileMigrated {
         profile.fill("Alice", "alice@example.com");
         profile.saveButton().click();
 
-        // TODO unified: was waitForFirst(); single() fails when several components match
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alice");
+        // TODO unified: was waitForFirst(); the lookup fails when several components match
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alice");
     }
 }

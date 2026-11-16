@@ -28,8 +28,8 @@ class ProfileBrowserlessLeftoversMigratedTest {
         // TODO unified: filter runs Java on the component: test($(TextField.class).withCondition(TextField::isRequiredIndicatorVisible).single()).setValue("alice@example.com"): replace withCondition(..) with a locator
         browserless.test(browserless.$(TextField.class).withCondition(TextField::isRequiredIndicatorVisible).single())
                 .setValue("alice@example.com");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alice");
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alice");
     }
 }

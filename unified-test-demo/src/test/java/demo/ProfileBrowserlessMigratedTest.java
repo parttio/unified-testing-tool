@@ -27,15 +27,15 @@ class ProfileBrowserlessMigratedTest {
     @Test
     void savesTheProfile(UnifiedPage page) {
         open(page);
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
-        // TODO unified: was first(); single() fails when several components match
-        UnifiedTextField email = page.find(UnifiedTextField.class).withLabel("Email").single();
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+        // TODO unified: was first(); the lookup fails when several components match
+        UnifiedTextField email = page.find(UnifiedTextField.class).withLabel("Email");
         email.setValue("alice@example.com");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedTextField.class).withLabel("Name").single()).hasValue("Alice");
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alice");
-        assertThat(page.find(UnifiedButton.class).withText("Archive").single()).isDisabled();
+        assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Alice");
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alice");
+        assertThat(page.find(UnifiedButton.class).withText("Archive")).isDisabled();
     }
 
     @Test
@@ -43,9 +43,9 @@ class ProfileBrowserlessMigratedTest {
     void opensTheEmailDialog(UnifiedPage page) {
         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
         open(page);
-        page.find(UnifiedButton.class).withText("Change email").single().click();
+        page.find(UnifiedButton.class).withText("Change email").click();
 
-        assertThat(page.find(UnifiedDialog.class).single()).isOpen();
+        assertThat(page.find(UnifiedDialog.class)).isOpen();
         // TODO unified: was fireShortcut(..); pressKey also reaches the focused component and an open dialog
         page.pressKey("Enter");
 

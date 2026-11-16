@@ -25,16 +25,16 @@ class PreferencesTest {
     void savesTypedValues(UnifiedPage page) {
         page.navigate(PreferencesView.class);
 
-        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)").single();
-        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday").single();
-        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Subscribe to newsletter").single();
+        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
+        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday");
+        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Subscribe to newsletter");
 
         height.setValue(180.5);
         birthday.setValue(BIRTHDAY);
         newsletter.check();
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single())
+        assertThat(page.find(UnifiedNotification.class))
                 .hasText("Saved: height 180.5, birthday 1990-05-17, newsletter yes, remember yes");
         assertThat(height).hasValue(180.5).isValid();
         assertThat(birthday).hasValue(BIRTHDAY).isValid();
@@ -47,7 +47,7 @@ class PreferencesTest {
     @Test
     void wholeNumbers(UnifiedPage page) {
         page.navigate(PreferencesView.class);
-        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)").single();
+        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
 
         height.setValue(170.0);
 
@@ -57,8 +57,8 @@ class PreferencesTest {
     @Test
     void clearsValues(UnifiedPage page) {
         page.navigate(PreferencesView.class);
-        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)").single();
-        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday").single();
+        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
+        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday");
         height.setValue(180.0);
         birthday.setValue(BIRTHDAY);
 
@@ -73,8 +73,8 @@ class PreferencesTest {
     @Test
     void outOfRangeValuesAreInvalid(UnifiedPage page) {
         page.navigate(PreferencesView.class);
-        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)").single();
-        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday").single();
+        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
+        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday");
 
         height.setValue(300.0);
         birthday.setValue(LocalDate.of(2030, 1, 1));
@@ -86,7 +86,7 @@ class PreferencesTest {
     @Test
     void readsNumberFieldLimits(UnifiedPage page) {
         page.navigate(PreferencesView.class);
-        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)").single();
+        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
 
         assertEquals(50.0, height.getMin());
         assertEquals(250.0, height.getMax());
@@ -97,18 +97,18 @@ class PreferencesTest {
     @Test
     void checksAndUnchecks(UnifiedPage page) {
         page.navigate(PreferencesView.class);
-        UnifiedCheckbox remember = page.find(UnifiedCheckbox.class).withLabel("Remember me").single();
-        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Subscribe to newsletter").single();
+        UnifiedCheckbox remember = page.find(UnifiedCheckbox.class).withLabel("Remember me");
+        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Subscribe to newsletter");
 
         assertThat(remember).isChecked();
         remember.check(); // already checked: no change
         assertThat(remember).isChecked();
         remember.uncheck();
         newsletter.setChecked(true);
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedButton.class).withText("Save").click();
 
         assertThat(remember).isNotChecked();
-        assertThat(page.find(UnifiedNotification.class).single())
+        assertThat(page.find(UnifiedNotification.class))
                 .hasText("Saved: height null, birthday null, newsletter yes, remember no");
     }
 
@@ -116,7 +116,7 @@ class PreferencesTest {
     void readsIndeterminate(UnifiedPage page) {
         page.navigate(PreferencesView.class);
 
-        assertThat(page.find(UnifiedCheckbox.class).withLabel("Accept terms").single())
+        assertThat(page.find(UnifiedCheckbox.class).withLabel("Accept terms"))
                 .isIndeterminate().isNotChecked().hasLabel("Accept terms");
     }
 }

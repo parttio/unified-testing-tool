@@ -1,7 +1,6 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
@@ -29,13 +28,13 @@ class UsersTest {
     @Test
     void openWindowSharesTheSession(UnifiedPage page) {
         page.navigate(WhoAmIView.class);
-        assertThat(page.findComponent(Span.class).withText("Visits in this session: 1").single()).isVisible();
+        assertThat(page.findComponent(Span.class).withText("Visits in this session: 1")).isVisible();
 
         UnifiedPage second = page.openWindow();
         second.navigate(WhoAmIView.class);
 
-        assertThat(second.findComponent(Span.class).withText("Visits in this session: 2").single()).isVisible();
-        assertThat(second.findComponent(Span.class).withText("Anonymous").single()).isVisible();
+        assertThat(second.findComponent(Span.class).withText("Visits in this session: 2")).isVisible();
+        assertThat(second.findComponent(Span.class).withText("Anonymous")).isVisible();
     }
     // --8<-- [end:openWindowSharesTheSession]
 
@@ -47,7 +46,7 @@ class UsersTest {
         page.navigate(AdminView.class);
 
         assertThat(page).isAt(AdminView.class);
-        assertThat(page.findComponent(H2.class).withText("Admin area of alice").single()).isVisible();
+        assertThat(page.findComponent(H2.class).withText("Admin area of alice")).isVisible();
     }
 
     @Test
@@ -55,9 +54,9 @@ class UsersTest {
     void userWithoutTheRoleIsKeptOut(UnifiedPage page) {
         page.navigate(AdminView.class);
 
-        assertEquals(0, page.findComponent(H2.class).withTextContaining("Admin area").all().size());
+        assertThat(page.findComponent(H2.class).withTextContaining("Admin area")).doesNotExist();
         page.navigate(WhoAmIView.class);
-        assertThat(page.findComponent(Span.class).withText("Signed in as bob").single()).isVisible();
+        assertThat(page.findComponent(Span.class).withText("Signed in as bob")).isVisible();
     }
 
     @Test
@@ -79,14 +78,14 @@ class UsersTest {
             alice.navigate(WhoAmIView.class);
             bob.navigate(WhoAmIView.class);
 
-            assertThat(bob.findComponent(Span.class).withText("Signed in as bob").single()).isVisible();
-            assertThat(bob.findComponent(Span.class).withText("Visits in this session: 1").single()).isVisible();
+            assertThat(bob.findComponent(Span.class).withText("Signed in as bob")).isVisible();
+            assertThat(bob.findComponent(Span.class).withText("Visits in this session: 1")).isVisible();
             // back to alice's window: still alice, own session
-            assertThat(alice.findComponent(Span.class).withText("Signed in as alice").single()).isVisible();
+            assertThat(alice.findComponent(Span.class).withText("Signed in as alice")).isVisible();
             alice.navigate(AdminView.class);
             assertThat(alice).isAt(AdminView.class);
             bob.navigate(AdminView.class);
-            assertEquals(0, bob.findComponent(H2.class).withTextContaining("Admin area").all().size());
+            assertThat(bob.findComponent(H2.class).withTextContaining("Admin area")).doesNotExist();
         }
 
         @Test
@@ -94,7 +93,7 @@ class UsersTest {
             UnifiedPage second = alice.openWindow();
             second.navigate(WhoAmIView.class);
 
-            assertThat(second.findComponent(Span.class).withText("Signed in as alice").single()).isVisible();
+            assertThat(second.findComponent(Span.class).withText("Signed in as alice")).isVisible();
         }
     }
 }

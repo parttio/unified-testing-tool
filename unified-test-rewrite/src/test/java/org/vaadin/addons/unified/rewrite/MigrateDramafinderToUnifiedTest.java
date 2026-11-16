@@ -101,7 +101,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     @Test
                     void saves(UnifiedPage page) {
                         page.navigate(PeopleView.class);
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -333,13 +333,13 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     @Test
                     void edits(UnifiedPage page) {
                         page.navigate(PeopleView.class);
-                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
                         name.setValue("Alan");
                         assertThat(name).hasValue("Alan");
-                        // TODO unified: was first(); single() fails when several components match
-                        page.find(UnifiedCheckbox.class).withLabel("Active").single().check();
+                        // TODO unified: was first(); the lookup fails when several components match
+                        page.find(UnifiedCheckbox.class).withLabel("Active").check();
                         assertThat(page.find(UnifiedTextField.class).all().get(1)).isDisabled();
-                        assertThat(page.find(UnifiedDialog.class).withHeaderTitle("Edit").single()).isOpen();
+                        assertThat(page.find(UnifiedDialog.class).withHeaderTitle("Edit")).isOpen();
                     }
                 }
                 """));
@@ -438,11 +438,11 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     @Test
                     void readsTheGrid(UnifiedPage page) {
                         page.navigate(PeopleView.class);
-                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        UnifiedGrid people = page.find(UnifiedGrid.class);
                         assertThat(people).hasRowCount(3);
                         Assertions.assertEquals(3, people.getRowCount());
-                        // TODO unified: was findRowIndexesWithColumnText(0, ..).get(0): any column matches now; single() fails when several rows match
-                        UnifiedGrid.UnifiedGridRow ada = people.row(people.rows().withCellText("Ada").single().getIndex());
+                        // TODO unified: was findRowIndexesWithColumnText(0, ..).get(0): any column matches now; the row lookup fails when several rows match
+                        UnifiedGrid.UnifiedGridRow ada = people.row(people.row().withCellText("Ada").getIndex());
                         Assertions.assertEquals("ada@example.com", ada.getCellText(1));
                         ada.select();
                         assertThat(ada).isSelected();

@@ -16,11 +16,11 @@ class ProfileMigratedTest {
     void savesTheProfile(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
-        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("alice@example.com");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedTextField.class).withLabel("Name").single()).hasValue("Alice");
-        assertThat(page.find(UnifiedButton.class).withText("Archive").single()).hasText("Archive");
+        assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Alice");
+        assertThat(page.find(UnifiedButton.class).withText("Archive")).hasText("Archive");
     }
 }

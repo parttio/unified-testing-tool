@@ -23,34 +23,34 @@ class ItemNameTest {
     @Test
     void namesATabByTheTextOfTheLinkItHolds(UnifiedPage page) {
         page.navigate(RatesView.class);
-        UnifiedTabs tabs = page.find(UnifiedTabs.class).withTab("Mileage Rates").single();
+        UnifiedTabs tabs = page.find(UnifiedTabs.class).withTab("Mileage Rates");
 
         assertThat(tabs).hasTabs("Allowance Rates", "Mileage Rates", "Lodging Rates")
                 .hasSelectedTab("Allowance Rates");
 
         tabs.selectTab("Lodging Rates");
 
-        assertThat(page.find(UnifiedTabs.class).single()).hasSelectedTab("Lodging Rates");
+        assertThat(page.find(UnifiedTabs.class)).hasSelectedTab("Lodging Rates");
     }
 
     @Test
     void namesAnIconOnlyMenuItemByItsAriaLabel(UnifiedPage page) {
         page.navigate(ExpenseListView.class);
-        UnifiedMenuBar taxi = page.find(UnifiedMenuBar.class).withItem("Actions for Taxi").single();
+        UnifiedMenuBar taxi = page.find(UnifiedMenuBar.class).withItem("Actions for Taxi");
 
         assertEquals(List.of("Actions for Taxi"), taxi.getItems());
         assertEquals(List.of("Edit", "Delete"), taxi.getItems("Actions for Taxi"));
 
         taxi.clickItem("Actions for Taxi", "Edit");
 
-        assertThat(page.findComponent(Span.class).withId("status").single()).hasText("Editing Taxi");
+        assertThat(page.findComponent(Span.class).withId("status")).hasText("Editing Taxi");
     }
 
     @Test
     void readsWhetherAMenuItemIsEnabled(UnifiedPage page) {
         page.navigate(ExpenseListView.class);
-        UnifiedMenuBar taxi = page.find(UnifiedMenuBar.class).withItem("Actions for Taxi").single();
-        UnifiedMenuBar hotel = page.find(UnifiedMenuBar.class).withItem("Actions for Hotel").single();
+        UnifiedMenuBar taxi = page.find(UnifiedMenuBar.class).withItem("Actions for Taxi");
+        UnifiedMenuBar hotel = page.find(UnifiedMenuBar.class).withItem("Actions for Hotel");
 
         assertTrue(hotel.isItemEnabled("Actions for Hotel"));
         assertTrue(hotel.isItemEnabled("Actions for Hotel", "Edit"));

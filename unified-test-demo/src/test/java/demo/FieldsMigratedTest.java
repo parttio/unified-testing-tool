@@ -24,36 +24,36 @@ class FieldsMigratedTest {
     void savesPreferences(UnifiedPage page) {
         page.navigate(PreferencesView.class);
 
-        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)").single();
+        UnifiedNumberField height = page.find(UnifiedNumberField.class).withLabel("Height (cm)");
         height.setValue(170.0);
-        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday").single();
+        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday");
         birthday.setValue(LocalDate.of(1990, 5, 17));
-        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Subscribe to newsletter").single();
+        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Subscribe to newsletter");
         newsletter.setChecked(true);
         // TODO unified: was withCaption("Save"); use withAccessibleName(..) for a button without text
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedButton.class).withText("Save").click();
 
         assertThat(height).hasValue(170.0);
         assertThat(birthday).hasValue(LocalDate.of(1990, 5, 17));
         assertThat(newsletter).isChecked();
-        // TODO unified: was waitForFirst(); single() fails when several components match
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved: height 170.0, birthday 1990-05-17, newsletter yes, remember yes");
+        // TODO unified: was waitForFirst(); the lookup fails when several components match
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved: height 170.0, birthday 1990-05-17, newsletter yes, remember yes");
     }
 
     @Test
     void placesAnOrder(UnifiedPage page) {
         page.navigate(OrderView.class);
 
-        page.find(UnifiedComboBox.class).withLabel("Country").single().selectItem("Germany");
-        UnifiedRadioButtonGroup size = page.find(UnifiedRadioButtonGroup.class).withId("size").single();
+        page.find(UnifiedComboBox.class).withLabel("Country").selectItem("Germany");
+        UnifiedRadioButtonGroup size = page.find(UnifiedRadioButtonGroup.class).withId("size");
         size.selectItem("Large");
-        UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings").single();
+        UnifiedMultiSelectComboBox toppings = page.find(UnifiedMultiSelectComboBox.class).withLabel("Toppings");
         toppings.selectItems("Ham");
-        page.find(UnifiedButton.class).withText("Order").single().click();
+        page.find(UnifiedButton.class).withText("Order").click();
 
         assertThat(size).hasSelectedItem("Large");
         assertThat(toppings).hasSelectedItems("Ham");
-        // TODO unified: was waitForFirst(); single() fails when several components match
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Order: DE, LARGE, Ham, coupon SPRING");
+        // TODO unified: was waitForFirst(); the lookup fails when several components match
+        assertThat(page.find(UnifiedNotification.class)).hasText("Order: DE, LARGE, Ham, coupon SPRING");
     }
 }

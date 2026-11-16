@@ -162,6 +162,11 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+                if (inPageObject() && method.getSimpleName().equals("single") && lookupOnContext(method.getSelect())
+                        && m.getSelect() instanceof J.MethodInvocation lookup) {
+                    // the Wrapper is the lookup: no terminal (ADR 0007)
+                    return lookup.withPrefix(m.getPrefix());
+                }
                 if (!inPageObject() || !method.getSimpleName().equals("$") || !(method.getSelect() instanceof J.Identifier context)
                         || !isContext(context.getType())) {
                     return m;
@@ -190,6 +195,15 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
                                 ? Stubs.page().withPrefix(a.getPrefix()) : a));
             }
         };
+    }
+
+    /** Whether the expression is {@code context.$(XElement.class)} and filters: a lookup the class converts. */
+    private static boolean lookupOnContext(org.openrewrite.java.tree.Expression e) {
+        while (e instanceof J.MethodInvocation call && !call.getSimpleName().equals("$")) {
+            e = call.getSelect();
+        }
+        return e instanceof J.MethodInvocation dollar && dollar.getSelect() instanceof J.Identifier context
+                && isContext(context.getType()) && Chains.ofDollar(dollar) != null;
     }
 
     private static boolean isContext(JavaType type) {

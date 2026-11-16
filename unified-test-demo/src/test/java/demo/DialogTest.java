@@ -16,8 +16,8 @@ class DialogTest {
     // --8<-- [start:helpers]
     private UnifiedDialog openDialog(UnifiedPage page) {
         page.navigate(ProfileView.class);
-        page.find(UnifiedButton.class).withText("Change email").single().click();
-        return page.find(UnifiedDialog.class).withHeaderTitle("Change email").single();
+        page.find(UnifiedButton.class).withText("Change email").click();
+        return page.find(UnifiedDialog.class).withHeaderTitle("Change email");
     }
     // --8<-- [end:helpers]
 
@@ -34,12 +34,12 @@ class DialogTest {
         UnifiedDialog dialog = openDialog(page);
 
         // the page has its own "Email" field; scoping picks the dialog's one
-        dialog.find(UnifiedTextField.class).withLabel("Email").single().setValue("new@example.com");
-        dialog.find(UnifiedButton.class).withText("Save").single().click();
+        dialog.find(UnifiedTextField.class).withLabel("Email").setValue("new@example.com");
+        dialog.find(UnifiedButton.class).withText("Save").click();
 
         assertThat(dialog).isClosed();
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Email changed to new@example.com");
-        assertThat(page.find(UnifiedTextField.class).withLabel("Email").single()).hasValue("new@example.com");
+        assertThat(page.find(UnifiedNotification.class)).hasText("Email changed to new@example.com");
+        assertThat(page.find(UnifiedTextField.class).withLabel("Email")).hasValue("new@example.com");
     }
     // --8<-- [end:searchesInsideTheDialog]
 
@@ -47,7 +47,7 @@ class DialogTest {
     void closesWithCancel(UnifiedPage page) {
         UnifiedDialog dialog = openDialog(page);
 
-        dialog.find(UnifiedButton.class).withText("Cancel").single().click();
+        dialog.find(UnifiedButton.class).withText("Cancel").click();
 
         assertThat(dialog).isClosed();
     }

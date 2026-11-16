@@ -136,8 +136,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void fillsTheName(UnifiedPage page) {
-                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
-                        page.find(UnifiedTextField.class).withId("email").single().setValue("alice@example.com");
+                        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+                        page.find(UnifiedTextField.class).withId("email").setValue("alice@example.com");
                     }
                 }
                 """));
@@ -170,7 +170,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void saves(UnifiedPage page) {
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -209,8 +209,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void showsTheProfile(UnifiedPage page) {
-                        assertThat(page.find(UnifiedTextField.class).withLabel("Name").single()).hasValue("Alice");
-                        assertThat(page.find(UnifiedButton.class).withText("Save").single()).hasText("Save");
+                        assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Alice");
+                        assertThat(page.find(UnifiedButton.class).withText("Save")).hasText("Save");
                     }
                 }
                 """));
@@ -513,7 +513,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
                         // TODO unified: TestBench Escape Hatch: $(TextFieldElement.class)
                         testBench.$(TextFieldElement.class).withLabel("Name").single().sendKeys("Alice");
-                        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("alice@example.com");
+                        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
                     }
                 }
                 """));
@@ -592,7 +592,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void savesTheName(UnifiedPage page) {
-                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
                         name.setValue("Alice");
                         assertThat(name).hasValue("Alice");
                     }
@@ -631,10 +631,10 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void saves(UnifiedPage page) {
-                        // TODO unified: was first(); single() fails when several components match
-                        page.find(UnifiedButton.class).withText("Save").single().click();
-                        // TODO unified: was waitForFirst(); single() fails when several components match
-                        assertThat(page.find(UnifiedButton.class).withText("Archive").single()).hasText("Archive");
+                        // TODO unified: was first(); the lookup fails when several components match
+                        page.find(UnifiedButton.class).withText("Save").click();
+                        // TODO unified: was waitForFirst(); the lookup fails when several components match
+                        assertThat(page.find(UnifiedButton.class).withText("Archive")).hasText("Archive");
                     }
                 }
                 """));
@@ -686,11 +686,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     void savesTheName(UnifiedPage page) {
                         open(page);
                         fillName(page, "Alice");
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
 
                     private void fillName(UnifiedPage page, String name) {
-                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
+                        page.find(UnifiedTextField.class).withLabel("Name").setValue(name);
                     }
                 }
                 """));
@@ -773,8 +773,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void confirmsTheSave(UnifiedPage page) {
-                        // TODO unified: was waitForFirst(); single() fails when several components match
-                        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved");
+                        // TODO unified: was waitForFirst(); the lookup fails when several components match
+                        assertThat(page.find(UnifiedNotification.class)).hasText("Saved");
                     }
                 }
                 """));
@@ -811,8 +811,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void listsPeople(UnifiedPage page) {
-                        // TODO unified: was waitForFirst(); single() fails when several components match
-                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        // TODO unified: was waitForFirst(); the lookup fails when several components match
+                        UnifiedGrid people = page.find(UnifiedGrid.class);
                         Assertions.assertEquals("Alan Turing", people.row(0).getCellText(0));
                         Assertions.assertEquals(3, people.getRowCount());
                     }
@@ -851,9 +851,9 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void opensAlan(UnifiedPage page) {
-                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
-                        // TODO unified: was getCell("Alan Turing"); single() fails when several rows match
-                        UnifiedGrid.UnifiedGridRow alan = people.rows().withCellText("Alan Turing").single();
+                        UnifiedGrid people = page.find(UnifiedGrid.class);
+                        // TODO unified: was getCell("Alan Turing"); the row lookup fails when several rows match
+                        UnifiedGrid.UnifiedGridRow alan = people.row().withCellText("Alan Turing");
                         int row = alan.getIndex();
                         alan.click();
                     }
@@ -894,10 +894,10 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void togglesNewsletter(UnifiedPage page) {
-                        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Newsletter").single();
+                        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Newsletter");
                         newsletter.setChecked(true);
                         assertThat(newsletter).isChecked();
-                        assertThat(page.find(UnifiedCheckbox.class).withLabel("Dark mode").single()).isNotChecked();
+                        assertThat(page.find(UnifiedCheckbox.class).withLabel("Dark mode")).isNotChecked();
                     }
                 }
                 """));
@@ -937,7 +937,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void picksAProduct(UnifiedPage page) {
-                        UnifiedComboBox product = page.find(UnifiedComboBox.class).withLabel("Product").single();
+                        UnifiedComboBox product = page.find(UnifiedComboBox.class).withLabel("Product");
                         product.selectItem("Tea");
                         assertThat(product).hasSelectedItem("Tea");
                         Assertions.assertEquals(3, product.getItems().size());
@@ -977,8 +977,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void picksDelivery(UnifiedPage page) {
-                        page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery").single().selectItem("Express");
-                        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery").single()).hasSelectedItem("Express");
+                        page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery").selectItem("Express");
+                        assertThat(page.find(UnifiedRadioButtonGroup.class).withLabel("Delivery")).hasSelectedItem("Express");
                     }
                 }
                 """));
@@ -1021,7 +1021,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void picksExtras(UnifiedPage page) {
-                        UnifiedMultiSelectComboBox extras = page.find(UnifiedMultiSelectComboBox.class).withLabel("Extras").single();
+                        UnifiedMultiSelectComboBox extras = page.find(UnifiedMultiSelectComboBox.class).withLabel("Extras");
                         extras.selectItems("Milk");
                         extras.selectItems("Sugar");
                         extras.deselectItems("Milk");
@@ -1069,7 +1069,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void setsTheBirthday(UnifiedPage page) {
-                        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday").single();
+                        UnifiedDatePicker birthday = page.find(UnifiedDatePicker.class).withLabel("Birthday");
                         birthday.setValue(LocalDate.of(1990, 5, 17));
                         assertThat(birthday).hasValue(LocalDate.of(1990, 5, 17));
                         birthday.typeText("1/2/2000");
@@ -1110,7 +1110,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void setsTheAge(UnifiedPage page) {
-                        UnifiedNumberField age = page.find(UnifiedNumberField.class).withLabel("Age").single();
+                        UnifiedNumberField age = page.find(UnifiedNumberField.class).withLabel("Age");
                         age.setValue(42.0);
                         assertThat(age).hasValue(42.0);
                     }
@@ -1188,9 +1188,9 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     @Test
                     void saves(UnifiedPage page) {
                         // TODO unified: was withCaption("Save"); use withAccessibleName(..) for a button without text
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                         // TODO unified: was withLabel("Cancel"); use withAccessibleName(..) for a button without text
-                        page.find(UnifiedButton.class).withText("Cancel").single().click();
+                        page.find(UnifiedButton.class).withText("Cancel").click();
                     }
                 }
                 """));
@@ -1229,10 +1229,10 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void opensTheDialog(UnifiedPage page) {
-                        UnifiedDialog dialog = page.find(UnifiedDialog.class).single();
+                        UnifiedDialog dialog = page.find(UnifiedDialog.class);
                         assertThat(dialog).isOpen();
                         assertThat(dialog).hasHeaderTitle("Change email");
-                        assertThat(page.find(UnifiedDialog.class).withId("help").single()).isClosed();
+                        assertThat(page.find(UnifiedDialog.class).withId("help")).isClosed();
                     }
                 }
                 """));
@@ -1271,9 +1271,9 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void changesTheEmail(UnifiedPage page) {
-                        UnifiedDialog dialog = page.find(UnifiedDialog.class).single();
-                        dialog.find(UnifiedTextField.class).withLabel("Email").single().setValue("bob@example.com");
-                        dialog.find(UnifiedButton.class).withText("Save").single().click();
+                        UnifiedDialog dialog = page.find(UnifiedDialog.class);
+                        dialog.find(UnifiedTextField.class).withLabel("Email").setValue("bob@example.com");
+                        dialog.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -1316,11 +1316,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                     @Test
                     void changesThePassword(UnifiedPage page) {
-                        UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class).single();
+                        UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
                         assertThat(tabs).hasTabs("Profile", "Security", "Billing");
                         tabs.selectTab("Security");
                         assertThat(tabs).hasSelectedTab("Security");
-                        tabs.content().find(UnifiedButton.class).withText("Change password").single().click();
+                        tabs.content().find(UnifiedButton.class).withText("Change password").click();
                     }
                 }
                 """));
@@ -1382,7 +1382,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             @Test
                             void saves(UnifiedPage page) {
                                 open(page, "profile");
-                                page.find(UnifiedButton.class).withText("Save").single().click();
+                                page.find(UnifiedButton.class).withText("Save").click();
                             }
                         }
                         """));
@@ -1439,7 +1439,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             @Test
                             void saves(UnifiedPage page) {
                                 openProfile(page);
-                                page.find(UnifiedButton.class).withText("Save").single().click();
+                                page.find(UnifiedButton.class).withText("Save").click();
                             }
                         }
                         """));
@@ -1486,11 +1486,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             }
 
                             void setName(String name) {
-                                test.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
+                                test.find(UnifiedTextField.class).withLabel("Name").setValue(name);
                             }
 
                             UnifiedButton save() {
-                                return test.find(UnifiedButton.class).withText("Save").single();
+                                return test.find(UnifiedButton.class).withText("Save");
                             }
                         }
                         """),
@@ -1695,8 +1695,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     @Test
                     public void saves(UnifiedPage page) {
                         setUp(page);
-                        page.find(UnifiedButton.class).withText("Save").single().click();
-                        assertThat(page.find(UnifiedButton.class).withText("Save").single()).hasText("Save");
+                        page.find(UnifiedButton.class).withText("Save").click();
+                        assertThat(page.find(UnifiedButton.class).withText("Save")).hasText("Save");
                     }
                 }
                 """));

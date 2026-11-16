@@ -1,12 +1,19 @@
 package com.vaadin.testing.unified.query;
 
 import com.vaadin.testing.unified.UnifiedElement;
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
- * Filters every type has. Exact match by default; {@code ...Containing} for partial matches.
+ * Filters every Wrapper has, as a mixin: {@code SELF} is the Wrapper type itself, e.g.
+ * {@code UnifiedTextField extends CommonFilters<UnifiedTextField>} (ADR 0007). The Unified API implements these
+ * methods at run time; a Wrapper author only lists the mixin.
  * <p>
- * Queries include hidden components, on every Testing Tool: a component hidden after it was shown stays in a
+ * Each filter returns a new Wrapper and leaves the one it is called on unchanged. Exact match by default;
+ * {@code ...Containing} for partial matches. The Wrapper finds its component again on every use and waits up
+ * to the timeout for exactly one match.
+ * <p>
+ * Lookups include hidden components, on every Testing Tool: a component hidden after it was shown stays in a
  * browser's page. Add {@link #visible()} where that matters, e.g. "the action is gone". A component that was
  * never visible is in no browser's page (Flow doesn't send it), but Browserless finds it; {@code visible()}
  * gives the same answer everywhere.
@@ -31,4 +38,11 @@ public interface CommonFilters<SELF> {
     /** Building blocks for custom filters. */
     SELF withProperty(String name, Object value);
     SELF where(Predicate<UnifiedElement> condition);
+
+    /**
+     * Every match right now, as lazy Wrappers by position: the {@code i}-th Wrapper is the {@code i}-th match
+     * whenever it is used. Only for looping over matches; to check a count, use
+     * {@code assertThat(wrapper).hasCount(n)}, which waits.
+     */
+    List<SELF> all();
 }

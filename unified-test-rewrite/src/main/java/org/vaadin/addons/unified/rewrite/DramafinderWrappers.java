@@ -47,8 +47,8 @@ final class DramafinderWrappers {
     }
 
     /**
-     * A Dramafinder lookup the Wrapper can express: {@code page.find(W.class)}, the filters, then {@code single()},
-     * or {@code all().get(index)} when {@code index} is set. {@code marker} is the Migration Marker it needs, if any.
+     * A Dramafinder lookup the Wrapper can express: {@code page.find(W.class)} and the filters (the Wrapper
+     * itself, ADR 0007), then {@code all().get(index)} when {@code index} is set. {@code marker} is the Migration Marker it needs, if any.
      */
     record Lookup(Wrapper wrapper, List<Filter> filters, Expression index, String marker) {
     }
@@ -165,7 +165,7 @@ final class DramafinderWrappers {
             return null; // 1.x matched a substring, and the Unified filter is exact
         } else if (FIRST_MATCH.contains(declaring.getFullyQualifiedName() + "#" + name)) {
             filter = "withTextContaining";
-            marker = "was " + name + "(..), a substring and first match; single() fails when several components match";
+            marker = "was " + name + "(..), a substring and first match; the lookup fails when several components match";
         }
         return new Lookup(wrapper, List.of(new Filter(filter, List.of(call.getArguments().get(1)))), null, marker);
     }
@@ -195,7 +195,7 @@ final class DramafinderWrappers {
             return null;
         }
         return switch (name) {
-            case "first" -> new Lookup(wrapper, filters, null, "was first(); single() fails when several components match");
+            case "first" -> new Lookup(wrapper, filters, null, "was first(); the lookup fails when several components match");
             case "get" -> new Lookup(wrapper, filters, terminal.getArguments().get(0), null);
             default -> new Lookup(wrapper, filters, null, null);
         };
@@ -220,8 +220,6 @@ final class DramafinderWrappers {
         if (lookup.index() != null) {
             code.append(".all().get(#{any(int)})");
             parameters.add(lookup.index());
-        } else {
-            code.append(".single()");
         }
         return code.toString();
     }

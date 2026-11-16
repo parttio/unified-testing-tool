@@ -2,7 +2,6 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedGrid;
@@ -16,7 +15,7 @@ class GridTest {
     // --8<-- [start:helpers]
     private static UnifiedGrid grid(UnifiedPage page, String testId) {
         page.navigate(UsersView.class);
-        return page.find(UnifiedGrid.class).withTestId(testId).single();
+        return page.find(UnifiedGrid.class).withTestId(testId);
     }
     // --8<-- [end:helpers]
 
@@ -35,7 +34,7 @@ class GridTest {
         UnifiedGrid users = grid(page, "users");
 
         // far beyond the first page: loaded lazily
-        UnifiedGrid.UnifiedGridRow row = users.rows().withCellText("Name", "User 110").single();
+        UnifiedGrid.UnifiedGridRow row = users.row().withCellText("Name", "User 110");
 
         assertEquals(109, row.getIndex());
         assertThat(row).hasCellText("Email", "user110@example.com").hasCellText("Role", "Admin");
@@ -47,9 +46,9 @@ class GridTest {
         UnifiedGrid users = grid(page, "users");
 
         // "user110@example.com" is in the Email column, "User 110" in the Name column
-        assertEquals(109, users.rows().withCellText("user110@example.com").single().getIndex());
-        assertEquals(109, users.rows().withCellText("User 110").single().getIndex());
-        assertFalse(users.rows().withCellText("user110@example").exists());
+        assertEquals(109, users.row().withCellText("user110@example.com").getIndex());
+        assertEquals(109, users.row().withCellText("User 110").getIndex());
+        assertThat(users.row().withCellText("user110@example")).doesNotExist();
     }
 
     @Test
@@ -57,7 +56,7 @@ class GridTest {
         UnifiedGrid users = grid(page, "users");
 
         assertEquals("User 1", users.row(0).getCellText(0));
-        assertEquals("user110@example.com", users.rows().withCellText("Name", "User 110").single().getCellText(1));
+        assertEquals("user110@example.com", users.row().withCellText("Name", "User 110").getCellText(1));
     }
 
     // --8<-- [start:combinesCellFilters]
@@ -66,11 +65,11 @@ class GridTest {
         UnifiedGrid users = grid(page, "users");
 
         // "user11" matches user11 and user110..user119 (11 rows); only user110 of them is an Admin
-        assertEquals(11, users.rows().withCellTextContaining("Email", "user11").all().size());
+        assertThat(users.row().withCellTextContaining("Email", "user11")).hasCount(11);
         // ...Containing ignores case
-        assertEquals(1, users.rows().withCellTextContaining("Email", "USER11@").all().size());
-        assertEquals(1, users.rows().withCellTextContaining("Email", "user11").withCellText("Role", "Admin").all().size());
-        assertFalse(users.rows().withCellText("Name", "Nobody").exists());
+        assertThat(users.row().withCellTextContaining("Email", "USER11@")).hasCount(1);
+        assertThat(users.row().withCellTextContaining("Email", "user11").withCellText("Role", "Admin")).hasCount(1);
+        assertThat(users.row().withCellText("Name", "Nobody")).doesNotExist();
     }
     // --8<-- [end:combinesCellFilters]
 

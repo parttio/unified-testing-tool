@@ -19,15 +19,15 @@ class EditPersonBrowserlessMigratedTest {
     @Test
     void editsAPersonFromTheGrid(UnifiedPage page) {
         page.navigate(PeopleView.class);
-        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+        UnifiedGrid people = page.find(UnifiedGrid.class);
 
         // TODO unified: was a scan of column 0; withCellText(text) matches any column: name the column, withCellText(header, text), if another column can hold the text
-        int row = people.rows().withCellText("Alan Turing").single().getIndex();
+        int row = people.row().withCellText("Alan Turing").getIndex();
         people.row(row).click();
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alan M. Turing");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alan M. Turing");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alan M. Turing");
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
         assertEquals("Alan M. Turing", people.row(row).getCellText(0));
     }
 }

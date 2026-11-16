@@ -13,7 +13,7 @@ import org.openrewrite.java.tree.TypeUtils;
 /**
  * Dramafinder's {@code GridElement} rows and cells in Unified terms (ADR 0006): {@code grid.findRow(index)} is
  * {@code grid.row(index)}, {@code findRowIndexesWithColumnText(col, text).get(0)} the index of
- * {@code grid.rows().withCellText(..).single()}, a row's {@code getCell(col).getText()} its
+ * {@code grid.row().withCellText(..)}, a row's {@code getCell(col).getText()} its
  * {@code getCellText(col)}, and grid waits Auto-Wait makes unnecessary go.
  */
 final class DramafinderGrids {
