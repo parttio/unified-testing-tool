@@ -63,7 +63,7 @@ The same on every Testing Tool:
 |---|---|
 | Hidden components | **included**: a component hidden after it was shown stays in a browser's page, so Browserless includes it too. Add `.visible()` for "the action is gone". A component that was never visible is in no browser's page (Flow doesn't send it), but Browserless finds it: `.visible()` gives the same answer everywhere. |
 | Dialogs, notifications | open ones only; a closed dialog (the app's or the dev tools') is not part of the page |
-| Shadow DOM | not searched, except the shadow DOM of the app's own templates in Playwright; Vaadin's components and the dev tools are left out |
+| Shadow DOM | not searched: neither Vaadin's components and the dev tools nor the app's own templates |
 | Grid cell components | found page-wide for the rows the grid rendered, as a browser has them |
 | No tag | a lookup for a component without a tag (`findComponent(Component.class)`, a `Composite`) fails at once on every Testing Tool: a browser can't find it |
 

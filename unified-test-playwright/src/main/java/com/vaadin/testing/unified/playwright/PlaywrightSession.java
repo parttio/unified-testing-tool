@@ -1,5 +1,6 @@
 package com.vaadin.testing.unified.playwright;
 
+import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
@@ -11,12 +12,8 @@ import com.vaadin.testing.unified.internal.CurrentView;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
-import com.vaadin.testing.unified.spi.StaleElementException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +22,11 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.RouteNavigation;
+import org.vaadin.addons.dramafinder.VaadinClient;
+import org.vaadin.addons.dramafinder.element.GenericElement;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
 import org.vaadin.addons.dramafinder.element.query.ElementQueries;
+import org.vaadin.addons.dramafinder.element.query.TagQuery;
 
 /** One test on Playwright: one browser context and page. */
 final class PlaywrightSession implements AdapterSession {
@@ -94,16 +94,33 @@ final class PlaywrightSession implements AdapterSession {
         if (support.dramafinderElement() != null) {
             return findWithDramafinder(support, scope, spec.filters());
         }
-        String tag = spec.tag() == null ? null : support.selector(spec.tag());
-        if (tag == null) {
+        if (spec.tag() == null) {
             throw new IllegalArgumentException(spec.componentType().getName()
                     + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
         }
-        // what CSS can express goes into the selector; the rest is checked in the page, for every candidate in
-        // one round trip: no browser call per element, and no element detaching between two calls.
-        // Dramafinder has no query by tag yet: parttio/dramafinder#273, #276
-        String selector = BrowserQueries.selector(tag, spec.filters());
-        Locator candidates = scope == null ? page.locator(selector) : scope.locator(selector);
+        // Dramafinder's tag query takes the filters CSS can express; the rest are checked in the page with the
+        // Unified API's matching, for every candidate in one round trip: no browser call per element, and no
+        // element detaching between two calls.
+        TagQuery<GenericElement> query;
+        if ("*".equals(spec.tag())) { // Dramafinder's find takes a tag name only: any element, light DOM only
+            query = new TagQuery<>(GenericElement.class, scope == null ? page.locator("css:light=*")
+                    : scope.locator("css:light=*"));
+        } else {
+            query = scope == null ? ElementQueries.find(page, spec.tag()) : ElementQueries.find(scope, spec.tag());
+        }
+        for (Filter f : spec.filters()) {
+            if (BrowserQueries.selectorPart(f) != null) {
+                query = switch (f.kind()) {
+                    case ID -> query.withId(f.value());
+                    case TEST_ID -> query.withTestId(f.value());
+                    case CLASS_NAME -> query.withClassName(f.value());
+                    case THEME -> query.withTheme(f.value());
+                    case ATTRIBUTE -> query.withAttribute(f.name(), f.value());
+                    default -> throw new IllegalStateException("Not a CSS filter: " + f);
+                };
+            }
+        }
+        Locator candidates = query.getLocator();
         List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
         List<Integer> indices = new ArrayList<>();
         for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, remaining)) {
@@ -170,37 +187,27 @@ final class PlaywrightSession implements AdapterSession {
                 case CLASS_NAME -> "withClassName";
                 case THEME, ATTRIBUTE -> null;
             };
-            if (f.kind() == Filter.Kind.THEME) { // parttio/dramafinder#274
-                query = refine(query, l -> l.and(page.locator("[theme~=\"" + f.value() + "\"]")));
+            if (f.kind() == Filter.Kind.THEME) {
+                query = invoke(query, "withTheme", new Class<?>[] { String.class }, f.value());
             } else if (f.kind() == Filter.Kind.ATTRIBUTE) {
                 query = invoke(query, "withAttribute", new Class<?>[] { String.class, String.class }, f.name(), f.value());
             } else {
-                // no withPlaceholderContaining yet: parttio/dramafinder#275
-                String name = f.exact() || f.kind() == Filter.Kind.PLACEHOLDER ? method : method + "Containing";
-                query = invoke(query, name, new Class<?>[] { String.class }, f.value());
+                query = invoke(query, f.exact() ? method : method + "Containing", new Class<?>[] { String.class },
+                        f.value());
             }
         }
-        // Dramafinder's queries also match inside the shadow DOM of Vaadin's components and dev tools (e.g. the
-        // Copilot toolbar's radio group): leave those out, as tag queries do. parttio/dramafinder#276
+        // all() returns the query locator's matches in order: element i is candidates.nth(i)
         Locator candidates = (Locator) invoke(query, "getLocator", new Class<?>[0]);
-        List<?> app = (List<?>) candidates.evaluateAll("els => els.map(" + BrowserQueries.APP_CONTENT + ")");
         @SuppressWarnings("unchecked")
         List<VaadinElement> found = (List<VaadinElement>) invoke(query, "all", new Class<?>[0]);
-        if (found.size() != app.size()) { // the page changed between the two reads: the core queries again
-            throw new StaleElementException("The page changed while finding " + candidates, null);
-        }
         List<UnifiedElement> result = new ArrayList<>();
         for (int i = 0; i < found.size(); i++) {
             VaadinElement e = found.get(i);
-            if (Boolean.TRUE.equals(app.get(i)) && support.include(e.getLocator())) {
+            if (support.include(e.getLocator())) {
                 result.add(new PlaywrightElement(this, e.getLocator(), e, support, candidates, i));
             }
         }
         return result;
-    }
-
-    private static Object refine(Object query, java.util.function.UnaryOperator<Locator> refinement) {
-        return invoke(query, "refine", new Class<?>[] { java.util.function.UnaryOperator.class }, refinement);
     }
 
     private static Object invokeStatic(String name, Class<?>[] types, Object... args) {
@@ -266,55 +273,35 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public boolean isAt(Class<? extends Component> view) {
-        if (!CurrentView.hasRoute(view)) { // UI id from Dramafinder: parttio/dramafinder#280
-            return CurrentView.shows((String) page.evaluate(CurrentView.SCRIPT, baseUrl + CurrentView.PATH), view);
+        if (!CurrentView.hasRoute(view)) {
+            return CurrentView.shows(currentViews(), view);
         }
-        return currentPath().equals(strip(RouteNavigation.pathOf(view)));
+        return RouteNavigation.isAt(page, baseUrl, view);
     }
 
-    /**
-     * The browser's location, read in the page: {@code page.url()} only learns about a client-side navigation
-     * (a RouterLink, {@code history.pushState}) on the next call to the browser. To be replaced by
-     * Dramafinder's RouteNavigation getters: parttio/dramafinder#279
-     */
-    private String location() {
-        return (String) page.evaluate("() => location.href");
+    /** The current-view endpoint's answer for the page's UI, or null (no Vaadin UI, or no endpoint). */
+    private String currentViews() {
+        Optional<Integer> ui = VaadinClient.uiId(page);
+        if (ui.isEmpty()) {
+            return null;
+        }
+        APIResponse response = page.request().get(baseUrl + CurrentView.PATH + "?ui=" + ui.get());
+        try {
+            return response.ok() ? response.text() : null;
+        } finally {
+            response.dispose();
+        }
     }
 
+    /** The path in the page's location: it already sees a client-side navigation. Null outside the app. */
     @Override
     public String currentPath() {
-        String path = URI.create(location()).getPath();
-        String basePath = URI.create(baseUrl).getPath();
-        if (basePath != null && !basePath.isEmpty() && path.startsWith(basePath)) {
-            path = path.substring(basePath.length());
-        }
-        return strip(path);
-    }
-
-    private static String strip(String path) {
-        String p = path == null ? "" : path;
-        while (p.startsWith("/")) {
-            p = p.substring(1);
-        }
-        while (p.endsWith("/")) {
-            p = p.substring(0, p.length() - 1);
-        }
-        return p;
+        return RouteNavigation.currentPath(page, baseUrl);
     }
 
     @Override
     public Optional<String> queryParameter(String name) {
-        String query = URI.create(location()).getRawQuery();
-        if (query == null) {
-            return Optional.empty();
-        }
-        for (String pair : query.split("&")) {
-            String[] kv = pair.split("=", 2);
-            if (URLDecoder.decode(kv[0], StandardCharsets.UTF_8).equals(name)) {
-                return Optional.of(kv.length > 1 ? URLDecoder.decode(kv[1], StandardCharsets.UTF_8) : "");
-            }
-        }
-        return Optional.empty();
+        return RouteNavigation.queryParameter(page, name);
     }
 
     // ---------------------------------------------------------------- the rest

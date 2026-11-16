@@ -31,18 +31,10 @@ final class PlaywrightGridAccess implements GridAccess {
 
     // ---------------------------------------------------------------- columns
 
-    /**
-     * Browser column index of each Unified column: visible, display order, selection column skipped. To be
-     * replaced by Dramafinder's column model: parttio/dramafinder#281
-     */
+    /** Browser column index of each Unified column: visible, display order, selection column skipped. */
     private List<Integer> domColumns() {
-        @SuppressWarnings("unchecked")
-        List<Number> indexes = (List<Number>) locator.evaluate("""
-                g => g._getColumns().filter(c => !c.hidden).sort((a, b) => a._order - b._order)
-                      .map((c, i) => [c, i])
-                      .filter(([c]) => c.localName !== 'vaadin-grid-flow-selection-column')
-                      .map(([, i]) => i)""");
-        return indexes.stream().map(Number::intValue).collect(Collectors.toList());
+        return grid.getColumns().stream().filter(c -> !c.selectionColumn()).map(GridElement.ColumnInfo::index)
+                .collect(Collectors.toList());
     }
 
     private int dom(int column) {
@@ -181,15 +173,10 @@ final class PlaywrightGridAccess implements GridAccess {
         return element(cellOf(row, column).getCellContentLocator());
     }
 
-    /**
-     * The column's header cells in every header row (a group header above, a filter row below). To be
-     * replaced by one Dramafinder locator: parttio/dramafinder#282
-     */
+    /** The column's header cells in every header row (a group header above, a filter row below). */
     @Override
     public UnifiedElement header(int column) {
-        return element(grid.getHeaderCells(dom(column)).stream().map(GridElement.CellElement::getCellContentLocator)
-                .reduce(Locator::or)
-                .orElseGet(() -> locator.locator("vaadin-grid-cell-content[slot='__none__']")));
+        return element(grid.getHeaderContentLocator(dom(column)));
     }
 
     @Override

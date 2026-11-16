@@ -50,11 +50,6 @@ final class PlaywrightComponents {
             return null;
         }
 
-        /** CSS selector for the component on the page; by default its web component tag. */
-        default String selector(String componentTag) {
-            return componentTag;
-        }
-
         /** Whether a found element counts as a match at all (e.g. only open dialogs). */
         default boolean include(Locator locator) {
             return true;
