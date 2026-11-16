@@ -63,3 +63,7 @@ _Avoid_: Field access, component instance
 **User Step**:
 One action or check a Unified UI Test performs, stated the way a user would describe it ("fill text field 'City' with 'Turku'"), as the Unified API reports it.
 _Avoid_: Step method, log line, trace, keyword
+
+**User Task**:
+A named piece of user work in a Unified UI Test ("edit Alan Turing's name"), shown in the reports as one heading over the User Steps it performs.
+_Avoid_: Task, step method, keyword, flow, journey, page object
