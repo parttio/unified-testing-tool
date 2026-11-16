@@ -2,7 +2,7 @@
 
 How to write Unified UI Tests, by example. The [Specification](../spec/README.md) says what the Unified API guarantees and why; this guide shows how to use it.
 
-Most examples below are included from the tests in [`unified-test-demo`](https://github.com/jcgueriaud1/unified-testing-tool/tree/main/unified-test-demo/src/test/java/demo). They run in CI on every Testing Tool, so they can't go out of date.
+Most examples below are included from the tests in [`unified-test-demo`](https://github.com/parttio/unified-testing-tool/tree/main/unified-test-demo/src/test/java/demo). They run in CI on every Testing Tool, so they can't go out of date.
 
 ## Your first test
 

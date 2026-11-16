@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-repo_url="https://github.com/jcgueriaud1/unified-testing-tool/blob/main"
+repo_url="https://github.com/parttio/unified-testing-tool/blob/main"
 src=target/docs-src
 
 rm -rf "$src"

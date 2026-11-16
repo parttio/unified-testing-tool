@@ -1,6 +1,6 @@
 # Appendix A. Mapping to the Testing Tools
 
-How each Unified API call maps onto the three Testing Tools: Browserless Test 25.3, Dramafinder 2.0.0, TestBench 25.3. "Adapter" marks behaviour the adapter adds because the tool lacks it ([appendix-gaps.md](appendix-gaps.md)). Side-by-side test: [COMPARISON.md](https://github.com/jcgueriaud1/unified-testing-tool/blob/prototype/component-wrapper/prototypes/component-wrapper/COMPARISON.md).
+How each Unified API call maps onto the three Testing Tools: Browserless Test 25.3, Dramafinder 2.0.0, TestBench 25.3. "Adapter" marks behaviour the adapter adds because the tool lacks it ([appendix-gaps.md](appendix-gaps.md)). Side-by-side test: [COMPARISON.md](https://github.com/parttio/unified-testing-tool/blob/prototype/component-wrapper/prototypes/component-wrapper/COMPARISON.md).
 
 ## Setup and navigation
 

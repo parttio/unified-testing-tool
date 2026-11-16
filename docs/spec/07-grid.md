@@ -1,6 +1,6 @@
 # 7. Grid
 
-Decided in [#28](https://github.com/jcgueriaud1/unified-testing-tool/issues/28) and, for the row lookup, [ADR 0007](../adr/0007-wrappers-carry-their-filters.md), from the prototype on branch [`prototype/grid-wrapper`](https://github.com/jcgueriaud1/unified-testing-tool/tree/prototype/grid-wrapper/prototypes/grid-wrapper). Sketch: [`UnifiedGrid`](../../spec/api-sketch/src/main/java/com/vaadin/testing/unified/component/UnifiedGrid.java), example [`UsersViewTest`](../../spec/api-sketch/src/test/java/example/UsersViewTest.java).
+Decided in [#28](https://github.com/jcgueriaud1/unified-testing-tool/issues/28) and, for the row lookup, [ADR 0007](../adr/0007-wrappers-carry-their-filters.md), from the prototype on branch [`prototype/grid-wrapper`](https://github.com/parttio/unified-testing-tool/tree/prototype/grid-wrapper/prototypes/grid-wrapper). Sketch: [`UnifiedGrid`](../../spec/api-sketch/src/main/java/com/vaadin/testing/unified/component/UnifiedGrid.java), example [`UsersViewTest`](../../spec/api-sketch/src/test/java/example/UsersViewTest.java).
 
 ## Shape
 

@@ -2,7 +2,7 @@
 
 The same test written four times: once with the Unified API and once with each Testing Tool's own API. The point is to compare syntax: how each one sets up, finds components, acts and asserts.
 
-**Scenario** ([`PeopleView`](https://github.com/jcgueriaud1/unified-testing-tool/blob/main/unified-test-demo/src/main/java/demo/PeopleView.java)): a grid of people next to an editor form.
+**Scenario** ([`PeopleView`](https://github.com/parttio/unified-testing-tool/blob/main/unified-test-demo/src/main/java/demo/PeopleView.java)): a grid of people next to an editor form.
 
 1. Open the view.
 2. Click the row of *Alan Turing* in the grid; the form shows that person.
