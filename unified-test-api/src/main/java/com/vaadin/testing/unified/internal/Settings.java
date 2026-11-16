@@ -18,6 +18,8 @@ public final class Settings {
     public static final String TIMEOUT = "vaadin.testing.timeout";
     public static final String EVIDENCE_DIR = "vaadin.testing.evidence-dir";
     public static final String USER_STEPS_LOG = "vaadin.testing.user-steps.log";
+    public static final String USER_STEPS_GITHUB_SUMMARY = "vaadin.testing.user-steps.github-summary";
+    public static final String USER_STEPS_CHANGED_SINCE = "vaadin.testing.user-steps.changed-since";
 
     /** Which tests print their User Steps to stdout, the CI log. */
     public enum UserStepsLog { ALL, FAILED, NONE }
@@ -60,6 +62,23 @@ public final class Settings {
                 throw new IllegalArgumentException(USER_STEPS_LOG + ": expected all, failed or none, got " + v);
             }
         }).orElse(UserStepsLog.FAILED);
+    }
+
+    /**
+     * {@code vaadin.testing.user-steps.github-summary}: whether {@code summary.md} goes into the GitHub job summary
+     * when {@code GITHUB_STEP_SUMMARY} is set. Anything but {@code false} means yes.
+     */
+    public boolean userStepsGithubSummary() {
+        return get(USER_STEPS_GITHUB_SUMMARY).map(v -> !v.trim().equalsIgnoreCase("false")).orElse(true);
+    }
+
+    /**
+     * The base ref of "Changed in this PR": {@code vaadin.testing.user-steps.changed-since}, else
+     * {@code origin/$GITHUB_BASE_REF} when GitHub Actions builds a pull request, else none.
+     */
+    public Optional<String> userStepsChangedSince(java.util.Map<String, String> env) {
+        return get(USER_STEPS_CHANGED_SINCE).map(String::trim).or(() -> Optional
+                .ofNullable(env.get("GITHUB_BASE_REF")).filter(v -> !v.isBlank()).map(v -> "origin/" + v.trim()));
     }
 
     static Duration parseDuration(String value) {
