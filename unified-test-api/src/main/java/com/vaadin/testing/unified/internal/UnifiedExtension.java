@@ -4,7 +4,6 @@ import com.vaadin.testing.unified.RequiresBrowser;
 import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
-import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
 import java.lang.reflect.AnnotatedElement;
@@ -73,11 +72,7 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
         TestingTool tool = settings.tool();
         Duration timeout = settings.timeout();
         TestingToolAdapter adapter = adapterFor(tool);
-        AdapterSession session = adapter.open(new AdapterContext() {
-            @Override public ExtensionContext extensionContext() { return context; }
-            @Override public Optional<String> configuration(String key) { return settings.get(key); }
-            @Override public Duration timeout() { return timeout; }
-        });
+        AdapterSession session = adapter.open(new JUnitAdapterContext(context, settings));
         context.getStore(NAMESPACE).put(SESSION, session);
         return new UnifiedPageImpl(new TestRun(tool, session, timeout));
     }
