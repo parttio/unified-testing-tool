@@ -49,6 +49,11 @@ public final class TabSheetSupport {
             public String describe() {
                 return sheet.describe() + ".content()";
             }
+
+            @Override
+            public com.vaadin.testing.unified.internal.steps.StepTarget userTarget() {
+                return com.vaadin.testing.unified.internal.steps.StepTarget.of(sheet);
+            }
         };
         return new LazyScope(new LazyElement(resolver, -1, sheet.run()));
     }

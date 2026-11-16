@@ -130,6 +130,66 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 
 Later outputs, built from the same `user-steps.json`: an HTML run report with per-step evidence, living documentation per view, and a step-level diff against the base branch's last run.
 
+### `user-steps.json`, schema version 1
+
+One file per test, at `<vaadin.testing.evidence-dir>/<test class>/<test method>/user-steps.json`, next to `user-steps.txt`. The test class is its binary name without the package (`EditPersonTest`, `UsersTest$AsAlice`). The n-th invocation of a parameterized or repeated test adds `[n]` to the method (`savesAll[2]`). UTF-8, written for every test that injects a `UnifiedPage`, passed or failed.
+
+A reader checks `schemaVersion` first. Version 1 only adds fields in a compatible way: readers ignore fields they don't know. Optional fields are left out when they have no value, never written as `null`.
+
+**Test**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schemaVersion` | number | `1` |
+| `testClass` | string | binary name, `demo.EditPersonTest` |
+| `testMethod` | string | `editsAPersonInTheDialog` |
+| `displayName` | string | the scenario: `@DisplayName`, or the method name |
+| `tool` | string | `browserless`, `playwright` or `selenium` |
+| `status` | string | `passed`, `failed` or `aborted` (an assumption failed) |
+| `startedAt` | string | ISO-8601 instant, UTC |
+| `durationMs` | number | from injecting the `UnifiedPage` to the end of the test |
+| `stepCount` | number | User Steps recorded, groups and gaps not counted |
+| `failure` | object, optional | only when `status` is `failed`, see below |
+| `steps` | array | the entries, in order: User Steps, step groups and gaps |
+
+**`failure`**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `type` | string | the exception class, `java.lang.AssertionError` |
+| `message` | string, optional | its message, secrets masked |
+| `stepIndex`, `stepNumber` | string, number, optional | the User Step that threw it; left out when the test failed outside any User Step (a plain JUnit assertion) |
+| `codePath` | array of call sites | where it happened, outermost first: the call site of each `page.step(..)` it passed through, then the failed User Step's (or the first line of the failure's stack trace outside the Unified API) |
+
+**Entries** (`type` tells them apart)
+
+| Field | In | Type | Meaning |
+|---|---|---|---|
+| `type` | all | string | `step`, `group` or `gap` |
+| `index` | step, group | string | position in the tree, `2.1`. Gaps have none |
+| `number` | step | number | 1-based among all User Steps of the test, in the order they finished |
+| `text` | step, gap | string | the line as in `user-steps.txt`: `fill text field “Name” with “Alan M. Turing”` |
+| `verb` | step | string | from the verb table: `open`, `click`, `fill`, `see`, `see no`, …; for add-on Wrappers their `@UserStepVerb` or method name in words |
+| `kind` | step, optional | string | component kind, `combo box`; left out for page steps (`open People`) |
+| `name` | step, optional | string | the main filter's value |
+| `filters` | step, optional | array of strings | the other filters in words, `test id “billing”`; for grid rows the conditions, `Name is “Alan Turing”` |
+| `position` | step, optional | number | 1-based position from `all()` |
+| `scope` | step, optional | string | the containers, innermost first, `dialog “Edit person”` |
+| `values` | step, optional | array of strings | values typed, chosen or expected; masked and cut as in the text |
+| `name` | group | string | the `page.step(..)` name |
+| `steps` | group | array | its entries |
+| `reason` | gap | string | `Escape Hatch`, `waitUntil` or `where(..) condition` |
+| `count` | gap | number | calls in this run of gaps. For the Escape Hatch: how often it was entered (`unwrap`, `tryUnwrap`, an Escape Hatch method), not what ran inside |
+| `window` | all, optional | string | the window the entry ran in, `window 2` or `user bob`; left out for the test's first window |
+| `status` | all | string | `passed` or `failed`. A test that catches a failure (`assertThrows`) keeps the failed step |
+| `durationMs` | step, group | number | |
+| `callSite` | all, optional | call site | the first stack frame outside the Unified API, its adapters, Wrapper interfaces and the JDK; for a group, the line calling `page.step(..)` |
+| `error` | all, optional | string | when `failed`: exception class and first line of the message |
+
+**Call site:** `{ "file": "EditPersonTest.java", "line": 24, "className": "demo.EditPersonTest", "method": "editPerson" }`. `file` is left out without debug information; `line` is `-1` when unknown; a lambda's method is the method that declares it.
+
+Values typed into a password field, and every value passed through `page.secret(..)`, are written as `••••` in every field. Values longer than 80 characters are cut with `…`.
+
 ## Failures
 
 Every Unified failure throws `UnifiedAssertionError extends AssertionError`, so JUnit reports a failure, not an error. Its message uses fixed labels in a fixed order, and lines with nothing to say are left out. The same parts are available as fields.

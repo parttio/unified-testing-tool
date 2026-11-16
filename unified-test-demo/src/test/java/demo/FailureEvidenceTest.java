@@ -22,7 +22,10 @@ import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
 
-/** Runs a failing Unified UI Test and checks it left evidence: a screenshot or the component tree. */
+/**
+ * Runs a failing Unified UI Test and checks it left evidence: a screenshot or the component tree, and its User
+ * Steps, on the failure and in the evidence directory.
+ */
 class FailureEvidenceTest {
 
     /** Fails on purpose; tagged so Surefire doesn't run it on its own. */
@@ -56,6 +59,14 @@ class FailureEvidenceTest {
         String name = Failing.class.getName() + ".fails";
         assertTrue(Arrays.stream(failure.getSuppressed()).anyMatch(s -> s.getMessage().contains(name)),
                 "the failure names its evidence: " + Arrays.toString(failure.getSuppressed()));
+
+        String steps = "   1  open Profile\n   2  fill text field “Name” with “Evidence”\n"
+                + "   ✘ AssertionError: failing on purpose\n";
+        assertTrue(Arrays.stream(failure.getSuppressed()).anyMatch(s -> s.getMessage().contains(steps)),
+                "the failure shows the User Steps: " + Arrays.toString(failure.getSuppressed()));
+        Path stepsDir = dir.resolve("FailureEvidenceTest$Failing").resolve("fails");
+        assertTrue(Files.readString(stepsDir.resolve("user-steps.txt")).contains(steps));
+        assertTrue(Files.readString(stepsDir.resolve("user-steps.json")).contains("\"schemaVersion\": 1"));
 
         if (tool.hasRealBrowser()) {
             byte[] png = Files.readAllBytes(dir.resolve(name + ".png"));

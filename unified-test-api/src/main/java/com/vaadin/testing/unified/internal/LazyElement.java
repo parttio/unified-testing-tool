@@ -4,6 +4,9 @@ import com.vaadin.testing.unified.UnifiedElement;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
+import com.vaadin.testing.unified.internal.steps.Phrase;
+import com.vaadin.testing.unified.internal.steps.Phrases;
 
 /**
  * The Unified Element behind every wrapper. Finds its component again on every call (lazy), waiting until
@@ -11,6 +14,9 @@ import java.util.function.Consumer;
  * is visible and enabled; the adapter waits for the server round-trip after the action.
  */
 public final class LazyElement implements UnifiedElement {
+
+    /** The gap reason for calls into the Testing Tool's own API. */
+    public static final String ESCAPE_HATCH = "Escape Hatch";
 
     private final ElementResolver source;
     private final int index;
@@ -88,16 +94,23 @@ public final class LazyElement implements UnifiedElement {
         return index < found.size() ? Optional.of(found.get(index)) : Optional.empty();
     }
 
-    /** Runs a user action once the element is visible and enabled (Auto-Wait). */
+    /**
+     * Runs a user action once the element is visible and enabled (Auto-Wait). Called from a Wrapper method, it
+     * makes that call a User Step; otherwise it records one of its own, from {@code action}.
+     */
     public void act(String action, Consumer<UnifiedElement> body) {
-        StaleRetry.call(run, () -> {
+        act(() -> Phrases.forElementAction(action, this, null), action, body);
+    }
+
+    private void act(Supplier<Phrase> phrase, String action, Consumer<UnifiedElement> body) {
+        run.steps().action(phrase, run.window(), () -> StaleRetry.call(run, () -> {
             UnifiedElement element = run.poll(() -> {
                 UnifiedElement e = concrete();
                 return e.isVisible() && e.isEnabled() ? e : null;
             }, () -> "Can't " + action + ": " + describe() + " is not visible and enabled");
             body.accept(element);
             return null;
-        });
+        }));
     }
 
     /** Reads from the element, finding it again if it went stale meanwhile. */
@@ -124,10 +137,16 @@ public final class LazyElement implements UnifiedElement {
 
     @Override public void setProperty(String name, Object value) { read(e -> { e.setProperty(name, value); return null; }); }
     @Override public void click() { act("click", UnifiedElement::click); }
-    @Override public void setValueAsUser(Object value) { act("set the value of", e -> e.setValueAsUser(value)); }
+    @Override public void setValueAsUser(Object value) {
+        act(() -> Phrases.forElementAction("set the value of", this, value), "set the value of",
+                e -> e.setValueAsUser(value));
+    }
     @Override public void focus() { act("focus", UnifiedElement::focus); }
     @Override public void blur() { read(e -> { e.blur(); return null; }); }
-    @Override public void pressKey(String key) { act("press " + key + " on", e -> e.pressKey(key)); }
+    @Override public void pressKey(String key) {
+        act(() -> Phrases.forElementAction("press " + key + " on", this, key), "press " + key + " on",
+                e -> e.pressKey(key));
+    }
     @Override public void dispatchEvent(String eventName) { read(e -> { e.dispatchEvent(eventName); return null; }); }
 
     @Override
@@ -140,6 +159,10 @@ public final class LazyElement implements UnifiedElement {
 
     @Override
     public <T> Optional<T> tryUnwrap(Class<T> type) {
+        if (!type.getName().startsWith("com.vaadin.testing.unified.")) {
+            // the Testing Tool's own type: the Escape Hatch, which the User Steps can't see into
+            run.steps().gap(ESCAPE_HATCH, run.window());
+        }
         return concrete().tryUnwrap(type);
     }
 

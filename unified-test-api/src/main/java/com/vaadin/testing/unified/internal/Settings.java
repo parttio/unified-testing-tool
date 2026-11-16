@@ -17,6 +17,10 @@ public final class Settings {
     public static final String BASE_URL = "vaadin.testing.base-url";
     public static final String TIMEOUT = "vaadin.testing.timeout";
     public static final String EVIDENCE_DIR = "vaadin.testing.evidence-dir";
+    public static final String USER_STEPS_LOG = "vaadin.testing.user-steps.log";
+
+    /** Which tests print their User Steps to stdout, the CI log. */
+    public enum UserStepsLog { ALL, FAILED, NONE }
 
     private static final Pattern DURATION = Pattern.compile("(\\d+)\\s*(ms|s|m)?");
 
@@ -45,6 +49,17 @@ public final class Settings {
     /** Where failure evidence goes: next to the Surefire reports, so CI uploads it with them. */
     public Path evidenceDir() {
         return Path.of(get(EVIDENCE_DIR).orElse("target/surefire-reports/unified-evidence"));
+    }
+
+    /** {@code vaadin.testing.user-steps.log}: {@code failed} (default), {@code all} or {@code none}. */
+    public UserStepsLog userStepsLog() {
+        return get(USER_STEPS_LOG).map(v -> {
+            try {
+                return UserStepsLog.valueOf(v.trim().toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(USER_STEPS_LOG + ": expected all, failed or none, got " + v);
+            }
+        }).orElse(UserStepsLog.FAILED);
     }
 
     static Duration parseDuration(String value) {

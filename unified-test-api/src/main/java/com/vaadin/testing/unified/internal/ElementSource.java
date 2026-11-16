@@ -12,25 +12,55 @@ import java.util.function.Predicate;
 /**
  * An immutable description of what to find: component type, tag, adapter filters, core filters (property,
  * predicate) and the parent scope. {@link #resolve} returns the matching adapter elements right now.
+ * {@code wrapperType} is null for {@code findComponent(..)}; the first {@code selectorFilters} filters come from
+ * {@code @UnifiedComponent(selector)} and are not the user's.
  */
-public record ElementSource(TestRun run, String wrapperName, Class<? extends Component> componentType, String tag,
-        List<Filter> filters, List<Predicate<UnifiedElement>> coreFilters, List<String> coreFilterNames,
-        LazyElement parent) implements ElementResolver {
+public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperType,
+        Class<? extends Component> componentType, String tag, List<Filter> filters, int selectorFilters,
+        List<Predicate<UnifiedElement>> coreFilters, List<FilterLabel> coreFilterNames, LazyElement parent)
+        implements ElementResolver {
+
+    /**
+     * How a core filter reads: {@code display} in API terms ({@code withHeaderTitle("Edit person")}), and the
+     * method and arguments for the User Step reports. {@code where(..)} has no arguments: it is opaque.
+     */
+    public record FilterLabel(String display, String method, List<String> args) {
+        public static FilterLabel opaque() {
+            return new FilterLabel("where(..)", "where", List.of());
+        }
+
+        public boolean isOpaque() {
+            return method.equals("where");
+        }
+
+        @Override
+        public String toString() {
+            return display;
+        }
+    }
 
     public ElementSource with(Filter filter) {
         List<Filter> copy = new ArrayList<>(filters);
         copy.add(filter);
-        return new ElementSource(run, wrapperName, componentType, tag, List.copyOf(copy), coreFilters,
-                coreFilterNames, parent);
+        return new ElementSource(run, wrapperName, wrapperType, componentType, tag, List.copyOf(copy),
+                selectorFilters, coreFilters, coreFilterNames, parent);
     }
 
-    public ElementSource with(Predicate<UnifiedElement> filter, String name) {
+    public ElementSource with(Predicate<UnifiedElement> filter, FilterLabel label) {
         List<Predicate<UnifiedElement>> copy = new ArrayList<>(coreFilters);
         copy.add(filter);
-        List<String> names = new ArrayList<>(coreFilterNames);
-        names.add(name);
-        return new ElementSource(run, wrapperName, componentType, tag, filters, List.copyOf(copy),
-                List.copyOf(names), parent);
+        List<FilterLabel> names = new ArrayList<>(coreFilterNames);
+        names.add(label);
+        return new ElementSource(run, wrapperName, wrapperType, componentType, tag, filters, selectorFilters,
+                List.copyOf(copy), List.copyOf(names), parent);
+    }
+
+    /** The same lookup with its last core filter named, e.g. a custom filter built from {@code where(..)}. */
+    public ElementSource withLastCoreFilterNamed(FilterLabel label) {
+        List<FilterLabel> names = new ArrayList<>(coreFilterNames);
+        names.set(names.size() - 1, label);
+        return new ElementSource(run, wrapperName, wrapperType, componentType, tag, filters, selectorFilters,
+                coreFilters, List.copyOf(names), parent);
     }
 
     /** Matching adapter elements now. Waits for the parent scope (if any) to exist. */
