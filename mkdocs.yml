@@ -1,7 +1,7 @@
 site_name: Unified API for Vaadin UI tests
-site_url: https://jcgueriaud1.github.io/unified-testing-tool/
-repo_url: https://github.com/jcgueriaud1/unified-testing-tool
-repo_name: jcgueriaud1/unified-testing-tool
+site_url: https://parttio.github.io/unified-testing-tool/
+repo_url: https://github.com/parttio/unified-testing-tool
+repo_name: parttio/unified-testing-tool
 edit_uri: ""
 
 # Staged by scripts/build-docs.sh from README.md, GLOSSARY.md and docs/.

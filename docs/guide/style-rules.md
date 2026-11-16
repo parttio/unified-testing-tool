@@ -78,7 +78,7 @@ Leave classes out when you import them. The demo leaves out its golden migration
 --8<-- "unified-test-demo/src/test/java/demo/UnifiedStyleTest.java:excludingClasses"
 ```
 
-For one violation that is the point of a test, list a regular expression matching its message in `archunit_ignore_patterns.txt` at the root of the test class path (`src/test/resources`). The demo's [`ProfileViewTest`](https://github.com/jcgueriaud1/unified-testing-tool/blob/main/unified-test-demo/src/test/java/demo/ProfileViewTest.java) checks that `unwrap(..)` without the annotation fails, so its file has:
+For one violation that is the point of a test, list a regular expression matching its message in `archunit_ignore_patterns.txt` at the root of the test class path (`src/test/resources`). The demo's [`ProfileViewTest`](https://github.com/parttio/unified-testing-tool/blob/main/unified-test-demo/src/test/java/demo/ProfileViewTest.java) checks that `unwrap(..)` without the annotation fails, so its file has:
 
 ```
 Testing Tool code needs its Capability: test demo\.ProfileViewTest\.unwrapNamesTheMissingAnnotation\(UnifiedPage\) .*
