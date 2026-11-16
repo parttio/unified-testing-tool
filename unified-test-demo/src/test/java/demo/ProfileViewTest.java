@@ -2,7 +2,6 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,12 +29,12 @@ class ProfileViewTest {
     void savesName(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
-        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
         name.setValue("Alice");
-        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("alice@example.com");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single()).isOpen().hasText("Saved Alice");
+        assertThat(page.find(UnifiedNotification.class)).isOpen().hasText("Saved Alice");
         assertThat(name).hasValue("Alice").isValid();
     }
     // --8<-- [end:savesName]
@@ -44,9 +43,9 @@ class ProfileViewTest {
     void requiresEmail(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedTextField.class).withLabel("Email").single())
+        assertThat(page.find(UnifiedTextField.class).withLabel("Email"))
                 .isInvalid()
                 .hasErrorMessage("Email is required");
     }
@@ -56,9 +55,9 @@ class ProfileViewTest {
     void findsIconButtonByAccessibleName(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
-        page.find(UnifiedButton.class).withAccessibleName("Delete account").single().click();
+        page.find(UnifiedButton.class).withAccessibleName("Delete account").click();
 
-        assertThat(page.find(UnifiedNotification.class).withText("Account deleted").single()).isOpen();
+        assertThat(page.find(UnifiedNotification.class).withText("Account deleted")).isOpen();
     }
     // --8<-- [end:findsIconButtonByAccessibleName]
 
@@ -66,36 +65,36 @@ class ProfileViewTest {
     void findsByTestIdAndPlaceholder(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
-        page.find(UnifiedTextField.class).withTestId("nickname").single().setValue("Ali");
+        page.find(UnifiedTextField.class).withTestId("nickname").setValue("Ali");
 
-        assertThat(page.find(UnifiedTextField.class).withPlaceholder("Nickname").single()).hasValue("Ali");
+        assertThat(page.find(UnifiedTextField.class).withPlaceholder("Nickname")).hasValue("Ali");
     }
 
     @Test
     void knowsDisabledButtons(UnifiedPage page) {
         page.navigate(ProfileView.class);
 
-        assertThat(page.find(UnifiedButton.class).withText("Archive").single()).isDisabled();
-        assertThat(page.find(UnifiedButton.class).withText("Save").single()).isEnabled().hasText("Save");
+        assertThat(page.find(UnifiedButton.class).withText("Archive")).isDisabled();
+        assertThat(page.find(UnifiedButton.class).withText("Save")).isEnabled().hasText("Save");
     }
 
     // --8<-- [start:escapeHatchIsOptional]
     @Test
     void escapeHatchIsOptional(UnifiedPage page) {
         page.navigate(ProfileView.class);
-        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
 
         // the Flow component exists only on Browserless; the test still runs everywhere
         name.tryUnwrap(TextField.class).ifPresent(field -> assertEquals("Name", field.getLabel()));
-        assertTrue(page.find(UnifiedButton.class).withText("Save").exists());
-        assertFalse(page.find(UnifiedButton.class).withText("No such button").exists());
+        assertThat(page.find(UnifiedButton.class).withText("Save")).exists();
+        assertThat(page.find(UnifiedButton.class).withText("No such button")).doesNotExist();
     }
     // --8<-- [end:escapeHatchIsOptional]
 
     @Test
     void unwrapNamesTheMissingAnnotation(UnifiedPage page) {
         page.navigate(ProfileView.class);
-        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
 
         UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class,
                 () -> name.unwrap(java.io.File.class));
@@ -106,7 +105,7 @@ class ProfileViewTest {
     @RequiresTestingTool(TestingTool.SELENIUM)
     void escapeHatchToTestBench(UnifiedPage page) {
         page.navigate(ProfileView.class);
-        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
 
         TextFieldElement testBench = name.unwrap(TextFieldElement.class);
         testBench.setValue("Carol");
@@ -121,9 +120,9 @@ class ProfileViewTest {
     @RequiresTestingTool(TestingTool.BROWSERLESS)
     void readsServerSideState(UnifiedPage page) {
         page.navigate(ProfileView.class);
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Bob");
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Bob");
 
-        TextField field = page.find(UnifiedTextField.class).withLabel("Name").single().unwrap(TextField.class);
+        TextField field = page.find(UnifiedTextField.class).withLabel("Name").unwrap(TextField.class);
         assertEquals("Bob", field.getValue());
     }
     // --8<-- [end:readsServerSideState]
@@ -132,14 +131,14 @@ class ProfileViewTest {
     @RequiresBrowser
     void needsARealBrowser(UnifiedPage page) {
         page.navigate(ProfileView.class);
-        assertThat(page.find(UnifiedButton.class).withText("Save").single()).hasCssValue("cursor", "pointer");
+        assertThat(page.find(UnifiedButton.class).withText("Save")).hasCssValue("cursor", "pointer");
     }
 
     // --8<-- [start:screenshotOnlyWithARealBrowser]
     @Test
     void screenshotOnlyWithARealBrowser(UnifiedPage page) throws Exception {
         page.navigate(ProfileView.class);
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
 
         Path file = Path.of("target/screenshots/profile-alice.png");
         Files.deleteIfExists(file);

@@ -32,7 +32,7 @@ class FailureEvidenceTest {
         @Test
         void fails(UnifiedPage page) {
             page.navigate(ProfileView.class);
-            page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Evidence");
+            page.find(UnifiedTextField.class).withLabel("Name").setValue("Evidence");
             throw new AssertionError("failing on purpose");
         }
     }

@@ -19,23 +19,23 @@ class ReportTest {
     void findsAFieldByItsAccessibleName(UnifiedPage page) {
         page.navigate(ReportView.class);
 
-        page.find(UnifiedComboBox.class).withAccessibleName("Year").single().selectItem("2026");
+        page.find(UnifiedComboBox.class).withAccessibleName("Year").selectItem("2026");
 
-        assertThat(page.findComponent(Span.class).withId("selected-year").single()).hasText("2026");
+        assertThat(page.findComponent(Span.class).withId("selected-year")).hasText("2026");
     }
     // --8<-- [end:findsAFieldByItsAccessibleName]
 
-    /** Closed dialogs (the view's own, the dev tools') never match: single() finds the open one. */
+    /** Closed dialogs (the view's own, the dev tools') never match: the lookup finds the open one. */
     @Test
     void findsOnlyTheOpenDialog(UnifiedPage page) {
         page.navigate(ReportView.class);
-        page.find(UnifiedComboBox.class).withAccessibleName("Year").single().selectItem("2025");
-        page.find(UnifiedButton.class).withText("Export").single().click();
+        page.find(UnifiedComboBox.class).withAccessibleName("Year").selectItem("2025");
+        page.find(UnifiedButton.class).withText("Export").click();
 
-        UnifiedDialog dialog = page.find(UnifiedDialog.class).single();
+        UnifiedDialog dialog = page.find(UnifiedDialog.class);
 
         assertThat(dialog).isOpen().hasHeaderTitle("Export report");
-        dialog.find(UnifiedButton.class).withText("Close").single().click();
+        dialog.find(UnifiedButton.class).withText("Close").click();
         assertThat(dialog).isClosed();
     }
 }

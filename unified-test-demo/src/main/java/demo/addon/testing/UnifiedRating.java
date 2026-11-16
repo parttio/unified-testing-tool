@@ -1,10 +1,9 @@
 package demo.addon.testing;
 
-import com.vaadin.testing.unified.Findable;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
+import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
-import com.vaadin.testing.unified.query.Query;
 import demo.addon.Rating;
 
 /**
@@ -13,13 +12,11 @@ import demo.addon.Rating;
  */
 // --8<-- [start:wrapper]
 @UnifiedComponent(Rating.class)
-public interface UnifiedRating extends UnifiedWrapper, Findable<UnifiedRating.RatingQuery> {
+public interface UnifiedRating extends UnifiedWrapper, CommonFilters<UnifiedRating>, LabelFilter<UnifiedRating> {
 
-    interface RatingQuery extends Query<UnifiedRating, RatingQuery>, LabelFilter<RatingQuery> {
-        /** A custom filter built from {@code where(..)}. */
-        default RatingQuery withValue(int stars) {
-            return where(e -> Integer.valueOf(stars).equals(e.getPropertyInteger("value")));
-        }
+    /** A custom filter built from {@code where(..)}. */
+    default UnifiedRating withValue(int stars) {
+        return where(e -> Integer.valueOf(stars).equals(e.getPropertyInteger("value")));
     }
 
     /** Clicks the n-th star, as a user would. */

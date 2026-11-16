@@ -15,7 +15,7 @@ class TreeTest {
 
     private static UnifiedElement tree(UnifiedPage page) {
         page.navigate(TreeView.class);
-        return page.find(UnifiedContainer.class).withTestId("tree").single().element();
+        return page.find(UnifiedContainer.class).withTestId("tree").element();
     }
 
     private static List<String> tags(List<UnifiedElement> elements) {

@@ -20,8 +20,8 @@ class TripTest {
     void readsTheSameTextOnEveryTool(UnifiedPage page) {
         page.navigate(TripView.class);
 
-        assertThat(page.findComponent(Span.class).withId("attention").single()).hasText("Needs your attention");
-        assertThat(page.findComponent(HorizontalLayout.class).withId("total").single()).hasText("Trip total€54.00");
+        assertThat(page.findComponent(Span.class).withId("attention")).hasText("Needs your attention");
+        assertThat(page.findComponent(HorizontalLayout.class).withId("total")).hasText("Trip total€54.00");
     }
 
     /** getVisibleText() is what the browser renders. */
@@ -31,15 +31,15 @@ class TripTest {
         page.navigate(TripView.class);
 
         assertEquals("NEEDS YOUR ATTENTION",
-                page.findComponent(Span.class).withId("attention").single().element().getVisibleText());
+                page.findComponent(Span.class).withId("attention").element().getVisibleText());
         assertEquals("Trip total\n€54.00",
-                page.findComponent(HorizontalLayout.class).withId("total").single().element().getVisibleText());
+                page.findComponent(HorizontalLayout.class).withId("total").element().getVisibleText());
     }
 
     @Test
     void readsInlineStylesAsDeclared(UnifiedPage page) {
         page.navigate(TripView.class);
-        var total = page.findComponent(HorizontalLayout.class).withId("total").single().element();
+        var total = page.findComponent(HorizontalLayout.class).withId("total").element();
 
         assertEquals("var(--lumo-space-m)", total.getInlineStyle("gap"));
         assertEquals("180px", total.getInlineStyle("width"));
@@ -52,9 +52,9 @@ class TripTest {
     void filtersByClassName(UnifiedPage page) {
         page.navigate(TripView.class);
 
-        assertEquals(60, page.find(UnifiedContainer.class).withClassName("trip-card").all().size());
-        assertThat(page.find(UnifiedContainer.class).withClassName("selected").single()).hasText("Trip 42");
-        assertEquals(1, page.findComponent(Div.class).withClassName("trip-card").withText("Trip 7").all().size());
+        assertThat(page.find(UnifiedContainer.class).withClassName("trip-card")).hasCount(60);
+        assertThat(page.find(UnifiedContainer.class).withClassName("selected")).hasText("Trip 42");
+        assertThat(page.findComponent(Div.class).withClassName("trip-card").withText("Trip 7")).hasCount(1);
     }
     // --8<-- [end:filtersByClassName]
 }

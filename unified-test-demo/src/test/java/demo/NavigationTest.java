@@ -16,7 +16,7 @@ class NavigationTest {
         page.navigate(HomeView.class);
         assertThat(page).isAt(HomeView.class);
 
-        page.find(UnifiedButton.class).withText("Go to profile").single().click();
+        page.find(UnifiedButton.class).withText("Go to profile").click();
 
         assertThat(page).isAt(ProfileView.class).hasPath("profile");
     }
@@ -35,7 +35,7 @@ class NavigationTest {
     void navigatesByRouterLink(UnifiedPage page) {
         page.navigate(HomeView.class);
 
-        page.findComponent(RouterLink.class).withText("Reports").single().element().click();
+        page.findComponent(RouterLink.class).withText("Reports").element().click();
 
         assertThat(page).isAt(ReportView.class).hasPath("report");
     }
@@ -45,7 +45,7 @@ class NavigationTest {
     void showsTheNotFoundView(UnifiedPage page) {
         page.navigate(HomeView.class);
 
-        page.find(UnifiedButton.class).withText("Broken link").single().click();
+        page.find(UnifiedButton.class).withText("Broken link").click();
 
         assertThat(page).isAt(NotFoundView.class).hasPath("no-such-page");
     }

@@ -1,7 +1,6 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.testing.unified.RequiresBrowser;
@@ -19,11 +18,11 @@ class GridInteractionTest {
     // --8<-- [start:helpers]
     private static UnifiedGrid grid(UnifiedPage page, String testId) {
         page.navigate(UsersView.class);
-        return page.find(UnifiedGrid.class).withTestId(testId).single();
+        return page.find(UnifiedGrid.class).withTestId(testId);
     }
 
     private static void assertNotification(UnifiedPage page, String text) {
-        assertThat(page.find(UnifiedNotification.class).withText(text).single()).isOpen();
+        assertThat(page.find(UnifiedNotification.class).withText(text)).isOpen();
     }
     // --8<-- [end:helpers]
 
@@ -32,8 +31,8 @@ class GridInteractionTest {
     void clicksAComponentInACell(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
-        users.rows().withCellText("Name", "User 3").single()
-                .cell("Actions").find(UnifiedButton.class).withText("Edit").single().click();
+        users.row().withCellText("Name", "User 3")
+                .cell("Actions").find(UnifiedButton.class).withText("Edit").click();
 
         assertNotification(page, "Editing User 3");
     }
@@ -44,7 +43,7 @@ class GridInteractionTest {
     void findsACellComponentPageWide(UnifiedPage page) {
         grid(page, "users");
 
-        page.find(UnifiedButton.class).withAccessibleName("Edit User 3").single().click();
+        page.find(UnifiedButton.class).withAccessibleName("Edit User 3").click();
 
         assertNotification(page, "Editing User 3");
     }
@@ -54,7 +53,7 @@ class GridInteractionTest {
     void filtersThroughAHeaderField(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
-        users.column("Name").header().find(UnifiedTextField.class).withPlaceholder("Filter by name").single()
+        users.column("Name").header().find(UnifiedTextField.class).withPlaceholder("Filter by name")
                 .setValue("User 11");
 
         // User 11 and User 110..119
@@ -82,13 +81,13 @@ class GridInteractionTest {
         // the multi-select checkbox column is not a Unified column
         assertThat(roles.column(1)).hasCellTexts("Ada", "Bob", "Cy");
 
-        UnifiedGrid.UnifiedGridRow bob = roles.rows().withCellText("Role", "Editor").single();
+        UnifiedGrid.UnifiedGridRow bob = roles.row().withCellText("Role", "Editor");
         bob.select();
         assertThat(bob).isSelected();
-        assertEquals(1, roles.rows().selected().all().size());
+        assertThat(roles.row().selected()).hasCount(1);
 
         roles.selectAll();
-        assertEquals(3, roles.rows().selected().all().size());
+        assertThat(roles.row().selected()).hasCount(3);
 
         roles.deselectAll();
         assertThat(bob).isNotSelected();
@@ -114,7 +113,7 @@ class GridInteractionTest {
         tasks.row(0).click();
 
         assertNotification(page, "Clicked Task 1");
-        assertEquals(0, page.find(UnifiedNotification.class).withText("Done Task 1").all().size());
+        assertThat(page.find(UnifiedNotification.class).withText("Done Task 1")).doesNotExist();
     }
 
     @Test
@@ -134,7 +133,7 @@ class GridInteractionTest {
         UnifiedGrid.UnifiedGridRow row = grid(page, "users").row(2);
 
         row.toggleDetails();
-        row.details().find(UnifiedButton.class).withText("Reset password").single().click();
+        row.details().find(UnifiedButton.class).withText("Reset password").click();
 
         assertNotification(page, "Password reset for User 3");
     }

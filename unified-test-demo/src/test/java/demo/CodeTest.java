@@ -17,18 +17,18 @@ class CodeTest {
     void typesIntoFlowInput(UnifiedPage page) {
         page.navigate(CodeView.class);
 
-        page.findComponent(Input.class).withTestId("code").single().element().setValueAsUser("ABC");
+        page.findComponent(Input.class).withTestId("code").element().setValueAsUser("ABC");
 
-        assertThat(page.findComponent(Span.class).withId("code-value").single()).hasText("ABC");
+        assertThat(page.findComponent(Span.class).withId("code-value")).hasText("ABC");
     }
 
     @Test
     void typesIntoBareInputElement(UnifiedPage page) {
         page.navigate(CodeView.class);
-        UnifiedContainer holder = page.find(UnifiedContainer.class).withTestId("raw").single();
+        UnifiedContainer holder = page.find(UnifiedContainer.class).withTestId("raw");
 
         holder.element().findChildren("input").get(0).setValueAsUser("XYZ");
 
-        assertThat(page.findComponent(Span.class).withId("raw-value").single()).hasText("XYZ");
+        assertThat(page.findComponent(Span.class).withId("raw-value")).hasText("XYZ");
     }
 }

@@ -18,14 +18,14 @@ class EditPersonUnifiedTest {
     @Test
     void editsAPersonFromTheGrid(UnifiedPage page) {
         page.navigate(PeopleView.class);
-        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+        UnifiedGrid people = page.find(UnifiedGrid.class);
 
-        people.rows().withCellText("Name", "Alan Turing").single().click();
-        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alan M. Turing");
-        page.find(UnifiedButton.class).withText("Save").single().click();
+        people.row().withCellText("Name", "Alan Turing").click();
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alan M. Turing");
+        page.find(UnifiedButton.class).withText("Save").click();
 
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Alan M. Turing");
-        assertThat(people.rows().withCellText("Name", "Alan M. Turing").single())
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
+        assertThat(people.row().withCellText("Name", "Alan M. Turing"))
                 .hasCellText("Email", "alan@example.com");
     }
 }

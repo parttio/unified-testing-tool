@@ -2,6 +2,7 @@ package demo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
@@ -21,12 +22,12 @@ class AddonTest {
     @Test
     void wrapperWithoutOverride(UnifiedPage page) {
         page.navigate(AddonView.class);
-        UnifiedRating food = page.find(UnifiedRating.class).withLabel("Food").single();
+        UnifiedRating food = page.find(UnifiedRating.class).withLabel("Food");
 
         food.rate(3);
 
         page.waitUntil(() -> food.getValue() == 3);
-        assertEquals(4, page.find(UnifiedRating.class).withLabel("Service").single().getValue());
+        assertEquals(4, page.find(UnifiedRating.class).withLabel("Service").getValue());
     }
     // --8<-- [end:wrapperWithoutOverride]
 
@@ -36,20 +37,20 @@ class AddonTest {
         page.navigate(AddonView.class);
 
         // custom filter from where(..)
-        assertEquals(1, page.find(UnifiedRating.class).withValue(4).all().size());
+        assertThat(page.find(UnifiedRating.class).withValue(4)).hasCount(1);
         // custom filters can also be built inline from withProperty
-        assertEquals(1, page.find(UnifiedRating.class).withProperty("label", "Service").all().size());
-        assertEquals(2, page.find(UnifiedRating.class).all().size());
+        assertThat(page.find(UnifiedRating.class).withProperty("label", "Service")).hasCount(1);
+        assertThat(page.find(UnifiedRating.class)).hasCount(2);
     }
     // --8<-- [end:customFilters]
 
     @Test
     void wrapperWithToolOverride(UnifiedPage page) {
         page.navigate(AddonView.class);
-        UnifiedBadge inbox = page.find(UnifiedBadge.class).withTestId("inbox").single();
+        UnifiedBadge inbox = page.find(UnifiedBadge.class).withTestId("inbox");
         page.waitUntil(() -> inbox.getCount() == 2);
 
-        page.find(UnifiedButton.class).withText("Receive").single().click();
+        page.find(UnifiedButton.class).withText("Receive").click();
 
         page.waitUntil(() -> inbox.getCount() == 3);
         // the override is what runs on Browserless; elsewhere the wrapper's own default methods
@@ -62,7 +63,7 @@ class AddonTest {
     void anyComponentWithoutAWrapper(UnifiedPage page) {
         page.navigate(AddonView.class);
 
-        UnifiedGenericComponent service = page.findComponent(Rating.class).withLabel("Service").single();
+        UnifiedGenericComponent service = page.findComponent(Rating.class).withLabel("Service");
 
         assertEquals(4, service.element().getPropertyInteger("value"));
         assertTrue(service.isVisible());

@@ -18,40 +18,40 @@ class KeyboardTest {
     @Test
     void enterInAFieldTriggersItsKeyListener(UnifiedPage page) {
         page.navigate(KeyboardView.class);
-        UnifiedTextField search = page.find(UnifiedTextField.class).withLabel("Search").single();
+        UnifiedTextField search = page.find(UnifiedTextField.class).withLabel("Search");
         search.setValue("vaadin");
 
         search.element().pressKey("Enter");
 
-        assertThat(page.find(UnifiedNotification.class).withText("Searching vaadin").single()).isOpen();
+        assertThat(page.find(UnifiedNotification.class).withText("Searching vaadin")).isOpen();
     }
 
     @Test
     void enterInAFormClicksItsShortcutButton(UnifiedPage page) {
         page.navigate(KeyboardView.class);
-        UnifiedTextField comment = page.find(UnifiedTextField.class).withLabel("Comment").single();
+        UnifiedTextField comment = page.find(UnifiedTextField.class).withLabel("Comment");
         comment.setValue("Hello");
 
         comment.element().pressKey("Enter");
 
-        assertThat(page.find(UnifiedNotification.class).withText("Sent Hello").single()).isOpen();
+        assertThat(page.find(UnifiedNotification.class).withText("Sent Hello")).isOpen();
     }
 
     @Test
     void shortcutWithModifier(UnifiedPage page) {
         page.navigate(KeyboardView.class);
 
-        page.find(UnifiedTextField.class).withLabel("Search").single().element().pressKey("Control+s");
+        page.find(UnifiedTextField.class).withLabel("Search").element().pressKey("Control+s");
 
-        assertThat(page.find(UnifiedNotification.class).withText("Saved with Ctrl+S").single()).isOpen();
+        assertThat(page.find(UnifiedNotification.class).withText("Saved with Ctrl+S")).isOpen();
     }
 
     // --8<-- [start:escapeOnThePageClosesTheDialog]
     @Test
     void escapeOnThePageClosesTheDialog(UnifiedPage page) {
         page.navigate(KeyboardView.class);
-        page.find(UnifiedButton.class).withText("Open dialog").single().click();
-        UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Escape me").single();
+        page.find(UnifiedButton.class).withText("Open dialog").click();
+        UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Escape me");
         assertThat(dialog).isOpen();
 
         page.pressKey("Escape");
@@ -64,30 +64,30 @@ class KeyboardTest {
     void dispatchesACustomDomEvent(UnifiedPage page) {
         page.navigate(KeyboardView.class);
 
-        page.find(UnifiedContainer.class).withTestId("drop-zone").single().element().dispatchEvent("item-dropped");
+        page.find(UnifiedContainer.class).withTestId("drop-zone").element().dispatchEvent("item-dropped");
 
-        assertThat(page.find(UnifiedNotification.class).withText("Item dropped").single()).isOpen();
+        assertThat(page.find(UnifiedNotification.class).withText("Item dropped")).isOpen();
     }
 
     @Test
     void reloadCreatesTheViewAgain(UnifiedPage page) {
         page.navigate(DraftView.class);
-        page.find(UnifiedTextField.class).withLabel("Draft").single().setValue("unsaved");
+        page.find(UnifiedTextField.class).withLabel("Draft").setValue("unsaved");
 
         page.reload();
 
         assertThat(page).isAt(DraftView.class);
-        assertThat(page.find(UnifiedTextField.class).withLabel("Draft").single()).isEmpty();
+        assertThat(page.find(UnifiedTextField.class).withLabel("Draft")).isEmpty();
     }
 
     @Test
     void reloadKeepsAPreservedView(UnifiedPage page) {
         page.navigate(PreservedDraftView.class);
-        page.find(UnifiedTextField.class).withLabel("Draft").single().setValue("kept");
+        page.find(UnifiedTextField.class).withLabel("Draft").setValue("kept");
 
         page.reload();
 
         assertThat(page).isAt(PreservedDraftView.class);
-        assertThat(page.find(UnifiedTextField.class).withLabel("Draft").single()).hasValue("kept");
+        assertThat(page.find(UnifiedTextField.class).withLabel("Draft")).hasValue("kept");
     }
 }
