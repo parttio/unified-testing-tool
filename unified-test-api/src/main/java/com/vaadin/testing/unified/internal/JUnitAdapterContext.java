@@ -24,12 +24,6 @@ final class JUnitAdapterContext implements AdapterContext {
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ExtensionContext extensionContext() {
-        return context;
-    }
-
-    @Override
     public Optional<String> configuration(String key) {
         return settings.get(key);
     }

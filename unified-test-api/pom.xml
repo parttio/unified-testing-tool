@@ -9,6 +9,9 @@
     <artifactId>unified-test-api</artifactId>
     <name>Unified API</name>
     <description>Annotations, UnifiedPage, Wrappers, assertions and the adapter SPI. No Testing Tool dependency.</description>
+    <properties>
+        <no-junit.base-package>com.vaadin.testing.unified.spi.**</no-junit.base-package>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -46,6 +49,11 @@
 
     <build>
         <plugins>
+            <!-- no JUnit imports in the adapter SPI (ADR 0008); the JUnit integration lives in internal -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
