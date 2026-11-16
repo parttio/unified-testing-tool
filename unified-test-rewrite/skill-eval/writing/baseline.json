@@ -1,0 +1,90 @@
+{
+  "skillSha256": "6dc523186b25c7e5ef8bc46864551313607bc19c0f1da4e0f0e3893ffb97634e",
+  "source": "agent",
+  "totals": {
+    "compiles": 6,
+    "browserless.passed": 6,
+    "browserless.failed": 0,
+    "playwright.passed": 6,
+    "playwright.failed": 0,
+    "styleRules": 6,
+    "intent": 114,
+    "plumbing": 182,
+    "escapeHatches": 0,
+    "otherFilesChanged": 0
+  },
+  "fixtures": {
+    "ChangeEmailTest": {
+      "compiles": 1,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0,
+      "styleRules": 1,
+      "intent": 23,
+      "plumbing": 38,
+      "escapeHatches": 0,
+      "otherFilesChanged": 0
+    },
+    "CheckoutCitiesTest": {
+      "compiles": 1,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0,
+      "styleRules": 1,
+      "intent": 20,
+      "plumbing": 30,
+      "escapeHatches": 0,
+      "otherFilesChanged": 0
+    },
+    "EditUserFromGridTest": {
+      "compiles": 1,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0,
+      "styleRules": 1,
+      "intent": 13,
+      "plumbing": 20,
+      "escapeHatches": 0,
+      "otherFilesChanged": 0
+    },
+    "FilterUsersTest": {
+      "compiles": 1,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0,
+      "styleRules": 1,
+      "intent": 20,
+      "plumbing": 36,
+      "escapeHatches": 0,
+      "otherFilesChanged": 0
+    },
+    "RenamePersonTest": {
+      "compiles": 1,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0,
+      "styleRules": 1,
+      "intent": 21,
+      "plumbing": 37,
+      "escapeHatches": 0,
+      "otherFilesChanged": 0
+    },
+    "UnknownSizeTest": {
+      "compiles": 1,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0,
+      "styleRules": 1,
+      "intent": 17,
+      "plumbing": 21,
+      "escapeHatches": 0,
+      "otherFilesChanged": 0
+    }
+  }
+}

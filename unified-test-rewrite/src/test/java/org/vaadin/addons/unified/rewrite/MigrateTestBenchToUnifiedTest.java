@@ -1859,7 +1859,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             getDriver().get("http://localhost:8080/profile");
                         }
                     }
-                    """, spec -> spec.after(after -> after)));
+                    """, spec -> spec.after(after -> after)),
+                InstalledSkill.files());
     }
 
     @Test
@@ -1994,7 +1995,8 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             Assert.assertEquals(2, 1 + 1);
                         }
                     }
-                    """));
+                    """),
+                InstalledSkill.files());
     }
 
     @Test

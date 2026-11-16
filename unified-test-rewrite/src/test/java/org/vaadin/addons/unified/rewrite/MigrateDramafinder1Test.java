@@ -128,7 +128,8 @@ class MigrateDramafinder1Test implements RewriteTest {
                                 page.find(UnifiedButton.class).withTextContaining("Save").click();
                             }
                         }
-                        """));
+                        """),
+                InstalledSkill.files());
     }
 
     @Test
@@ -152,7 +153,8 @@ class MigrateDramafinder1Test implements RewriteTest {
                                 page.find(UnifiedButton.class).withText("Save").click();
                             }
                         }
-                        """));
+                        """),
+                InstalledSkill.files());
     }
 
     @Test
@@ -171,6 +173,7 @@ class MigrateDramafinder1Test implements RewriteTest {
                                 loginAsAdmin();
                             }
                         }
-                        """));
+                        """),
+                InstalledSkill.files());
     }
 }
