@@ -46,7 +46,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class ProfileTest {
                     @Test
                     void saves(UnifiedPage page) {
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -81,7 +81,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class ProfileTest {
                     @Test
                     void saves(UnifiedPage page) {
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -133,7 +133,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                     }
 
                     private void typeName(UnifiedPage page, String name) {
-                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue(name);
+                        page.find(UnifiedTextField.class).withLabel("Name").setValue(name);
                     }
                 }
                 """));
@@ -169,7 +169,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class FieldTest {
                     @Test
                     void types(UnifiedPage page) {
-                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name").single();
+                        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
                         name.setValue("Alice");
                         assertThat(name).hasValue("Alice");
                     }
@@ -206,8 +206,8 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class TermsTest {
                     @Test
                     void accepts(UnifiedPage page) {
-                        page.find(UnifiedCheckbox.class).withLabel("Terms").single().check();
-                        assertThat(page.find(UnifiedCheckbox.class).withLabel("Terms").single()).isChecked();
+                        page.find(UnifiedCheckbox.class).withLabel("Terms").check();
+                        assertThat(page.find(UnifiedCheckbox.class).withLabel("Terms")).isChecked();
                     }
                 }
                 """));
@@ -242,12 +242,12 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class ProfileTest {
                     @Test
                     void saves(UnifiedPage page) {
-                        // TODO unified: was last(); single() fails when several components match
-                        page.find(UnifiedTextField.class).single().setValue("x");
-                        // TODO unified: was atIndex(2); single() fails when several components match
-                        page.find(UnifiedTextField.class).single().clear();
+                        // TODO unified: was last(); the lookup fails when several components match
+                        page.find(UnifiedTextField.class).setValue("x");
+                        // TODO unified: was atIndex(2); the lookup fails when several components match
+                        page.find(UnifiedTextField.class).clear();
                         // TODO unified: was withCaption("Save"); use withAccessibleName(..) for a button without text
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -470,7 +470,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                     @Transactional
                     @RequiresTestingTool(TestingTool.BROWSERLESS)
                     void saves(UnifiedPage page) {
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -512,7 +512,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class ProfileTest {
                     @Test
                     void saves(UnifiedPage page) {
-                        page.find(UnifiedButton.class).withText("Save").single().click();
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));
@@ -604,8 +604,8 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                     @Test
                     void types(UnifiedPage page) {
                         page.navigate(Div.class);
-                        page.find(UnifiedTextField.class).withLabel("Name").single().setValue("Alice");
-                        page.find(UnifiedTextField.class).withLabel("Email").single().setValue("a@b");
+                        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+                        page.find(UnifiedTextField.class).withLabel("Email").setValue("a@b");
                     }
                 }
                 """));
@@ -658,8 +658,8 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
 
                     @Test
                     void reads(UnifiedPage page) {
-                        page.find(UnifiedButton.class).withText("Save").single().click();
-                        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved");
+                        page.find(UnifiedButton.class).withText("Save").click();
+                        assertThat(page.find(UnifiedNotification.class)).hasText("Saved");
                     }
                 }
                 """));
@@ -747,7 +747,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class PeopleTest {
                     @Test
                     void edits(UnifiedPage page) {
-                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        UnifiedGrid people = page.find(UnifiedGrid.class);
                         people.row(2).click();
                         people.row(1).select();
                         Assertions.assertEquals(3, people.getRowCount());
@@ -795,12 +795,12 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class FormTest {
                     @Test
                     void fills(UnifiedPage page) {
-                        page.find(UnifiedComboBox.class).withLabel("Country").single().selectItem("Finland");
-                        page.find(UnifiedMultiSelectComboBox.class).withLabel("Tags").single().selectItems("a", "b");
-                        page.find(UnifiedDatePicker.class).withLabel("Start").single().setValue(LocalDate.of(2026, 1, 1));
-                        page.find(UnifiedIntegerField.class).withLabel("Age").single().setValue(42);
-                        page.find(UnifiedTabSheet.class).single().selectTab("Security");
-                        page.find(UnifiedDetails.class).single().open();
+                        page.find(UnifiedComboBox.class).withLabel("Country").selectItem("Finland");
+                        page.find(UnifiedMultiSelectComboBox.class).withLabel("Tags").selectItems("a", "b");
+                        page.find(UnifiedDatePicker.class).withLabel("Start").setValue(LocalDate.of(2026, 1, 1));
+                        page.find(UnifiedIntegerField.class).withLabel("Age").setValue(42);
+                        page.find(UnifiedTabSheet.class).selectTab("Security");
+                        page.find(UnifiedDetails.class).open();
                     }
                 }
                 """));
@@ -883,12 +883,12 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                             }
 
                             void logIn(String user) {
-                                test.find(UnifiedTextField.class).withLabel("User").single().setValue(user);
-                                test.find(UnifiedButton.class).withText("Log in").single().click();
+                                test.find(UnifiedTextField.class).withLabel("User").setValue(user);
+                                test.find(UnifiedButton.class).withText("Log in").click();
                             }
 
                             UnifiedTextField user() {
-                                return test.find(UnifiedTextField.class).withLabel("User").single();
+                                return test.find(UnifiedTextField.class).withLabel("User");
                             }
                         }
                         """),
@@ -1009,9 +1009,9 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 class PeopleTest {
                     @Test
                     void edits(UnifiedPage page) {
-                        UnifiedGrid people = page.find(UnifiedGrid.class).single();
+                        UnifiedGrid people = page.find(UnifiedGrid.class);
                         // TODO unified: was a scan of column 1; withCellText(text) matches any column: name the column, withCellText(header, text), if another column can hold the text
-                        int row = people.rows().withCellText("Alan").single().getIndex();
+                        int row = people.row().withCellText("Alan").getIndex();
                         people.row(row).click();
                         int other = IntStream.range(0, people.getRowCount())
                                 .filter(i -> people.row(i).getCellText(1).startsWith("Al"))

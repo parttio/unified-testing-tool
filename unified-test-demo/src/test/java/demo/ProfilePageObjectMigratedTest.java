@@ -25,7 +25,7 @@ class ProfilePageObjectMigratedTest {
         profile.fill("Bob", "bob@example.com");
         profile.saveButton().click();
 
-        // TODO unified: was waitForFirst(); single() fails when several components match
-        assertThat(page.find(UnifiedNotification.class).single()).hasText("Saved Bob");
+        // TODO unified: was waitForFirst(); the lookup fails when several components match
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved Bob");
     }
 }

@@ -16,8 +16,10 @@ import org.openrewrite.java.tree.JavaType;
 
 /**
  * Turns {@code $(XElement.class)} into {@code page.find(UnifiedX.class)} for elements that have a Wrapper,
- * in test methods that have the {@code UnifiedPage page} parameter. The filters and terminals after it
- * ({@code withLabel}, {@code withText}, {@code withId}, {@code single}) keep their names.
+ * in test methods that have the {@code UnifiedPage page} parameter. The filters after it ({@code withLabel},
+ * {@code withText}, {@code withId}) keep their names; the terminal ({@code single()}, {@code first()},
+ * {@code waitForFirst()}) goes, as the Wrapper is the lookup (ADR 0007). {@code first()} and
+ * {@code waitForFirst()} leave a Migration Marker.
  */
 public class TestBenchLookupsToUnified extends Recipe {
 
@@ -62,12 +64,12 @@ public class TestBenchLookupsToUnified extends Recipe {
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
-                if (FIRST.contains(m.getSimpleName()) && hasPageParameter()) {
-                    Wrappers.Wrapper wrapper = Wrappers.ofLookup(method);
-                    if (wrapper != null && Chains.supported(getCursor(), true, wrapper)
-                            && MigrationMarkers.add(getCursor(),
-                                    "was " + m.getSimpleName() + "(); single() fails when several components match")) {
-                        return m.withName(m.getName().withSimpleName("single"));
+                if (Wrappers.TERMINALS.contains(m.getSimpleName()) && hasPageParameter()) {
+                    if (convertedLookup(method, m) && m.getSelect() instanceof J.MethodInvocation lookup
+                            && (!FIRST.contains(m.getSimpleName()) || MigrationMarkers.add(getCursor(),
+                                    "was " + m.getSimpleName() + "(); the lookup fails when several components match"))) {
+                        // the Wrapper is the lookup: no terminal (ADR 0007)
+                        return lookup.withPrefix(m.getPrefix());
                     }
                     return m;
                 }
@@ -104,6 +106,23 @@ public class TestBenchLookupsToUnified extends Recipe {
                         .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
                         .build()
                         .apply(getCursor(), m.getCoordinates().replace(), receiver);
+            }
+
+            /**
+             * Whether the terminal's lookup is one this visit converted: its {@code $(..)} (on the page or a
+             * Scope) became {@code find(..)}, which it does only when the Wrapper expresses the whole chain.
+             */
+            private boolean convertedLookup(J.MethodInvocation original, J.MethodInvocation converted) {
+                org.openrewrite.java.tree.Expression o = original.getSelect();
+                org.openrewrite.java.tree.Expression c = converted.getSelect();
+                while (o instanceof J.MethodInvocation oc && c instanceof J.MethodInvocation cc) {
+                    if (oc.getSimpleName().equals("$")) {
+                        return DOLLAR.matches(oc) && cc.getSimpleName().equals("find");
+                    }
+                    o = oc.getSelect();
+                    c = cc.getSelect();
+                }
+                return false;
             }
 
             private boolean isTabSheet(org.openrewrite.java.tree.Expression tabSheet) {

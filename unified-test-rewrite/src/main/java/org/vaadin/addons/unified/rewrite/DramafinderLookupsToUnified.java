@@ -24,7 +24,7 @@ import org.openrewrite.marker.Markers;
 
 /**
  * Dramafinder element code to Wrappers (ADR 0006): a lookup on the test's page ({@code XElement.getByLabel(page, ..)},
- * {@code find(page, XElement.class)...single()}) becomes {@code page.find(UnifiedX.class)...single()}, element
+ * {@code find(page, XElement.class)...single()}) becomes {@code page.find(UnifiedX.class)...}, the Wrapper, element
  * actions become the Wrapper's, and element assertions ({@code assertValue}, {@code assertOpen}, ...) become retrying
  * {@code UnifiedAssertions}. A lookup converts only when every call on what it finds does, directly or through a
  * local. Waits Auto-Wait makes unnecessary ({@code AutoWait.waitForVaadinIdle}, {@code waitForLoadState}) go.
@@ -190,8 +190,8 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                     Expression column = indexes.getArguments().get(0);
                     // Dramafinder matches one column by its index; a Unified row query names a header, or any column
                     MigrationMarkers.add(getCursor(), "was findRowIndexesWithColumnText(" + column.printTrimmed(getCursor())
-                            + ", ..).get(0): any column matches now; single() fails when several rows match");
-                    return typed(template("#{any()}.rows().withCellText(#{any(java.lang.String)}).single().getIndex()", grid)
+                            + ", ..).get(0): any column matches now; the row lookup fails when several rows match");
+                    return typed(template("#{any()}.row().withCellText(#{any(java.lang.String)}).getIndex()", grid)
                             .<J>apply(getCursor(), m.getCoordinates().replace(), indexes.getSelect(), indexes.getArguments().get(1))
                             .withId(m.getId()), DramafinderWrappers.ROW);
                 }
@@ -253,11 +253,10 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
         };
     }
 
-    private static final String QUERY = "com.vaadin.testing.unified.query.Query";
-
     /**
      * The tree with a Unified method type on every call the templates wrote untyped (the stubs don't know the
-     * Wrappers' queries), so later recipes find no Dramafinder type in it and the tree stays valid.
+     * Wrappers' filters), so later recipes find no Dramafinder type in it and the tree stays valid. A filter is
+     * declared on the Wrapper and returns it (ADR 0007).
      */
     @SuppressWarnings("unchecked")
     static <T extends J> T typed(T tree, DramafinderWrappers.Wrapper wrapper) {
@@ -270,14 +269,12 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 }
                 JavaType.FullyQualified declaring = m.getSelect() != null
                         && m.getSelect().getType() instanceof JavaType.FullyQualified fq && !(fq instanceof JavaType.Unknown)
-                        ? fq : JavaType.ShallowClass.build(QUERY);
+                        && !fq.getFullyQualifiedName().equals("java.lang.Object")
+                        ? fq : JavaType.ShallowClass.build(wrapper.fqn());
                 String name = m.getSimpleName();
-                JavaType returned = switch (name) {
-                    case "single", "get" -> JavaType.ShallowClass.build(wrapper.fqn());
-                    case "all" -> JavaType.ShallowClass.build("java.util.List");
-                    default -> declaring.getFullyQualifiedName().equals(QUERY)
-                            ? JavaType.ShallowClass.build(QUERY) : JavaType.Primitive.Void;
-                };
+                JavaType returned = name.equals("get") || name.startsWith("with") || name.equals("visible")
+                        ? JavaType.ShallowClass.build(wrapper.fqn())
+                        : name.equals("all") ? JavaType.ShallowClass.build("java.util.List") : JavaType.Primitive.Void;
                 return withType(m, declaring, returned);
             }
         }.visitNonNull(tree, 0);

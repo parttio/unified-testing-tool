@@ -125,7 +125,7 @@ class MigrateDramafinder1Test implements RewriteTest {
                             void saves(UnifiedPage page) {
                                 page.navigate("");
                                 // TODO unified: was 1.x getByText(..), a case-insensitive substring and first match; tighten it to withText(..) once the test passes
-                                page.find(UnifiedButton.class).withTextContaining("Save").single().click();
+                                page.find(UnifiedButton.class).withTextContaining("Save").click();
                             }
                         }
                         """));
@@ -149,7 +149,7 @@ class MigrateDramafinder1Test implements RewriteTest {
                             @Test
                             void saves(UnifiedPage page) {
                                 page.navigate("");
-                                page.find(UnifiedButton.class).withText("Save").single().click();
+                                page.find(UnifiedButton.class).withText("Save").click();
                             }
                         }
                         """));

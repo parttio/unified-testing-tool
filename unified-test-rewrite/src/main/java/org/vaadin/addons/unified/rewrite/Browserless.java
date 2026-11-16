@@ -41,7 +41,7 @@ final class Browserless {
     /** The test base's lookups: {@code $(X.class)} and friends, all starting a query on the current UI or view. */
     private static final Set<String> LOOKUPS = Set.of("$", "$view", "find", "findInView");
 
-    /** Query terminals; all but {@code single()} become {@code single()} with a Migration Marker. */
+    /** Query terminals; the conversion drops them, all but {@code single()} with a Migration Marker. */
     static final Set<String> TERMINALS = Set.of("single", "first", "last", "atIndex");
 
     /**
