@@ -76,6 +76,7 @@ nav:
       - 9. Capabilities: spec/09-capabilities.md
       - 10. Packaging: spec/10-packaging.md
       - 11. Users: spec/11-users.md
+      - 12. Readable tests: spec/12-readable-tests.md
       - Open questions: spec/open-questions.md
       - "Appendix: gaps": spec/appendix-gaps.md
       - "Appendix: mapping": spec/appendix-mapping.md
