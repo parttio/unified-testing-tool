@@ -1,38 +1,50 @@
 package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.TestingTool;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.junit.jupiter.api.extension.ExtensionContext;
 
-/** The Unified API's JUnit configuration parameters (also read from system properties). */
+/**
+ * The Unified API's settings, read from the {@link ConfigurationSource} the Test Runner integration supplies.
+ * A blank value counts as unset.
+ */
 public final class Settings {
-    private Settings() {}
 
     public static final String TOOL = "vaadin.testing.tool";
     public static final String BASE_URL = "vaadin.testing.base-url";
     public static final String TIMEOUT = "vaadin.testing.timeout";
     public static final String EVIDENCE_DIR = "vaadin.testing.evidence-dir";
 
-    /** Where failure evidence goes: next to the Surefire reports, so CI uploads it with them. */
-    public static java.nio.file.Path evidenceDir(ExtensionContext context) {
-        return java.nio.file.Path.of(get(context, EVIDENCE_DIR).orElse("target/surefire-reports/unified-evidence"));
-    }
-
     private static final Pattern DURATION = Pattern.compile("(\\d+)\\s*(ms|s|m)?");
 
-    public static Optional<String> get(ExtensionContext context, String key) {
-        return context.getConfigurationParameter(key).filter(v -> !v.isBlank());
+    private final ConfigurationSource source;
+
+    private Settings(ConfigurationSource source) {
+        this.source = source;
     }
 
-    public static TestingTool tool(ExtensionContext context) {
-        return get(context, TOOL).map(TestingTool::parse).orElse(TestingTool.BROWSERLESS);
+    public static Settings from(ConfigurationSource source) {
+        return new Settings(source);
     }
 
-    public static Duration timeout(ExtensionContext context) {
-        return get(context, TIMEOUT).map(Settings::parseDuration).orElse(Duration.ofSeconds(10));
+    public Optional<String> get(String key) {
+        return source.get(key).filter(v -> !v.isBlank());
+    }
+
+    public TestingTool tool() {
+        return get(TOOL).map(TestingTool::parse).orElse(TestingTool.BROWSERLESS);
+    }
+
+    public Duration timeout() {
+        return get(TIMEOUT).map(Settings::parseDuration).orElse(Duration.ofSeconds(10));
+    }
+
+    /** Where failure evidence goes: next to the Surefire reports, so CI uploads it with them. */
+    public Path evidenceDir() {
+        return Path.of(get(EVIDENCE_DIR).orElse("target/surefire-reports/unified-evidence"));
     }
 
     static Duration parseDuration(String value) {
