@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** The Core Set wrappers added for a typical Flow app, on every Testing Tool. */
@@ -39,6 +40,7 @@ class ExpenseTest {
 
     // --8<-- [start:fillsTheValueFields]
     @Test
+    @DisplayName("The user fills notes, nights, amount and departure, and saves the expense")
     void fillsTheValueFields(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         LocalDateTime departure = LocalDateTime.of(2026, 11, 8, 10, 30);
@@ -59,6 +61,7 @@ class ExpenseTest {
     // --8<-- [end:fillsTheValueFields]
 
     @Test
+    @DisplayName("Typing text that isn't a date leaves the return date invalid and empty")
     void typesTextADatePickerCantParse(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         UnifiedDatePicker returnDate = page.find(UnifiedDatePicker.class).withLabel("Return date");
@@ -70,6 +73,7 @@ class ExpenseTest {
     }
 
     @Test
+    @DisplayName("Typing text that isn't a date marks the departure invalid until a valid one is set")
     void typesTextADateTimePickerCantParse(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure");
@@ -86,6 +90,7 @@ class ExpenseTest {
     }
 
     @Test
+    @DisplayName("A departure with a time but no date is invalid")
     void typesAnIncompleteDateTime(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure");
@@ -98,6 +103,7 @@ class ExpenseTest {
     }
 
     @Test
+    @DisplayName("The user filters the expenses to the rejected ones")
     void selectsATab(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         UnifiedTabs filter = page.find(UnifiedTabs.class).withTab("Approved");
@@ -110,6 +116,7 @@ class ExpenseTest {
 
     // --8<-- [start:opensDetails]
     @Test
+    @DisplayName("The user opens the Advanced section and saves a cost center")
     void opensDetails(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         UnifiedDetails advanced = page.find(UnifiedDetails.class).withSummaryText("Advanced");
@@ -125,6 +132,7 @@ class ExpenseTest {
 
     // --8<-- [start:clicksNestedMenuItems]
     @Test
+    @DisplayName("The user exports the expenses as CSV from the File menu, then opens Help")
     void clicksNestedMenuItems(UnifiedPage page) {
         page.navigate(ExpenseView.class);
         UnifiedMenuBar menu = page.find(UnifiedMenuBar.class).withItem("File");
@@ -140,6 +148,7 @@ class ExpenseTest {
 
     // --8<-- [start:uploadsAFile]
     @Test
+    @DisplayName("The user uploads a receipt")
     void uploadsAFile(UnifiedPage page) {
         page.navigate(ExpenseView.class);
 
@@ -152,6 +161,7 @@ class ExpenseTest {
 
     /** Returns once the upload is handled, even when the app clears the file list right after (#122). */
     @Test
+    @DisplayName("The user uploads three attachments one after another")
     void uploadsRepeatedlyWhenTheAppClearsTheFileList(UnifiedPage page) {
         page.navigate(ExpenseView.class);
 
@@ -166,6 +176,7 @@ class ExpenseTest {
 
     // --8<-- [start:searchesInPlainHtmlContainers]
     @Test
+    @DisplayName("The summary and the payment note are found in plain HTML containers")
     void searchesInPlainHtmlContainers(UnifiedPage page) {
         page.navigate(ExpenseView.class);
 

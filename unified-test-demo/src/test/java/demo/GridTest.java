@@ -7,6 +7,7 @@ import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @UnifiedSpringBootTest
@@ -20,6 +21,7 @@ class GridTest {
     // --8<-- [end:helpers]
 
     @Test
+    @DisplayName("The users grid shows 120 rows under Name, Email, Role and Actions")
     void readsCountHeadersAndCells(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -30,6 +32,7 @@ class GridTest {
 
     // --8<-- [start:findsARowByWhatItShows]
     @Test
+    @DisplayName("The user finds User 110's row far down the grid by its name")
     void findsARowByWhatItShows(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -42,6 +45,7 @@ class GridTest {
     // --8<-- [end:findsARowByWhatItShows]
 
     @Test
+    @DisplayName("A row is found by a cell's text in any column")
     void findsARowByCellTextInAnyColumn(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -52,6 +56,7 @@ class GridTest {
     }
 
     @Test
+    @DisplayName("A cell is read by the index of its column")
     void readsACellByColumnIndex(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -61,6 +66,7 @@ class GridTest {
 
     // --8<-- [start:combinesCellFilters]
     @Test
+    @DisplayName("Only one user with an email starting with user11 is an admin")
     void combinesCellFilters(UnifiedPage page) {
         UnifiedGrid users = grid(page, "users");
 
@@ -74,6 +80,7 @@ class GridTest {
     // --8<-- [end:combinesCellFilters]
 
     @Test
+    @DisplayName("The same column is found by its header, its id and its index")
     void readsColumnsByHeaderIdAndIndex(UnifiedPage page) {
         UnifiedGrid roles = grid(page, "roles");
 
@@ -83,6 +90,7 @@ class GridTest {
     }
 
     @Test
+    @DisplayName("The archived users grid is empty")
     void knowsAnEmptyGrid(UnifiedPage page) {
         assertThat(grid(page, "archived")).isEmpty();
     }

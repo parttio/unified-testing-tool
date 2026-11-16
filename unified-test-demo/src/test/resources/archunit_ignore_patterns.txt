@@ -1,0 +1,6 @@
+# Violations of the style rules (UnifiedStyleTest) that are the point of the test. ArchUnit leaves out every
+# violation whose message matches one of these regular expressions.
+#
+# ProfileViewTest.unwrapNamesTheMissingAnnotation checks that unwrap(..) without @RequiresTestingTool fails, naming
+# the annotation, on every Testing Tool.
+Testing Tool code needs its Capability: test demo\.ProfileViewTest\.unwrapNamesTheMissingAnnotation\(UnifiedPage\) .*

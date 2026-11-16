@@ -7,6 +7,7 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import demo.HomeView;
 import demo.ProfileView;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** A test outside the views' package: Browserless still finds every route of the Spring Boot app. */
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 class OtherPackageTest {
 
     @Test
+    @DisplayName("A test outside the views' package goes from home to the profile")
     void navigatesToViewsOfTheApplication(UnifiedPage page) {
         page.navigate(HomeView.class);
         page.find(UnifiedButton.class).withText("Go to profile").click();
