@@ -124,6 +124,12 @@ final class SeleniumElement implements UnifiedElement {
                 BrowserQueries.cssName(name));
     }
 
+    /** The same script as the {@code withAccessibleName(..)} filter; TestBench has no read of it. */
+    @Override
+    public String getAccessibleName() {
+        return (String) js("return (" + BrowserQueries.ACCESSIBLE_NAME + ")(arguments[0]);");
+    }
+
     @Override
     public String getProperty(String name) {
         Object value = property(name);

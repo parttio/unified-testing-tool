@@ -8,6 +8,9 @@ import com.vaadin.testing.unified.internal.LazyElement;
 import com.vaadin.testing.unified.internal.LazyScope;
 import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
+import com.vaadin.testing.unified.internal.failures.FailureParts;
+import com.vaadin.testing.unified.internal.failures.ItemFailures;
+import com.vaadin.testing.unified.internal.steps.StepTarget;
 import java.util.List;
 
 /** TabSheet behaviour: Auto-Wait and verified tab selection, the selected content as a lazy Scope. */
@@ -23,12 +26,13 @@ public final class TabSheetSupport {
         element.act("select tab \"" + label + "\" in", e -> {
             TabSheetAccess access = e.unwrap(TabSheetAccess.class);
             List<String> tabs = access.tabs();
+            String sheet = StepTarget.of(element).renderWithScope();
             if (!tabs.contains(label)) {
-                throw new IllegalArgumentException("No tab \"" + label + "\" in " + element.describe() + "; tabs: " + tabs);
+                throw ItemFailures.missing(element.run(), "tab", label, sheet, tabs, "selectTab");
             }
             // Auto-Wait for the tab itself
-            element.run().poll(() -> e.unwrap(TabSheetAccess.class).isEnabled(label) ? Boolean.TRUE : null,
-                    () -> "Can't select tab \"" + label + "\" in " + element.describe() + ": the tab is disabled");
+            element.run().pollFor(() -> e.unwrap(TabSheetAccess.class).isEnabled(label) ? Boolean.TRUE : null,
+                    () -> FailureParts.of("an enabled tab “" + label + "” in " + sheet, "1, but the tab is disabled"));
             access.select(label);
             if (!label.equals(access.selectedTab())) {
                 throw new IllegalStateException("Tab \"" + label + "\" could not be selected in " + element.describe());

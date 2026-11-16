@@ -1,5 +1,6 @@
 package com.vaadin.testing.unified.internal.steps;
 
+import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.internal.steps.StepRecorder.Entry;
 import com.vaadin.testing.unified.internal.steps.StepRecorder.Gap;
 import com.vaadin.testing.unified.internal.steps.StepRecorder.Group;
@@ -135,8 +136,12 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         return String.format(Locale.ROOT, "%.1f s", nanos / 1e9);
     }
 
+    /**
+     * {@code AssertionError: first line of the message}; for a Unified failure, its summary ({@code Expected …,
+     * found …}): its message's first line is the scenario, which the report already names.
+     */
     private static String firstLine(Throwable t) {
-        String message = t.getMessage();
+        String message = t instanceof UnifiedAssertionError unified ? unified.getSummary() : t.getMessage();
         String line = message == null ? "" : message.lines().findFirst().orElse("");
         line = line.length() > 300 ? line.substring(0, 299) + "…" : line;
         return t.getClass().getSimpleName() + (line.isEmpty() ? "" : ": " + line);
@@ -190,6 +195,16 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             json.key("codePath").open('[');
             codePath().forEach(site -> callSite(json, site));
             json.close(']');
+            if (failure instanceof UnifiedAssertionError unified) {
+                json.optional("expected", steps.mask(unified.getExpected()));
+                json.optional("found", steps.mask(unified.getFound()));
+                if (!unified.getNearMisses().isEmpty()) {
+                    json.key("nearMisses").open('[');
+                    unified.getNearMisses().forEach(n -> json.value(steps.mask(n)));
+                    json.close(']');
+                }
+                json.optional("suggestion", steps.mask(unified.getSuggestion().orElse(null)));
+            }
             json.close('}');
         }
         json.key("steps");

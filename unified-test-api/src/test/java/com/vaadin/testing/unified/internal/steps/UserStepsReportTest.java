@@ -61,8 +61,8 @@ public class UserStepsReportTest {
                 "   3  open window 2",
                 "   4  [window 2] Check",
                 "      4.1  [window 2] see notification “Saved Alan M. Turing”   ✘"), lines.subList(1, 9));
-        assertTrue(lines.get(9).startsWith("   ✘ AssertionError: No component matches UnifiedNotification"),
-                lines.get(9));
+        assertEquals("   ✘ UnifiedAssertionError: Expected exactly one notification, found none", lines.get(9),
+                text);
         assertTrue(lines.get(10).matches("     at UserStepsReportTest\\.java:\\d+ \\(runFailingScenario\\)"
                 + " ← UserStepsReportTest\\.java:\\d+ \\(runFailingScenario\\)"), lines.get(10));
         assertEquals(11, lines.size(), text);
@@ -84,7 +84,11 @@ public class UserStepsReportTest {
         assertTrue(json.get("startedAt").asString().endsWith("Z"));
 
         JsonNode fail = json.get("failure");
-        assertEquals("java.lang.AssertionError", fail.get("type").asString());
+        assertEquals("com.vaadin.testing.unified.UnifiedAssertionError", fail.get("type").asString());
+        assertEquals("exactly one notification", fail.get("expected").asString());
+        assertEquals("none", fail.get("found").asString());
+        assertFalse(fail.has("nearMisses"));
+        assertFalse(fail.has("suggestion"));
         assertEquals("4.1", fail.get("stepIndex").asString());
         assertEquals(5, fail.get("stepNumber").asInt());
         assertEquals(2, fail.get("codePath").size());
@@ -121,7 +125,8 @@ public class UserStepsReportTest {
         assertEquals("window 2", check.get("window").asString());
         assertEquals("failed", check.get("status").asString());
         assertEquals("see", check.get("verb").asString());
-        assertTrue(check.get("error").asString().startsWith("AssertionError: No component matches"));
+        assertEquals("UnifiedAssertionError: Expected exactly one notification, found none",
+                check.get("error").asString());
         assertEquals("failed", steps.get(4).get("status").asString());
     }
 

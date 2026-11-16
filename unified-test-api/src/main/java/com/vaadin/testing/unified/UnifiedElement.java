@@ -26,6 +26,23 @@ public interface UnifiedElement extends HasEscapeHatch {
      */
     String getVisibleText();
 
+    /**
+     * What a screen reader announces, approximated the same on every Testing Tool, in this order: the
+     * {@code aria-label} attribute, the {@code accessibleName} property ({@code setAriaLabel} on a field), the text
+     * of the {@code aria-labelledby} target, the {@code label} property, the text. What
+     * {@code withAccessibleName(..)} matches. The default skips {@code aria-labelledby}; the Testing Tools' own
+     * elements don't.
+     */
+    default String getAccessibleName() {
+        for (String value : new String[] { getAttribute("aria-label"), getProperty("accessibleName"),
+                getProperty("label") }) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return getText();
+    }
+
     String getProperty(String name);
     Integer getPropertyInteger(String name);
     Boolean getPropertyBoolean(String name);

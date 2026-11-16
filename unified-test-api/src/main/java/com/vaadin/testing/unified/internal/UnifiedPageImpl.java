@@ -78,7 +78,8 @@ public final class UnifiedPageImpl implements UnifiedPage {
     @Override
     public void waitUntil(BooleanSupplier condition) {
         run.steps().opaque(WAIT_UNTIL, run.window(),
-                () -> run.poll(() -> condition.getAsBoolean() ? Boolean.TRUE : null, () -> "Condition not met"));
+                () -> run.poll(() -> condition.getAsBoolean() ? Boolean.TRUE : null,
+                        () -> "the waitUntil(..) condition to be true"));
     }
 
     @Override

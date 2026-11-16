@@ -135,6 +135,27 @@ final class SeleniumSession implements AdapterSession {
 
     @Override
     public List<UnifiedElement> find(QuerySpec spec) {
+        return findElements(spec);
+    }
+
+    /** All the elements in one script call: WebDriver passes a list of elements as one argument. */
+    @Override
+    public List<com.vaadin.testing.unified.spi.ElementFacts> facts(List<UnifiedElement> elements) {
+        if (!elements.stream().allMatch(SeleniumElement.class::isInstance)) {
+            return AdapterSession.super.facts(elements);
+        }
+        List<WebElement> web = elements.stream().map(e -> ((SeleniumElement) e).webElement()).toList();
+        List<?> read = (List<?>) js("return arguments[0].map(e => (" + BrowserQueries.FACTS + ")(e));", web);
+        return read.stream().map(BrowserQueries::facts).toList();
+    }
+
+    @Override
+    public String browserName() {
+        Object wrapped = driver.getWrappedDriver();
+        return wrapped instanceof org.openqa.selenium.HasCapabilities c ? c.getCapabilities().getBrowserName() : null;
+    }
+
+    private List<UnifiedElement> findElements(QuerySpec spec) {
         SeleniumComponents.Support support = SeleniumComponents.of(spec.componentType());
         String tag = spec.tag() == null ? null : support.selector(spec.tag());
         if (tag == null) {

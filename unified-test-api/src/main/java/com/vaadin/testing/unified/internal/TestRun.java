@@ -1,19 +1,27 @@
 package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.UnifiedAssertionError;
+import com.vaadin.testing.unified.internal.failures.FailureParts;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.function.Supplier;
 
 /**
  * One running test: its Testing Tool, adapter session and timeout, and the recorder of its User Steps, shared by
  * all its windows. {@code window} names the window the steps run in: null for the test's first window.
+ * {@code ownTimeout} is true when a Wrapper's {@code withTimeout(..)} set the timeout, not the setting.
  */
 public record TestRun(TestingTool tool, AdapterSession session, Duration timeout, StepRecorder steps,
-        String window) {
+        String window, boolean ownTimeout) {
 
     private static final long POLL_MILLIS = 50;
+
+    public TestRun(TestingTool tool, AdapterSession session, Duration timeout, StepRecorder steps, String window) {
+        this(tool, session, timeout, steps, window, false);
+    }
 
     /** A run of its own, with a fresh recorder: for tests of the Unified API itself. */
     public TestRun(TestingTool tool, AdapterSession session, Duration timeout) {
@@ -21,19 +29,29 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
     }
 
     public TestRun withTimeout(Duration newTimeout) {
-        return new TestRun(tool, session, newTimeout, steps, window);
+        return new TestRun(tool, session, newTimeout, steps, window, true);
     }
 
     /** Another window of the same test, recording into the same User Steps. */
     public TestRun inWindow(AdapterSession windowSession, String windowName) {
-        return new TestRun(tool, windowSession, timeout, steps, windowName);
+        return new TestRun(tool, windowSession, timeout, steps, windowName, ownTimeout);
     }
 
     /**
      * Calls {@code attempt} until it returns a non-null value or the timeout ends. Exceptions count as
-     * "not yet"; the last one is the cause of the failure. Between attempts the session syncs.
+     * "not yet"; the last one is the cause of the failure. Between attempts the session syncs. The failure is a
+     * {@link UnifiedAssertionError} expecting what {@code failure} says.
      */
     public <T> T poll(Supplier<T> attempt, Supplier<String> failure) {
+        return pollFor(attempt, () -> FailureParts.of(failure.get(), null));
+    }
+
+    /**
+     * {@link #poll}, failing with a {@link UnifiedAssertionError} from the parts {@code failure} gives (computed
+     * on failure only, e.g. the Near Misses), with how long it waited and the Testing Tool added. Every timeout
+     * of the Unified API ends here.
+     */
+    public <T> T pollFor(Supplier<T> attempt, Supplier<FailureParts> failure) {
         long deadline = System.nanoTime() + timeout.toNanos();
         RuntimeException last = null;
         while (true) {
@@ -47,11 +65,7 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
                 last = e;
             }
             if (System.nanoTime() > deadline) {
-                AssertionError error = new AssertionError(failure.get() + " (waited " + timeout.toMillis() + " ms)");
-                if (last != null) {
-                    error.initCause(last);
-                }
-                throw error;
+                throw failure(failure.get().waited(timeout, ownTimeout ? "withTimeout" : Settings.TIMEOUT), last);
             }
             session.sync();
             try {
@@ -61,6 +75,23 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
                 throw new IllegalStateException("Interrupted while waiting", e);
             }
         }
+    }
+
+    /** A Unified failure, with the Testing Tool: also for one that didn't wait (an item a combo box lacks). */
+    public UnifiedAssertionError failure(FailureParts parts, Throwable cause) {
+        return new UnifiedAssertionError(parts.tool(toolName()), cause);
+    }
+
+    /** {@code playwright (chromium)}, {@code browserless}. */
+    public String toolName() {
+        String name = tool.name().toLowerCase(Locale.ROOT);
+        String browser = null;
+        try {
+            browser = session.browserName();
+        } catch (RuntimeException e) {
+            // a failure message never fails for want of the browser's name
+        }
+        return browser == null || browser.isBlank() ? name : name + " (" + browser + ")";
     }
 
     /** Fails if the run's Testing Tool has no real browser. */

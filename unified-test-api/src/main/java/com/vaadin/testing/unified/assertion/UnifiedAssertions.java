@@ -27,6 +27,10 @@ import com.vaadin.testing.unified.internal.steps.Phrase;
 import com.vaadin.testing.unified.internal.steps.Phrases;
 import com.vaadin.testing.unified.internal.steps.StepTarget;
 import java.util.Objects;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import com.vaadin.testing.unified.internal.failures.FailureMessage;
+import com.vaadin.testing.unified.internal.failures.FailureParts;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -73,24 +77,46 @@ public final class UnifiedAssertions {
     // ---------------------------------------------------------------- shared retry
 
     /** Every retrying assertion ends here, and records one User Step: "see …" or "see no …". */
-    static void check(TestRun run, Supplier<Phrase> step, String subject, String expectation, Object expected,
-            Supplier<?> actual, Predicate<Object> ok) {
+    static void check(TestRun run, Supplier<Phrase> step, Supplier<String> subject, String expectation,
+            Object expected, Supplier<?> actual, Predicate<Object> ok) {
         run.steps().check(step, run.window(), () -> {
-            Object[] last = { "<not available>" };
-            return run.poll(() -> {
+            // the distinct values seen while waiting, in order: "Found “Saving…”, then “Saved Alan Turing”"
+            Set<String> seen = new LinkedHashSet<>();
+            return run.pollFor(() -> {
                 Object value = actual.get();
-                last[0] = value;
+                String shown = shown(value);
+                seen.remove(shown); // the latest last
+                seen.add(shown);
                 return ok.test(value) ? Boolean.TRUE : null;
-            }, () -> "Expected " + subject + " " + expectation
-                    + (expected == null ? "" : " <" + expected + ">") + " but was <" + last[0] + ">");
+            }, () -> FailureParts.of(subject.get() + " " + expectation + (expected == null ? "" : " " + shown(expected)),
+                    seen.isEmpty() ? null : FailureMessage.sequence(List.copyOf(seen))));
         });
+    }
+
+    /** A value as a failure shows it: text quoted (“Saved”), lists in brackets, the rest as it prints. */
+    static String shown(Object value) {
+        if (value == null) {
+            return "nothing";
+        }
+        if (value instanceof CharSequence text) {
+            return "“" + Phrase.cut(text.toString()) + "”";
+        }
+        if (value instanceof java.util.Collection<?> values) {
+            return "[" + String.join(", ", values.stream().map(UnifiedAssertions::shown).toList()) + "]";
+        }
+        return String.valueOf(value);
     }
 
     /** {@link #check} with the step worded from the expectation: "see text field “Name” with value “Alan”". */
     static void checkTarget(TestRun run, Supplier<StepTarget> target, String subject, String expectation,
             Object expected, Supplier<?> actual, Predicate<Object> ok) {
-        check(run, () -> Phrases.forCheck(target.get(), expectation, expected), subject, expectation, expected,
-                actual, ok);
+        check(run, () -> Phrases.forCheck(target.get(), expectation, expected), () -> {
+            try {
+                return target.get().renderWithScope();
+            } catch (RuntimeException e) {
+                return subject;
+            }
+        }, expectation, expected, actual, ok);
     }
 
     /** A match count, read as "2 matches" in a failure. */
@@ -117,21 +143,21 @@ public final class UnifiedAssertions {
         PageAssert(TestRun run) { this.run = run; }
 
         public PageAssert isAt(Class<? extends Component> view) {
-            check(run, () -> Phrases.page("see", "see " + Phrases.viewName(view)), "the page", "to show",
+            check(run, () -> Phrases.page("see", "see " + Phrases.viewName(view)), () -> "the page", "to show",
                     view.getSimpleName(), () -> run.session().currentPath(), any -> run.session().isAt(view));
             return this;
         }
 
         public PageAssert hasPath(String path) {
             String expected = path.startsWith("/") ? path.substring(1) : path;
-            check(run, () -> Phrase.template("see", "see path {value}", null, List.of(expected)), "the page",
+            check(run, () -> Phrase.template("see", "see path {value}", null, List.of(expected)), () -> "the page",
                     "to have path", expected, () -> run.session().currentPath(), expected::equals);
             return this;
         }
 
         public PageAssert hasQueryParameter(String name, String value) {
             check(run, () -> Phrase.template("see", "see query parameter “" + name + "” with {value}", null,
-                            value == null ? List.of() : List.of(value)), "query parameter " + name, "to be", value,
+                            value == null ? List.of() : List.of(value)), () -> "query parameter “" + name + "”", "to be", value,
                     () -> run.session().queryParameter(name).orElse(null), v -> Objects.equals(v, value));
             return this;
         }
@@ -441,7 +467,7 @@ public final class UnifiedAssertions {
         public GridRowAssert hasCellText(String columnHeader, String expected) {
             UnifiedAssertions.check(run,
                     () -> Phrase.of("see", GridSupport.targetOf(row), List.of(expected)).withValueLabel("with " + columnHeader),
-                    row + " cell \"" + columnHeader + "\"", "to have text", expected,
+                    () -> "cell “" + columnHeader + "” of " + GridSupport.targetOf(row).renderWithScope(), "to have text", expected,
                     () -> row.getCellText(columnHeader), v -> Objects.equals(v, expected));
             return this;
         }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
@@ -76,7 +77,8 @@ class WrappersTest {
         UnifiedButton save = page().find(UnifiedButton.class).withText("Save");
 
         AssertionError several = assertThrows(AssertionError.class, save::click);
-        assertTrue(several.getMessage().startsWith("2 components match UnifiedButton.withText(\"Save\")"),
+        assertEquals("exactly one button with text “Save”", ((UnifiedAssertionError) several).getExpected());
+        assertTrue(((UnifiedAssertionError) several).getFound().startsWith("2: button “Save”, button “Save”"),
                 several.getMessage());
 
         buttons.remove("Save");
@@ -94,7 +96,8 @@ class WrappersTest {
         assertThat(page.find(UnifiedButton.class).withText("Delete")).exists().hasCount(2);
         AssertionError missing = assertThrows(AssertionError.class,
                 () -> assertThat(page.find(UnifiedButton.class).withText("Archive")).exists());
-        assertTrue(missing.getMessage().contains("to exist but was <0 matches>"), missing.getMessage());
+        assertTrue(missing.getMessage().contains("Expected      button “Archive” to exist\n  Found         0 matches"),
+                missing.getMessage());
         assertThrows(AssertionError.class,
                 () -> assertThat(page.find(UnifiedButton.class).withText("Save")).doesNotExist());
     }
