@@ -32,7 +32,7 @@
 
     <properties>
         <browserless-test.version>25.3.2</browserless-test.version>
-        <dramafinder.version>2.1.0</dramafinder.version>
+        <dramafinder.version>2.2.0</dramafinder.version>
     </properties>
 
     <dependencyManagement>

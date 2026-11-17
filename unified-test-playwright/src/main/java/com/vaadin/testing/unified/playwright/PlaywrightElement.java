@@ -7,9 +7,9 @@ import com.vaadin.testing.unified.internal.BrowserQueries;
 import java.util.List;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
+import org.vaadin.addons.dramafinder.element.GenericElement;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
 import org.vaadin.addons.dramafinder.element.shared.FocusableElement;
-import org.vaadin.addons.dramafinder.element.shared.HasDisabledAttributeElement;
 import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
 
 /**
@@ -53,17 +53,6 @@ final class PlaywrightElement implements UnifiedElement {
 
     int index() {
         return index;
-    }
-
-    /**
-     * Dramafinder's element for any component, plus focus and enabled state from the {@code disabled}
-     * attribute: Vaadin components reflect the property to it.
-     */
-    private static final class GenericElement extends org.vaadin.addons.dramafinder.element.GenericElement
-            implements FocusableElement, HasDisabledAttributeElement {
-        GenericElement(Locator locator) {
-            super(locator);
-        }
     }
 
     Locator locator() {

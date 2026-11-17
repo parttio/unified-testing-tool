@@ -101,13 +101,9 @@ final class PlaywrightSession implements AdapterSession {
         // Dramafinder's tag query takes the filters CSS can express; the rest are checked in the page with the
         // Unified API's matching, for every candidate in one round trip: no browser call per element, and no
         // element detaching between two calls.
-        TagQuery<GenericElement> query;
-        if ("*".equals(spec.tag())) { // Dramafinder's find takes a tag name only: any element, light DOM only
-            query = new TagQuery<>(GenericElement.class, scope == null ? page.locator("css:light=*")
-                    : scope.locator("css:light=*"));
-        } else {
-            query = scope == null ? ElementQueries.find(page, spec.tag()) : ElementQueries.find(scope, spec.tag());
-        }
+        // "*" (VaadinElement.ANY_TAG) queries every light-DOM element, whatever its tag
+        TagQuery<GenericElement> query = scope == null ? ElementQueries.find(page, spec.tag())
+                : ElementQueries.find(scope, spec.tag());
         for (Filter f : spec.filters()) {
             if (BrowserQueries.selectorPart(f) != null) {
                 query = switch (f.kind()) {
