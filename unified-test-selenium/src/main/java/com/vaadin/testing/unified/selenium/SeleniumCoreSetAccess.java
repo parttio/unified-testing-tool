@@ -108,7 +108,7 @@ final class SeleniumCoreSetAccess {
 
         private void close() {
             session.pressKey("Escape");
-            if (menuBar().getAllSubMenus().stream().anyMatch(s -> s.hasAttribute("opened"))) {
+            if (!menuBar().$("vaadin-menu-bar-submenu").withAttribute("opened").all().isEmpty()) {
                 session.pressKey("Escape");
             }
         }
