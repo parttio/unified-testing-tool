@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     steps:
       # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Fetch the pull request's base branch
@@ -34,7 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: scripts/download-base-user-steps.sh unified-evidence-browserless "$RUNNER_TEMP/base-user-steps"
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -43,14 +43,14 @@ jobs:
         run: mvn -B -ntp install -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: surefire-reports-browserless
           path: '**/target/surefire-reports/'
       # summary.md and every test's User Steps and failure evidence, passed or failed
       - name: Upload Unified evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-browserless
           path: '**/target/surefire-reports/unified-evidence/'
@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 30
     steps:
       # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Fetch the pull request's base branch
@@ -73,7 +73,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: scripts/download-base-user-steps.sh unified-evidence-playwright "$RUNNER_TEMP/base-user-steps"
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -91,14 +91,14 @@ jobs:
         run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: surefire-reports-playwright
           path: '**/target/surefire-reports/'
       # summary.md and every test's User Steps and failure evidence, passed or failed
       - name: Upload Unified evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-playwright
           path: '**/target/surefire-reports/unified-evidence/'
@@ -113,7 +113,7 @@ jobs:
       VAADIN_OFFLINE_KEY: ${{ secrets.VAADIN_OFFLINE_KEY }}
     steps:
       # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Fetch the pull request's base branch
@@ -124,7 +124,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: scripts/download-base-user-steps.sh unified-evidence-selenium "$RUNNER_TEMP/base-user-steps"
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -135,14 +135,14 @@ jobs:
         run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=selenium -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: surefire-reports-selenium
           path: '**/target/surefire-reports/'
       # summary.md and every test's User Steps and failure evidence, passed or failed
       - name: Upload Unified evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-selenium
           path: '**/target/surefire-reports/unified-evidence/'
