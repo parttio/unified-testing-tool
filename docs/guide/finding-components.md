@@ -30,7 +30,7 @@ Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `Un
 
 | Filter | Finds | Example |
 |---|---|---|
-| `withLabel("Email")` | a field by its label | `page.find(UnifiedTextField.class).withLabel("Email")` |
+| `withLabel("Email")` | a field by its label, or by the label of its FormLayout item | `page.find(UnifiedTextField.class).withLabel("Email")` |
 | `withText("Save")` | a button, notification, … by its text | `page.find(UnifiedButton.class).withText("Save")` |
 | `withAccessibleName("Delete account")` | what a screen reader announces: `aria-label`, `setAriaLabel(..)`, label or text | an icon-only button, a field without a visible label |
 | `withPlaceholder("Nickname")` | a field by its placeholder | `page.find(UnifiedTextField.class).withPlaceholder("Nickname")` |
@@ -38,6 +38,12 @@ Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `Un
 | `withTab("Security")` | a TabSheet or Tabs that has this tab | `page.find(UnifiedTabSheet.class).withTab("Security")` |
 | `withItem("File")` | a MenuBar that has this top-level item | `page.find(UnifiedMenuBar.class).withItem("File")` |
 | `withSummaryText("Advanced")` | a Details by its summary | `page.find(UnifiedDetails.class).withSummaryText("Advanced")` |
+
+A field in a FormLayout item has no label of its own: `formLayout.addFormItem(field, "Nickname")` labels the item. `withLabel` finds it by that label too, on every Testing Tool, and a failure lists it under that name:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/FormItemLabelTest.java:formItemLabel"
+```
 
 An icon-only button has no text, but it has an accessible name:
 

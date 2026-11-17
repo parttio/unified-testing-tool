@@ -159,9 +159,23 @@ final class BrowserlessSession implements AdapterSession {
                     }
                 }
             }
-            return new com.vaadin.testing.unified.spi.ElementFacts(own.label(), own.text(), own.placeholder(),
+            String label = own.label() != null && !own.label().isBlank() || !(e instanceof BrowserlessElement b2)
+                    ? own.label() : formItemLabel(b2.component());
+            return new com.vaadin.testing.unified.spi.ElementFacts(label, own.text(), own.placeholder(),
                     own.testId(), own.accessibleName(), testId, testId == null ? id : null);
         }).toList();
+    }
+
+    /**
+     * The label of the FormLayout item holding the component ({@code formLayout.addFormItem(field, "Name")}): the
+     * text of the {@code <vaadin-form-item>}'s {@code slot="label"} child, as a browser reads it; null outside a
+     * form item.
+     */
+    static String formItemLabel(Component c) {
+        return c.getElement().getParent() == null || !"vaadin-form-item".equals(c.getElement().getParent().getTag())
+                ? null
+                : c.getElement().getParent().getChildren().filter(l -> "label".equals(l.getAttribute("slot")))
+                        .findFirst().map(l -> com.vaadin.testing.unified.internal.BrowserQueries.normalize(l.getTextRecursively())).orElse(null);
     }
 
     /** Matching components under {@code root}, and {@code root} itself when {@code includeRoot}. */
@@ -180,8 +194,9 @@ final class BrowserlessSession implements AdapterSession {
     private boolean matches(Component c, Filter f) {
         com.vaadin.flow.dom.Element e = c.getElement();
         return switch (f.kind()) {
-            case LABEL -> f.exact() ? com.vaadin.browserless.ElementConditions.hasLabel(f.value()).test(c)
-                    : f.matches(e.getProperty("label"));
+            // its own label, or the label of the FormLayout item holding it
+            case LABEL -> (f.exact() ? com.vaadin.browserless.ElementConditions.hasLabel(f.value()).test(c)
+                    : f.matches(e.getProperty("label"))) || f.matches(formItemLabel(c));
             // getText(), as in a browser: Browserless's own withText reads the element's own text only
             case TEXT -> f.matches(new BrowserlessElement(this, c).getText());
             case PLACEHOLDER -> f.matches(e.getProperty("placeholder"));

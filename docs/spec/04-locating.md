@@ -34,7 +34,7 @@ Exact match by default (whitespace normalised); every text filter has a `…Cont
 
 | Filter | Matches | Mixin | Recommended |
 |---|---|---|---|
-| `withLabel` | `label` property, a `<label for>`, or the FormLayout item label | `LabelFilter` | yes |
+| `withLabel` | `label` property, or the label of the FormLayout item holding the field (`addFormItem(field, "Name")`: the `<vaadin-form-item>`'s `slot="label"` child) | `LabelFilter` | yes |
 | `withAccessibleName` | what a screen reader announces (see below) | `CommonFilters` (every type) | yes |
 | `withText` | text content: `getText()`, the DOM text, the same on every Testing Tool | `TextFilter` | yes |
 | `withPlaceholder` | `placeholder` | `PlaceholderFilter` | yes |
