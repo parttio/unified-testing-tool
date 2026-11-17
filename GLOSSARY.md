@@ -72,6 +72,10 @@ _Avoid_: Step method, log line, trace, keyword
 A named piece of user work in a Unified UI Test ("edit Alan Turing's name"), shown in the reports as one heading over the User Steps it performs.
 _Avoid_: Task, step method, keyword, flow, journey, page object
 
+**Base Run**:
+The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
+_Avoid_: Baseline, golden run, reference run
+
 **Near Miss**:
 A component a failed lookup almost matched (the same kind with a similar name, or another kind with the exact name), listed in the failure so the reader can see what the test should have asked for.
 _Avoid_: Candidate, suggestion, fuzzy match

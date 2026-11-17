@@ -20,6 +20,7 @@ public final class Settings {
     public static final String USER_STEPS_LOG = "vaadin.testing.user-steps.log";
     public static final String USER_STEPS_GITHUB_SUMMARY = "vaadin.testing.user-steps.github-summary";
     public static final String USER_STEPS_CHANGED_SINCE = "vaadin.testing.user-steps.changed-since";
+    public static final String USER_STEPS_BASELINE_DIR = "vaadin.testing.user-steps.baseline-dir";
     public static final String USER_STEPS_SNAPSHOTS = "vaadin.testing.user-steps.snapshots";
 
     /** Which tests print their User Steps to stdout, the CI log. */
@@ -88,6 +89,14 @@ public final class Settings {
     public Optional<String> userStepsChangedSince(java.util.Map<String, String> env) {
         return get(USER_STEPS_CHANGED_SINCE).map(String::trim).or(() -> Optional
                 .ofNullable(env.get("GITHUB_BASE_REF")).filter(v -> !v.isBlank()).map(v -> "origin/" + v.trim()));
+    }
+
+    /**
+     * {@code vaadin.testing.user-steps.baseline-dir}: the evidence of the base branch's last run, such as its
+     * downloaded CI artifact. "Changed in this PR" compares each changed scenario's User Steps with it.
+     */
+    public Optional<Path> userStepsBaselineDir() {
+        return get(USER_STEPS_BASELINE_DIR).map(v -> Path.of(v.trim()));
     }
 
     static Duration parseDuration(String value) {

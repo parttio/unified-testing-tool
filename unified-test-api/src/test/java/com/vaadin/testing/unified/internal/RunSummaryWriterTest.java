@@ -144,6 +144,52 @@ class RunSummaryWriterTest {
     }
 
     @Test
+    void changedScenariosAreComparedWithTheBaseRunInTheBaselineDir() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+        String json = Files.readString(evidence().resolve("EditPersonTest/edits/user-steps.json"));
+        // a downloaded artifact keeps the module's path; a base run on another Testing Tool doesn't count
+        Path base = dir.resolve("base");
+        Path inArtifact = base.resolve("app/target/surefire-reports/unified-evidence/EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(inArtifact.getParent());
+        Files.writeString(inArtifact, json.replace("open People", "open Home"));
+        Path onSelenium = base.resolve("other/EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(onSelenium.getParent());
+        Files.writeString(onSelenium, json.replace("\"playwright\"", "\"selenium\""));
+
+        String testFile = "app/src/test/java/demo/EditPersonTest.java";
+        writer(Map.of(Settings.USER_STEPS_BASELINE_DIR, base.toString()), Map.of("GITHUB_BASE_REF", "main"),
+                ref -> Optional.of(ChangedFiles.of(ref, List.of(testFile), List.of(), Map.of(testFile, "void edits() {}"))))
+                .write(Set.of(), "1");
+
+        assertTrue(summary().contains("· changed · User Steps +1 −1 against the base run\n\n```diff\n- open Home\n"
+                + "+ open People\n```\n"), summary());
+        assertEquals(List.of(), log);
+    }
+
+    @Test
+    void aMissingBaseRunIsSaidOnce() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+
+        writer(Map.of(Settings.USER_STEPS_BASELINE_DIR, dir.resolve("not-downloaded").toString()),
+                Map.of("GITHUB_BASE_REF", "main")).write(Set.of(), "1");
+
+        assertTrue(summary().contains("No base run found to compare their User Steps with.\n"), summary());
+        assertTrue(summary().contains("```text\n1  open People\n```"), summary());
+        assertEquals(1, log.size(), log.toString());
+    }
+
+    @Test
+    void outsideAPullRequestTheBaseRunIsNotRead() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+
+        writer(Map.of(Settings.USER_STEPS_BASELINE_DIR, dir.resolve("not-downloaded").toString()), Map.of())
+                .write(Set.of(), "1");
+
+        assertFalse(summary().contains("base run"), summary());
+        assertEquals(List.of(), log);
+    }
+
+    @Test
     void withoutGitTheChangedSectionIsLeftOut() throws Exception {
         test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
         Path notARepository = Files.createDirectories(dir.resolve("not-a-repository"));

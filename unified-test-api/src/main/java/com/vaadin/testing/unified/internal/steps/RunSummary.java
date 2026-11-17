@@ -7,7 +7,8 @@ import java.util.Optional;
 
 /**
  * The run's {@code summary.md} (spec chapter 12, "Reports"), built from the {@code user-steps.json} of the run's
- * tests: a header with the counts, "Changed in this PR" when a base ref is known, then the failed scenarios.
+ * tests: a header with the counts, "Changed in this PR" when a base ref is known, then the failed scenarios. A
+ * changed scenario's User Steps are diffed against the {@link BaseRun} when there is one.
  * Passing scenarios count in the header only: a run's list of them is long to scroll past on the job summary,
  * and each one's User Steps are in its own {@code user-steps.txt}.
  *
@@ -16,8 +17,11 @@ import java.util.Optional;
  * @param disabled how many Unified UI Tests the run skipped without running them; aborted scenarios count as
  *        skipped too
  * @param changes the files changed against the base ref, or null outside a PR
+ * @param base the base branch's last run, to compare a changed scenario's User Steps with; null when none was
+ *        asked for ({@code vaadin.testing.user-steps.baseline-dir} unset)
  */
-public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes) {
+public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes,
+        BaseRun base) {
 
     public static final String FILE = "summary.md";
 
@@ -26,6 +30,11 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
 
     public RunSummary {
         scenarios = scenarios.stream().sorted(ORDER).toList();
+    }
+
+    /** Without a base run: changed scenarios show their User Steps in full. */
+    public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes) {
+        this(tool, scenarios, disabled, changes, null);
     }
 
     public long passed() {
@@ -64,11 +73,42 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
         }
         md.append(touched.size()).append(touched.size() == 1 ? " scenario calls" : " scenarios call")
                 .append(" code changed since ").append(code(changes.baseRef())).append(".\n");
-        for (ScenarioResult s : touched) {
-            md.append("\n**").append(markdown(mark(s) + " " + title(s))).append("** · ")
-                    .append(changes.isNew(s) ? "new" : "changed").append("\n\n");
-            steps(md, s);
+        if (base != null && base.isEmpty()) {
+            md.append("No base run found to compare their User Steps with.\n");
         }
+        for (ScenarioResult s : touched) {
+            md.append("\n**").append(markdown(mark(s) + " " + title(s))).append("** · ");
+            if (changes.isNew(s)) {
+                md.append("new\n\n");
+                steps(md, s);
+            } else {
+                changedSteps(md, s);
+            }
+        }
+    }
+
+    /**
+     * A changed scenario: its User Steps against the base run's when there is one, else in full. A scenario whose
+     * steps didn't change gets one line: the reviewer reads the code change instead.
+     */
+    private void changedSteps(StringBuilder md, ScenarioResult s) {
+        Optional<ScenarioResult> before = base == null ? Optional.empty() : base.find(s);
+        if (before.isEmpty()) {
+            md.append("changed").append(base == null || base.isEmpty() ? "" : " · not in the base run")
+                    .append("\n\n");
+            steps(md, s);
+            return;
+        }
+        StepsDiff diff = StepsDiff.of(before.get(), s);
+        if (diff.isEmpty()) {
+            md.append("changed · same User Steps as the base run\n");
+            return;
+        }
+        md.append("changed · User Steps +").append(diff.added()).append(" −").append(diff.removed())
+                .append(" against the base run\n\n");
+        String text = diff.text();
+        String fence = fence(text);
+        md.append(fence).append("diff\n").append(text).append(fence).append('\n');
     }
 
     private void failed(StringBuilder md, ScenarioResult s) {

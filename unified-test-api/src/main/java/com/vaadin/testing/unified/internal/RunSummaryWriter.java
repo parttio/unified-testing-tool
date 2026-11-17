@@ -1,5 +1,6 @@
 package com.vaadin.testing.unified.internal;
 
+import com.vaadin.testing.unified.internal.steps.BaseRun;
 import com.vaadin.testing.unified.internal.steps.ChangedFiles;
 import com.vaadin.testing.unified.internal.steps.RunReport;
 import com.vaadin.testing.unified.internal.steps.RunSummary;
@@ -33,6 +34,10 @@ import java.util.stream.Stream;
  * {@code startedAt} is not before {@code runStart}. With Surefire's forks every fork rewrites the summary when it
  * ends, from the files of all forks, so the last one to end writes the whole run. Tests the run skipped without
  * running are listed per process in {@code .summary/skipped-<pid>.txt}, since they leave no {@code user-steps.json}.
+ * <p>
+ * <b>The base run.</b> With "Changed in this PR" and {@code vaadin.testing.user-steps.baseline-dir} set, every
+ * {@code user-steps.json} under that directory, at any depth (a downloaded CI artifact keeps the module's path),
+ * on this run's Testing Tool.
  *
  * @param settings the run's settings
  * @param workDir where git runs, the project's directory
@@ -75,7 +80,8 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
             return Optional.empty();
         }
         ChangedFiles changes = settings.userStepsChangedSince(env).flatMap(changedFiles).orElse(null);
-        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes);
+        BaseRun base = changes == null ? null : settings.userStepsBaselineDir().map(this::baseRun).orElse(null);
+        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes, base);
         String markdown = summary.markdown();
         Path file = evidenceDir.resolve(RunSummary.FILE);
         Files.createDirectories(evidenceDir);
@@ -120,6 +126,34 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
             }
         }
         return scenarios;
+    }
+
+    /** The base run's scenarios under {@code dir} on this run's Testing Tool; none when it has no readable one. */
+    private BaseRun baseRun(Path dir) {
+        List<ScenarioResult> scenarios = new ArrayList<>();
+        if (Files.isDirectory(dir)) {
+            List<Path> files;
+            try (Stream<Path> walk = Files.walk(dir)) {
+                files = walk.filter(p -> p.getFileName().toString().equals(UserStepsReport.JSON_FILE)).sorted()
+                        .toList();
+            } catch (IOException | RuntimeException e) {
+                files = List.of();
+                log.accept("the base run could not be read: " + dir + " (" + e.getMessage() + ")");
+            }
+            for (Path json : files) {
+                String evidencePath = (json.getParent().toString() + "/").replace('\\', '/');
+                try {
+                    scenarios.add(ScenarioResult.parse(Files.readString(json, StandardCharsets.UTF_8), evidencePath));
+                } catch (IOException | RuntimeException e) {
+                    log.accept("left out of the base run, unreadable: " + json + " (" + e.getMessage() + ")");
+                }
+            }
+        }
+        BaseRun base = BaseRun.of(scenarios, settings.tool().name());
+        if (base.isEmpty()) {
+            log.accept("no base run in " + dir + " to compare User Steps with");
+        }
+        return base;
     }
 
     private boolean isFromThisRun(Path file) {
