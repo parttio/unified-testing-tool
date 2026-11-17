@@ -81,7 +81,7 @@ Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha
 </dependencies>
 ```
 
-`unified-test-demo` shows a complete setup.
+`unified-test-demo` shows a complete setup. To run the tests in CI, with the run summary on GitHub's job page, see [Running in CI](docs/guide/ci-setup.md).
 
 ## Build and run
 

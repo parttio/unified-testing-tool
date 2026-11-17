@@ -230,6 +230,8 @@ Skipped scenarios (disabled, aborted, or lacking a Capability) count in the head
 
 ## The GitHub job summary
 
+A complete workflow, and the setup for other CI servers, is in [Running in CI](ci-setup.md).
+
 In GitHub Actions (`GITHUB_STEP_SUMMARY` is set), `summary.md` is also appended to the job's summary page, so the reviewer reads it on the pull request's checks without downloading anything. In a pull request (`GITHUB_BASE_REF` is set) the base is `origin/<base branch>`, so the checkout needs that branch and its history:
 
 ```yaml
