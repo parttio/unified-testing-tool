@@ -2,6 +2,7 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
@@ -84,6 +85,13 @@ class FailureMessagesTest {
             UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Export Report");
             dialog.find(UnifiedButton.class).withText("Close").click();
         }
+
+        @Test
+        @DisplayName("A renamed button lists Near Misses by their own text, not their tooltips")
+        void renamedButton(UnifiedPage page) {
+            page.navigate(ReportView.class);
+            page.find(UnifiedButton.class).withText("Export CSV").click();
+        }
     }
 
     private static TestingTool tool;
@@ -103,7 +111,7 @@ class FailureMessagesTest {
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
         TestExecutionSummary summary = listener.getSummary();
-        assertEquals(5, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+        assertEquals(6, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
         failures = summary.getFailures().stream().collect(Collectors.toMap(
                 f -> f.getTestIdentifier().getDisplayName(),
                 f -> assertInstanceOf(UnifiedAssertionError.class, f.getException(), f.getException()::toString)));
@@ -191,5 +199,15 @@ class FailureMessagesTest {
         failure.getNearMisses().stream().skip(1).forEach(n -> assertEquals("dialog “Help” (hidden)", n));
         assertEquals(Optional.of("find(UnifiedDialog.class).withHeaderTitle(\"Export report\")"),
                 failure.getSuggestion());
+    }
+
+    @Test
+    void nearMissesLeaveOutATooltip() {
+        UnifiedAssertionError failure = failures.get(
+                "A renamed button lists Near Misses by their own text, not their tooltips");
+
+        assertEquals("exactly one button with text “Export CSV”", failure.getExpected());
+        assertTrue(failure.getNearMisses().contains("button “Export”"), failure.getMessage());
+        failure.getNearMisses().forEach(n -> assertFalse(n.contains("report"), failure.getMessage()));
     }
 }

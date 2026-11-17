@@ -148,12 +148,11 @@ public final class BrowserQueries {
      */
     public static final String TEXT = """
             e => {
+              // as textContent: text nodes only, comments (Lit's markers) left out
               const tooltip = n => n.localName === 'vaadin-tooltip' && n.getAttribute('slot') === 'tooltip';
-              const text = n => n.nodeType === 3 ? n.data
-                  : n.nodeType === 1 && !tooltip(n) ? [...n.childNodes].map(text).join('') : '';
-              const all = e.querySelector('vaadin-tooltip[slot="tooltip"]')
-                  ? [...e.childNodes].map(text).join('') : e.textContent;
-              return (all || '').replace(/\\s+/g, ' ').trim();
+              const textOf = n => n.nodeType === 3 ? n.data
+                  : n.nodeType === 1 && !tooltip(n) ? [...n.childNodes].map(textOf).join('') : '';
+              return [...e.childNodes].map(textOf).join('').replace(/\\s+/g, ' ').trim();
             }""";
 
     /**
@@ -174,7 +173,8 @@ public final class BrowserQueries {
 
     /**
      * What a screen reader announces, approximated as on every Testing Tool: aria-label, the accessibleName
-     * property ({@code setAriaLabel} on a field), the aria-labelledby target's text, label, text.
+     * property ({@code setAriaLabel} on a field), the aria-labelledby target's text, label, text. Text is
+     * {@link #TEXT}'s: a tooltip is not part of it.
      */
     public static final String ACCESSIBLE_NAME = """
             e => {
@@ -189,7 +189,8 @@ public final class BrowserQueries {
 
     /**
      * Browser function {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId]}:
-     * what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages. The ancestor is the
+     * what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages; the text is
+     * {@link #TEXT}'s, without a tooltip. The ancestor is the
      * nearest one with a {@code data-testid} or an {@code id}, crossing shadow roots to their hosts.
      */
     public static final String FACTS = """

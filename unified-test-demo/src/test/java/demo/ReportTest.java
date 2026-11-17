@@ -1,7 +1,6 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.UnifiedPage;
@@ -53,6 +52,17 @@ class ReportTest {
         UnifiedButton print = page.find(UnifiedButton.class).withAccessibleName("Print");
 
         assertThat(export).hasText("Export");
-        assertEquals("", print.getText());
+        assertThat(print).hasText("");
+    }
+
+    /** Without an aria-label, the accessible name falls back to the text: the tooltip is not part of it. */
+    @Test
+    @DisplayName("The Export button is named by its own text, not its tooltip")
+    void aTooltipIsNotPartOfTheAccessibleName(UnifiedPage page) {
+        page.navigate(ReportView.class);
+
+        UnifiedButton export = page.find(UnifiedButton.class).withAccessibleName("Export");
+
+        assertThat(export).hasText("Export");
     }
 }
