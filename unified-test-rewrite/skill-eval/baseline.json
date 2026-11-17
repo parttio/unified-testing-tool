@@ -1,16 +1,16 @@
 {
-  "skillSha256": "b725a36ec4b060bcc9c4216203296b79a8f5ffb37dedbdc1b2386143cf129f61",
+  "skillSha256": "3f61c2b62b7287125e5f67e5677457442d93c9a40e88c5a1d4ea3c92aa7b2308",
   "compiles": 1,
   "totals": {
-    "markersBefore": 39,
-    "resolved": 39,
+    "markersBefore": 43,
+    "resolved": 43,
     "kept": 0,
     "untouched": 0,
     "escapeHatches": 0,
     "singleToolTests": 0,
-    "browserless.passed": 20,
+    "browserless.passed": 22,
     "browserless.failed": 0,
-    "playwright.passed": 20,
+    "playwright.passed": 22,
     "playwright.failed": 0
   },
   "fixtures": {
@@ -89,6 +89,30 @@
     "JUnit4MigratedTest.java": {
       "markersBefore": 1,
       "resolved": 1,
+      "kept": 0,
+      "untouched": 0,
+      "escapeHatches": 0,
+      "singleToolTests": 0,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0
+    },
+    "JUnit4RunLocallyMigratedTest.java": {
+      "markersBefore": 2,
+      "resolved": 2,
+      "kept": 0,
+      "untouched": 0,
+      "escapeHatches": 0,
+      "singleToolTests": 0,
+      "browserless.passed": 1,
+      "browserless.failed": 0,
+      "playwright.passed": 1,
+      "playwright.failed": 0
+    },
+    "PreferencesPageObjectMigratedTest.java": {
+      "markersBefore": 2,
+      "resolved": 2,
       "kept": 0,
       "untouched": 0,
       "escapeHatches": 0,

@@ -12,7 +12,15 @@ test); `--accept` then replaces this file.
 A baseline with totals only (before #153) compares with nothing: the first run in this format is acceptable.
 See [Migrating from TestBench](../../docs/migrating-from-testbench.md#evaluating-the-skill).
 
-Current baseline (2026-11-14), for the skill with both the Dramafinder marker kinds (#180) and the "was a scan of
+Current baseline (2026-11-17), for the skill as changed in d2c718f (#246), on two new fixtures (#134): all 43 markers
+resolved across 17 fixtures, no Escape Hatch, no single-tool test, 22 tests passing on Browserless and on Playwright.
+The new fixtures cover what no fixture did: `JUnit4RunLocallyMigratedTest` has the first "browser setup removed" marker
+(the agent deleted it: the original's `@Before` started a `ChromeDriver`, the Selenium adapter's default browser, though
+it was annotated `@RunLocally(Browser.FIREFOX)`); `PreferencesPageObjectMigratedTest` uses a TestBench page object with
+no converted twin to copy, and the agent wrote a Unified one (`PreferencesMigratedPage`), so the test runs on every
+Testing Tool. The script's verdict: "same (skill changed; the baseline is perfect: must not be worse), acceptable".
+
+Previous baseline (2026-11-14), for the skill with both the Dramafinder marker kinds (#180) and the "was a scan of
 column" marker (#154): the same score as the previous one, accepted by the script because that one had nothing left to
 improve: all 39 markers resolved across 15 fixtures, no Escape Hatch, no single-tool test, 20 tests passing on
 Browserless and on Playwright.
