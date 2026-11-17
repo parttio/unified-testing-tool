@@ -13,6 +13,7 @@ import com.vaadin.testing.unified.spi.TestingToolAdapter;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Inherited;
 import java.lang.reflect.AnnotatedElement;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -148,6 +149,12 @@ public final class TestLifecycle {
         }
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
+        steps.session(null, session);
+        if (test != null && settings.userStepsSnapshots()) {
+            Path snapshots = testEvidenceDir(test).resolve(StepRecorder.SNAPSHOT_DIR);
+            deleteSnapshots(snapshots);
+            steps.snapshotsInto(snapshots);
+        }
         return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)));
     }
 
@@ -179,9 +186,25 @@ public final class TestLifecycle {
         public List<Path> close(Throwable failure, TestId test) {
             try {
                 reportUserSteps(steps, failure, test);
-                return failure == null ? List.of() : writeEvidence(failure, test.evidenceName());
+                List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, test.evidenceName());
+                keepRecording(failure, test);
+                return evidence;
             } finally {
                 session.close();
+            }
+        }
+
+        /** What the session recorded for the test, such as Playwright's trace, into its evidence directory. */
+        private void keepRecording(Throwable failure, TestId test) {
+            boolean failed = failure != null
+                    && !failure.getClass().getName().equals("org.opentest4j.TestAbortedException");
+            try {
+                List<Path> files = session.testEnded(testEvidenceDir(test), failed);
+                if (failed && !files.isEmpty()) {
+                    failure.addSuppressed(new FailureEvidence("Recording: " + describe(files)));
+                }
+            } catch (Exception | LinkageError e) {
+                System.err.println("The recording of " + test + " could not be kept: " + e);
             }
         }
 
@@ -247,6 +270,20 @@ public final class TestLifecycle {
         String classDir = className.substring(className.lastIndexOf('.') + 1);
         String methodDir = test.methodName() + (test.invocation() == null ? "" : "[" + test.invocation() + "]");
         return settings.evidenceDir().resolve(classDir).resolve(methodDir);
+    }
+
+    /** Removes the snapshots an earlier run of the test left, so the directory holds this run's only. */
+    private static void deleteSnapshots(Path directory) {
+        if (!Files.isDirectory(directory)) {
+            return;
+        }
+        try (java.util.stream.Stream<Path> files = Files.list(directory)) {
+            for (Path file : files.toList()) {
+                Files.deleteIfExists(file);
+            }
+        } catch (java.io.IOException e) {
+            System.err.println("Old snapshots could not be removed from " + directory + ": " + e);
+        }
     }
 
     /** The test's evidence directory as a failure shows it: {@code target/…/EditPersonTest/editsAPerson/}. */

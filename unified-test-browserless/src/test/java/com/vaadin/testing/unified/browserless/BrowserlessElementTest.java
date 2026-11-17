@@ -33,4 +33,18 @@ class BrowserlessElementTest {
         assertEquals("Alice", BrowserlessElement.text("Alice"));
         assertNull(BrowserlessElement.text(null));
     }
+
+    @Test
+    void hidesPasswordValuesInTheComponentTree() {
+        String tree = """
+                ├── TextField[label='Name', value='Alan']
+                ├── PasswordField[label='Password', value='s3cret!', required='true']
+                └── PasswordField[label='Repeat']
+                """;
+        assertEquals("""
+                ├── TextField[label='Name', value='Alan']
+                ├── PasswordField[label='Password', value='••••', required='true']
+                └── PasswordField[label='Repeat']
+                """, BrowserlessSession.maskPasswords(tree));
+    }
 }

@@ -245,6 +245,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                         json.close(']');
                     }
                     common(json, step.window(), step.status(), step.durationNanos(), step.callSite(), step.error());
+                    json.optional("snapshot", step.snapshot());
                 }
                 case Group group -> {
                     json.field("type", "group");

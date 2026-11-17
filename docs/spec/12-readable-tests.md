@@ -147,9 +147,16 @@ How `summary.md` is made:
 4. **Failed scenarios:** Failed at, Expected and Found (or the error line), Nearby, Did you mean, the code path, the failure evidence (`<test class>.<test method>.*` at the evidence directory's root: a screenshot shown inline, other files linked), then the User Steps tree with the failed step marked.
 5. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
 
-Each step shows its index, window, text, duration and call site; step groups nest and fold; gaps are dimmed. Every value is HTML-escaped. Aborted scenarios count in the header only. Each scenario links its `user-steps.txt` and `user-steps.json`.
+Each step shows its index, window, text, duration and call site, and its snapshot when it has one: a screenshot opens under the step, a tree is a link. Step groups nest and fold; gaps are dimmed. Every value is HTML-escaped. Aborted scenarios count in the header only. Each scenario links its `user-steps.txt`, `user-steps.json`, and the Playwright trace this run kept for it (`trace.zip`).
 
-Later outputs, built from the same `user-steps.json`: per-step evidence in the HTML report ([#207](https://github.com/parttio/unified-testing-tool/issues/207)), living documentation per view, and a step-level diff against the base branch's last run ([#264](https://github.com/parttio/unified-testing-tool/issues/264)).
+### Evidence per User Step
+
+Off by default; both settings below cost time and disk on every step.
+
+- **Snapshots** (`vaadin.testing.user-steps.snapshots=true`): after each User Step, passed or failed, the step's window writes the page into `<test evidence dir>/steps/<number>`: a viewport screenshot (`.png`) in a browser, the component tree with its location (`.tree.txt`) on Browserless. At most 200 per test. The step's `snapshot` field names it. A test's run starts by removing the snapshots an earlier run left. A text snapshot is masked like the reports; a Browserless tree shows a password field's value as `••••`. A snapshot that can't be taken is left out and never fails the test.
+- **Playwright's trace** (`vaadin.testing.playwright.trace`: `off`, `on`, `on-failure`): the test's browser context records a trace with screenshots and DOM snapshots, each User Task and User Step a group named in its words, so Playwright's trace viewer lists the test's steps with their actions inside. It is kept as `<test evidence dir>/trace.zip` always (`on`) or when the test failed (`on-failure`), and named on the failure (`Recording: …`). Windows from `openWindow()` share it; users from `openAsUser(..)` have browser contexts of their own and are not traced. Open it at trace.playwright.dev, or with `mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="show-trace trace.zip"`.
+
+Later outputs, built from the same `user-steps.json`: living documentation per view, and a step-level diff against the base branch's last run ([#264](https://github.com/parttio/unified-testing-tool/issues/264)).
 
 ### `user-steps.json`, schema version 1
 
@@ -209,6 +216,7 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `durationMs` | step, group | number | |
 | `callSite` | all, optional | call site | the first stack frame outside the Unified API, its adapters, Wrapper interfaces and the JDK; for a group, the line calling `page.step(..)` |
 | `error` | all, optional | string | when `failed`: exception class and first line of the message |
+| `snapshot` | step, optional | string | with `vaadin.testing.user-steps.snapshots` on: the page right after the step, relative to the test's evidence directory: `steps/003.png` (browsers) or `steps/003.tree.txt` (Browserless) |
 
 **Call site:** `{ "file": "EditPersonTest.java", "line": 24, "className": "demo.EditPersonTest", "method": "editPerson" }`. `file` is left out without debug information; `line` is `-1` when unknown; a lambda's method is the method that declares it.
 
@@ -307,6 +315,8 @@ A clean break, since the API is alpha: no deprecation release and no Upgrade Rec
 | `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`) |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a PR, `origin/$GITHUB_BASE_REF`; otherwise unset |
+| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
+| `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
 
 ## Requirements on Testing Tool adapters
 
@@ -314,3 +324,5 @@ A clean break, since the API is alpha: no deprecation release and no Upgrade Rec
 - Expose the accessible name through the Unified Element.
 - Give grid row and column actions the same Auto-Wait as every other action.
 - Provide failure evidence for the failed User Step: a screenshot in a browser, the component tree on Browserless.
+- When asked, write a snapshot after a User Step (`AdapterSession.writeStepSnapshot`): a viewport screenshot in a browser, the component tree on Browserless.
+- An adapter with a trace of its own groups it by User Step (`tracesSteps`, `stepStarted`, `stepEnded`) and keeps it in the test's evidence directory when the test ends (`testEnded`). All four default to doing nothing.

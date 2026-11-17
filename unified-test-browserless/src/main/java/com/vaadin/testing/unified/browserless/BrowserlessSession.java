@@ -336,13 +336,28 @@ final class BrowserlessSession implements AdapterSession {
     /** The UI's component tree as text, with the location: what Browserless's TreeOnFailureExtension prints. */
     @Override
     public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
+        return writeTree(directory, name);
+    }
+
+    /** The component tree after the step: Browserless has no screenshot, and the tree is cheap. */
+    @Override
+    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+        return writeTree(directory, name);
+    }
+
+    private List<Path> writeTree(Path directory, String name) throws java.io.IOException {
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".tree.txt");
         Location location = activeLocation();
-        String tree = PrettyPrintTreeKt.toPrettyTree(window().getUI());
+        String tree = maskPasswords(PrettyPrintTreeKt.toPrettyTree(window().getUI()));
         Files.writeString(file, "Location: /" + (location == null ? "" : location.getPathWithQueryParameters())
                 + "\n\n" + tree);
         return List.of(file);
+    }
+
+    /** A password field's value shows as the reports show it: {@code ••••}. */
+    static String maskPasswords(String tree) {
+        return tree.replaceAll("(PasswordField\\[[^\\n]*?value=')[^'\\n]*(')", "$1••••$2");
     }
 
     @Override

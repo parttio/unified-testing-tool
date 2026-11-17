@@ -34,6 +34,7 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
 
     /** Another window of the same test, recording into the same User Steps. */
     public TestRun inWindow(AdapterSession windowSession, String windowName) {
+        steps.session(windowName, windowSession);
         return new TestRun(tool, windowSession, timeout, steps, windowName, ownTimeout);
     }
 

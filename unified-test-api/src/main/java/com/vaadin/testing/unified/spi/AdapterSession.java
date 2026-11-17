@@ -49,6 +49,44 @@ public interface AdapterSession extends AutoCloseable {
      */
     List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException;
 
+    /**
+     * Evidence of the page right after one User Step, when {@code vaadin.testing.user-steps.snapshots} is on:
+     * written into {@code directory}, with file names starting with {@code name}. Browsers: a screenshot of the
+     * viewport; Browserless: the component tree. The default writes nothing.
+     *
+     * @return the files written
+     */
+    default List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+        return List.of();
+    }
+
+    /**
+     * Whether this session records a trace of its own whose actions it can group by User Step
+     * ({@link #stepStarted}, {@link #stepEnded}): Playwright with {@code vaadin.testing.playwright.trace} on.
+     */
+    default boolean tracesSteps() {
+        return false;
+    }
+
+    /** A User Step or User Task starts, in its words; only called when {@link #tracesSteps()}. */
+    default void stepStarted(String text) {
+    }
+
+    /** The User Step or User Task last started has ended, passed or failed. */
+    default void stepEnded() {
+    }
+
+    /**
+     * The test has ended, before {@link #close()}: keep what the session recorded for it, such as Playwright's
+     * trace, in the test's evidence directory. The default keeps nothing.
+     *
+     * @param failed whether the test failed
+     * @return the files written
+     */
+    default List<Path> testEnded(Path testEvidenceDirectory, boolean failed) throws java.io.IOException {
+        return List.of();
+    }
+
     /** Another window of the same user and session. This session closes it when it closes. */
     AdapterSession openWindow();
 

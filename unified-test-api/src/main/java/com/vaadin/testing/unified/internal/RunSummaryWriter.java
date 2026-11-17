@@ -81,7 +81,7 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         Files.createDirectories(evidenceDir);
         Files.writeString(file, markdown, StandardCharsets.UTF_8);
         List<String> rootFiles = rootFiles(evidenceDir);
-        String report = new RunReport(summary, s -> failureEvidence(rootFiles, s)).html();
+        String report = new RunReport(summary, s -> evidence(evidenceDir, rootFiles, s)).html();
         Files.writeString(evidenceDir.resolve(RunReport.FILE), report, StandardCharsets.UTF_8);
         String stepSummary = env.get(GITHUB_STEP_SUMMARY);
         if (stepSummary != null && !stepSummary.isBlank() && settings.userStepsGithubSummary()) {
@@ -122,11 +122,30 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         return scenarios;
     }
 
+    private boolean isFromThisRun(Path file) {
+        try {
+            return !Files.getLastModifiedTime(file).toInstant().isBefore(runStart);
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     /** The file names at the evidence directory's root, sorted: where failure evidence is written. */
     private static List<String> rootFiles(Path evidenceDir) throws IOException {
         try (Stream<Path> files = Files.list(evidenceDir)) {
             return files.filter(Files::isRegularFile).map(p -> p.getFileName().toString()).sorted().toList();
         }
+    }
+
+    /** A scenario's failure evidence, then its Playwright trace if this run kept one. */
+    private List<String> evidence(Path evidenceDir, List<String> rootFiles, ScenarioResult scenario) {
+        List<String> files = new ArrayList<>(failureEvidence(rootFiles, scenario));
+        Path scenarioDir = Path.of(scenario.evidencePath());
+        Path trace = scenarioDir.resolve("trace.zip");
+        if (Files.isRegularFile(trace) && isFromThisRun(trace)) {
+            files.add(evidenceDir.relativize(trace).toString().replace('\\', '/'));
+        }
+        return files;
     }
 
     /**

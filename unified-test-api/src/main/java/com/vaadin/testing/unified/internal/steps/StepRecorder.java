@@ -2,6 +2,8 @@ package com.vaadin.testing.unified.internal.steps;
 
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.internal.failures.FailureParts;
+import com.vaadin.testing.unified.spi.AdapterSession;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -10,7 +12,9 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
@@ -39,6 +43,7 @@ public final class StepRecorder {
         private long durationNanos;
         private Throwable error;
         private List<CallSite> codePath = List.of();
+        private String snapshot;
 
         Step(String index, int number, Phrase phrase, String window, CallSite callSite) {
             this.index = index;
@@ -62,6 +67,8 @@ public final class StepRecorder {
         public Throwable error() { return error; }
         /** For a failed step: the call sites of the step groups around it, outermost first, then its own. */
         public List<CallSite> codePath() { return codePath; }
+        /** Its snapshot, relative to the test's evidence directory ({@code steps/003.png}); null without one. */
+        public String snapshot() { return snapshot; }
     }
 
     /** A step group: {@code page.step("Edit Alan Turing", () -> …)}, a User Task's heading. */
@@ -152,6 +159,15 @@ public final class StepRecorder {
     private volatile String scenario;
     private volatile String evidenceDir;
     private long durationNanos = -1;
+    /** The session of each window, by window name ("" for the first): snapshots and trace groups. */
+    private final Map<String, AdapterSession> sessions = new ConcurrentHashMap<>();
+    private volatile Path snapshotDir;
+    private int snapshots;
+
+    /** The most snapshots one test keeps: a long test doesn't fill the disk. */
+    public static final int MAX_SNAPSHOTS = 200;
+    /** Where snapshots go, inside the test's evidence directory. */
+    public static final String SNAPSHOT_DIR = "steps";
 
     // ---------------------------------------------------------------- recording
 
@@ -167,6 +183,8 @@ public final class StepRecorder {
         }
         Frame f = new Frame();
         frame.set(f);
+        // a void Wrapper method is a User Step whatever it does; a getter is known to be one only at the end
+        AdapterSession traced = voidAction ? traceStart(window, () -> action.get().render()) : null;
         try {
             Object result = body.run();
             if (f.acted || voidAction) {
@@ -178,6 +196,7 @@ public final class StepRecorder {
             throw t;
         } finally {
             frame.remove();
+            traceEnd(traced);
         }
     }
 
@@ -212,6 +231,7 @@ public final class StepRecorder {
     private <T> T step(Supplier<Phrase> phrase, String window, Body<T> body) {
         Frame f = new Frame();
         frame.set(f);
+        AdapterSession traced = traceStart(window, () -> phrase.get().render());
         try {
             T result = sneaky(body);
             add(f, phrase.get(), window, null);
@@ -221,6 +241,7 @@ public final class StepRecorder {
             throw t;
         } finally {
             frame.remove();
+            traceEnd(traced);
         }
     }
 
@@ -282,6 +303,7 @@ public final class StepRecorder {
             open.push(group);
         }
         long t0 = System.nanoTime();
+        AdapterSession traced = traceStart(window, () -> name);
         try {
             body.run();
         } catch (Throwable t) {
@@ -289,6 +311,7 @@ public final class StepRecorder {
             group.error = t;
             throw t;
         } finally {
+            traceEnd(traced);
             group.durationNanos = System.nanoTime() - t0;
             synchronized (this) {
                 open.remove(group);
@@ -326,6 +349,73 @@ public final class StepRecorder {
             }
         }
         container.children.add(step);
+        snapshot(step);
+    }
+
+    // ---------------------------------------------------------------- snapshots and trace groups
+
+    /** The session the steps of this window run in: the first window's under null. */
+    public void session(String window, AdapterSession session) {
+        sessions.put(window == null ? "" : window, session);
+    }
+
+    /** Turns snapshots on: one per User Step, into this directory, up to {@value #MAX_SNAPSHOTS}. */
+    public void snapshotsInto(Path directory) {
+        this.snapshotDir = directory;
+    }
+
+    /** The step's snapshot, from its window's session. A snapshot that can't be taken is left out. */
+    private void snapshot(Step step) {
+        Path dir = snapshotDir;
+        AdapterSession session = sessions.get(step.window == null ? "" : step.window);
+        if (dir == null || session == null || snapshots >= MAX_SNAPSHOTS) {
+            return;
+        }
+        try {
+            java.nio.file.Files.createDirectories(dir);
+            List<Path> files = session.writeStepSnapshot(dir, String.format(java.util.Locale.ROOT, "%03d",
+                    step.number));
+            if (!files.isEmpty()) {
+                snapshots++;
+                step.snapshot = SNAPSHOT_DIR + "/" + files.get(0).getFileName();
+                for (Path file : files) {
+                    if (file.getFileName().toString().endsWith(".txt")) {
+                        // a text snapshot hides the test's secrets, as the reports do
+                        String text = java.nio.file.Files.readString(file);
+                        java.nio.file.Files.writeString(file, mask(text));
+                    }
+                }
+            }
+        } catch (Exception | LinkageError e) {
+            // evidence is a help, never a reason to fail the test
+        }
+    }
+
+    /** Opens a trace group for a User Step or Task on a session that traces its steps; the session, or null. */
+    private AdapterSession traceStart(String window, Supplier<String> text) {
+        AdapterSession session = sessions.get(window == null ? "" : window);
+        if (session == null) {
+            return null;
+        }
+        try {
+            if (!session.tracesSteps()) {
+                return null;
+            }
+            session.stepStarted(mask(text.get()));
+            return session;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static void traceEnd(AdapterSession session) {
+        if (session != null) {
+            try {
+                session.stepEnded();
+            } catch (RuntimeException e) {
+                // the trace misses a group end; the test goes on
+            }
+        }
     }
 
     // ---------------------------------------------------------------- failures

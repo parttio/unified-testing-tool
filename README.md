@@ -125,6 +125,8 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`): whose User Steps go to the CI log |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; the base for "Changed in this PR" ([Reading reports and failures](docs/guide/reports-and-failures.md)) |
+| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
+| `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
 | `vaadin.testing.browserless.view-packages` | in a Spring test, the `@SpringBootApplication`'s packages and the test's package; otherwise the test's package |
 | `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends an exception thrown by a listener to the session's `ErrorHandler`, as in a browser |
 | `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |

@@ -75,7 +75,8 @@ jobs:
           -Dexec.classpathScope=test
           -Dexec.args="install --with-deps chromium"
       - name: Demo tests on Playwright
-        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright
+        # a failed test keeps Playwright's trace, grouped by User Step, in the evidence artifact
+        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4

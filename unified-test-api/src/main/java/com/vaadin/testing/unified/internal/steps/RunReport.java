@@ -19,7 +19,8 @@ import java.util.function.Function;
  * passing ones, hidden until the reader asks for them (or searches).
  *
  * @param summary the run, as {@code summary.md} has it
- * @param evidenceFiles a scenario's failure evidence files, as paths relative to the evidence directory
+ * @param evidenceFiles a scenario's evidence files, as paths relative to the evidence directory: its failure
+ *        evidence, and its recording ({@code trace.zip}) if it has one
  */
 public record RunReport(RunSummary summary, Function<ScenarioResult, List<String>> evidenceFiles) {
 
@@ -133,10 +134,15 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         if (s.steps().isEmpty()) {
             h.append("<li class=\"gap\">(no User Steps)</li>\n");
         }
-        entries(h, s.steps());
+        entries(h, s.steps(), evidenceDir(s));
         h.append("</ol>\n<p class=\"files\"><a href=\"").append(href(evidenceDir(s) + UserStepsReport.TEXT_FILE))
                 .append("\">user-steps.txt</a> · <a href=\"").append(href(evidenceDir(s) + UserStepsReport.JSON_FILE))
-                .append("\">user-steps.json</a></p>\n</details>\n");
+                .append("\">user-steps.json</a>");
+        for (String trace : evidenceFiles.apply(s).stream().filter(RunReport::isTrace).toList()) {
+            h.append(" · <a href=\"").append(href(trace)).append("\" title=\"Playwright trace: open it at ")
+                    .append("trace.playwright.dev, or with Playwright's show-trace\">trace.zip</a>");
+        }
+        h.append("</p>\n</details>\n");
     }
 
     private void failure(StringBuilder h, ScenarioResult s) {
@@ -175,7 +181,7 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             row(h, "Code", String.join(" ← ", path.reversed().stream().map(RunReport::site).toList()), true);
         }
         h.append("</dl>\n");
-        List<String> files = evidenceFiles.apply(s);
+        List<String> files = evidenceFiles.apply(s).stream().filter(f -> !isTrace(f)).toList();
         if (!files.isEmpty()) {
             h.append("<div class=\"evidence\">\n");
             for (String file : files) {
@@ -197,7 +203,12 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 .append(code ? "</code>" : "").append("</dd>\n");
     }
 
-    private static void entries(StringBuilder h, List<Map<String, Object>> entries) {
+    private static boolean isTrace(String file) {
+        return file.endsWith(".zip");
+    }
+
+    /** The entries as a tree; {@code dir} is the scenario's evidence directory, for the snapshots' links. */
+    private static void entries(StringBuilder h, List<Map<String, Object>> entries, String dir) {
         for (Map<String, Object> entry : entries) {
             String type = ScenarioResult.string(entry, "type");
             boolean failed = "failed".equals(ScenarioResult.string(entry, "status"));
@@ -208,9 +219,9 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 h.append("<span class=\"text\">");
                 window(h, window);
                 h.append(esc(orEmpty(ScenarioResult.string(entry, "name")))).append("</span>");
-                meta(h, entry);
+                meta(h, entry, null);
                 h.append("</summary>\n<ol>\n");
-                entries(h, ScenarioResult.entries(entry.get("steps")));
+                entries(h, ScenarioResult.entries(entry.get("steps")), dir);
                 h.append("</ol></details></li>\n");
             } else if ("gap".equals(type)) {
                 h.append("<li class=\"gap\">");
@@ -224,7 +235,7 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 h.append(esc(orEmpty(ScenarioResult.string(entry, "text"))))
                         .append(failed ? " <span class=\"mark\" aria-label=\"failed\">✘</span>" : "")
                         .append("</span>");
-                meta(h, entry);
+                meta(h, entry, dir);
                 String error = ScenarioResult.string(entry, "error");
                 if (failed && error != null) {
                     h.append("<div class=\"error\">").append(esc(error)).append("</div>");
@@ -244,9 +255,16 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         }
     }
 
-    /** Duration and call site, at the end of the line. */
-    private static void meta(StringBuilder h, Map<String, Object> entry) {
+    /** Snapshot link, duration and call site, at the end of the line. */
+    private static void meta(StringBuilder h, Map<String, Object> entry, String dir) {
         h.append("<span class=\"meta\">");
+        String snapshot = ScenarioResult.string(entry, "snapshot");
+        if (snapshot != null && dir != null) {
+            boolean image = snapshot.endsWith(".png");
+            h.append("<a class=\"snap\" href=\"").append(href(dir + snapshot)).append("\"")
+                    .append(image ? " data-image" : "").append(">").append(image ? "screenshot" : "tree")
+                    .append("</a>");
+        }
         if (entry.get("durationMs") instanceof Number n) {
             h.append("<span class=\"dur\">").append(duration(n.longValue())).append("</span>");
         }
@@ -346,6 +364,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             .badge{display:inline-block;padding:0 8px;border-radius:10px;background:var(--badge);color:var(--accent);\
             font-size:12px;font-weight:600}
             .dur,.site{color:var(--muted);font-weight:400;font-size:12px}
+            .snap{font-size:12px;font-weight:400}
+            img.snap-img{grid-column:2/-1;max-width:100%;margin:6px 0;border:1px solid var(--line);border-radius:6px}
             ol.steps,ol.steps ol{list-style:none;margin:0;padding:0}
             ol.steps ol{padding-left:22px;border-left:1px solid var(--line);margin-left:6px}
             ol.steps li{padding:3px 0}
@@ -399,6 +419,17 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 none.hidden=!(q||only)||shown>0;
               }
               [passing,changed].forEach(function(c){if(c){c.addEventListener('change',apply);}});
+              // a step's screenshot opens under the step; a second click closes it
+              document.addEventListener('click',function(e){
+                var a=e.target.closest('a.snap[data-image]');
+                if(!a||e.ctrlKey||e.metaKey||e.shiftKey){return;}
+                e.preventDefault();
+                var li=a.closest('li'),img=li.querySelector(':scope > img.snap-img');
+                if(img){img.remove();return;}
+                img=document.createElement('img');
+                img.className='snap-img';img.src=a.getAttribute('href');img.alt='The page after this step';
+                li.appendChild(img);
+              });
               search.addEventListener('input',apply);
             })();
             """;
