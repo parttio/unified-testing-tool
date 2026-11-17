@@ -58,6 +58,7 @@ nav:
       - Assertions and waiting: guide/assertions-and-waiting.md
       - Structuring a scenario: guide/structuring-a-scenario.md
       - Reading reports and failures: guide/reports-and-failures.md
+      - Running in CI: guide/ci-setup.md
       - Navigation, users and windows: guide/navigation-and-users.md
       - When a test needs one Testing Tool: guide/tool-specific.md
       - Wrappers for your own components: guide/custom-wrappers.md
