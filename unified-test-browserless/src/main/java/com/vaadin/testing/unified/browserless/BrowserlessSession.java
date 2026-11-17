@@ -187,8 +187,7 @@ final class BrowserlessSession implements AdapterSession {
             case PLACEHOLDER -> f.matches(e.getProperty("placeholder"));
             case TEST_ID -> f.value().equals(e.getAttribute("data-testid"));
             case ID -> f.value().equals(e.getAttribute("id"));
-            case CLASS_NAME -> java.util.Arrays.stream(f.value().trim().split("\\s+"))
-                    .allMatch(e.getClassList()::contains);
+            case CLASS_NAME -> e.getClassList().contains(f.value());
             case THEME -> {
                 String theme = e.getAttribute("theme");
                 yield theme != null && java.util.Arrays.asList(theme.split("\\s+")).contains(f.value());

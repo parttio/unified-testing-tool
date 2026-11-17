@@ -30,8 +30,18 @@ public interface CommonFilters<SELF> {
     SELF withTestId(String testId);
     SELF withId(String id);
 
-    /** Supported, not recommended: implementation details. */
+    /**
+     * Supported, not recommended: implementation details. One class name, as Flow's
+     * {@code addClassName(..)}: a name with whitespace throws {@link IllegalArgumentException} on every Testing
+     * Tool. For several, use {@link #withClassNames(String...)}.
+     */
     SELF withClassName(String className);
+
+    /**
+     * Components with every one of these class names, as Flow's {@code addClassNames(..)}: each argument may
+     * hold several names separated by whitespace. The same as chaining {@link #withClassName(String)}.
+     */
+    SELF withClassNames(String... classNames);
     SELF withTheme(String theme);
     SELF withAttribute(String name, String value);
 

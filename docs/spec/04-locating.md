@@ -41,6 +41,7 @@ Exact match by default (whitespace normalised); every text filter has a `…Cont
 | `withTestId` | `data-testid` (`Component.setTestId`) | `CommonFilters` | fallback |
 | `withId` | `id` | `CommonFilters` | fallback |
 | `withClassName`, `withTheme`, `withAttribute` | CSS class, theme, attribute | `CommonFilters` | no (implementation details) |
+| `withClassNames` | every one of several CSS classes; `withClassName` takes one class and rejects a name with spaces on every Testing Tool, as Flow's `addClassName` does | `CommonFilters` | no (implementation details) |
 | `visible()` | visible components only (`isVisible()`) | `CommonFilters` | where visibility matters |
 | `withProperty`, `where(Predicate<UnifiedElement>)` | building blocks for custom filters | `CommonFilters` | for Wrapper authors |
 | type-specific, e.g. `withHeaderTitle` | declared by the Wrapper as a default method | that type | yes |

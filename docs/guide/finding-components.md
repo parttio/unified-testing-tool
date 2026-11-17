@@ -73,6 +73,7 @@ When a component has nothing a user can read, give it a test id in the view (`co
 | `withTestId("nickname")` | `data-testid`, set with `Component.setTestId` |
 | `withId("receipt")` | `id`, set with `Component.setId` |
 | `withClassName("summary")` | a CSS class name |
+| `withClassNames("trip-card", "selected")` | every one of these CSS class names |
 | `withTheme("primary")` | a theme variant |
 | `withAttribute("name", "value")` | any attribute |
 | `withProperty("label", "Service")` | any property |
@@ -81,6 +82,12 @@ When a component has nothing a user can read, give it a test id in the view (`co
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/TripTest.java:filtersByClassName"
+```
+
+`withClassName` takes one class name, like Flow's `addClassName`: `withClassName("trip-card selected")` throws `IllegalArgumentException` on every Testing Tool. To require several classes, use `withClassNames`, which splits each argument on spaces like Flow's `addClassNames`, or chain `withClassName` calls:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/TripTest.java:filtersBySeveralClassNames"
 ```
 
 ### Combining filters

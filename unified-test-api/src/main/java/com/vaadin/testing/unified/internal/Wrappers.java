@@ -246,7 +246,14 @@ public final class Wrappers {
                 case "withPlaceholder" -> source.with(new Filter(Filter.Kind.PLACEHOLDER, null, (String) args[0], true));
                 case "withTestId" -> source.with(new Filter(Filter.Kind.TEST_ID, null, (String) args[0], true));
                 case "withId" -> source.with(new Filter(Filter.Kind.ID, null, (String) args[0], true));
-                case "withClassName" -> source.with(new Filter(Filter.Kind.CLASS_NAME, null, (String) args[0], true));
+                case "withClassName" -> source.with(classNameFilter((String) args[0]));
+                case "withClassNames" -> {
+                    ElementSource narrowed = source;
+                    for (String className : classNames((String[]) args[0])) {
+                        narrowed = narrowed.with(classNameFilter(className));
+                    }
+                    yield narrowed;
+                }
                 case "withTheme" -> source.with(new Filter(Filter.Kind.THEME, null, (String) args[0], true));
                 case "withAttribute" -> source.with(new Filter(Filter.Kind.ATTRIBUTE, (String) args[0], (String) args[1], true));
                 case "withProperty" -> {
@@ -269,6 +276,36 @@ public final class Wrappers {
                         wrapperType.getSimpleName() + "." + name + " is not implemented");
             };
             return newWrapper(wrapperType, element.withSource(next));
+        }
+
+        /** One class name, as Flow's {@code addClassName(..)} takes: none of the tools can match "a b" as one. */
+        private static Filter classNameFilter(String className) {
+            if (className == null || className.isBlank()) {
+                throw new IllegalArgumentException("Class name cannot be empty");
+            }
+            if (className.strip().matches(".*\\s.*")) {
+                throw new IllegalArgumentException("Class name cannot contain spaces: \"" + className
+                        + "\"; use withClassNames(..) to require several");
+            }
+            return new Filter(Filter.Kind.CLASS_NAME, null, className.strip(), true);
+        }
+
+        /** The names in each argument, split on whitespace, as Flow's {@code addClassNames(..)} does. */
+        private static List<String> classNames(String[] classNames) {
+            List<String> names = new ArrayList<>();
+            for (String arg : classNames) {
+                if (arg != null) {
+                    for (String name : arg.strip().split("\\s+")) {
+                        if (!name.isEmpty()) {
+                            names.add(name);
+                        }
+                    }
+                }
+            }
+            if (names.isEmpty()) {
+                throw new IllegalArgumentException("withClassNames(..) needs at least one class name");
+            }
+            return names;
         }
     }
 }

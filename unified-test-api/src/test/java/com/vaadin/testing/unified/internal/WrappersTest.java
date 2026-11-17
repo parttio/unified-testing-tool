@@ -26,12 +26,15 @@ class WrappersTest {
     /** Buttons on a fake page; {@code find} applies TEXT filters. */
     private final List<String> buttons = new CopyOnWriteArrayList<>();
     private final List<String> clicked = new CopyOnWriteArrayList<>();
+    /** The filters of every query the fake page received. */
+    private final List<List<Filter>> queried = new CopyOnWriteArrayList<>();
 
     private UnifiedPageImpl page() {
         AdapterSession session = (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { AdapterSession.class }, (proxy, method, args) -> {
                     if (method.getName().equals("find")) {
                         QuerySpec spec = (QuerySpec) args[0];
+                        queried.add(spec.filters());
                         return buttons.stream()
                                 .filter(text -> spec.filters().stream()
                                         .allMatch(f -> f.kind() == Filter.Kind.TEXT && f.matches(text)))
@@ -69,6 +72,30 @@ class WrappersTest {
         assertEquals(List.of("Save"), clicked);
         assertThat(any).hasCount(2);
         assertThat(save).hasCount(1);
+    }
+
+    @Test
+    void takesOneClassNamePerWithClassNameAsFlowDoes() {
+        UnifiedButton any = page().find(UnifiedButton.class);
+
+        IllegalArgumentException spaces = assertThrows(IllegalArgumentException.class,
+                () -> any.withClassName("primary large"));
+        assertEquals("Class name cannot contain spaces: \"primary large\"; use withClassNames(..) to require several",
+                spaces.getMessage());
+        assertThrows(IllegalArgumentException.class, () -> any.withClassName(" "));
+        assertThrows(IllegalArgumentException.class, () -> any.withClassNames());
+    }
+
+    @Test
+    void withClassNamesRequiresEachNameSplitAsFlowDoes() {
+        UnifiedButton both = page().find(UnifiedButton.class).withClassNames("primary", " large  wide ");
+
+        assertEquals("UnifiedButton[UnifiedButton.withClassName(\"primary\").withClassName(\"large\")"
+                + ".withClassName(\"wide\")]", both.toString());
+        both.all();
+        assertEquals(List.of(new Filter(Filter.Kind.CLASS_NAME, null, "primary", true),
+                new Filter(Filter.Kind.CLASS_NAME, null, "large", true),
+                new Filter(Filter.Kind.CLASS_NAME, null, "wide", true)), queried.get(queried.size() - 1));
     }
 
     @Test
