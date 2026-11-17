@@ -14,11 +14,6 @@
     </description>
 
     <properties>
-        <!-- not published before spec-v1 (ADR 0004) -->
-        <maven.deploy.skip>true</maven.deploy.skip>
-        <maven.source.skip>true</maven.source.skip>
-        <maven.javadoc.skip>true</maven.javadoc.skip>
-        <gpg.skip>true</gpg.skip>
         <!-- 3.38.0 imports rewrite-bom 8.91.0, which is not on Maven Central -->
         <rewrite-recipe-bom.version>3.37.0</rewrite-recipe-bom.version>
     </properties>
