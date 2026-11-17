@@ -24,6 +24,7 @@ public interface CommonFilters<SELF> {
 
     /** Supported, not recommended: implementation details. */
     SELF withClassName(String className);
+    SELF withClassNames(String... classNames);
     SELF withTheme(String theme);
     SELF withAttribute(String name, String value);
 

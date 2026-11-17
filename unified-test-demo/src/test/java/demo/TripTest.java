@@ -2,6 +2,7 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
@@ -62,4 +63,19 @@ class TripTest {
         assertThat(page.findComponent(Div.class).withClassName("trip-card").withText("Trip 7")).hasCount(1);
     }
     // --8<-- [end:filtersByClassName]
+
+    // --8<-- [start:filtersBySeveralClassNames]
+    /** One class name per withClassName, as Flow's addClassName; several with withClassNames (#259). */
+    @Test
+    @DisplayName("The selected trip card is found by both its class names")
+    void filtersBySeveralClassNames(UnifiedPage page) {
+        page.navigate(TripView.class);
+
+        assertThat(page.find(UnifiedContainer.class).withClassNames("trip-card", "selected")).hasText("Trip 42");
+        assertThat(page.find(UnifiedContainer.class).withClassName("trip-card").withClassName("selected"))
+                .hasText("Trip 42");
+        assertThrows(IllegalArgumentException.class,
+                () -> page.find(UnifiedContainer.class).withClassName("trip-card selected"));
+    }
+    // --8<-- [end:filtersBySeveralClassNames]
 }
