@@ -107,6 +107,12 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- RetryingHttpSenderInstaller: a launcher session listener, for every recipe test -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- types of the code before and after migration, for type attribution in tests -->
         <dependency>
             <groupId>org.vaadin.addons</groupId>
