@@ -75,6 +75,12 @@ class GoldenMigrationTest implements RewriteTest {
         assertMigrates("JUnit4TestBenchTest", "JUnit4MigratedTest");
     }
 
+    /** {@code @RunLocally} goes, with a "browser setup removed" Migration Marker (#134). */
+    @Test
+    void aJUnit4TestThatPicksItsBrowserMigratesWithABrowserSetupMarker() throws IOException {
+        assertMigrates("JUnit4RunLocallyTestBenchTest", "JUnit4RunLocallyMigratedTest");
+    }
+
     @Test
     void aBaseClassASubclassAndAPageObjectMigrateTogether() throws IOException {
         // twin names in the after files are the input names, as the recipe can't rename classes
@@ -283,6 +289,13 @@ class GoldenMigrationTest implements RewriteTest {
     @Test
     void aPageObjectWithoutIncludePageObjectsStaysBehindTheEscapeHatch() throws IOException {
         assertMigrates("ProfilePageObjectTestBenchTest", "ProfilePageObjectMigratedTest", "ProfileTestBenchPage");
+    }
+
+    /** A page object with no converted twin to copy: the skill must convert it, or keep it (#134). */
+    @Test
+    void aPageObjectWithNoConvertedTwinStaysWithAMarker() throws IOException {
+        assertMigrates("PreferencesPageObjectTestBenchTest", "PreferencesPageObjectMigratedTest",
+                "PreferencesTestBenchPage");
     }
 
     private void assertMigrates(String input, String twin) throws IOException {
