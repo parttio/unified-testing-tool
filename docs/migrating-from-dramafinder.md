@@ -2,8 +2,8 @@
 
 The `unified-test-rewrite` module turns Dramafinder 1.x and 2.x tests into Unified UI Tests with [OpenRewrite](https://docs.openrewrite.org/). It rewrites your test sources and `pom.xml` in place, so review the result with `git diff`. Code it can't convert keeps running on Playwright through the Escape Hatch, with a Migration Marker (`// TODO unified: ...`) on each statement that needs a person, or an agent, to look at it. Decided in [ADR 0006](adr/0006-dramafinder-migration-recipes.md), which follows the TestBench and Browserless migrations ([ADR 0004](adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](adr/0005-browserless-migration-recipes.md)).
 
-!!! warning "Not published yet"
-    The Migration Recipes are published to Maven Central from `spec-v1`. Until then, build them from this repository with `mvn install`; the commands below then find them in your local Maven repository.
+!!! note "Alpha"
+    The Migration Recipes are published to Maven Central with each alpha. A recipe migrates to the Unified API of its own version, and that API can still change between alphas, so use the recipe and the Unified API from the same release.
 
 ## Before and after
 
@@ -29,7 +29,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha2 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha3 \
       -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified
     ```
 
@@ -46,7 +46,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha2 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha3 \
       -Drewrite.activeRecipes=com.example.MigrateDramafinder
     ```
 
@@ -60,7 +60,7 @@ Commit or stash your work first: the recipe changes files in place.
         activeRecipe("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified")
     }
     dependencies {
-        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha2")
+        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha3")
     }
     ```
 

@@ -43,11 +43,11 @@ class ProfileViewTest {
 | `unified-test-archunit` | `UnifiedStyleRules`: the Unified UI Test style as ArchUnit rules, opt-in at test scope ([Checking the style](docs/guide/style-rules.md)) |
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
-| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench and Browserless to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)); not published before `spec-v1` |
+| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench, Browserless and Dramafinder to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)) |
 
 ## Try it
 
-Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha2`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies:
+Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha3`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies:
 
 ```xml
 <dependencyManagement>
@@ -55,7 +55,7 @@ Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha
         <dependency>
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-bom</artifactId>
-            <version>0.1.0-alpha2</version>
+            <version>0.1.0-alpha3</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -146,14 +146,14 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | Browserless: searching inside Grid row details (`row.details()`) | throws; toggling and checking details works |
 | Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66)) |
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
-| Browser: a combo box's `getItems()` | the drop-down's first page only (50 items by default) |
+| Selenium: a combo box's `getItems()` | the drop-down's first page only (50 items by default; [#127](https://github.com/parttio/unified-testing-tool/issues/127)) |
 
 ## Cutting a release
 
 Make sure the build passes locally and in the Tests workflow on `main`. Then, from an up-to-date `main` with push rights:
 
 ```
-mvn release:prepare release:clean -DreleaseVersion=0.1.0-alpha2 -DdevelopmentVersion=0.1.0-SNAPSHOT
+mvn release:prepare release:clean -DreleaseVersion=0.1.0-alpha3 -DdevelopmentVersion=0.1.0-SNAPSHOT
 ```
 
-This runs the tests, sets the version in every module, commits, tags `unified-test-0.1.0-alpha2`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
+This runs the tests, sets the version in every module, commits, tags `unified-test-0.1.0-alpha3`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
