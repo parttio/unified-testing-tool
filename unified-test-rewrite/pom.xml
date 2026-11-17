@@ -90,6 +90,12 @@
             <artifactId>rewrite-java-21</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- JavaParser.fromJavaVersion() picks the parser for the running JDK: without it, JDK 25 loses type attribution -->
+        <dependency>
+            <groupId>org.openrewrite</groupId>
+            <artifactId>rewrite-java-25</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.openrewrite</groupId>
