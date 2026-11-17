@@ -80,7 +80,7 @@ The portable layer every wrapper is written on:
 
 | Operation | Meaning on every Testing Tool |
 |---|---|
-| `getText()` | the DOM text (`textContent`), whitespace collapsed and trimmed. CSS doesn't change it: `text-transform`, hidden descendants and line breaks between flex items don't count. Browserless reads the same text from the server-side elements. |
+| `getText()` | the DOM text (`textContent`), whitespace collapsed and trimmed. CSS doesn't change it: `text-transform`, hidden descendants and line breaks between flex items don't count. A tooltip (`setTooltipText`) isn't part of it, though its text sits in the DOM in a browser. Browserless reads the same text from the server-side elements. |
 | `getVisibleText()` | the text as rendered (`innerText`); browser only |
 | `getAccessibleName()` | what a screen reader announces, in [4. Locating](04-locating.md#filters)'s order: what `withAccessibleName(..)` matches. Read for Near Misses and by tests |
 | `getInlineStyle(name)` | the value the inline style declares, as written (`var(--gap)`), or null |

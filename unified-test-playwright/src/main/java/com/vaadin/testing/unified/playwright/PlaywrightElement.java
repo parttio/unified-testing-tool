@@ -70,11 +70,14 @@ final class PlaywrightElement implements UnifiedElement {
         return generic.getTagName();
     }
 
-    /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
+    /**
+     * The DOM text, as {@link BrowserQueries#TEXT} reads it: what Browserless reads on the server. Not
+     * Dramafinder's {@code getText()}, whose {@code textContent} holds a tooltip's text.
+     */
     @Override
     public String getText() {
         Optional<String> special = support.text(locator);
-        return BrowserQueries.normalize(special.orElseGet(generic::getText));
+        return BrowserQueries.normalize(special.orElseGet(() -> (String) locator.evaluate(BrowserQueries.TEXT)));
     }
 
     @Override

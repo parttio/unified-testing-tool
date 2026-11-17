@@ -101,14 +101,14 @@ final class SeleniumElement implements UnifiedElement {
         return SeleniumSession.stale(element::getTagName);
     }
 
-    /** The DOM text ({@code textContent}), whitespace collapsed: what Browserless reads on the server. */
+    /** The DOM text, as {@link BrowserQueries#TEXT} reads it: what Browserless reads on the server. */
     @Override
     public String getText() {
         Optional<String> special = SeleniumSession.stale(() -> support.text(element, session));
         if (special.isPresent()) {
             return BrowserQueries.normalize(special.get());
         }
-        return BrowserQueries.normalize((String) property("textContent"));
+        return BrowserQueries.normalize((String) js("return (" + BrowserQueries.TEXT + ")(arguments[0]);"));
     }
 
     @Override
