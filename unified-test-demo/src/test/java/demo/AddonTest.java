@@ -87,4 +87,17 @@ class AddonTest {
         assertTrue(service.isVisible());
     }
     // --8<-- [end:anyComponentWithoutAWrapper]
+
+    /** A whole-number property reads "3" on every Testing Tool, not "3.0" on Browserless (#255). */
+    @Test
+    @DisplayName("The food rating reads 3 after the user rates it 3")
+    void readsAWholeNumberPropertyTheSameEverywhere(UnifiedPage page) {
+        page.navigate(AddonView.class);
+        UnifiedRating food = page.find(UnifiedRating.class).withLabel("Food");
+
+        food.rate(3);
+
+        assertThat(food).hasProperty("value", 3);
+        assertEquals("3", food.element().getProperty("value"));
+    }
 }
