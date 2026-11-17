@@ -88,14 +88,31 @@ final class BrowserlessElement implements UnifiedElement {
     @Override
     public String getProperty(String name) {
         if ("value".equals(name) && component instanceof HasValue<?, ?> hasValue) {
-            Object value = hasValue.getValue();
-            return value == null ? null : String.valueOf(value);
+            return text(hasValue.getValue());
         }
         if (element().hasProperty(name)) {
-            Object value = element().getPropertyRaw(name);
-            return value == null ? null : String.valueOf(value);
+            return text(element().getPropertyRaw(name));
         }
         return element().getAttribute(name);
+    }
+
+    /**
+     * A property value as the browsers write it: Flow keeps a numeric property as a double, so a whole number
+     * is written without its ".0" ({@code 3}, not {@code 3.0}), as Playwright and Selenium do. A BigDecimal
+     * keeps its scale ({@code 54.20}).
+     */
+    static String text(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if ((value instanceof Double || value instanceof Float) && isWhole(((Number) value).doubleValue())) {
+            return String.valueOf(((Number) value).longValue());
+        }
+        return String.valueOf(value);
+    }
+
+    private static boolean isWhole(double d) {
+        return !Double.isInfinite(d) && d == Math.rint(d) && Math.abs(d) < 0x1p53;
     }
 
     @Override
