@@ -116,6 +116,8 @@ scripts/build-docs.sh        # builds target/site
 
 JUnit configuration parameters (`junit-platform.properties`) or system properties:
 
+> With TestBench on the test classpath, your own `junit-platform.properties` replaces TestBench's (JUnit reads only one and warns about the other), which turns off TestBench's parallel execution. To keep TestBench's file, pass the settings as Surefire `configurationParameters` instead, as `unified-test-demo/pom.xml` does.
+
 | Setting | Default |
 |---|---|
 | `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |

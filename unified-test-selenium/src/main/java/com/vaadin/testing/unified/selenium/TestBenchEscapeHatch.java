@@ -39,6 +39,12 @@ public final class TestBenchEscapeHatch extends AbstractBrowserDriverTestBase {
         return new TestBenchEscapeHatch(page.unwrap(WebDriver.class));
     }
 
+    /**
+     * @deprecated TestBench deprecated this for removal in 25.3; use JUnit's {@code Assertions.assertEquals}:
+     *             TestBench elements implement {@code equals}, so wrapped and unwrapped elements compare correctly.
+     */
+    @Deprecated(since = "0.1.0", forRemoval = true)
+    @SuppressWarnings("removal")
     public static void assertEquals(WebElement expected, WebElement actual) {
         AbstractBrowserDriverTestBase.assertEquals(expected, actual);
     }
