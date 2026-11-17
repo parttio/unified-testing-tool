@@ -356,6 +356,12 @@ final class SeleniumSession implements AdapterSession {
         return List.of(file);
     }
 
+    /** A screenshot of the window after the step: a WebDriver round trip each, so only when asked for. */
+    @Override
+    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+        return writeFailureEvidence(directory, name);
+    }
+
     @Override
     public <T> Optional<T> unwrap(Class<T> type) {
         if (type.isInstance(driver())) {

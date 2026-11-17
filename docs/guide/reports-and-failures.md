@@ -240,6 +240,20 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the s
 
 Each User Step shows its number, its text, how long it took and the line that called it. User Tasks fold, and calls outside the Unified API show as dimmed gap lines. Each scenario links its `user-steps.txt` and `user-steps.json`.
 
+## What the page looked like at each step
+
+Two settings, both off by default, record more than the failure:
+
+- **A snapshot per User Step**: `-Dvaadin.testing.user-steps.snapshots=true`. After every User Step the page is saved into the test's evidence directory, under `steps/`: a screenshot of the browser window (Playwright, Selenium), or the component tree (Browserless). In the HTML report each step gets a *screenshot* link that opens the picture under the step, or a *tree* link. On Selenium each screenshot is a round trip to the browser, so expect slower tests.
+- **Playwright's trace**: `-Dvaadin.testing.playwright.trace=on-failure` (or `on`). Playwright records its trace, with a screenshot and the DOM before and after each of its actions, and the Unified API names a group in it after each User Task and User Step. The trace is kept as `trace.zip` in the test's evidence directory, for every test (`on`) or for failed ones (`on-failure`), and the HTML report links it. Open it at [trace.playwright.dev](https://trace.playwright.dev) (the file stays in your browser) or with Playwright's own viewer:
+
+```
+mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScope=test \
+    -Dexec.args="show-trace target/surefire-reports/unified-evidence/EditPersonTest/editsAPerson/trace.zip"
+```
+
+A trace is about 1 MB per test, a screenshot about 130 KB per step. With snapshots on, the demo's tests on Playwright took 7 minutes instead of 4 and wrote 542 screenshots (74 MB), so turn them on to look into a test rather than on every CI run. In CI, `trace=on-failure` keeps what you need to see why a test failed and costs little when tests pass. Values passed through `page.secret(..)` are masked in text snapshots, and Browserless trees show a password field's value as `••••`; screenshots and traces show the page as the browser drew it, where password fields show dots.
+
 ## The GitHub job summary
 
 A complete workflow, and the setup for other CI servers, is in [Running in CI](ci-setup.md).
@@ -276,6 +290,8 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
+| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |
+| `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step, as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 | `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits, the `Waited` of a failure |
 

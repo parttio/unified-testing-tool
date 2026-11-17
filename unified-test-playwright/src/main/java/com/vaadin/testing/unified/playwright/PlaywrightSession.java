@@ -39,25 +39,44 @@ final class PlaywrightSession implements AdapterSession {
     private final java.util.List<PlaywrightSession> children = new ArrayList<>();
 
     private final double timeoutMillis;
+    /** Whether the context records a trace ({@code vaadin.testing.playwright.trace}), and when to keep it. */
+    private final TraceMode trace;
 
-    PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis) {
-        this(context, page, baseUrl, timeoutMillis, true);
+    /** {@code vaadin.testing.playwright.trace}: {@code off} (default), {@code on}, or {@code on-failure}. */
+    enum TraceMode {
+        OFF, ON, ON_FAILURE;
+
+        static TraceMode parse(String value) {
+            return switch (value.trim().toLowerCase(java.util.Locale.ROOT)) {
+                case "", "off", "false" -> OFF;
+                case "on", "true" -> ON;
+                case "on-failure", "retain-on-failure" -> ON_FAILURE;
+                default -> throw new IllegalArgumentException(PlaywrightAdapter.TRACE
+                        + ": expected off, on or on-failure, got " + value);
+            };
+        }
+    }
+
+    PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis, TraceMode trace) {
+        this(context, page, baseUrl, timeoutMillis, true, trace);
     }
 
     private PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis,
-            boolean ownsContext) {
+            boolean ownsContext, TraceMode trace) {
         this.context = context;
         this.page = page;
         this.baseUrl = baseUrl;
         this.timeoutMillis = timeoutMillis;
         this.ownsContext = ownsContext;
+        this.trace = trace;
     }
 
     /** A new page in the same browser context: same cookies, so the same HTTP and Vaadin session. */
     @Override
     public AdapterSession openWindow() {
         Page second = context.newPage();
-        return new PlaywrightSession(context, second, baseUrl, timeoutMillis, false);
+        // the same context, so the same trace
+        return new PlaywrightSession(context, second, baseUrl, timeoutMillis, false, trace);
     }
 
     /** A new browser context (own cookies, own session), logged in through the test-only endpoint. */
@@ -66,7 +85,9 @@ final class PlaywrightSession implements AdapterSession {
         String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
         BrowserContext other = context.browser().newContext();
         other.setDefaultTimeout(timeoutMillis);
-        PlaywrightSession session = new PlaywrightSession(other, other.newPage(), baseUrl, timeoutMillis, true);
+        // a context of its own: not traced
+        PlaywrightSession session = new PlaywrightSession(other, other.newPage(), baseUrl, timeoutMillis, true,
+                TraceMode.OFF);
         children.add(session);
         session.logIn(loginUrl);
         return session;
@@ -330,6 +351,50 @@ final class PlaywrightSession implements AdapterSession {
         page.screenshot(new Page.ScreenshotOptions().setPath(file).setFullPage(true));
         return List.of(file);
     }
+
+    /** The viewport after the step: what the user saw. */
+    @Override
+    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+        java.nio.file.Files.createDirectories(directory);
+        Path file = directory.resolve(name + ".png");
+        page.screenshot(new Page.ScreenshotOptions().setPath(file));
+        return List.of(file);
+    }
+
+    @Override
+    public boolean tracesSteps() {
+        return trace != TraceMode.OFF;
+    }
+
+    /** A group in the trace: Playwright's trace viewer lists the step's actions under its words. */
+    @Override
+    public void stepStarted(String text) {
+        context.tracing().group(text);
+    }
+
+    @Override
+    public void stepEnded() {
+        context.tracing().groupEnd();
+    }
+
+    /** Stops the trace: kept as {@code trace.zip} in the test's evidence directory when its mode says so. */
+    @Override
+    public List<Path> testEnded(Path testEvidenceDirectory, boolean failed) throws java.io.IOException {
+        if (trace == TraceMode.OFF || !ownsContext) {
+            return List.of();
+        }
+        Path file = testEvidenceDirectory.resolve(TRACE_FILE);
+        java.nio.file.Files.deleteIfExists(file);
+        if (trace == TraceMode.ON || failed) {
+            java.nio.file.Files.createDirectories(testEvidenceDirectory);
+            context.tracing().stop(new com.microsoft.playwright.Tracing.StopOptions().setPath(file));
+            return List.of(file);
+        }
+        context.tracing().stop();
+        return List.of();
+    }
+
+    static final String TRACE_FILE = "trace.zip";
 
     @Override
     public void pressKey(String key) {

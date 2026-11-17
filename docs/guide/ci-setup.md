@@ -73,8 +73,9 @@ jobs:
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
           -Dexec.args="install --with-deps chromium"
+      # a failed test keeps Playwright's trace, grouped by User Step
       - name: Tests on Playwright
-        run: mvn -B -ntp verify -Dvaadin.testing.tool=playwright
+        run: mvn -B -ntp verify -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure
       - name: Upload Unified evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -150,6 +151,8 @@ In a multibranch pipeline building a pull request, Jenkins sets `CHANGE_TARGET` 
 | `vaadin.testing.user-steps.log` | `failed`: the User Steps of failed tests in the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a GitHub pull request, `origin/$GITHUB_BASE_REF`; otherwise unset |
+| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
+| `vaadin.testing.playwright.trace` | `off`; `on-failure` keeps the trace of failed tests as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 
 All settings: [Reading reports and failures](reports-and-failures.md#settings) and [2. Test setup](../spec/02-test-setup.md).

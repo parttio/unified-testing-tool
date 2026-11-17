@@ -20,6 +20,7 @@ public final class Settings {
     public static final String USER_STEPS_LOG = "vaadin.testing.user-steps.log";
     public static final String USER_STEPS_GITHUB_SUMMARY = "vaadin.testing.user-steps.github-summary";
     public static final String USER_STEPS_CHANGED_SINCE = "vaadin.testing.user-steps.changed-since";
+    public static final String USER_STEPS_SNAPSHOTS = "vaadin.testing.user-steps.snapshots";
 
     /** Which tests print their User Steps to stdout, the CI log. */
     public enum UserStepsLog { ALL, FAILED, NONE }
@@ -70,6 +71,14 @@ public final class Settings {
      */
     public boolean userStepsGithubSummary() {
         return get(USER_STEPS_GITHUB_SUMMARY).map(v -> !v.trim().equalsIgnoreCase("false")).orElse(true);
+    }
+
+    /**
+     * {@code vaadin.testing.user-steps.snapshots}: whether every User Step leaves a snapshot of the page in the
+     * test's evidence directory ({@code steps/}). Off unless {@code true}.
+     */
+    public boolean userStepsSnapshots() {
+        return get(USER_STEPS_SNAPSHOTS).map(v -> v.trim().equalsIgnoreCase("true")).orElse(false);
     }
 
     /**

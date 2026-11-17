@@ -44,6 +44,7 @@ class TestLifecycleTest {
         final List<String> calls = new ArrayList<>();
         List<Path> evidence = List.of(Path.of("evidence", "page.png"));
         IOException evidenceFailure;
+        boolean traces;
 
         AdapterSession proxy() {
             return (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -56,6 +57,9 @@ class TestLifecycleTest {
                                 }
                                 yield evidence;
                             }
+                            case "writeStepSnapshot" -> List.of(((Path) args[0]).resolve(args[1] + ".png"));
+                            case "testEnded" -> traces ? List.of(((Path) args[0]).resolve("trace.zip")) : List.of();
+                            case "tracesSteps" -> traces;
                             case "unwrap", "queryParameter" -> Optional.empty();
                             case "find" -> List.of();
                             case "isAt" -> false;
@@ -74,8 +78,14 @@ class TestLifecycleTest {
     static final TestLifecycle.TestId SAVES = new TestLifecycle.TestId("demo.ProfileTest", "saves", "saves", null);
 
     private TestLifecycle lifecycle(String tool) {
-        Settings settings = Settings.from(ConfigurationSource.of(Map.of(Settings.TOOL, tool,
-                Settings.EVIDENCE_DIR, evidenceDir.toString(), Settings.USER_STEPS_LOG, "none")));
+        return lifecycle(tool, Map.of());
+    }
+
+    private TestLifecycle lifecycle(String tool, Map<String, String> more) {
+        Map<String, String> all = new java.util.HashMap<>(more);
+        all.putAll(Map.of(Settings.TOOL, tool, Settings.EVIDENCE_DIR, evidenceDir.toString(),
+                Settings.USER_STEPS_LOG, "none"));
+        Settings settings = Settings.from(ConfigurationSource.of(all));
         return new TestLifecycle(settings, t -> new TestingToolAdapter() {
             @Override
             public TestingTool tool() {
@@ -178,7 +188,8 @@ class TestLifecycleTest {
         page.navigate("profile");
 
         assertEquals(List.of(), test.close(null, SAVES));
-        assertEquals(List.of("navigate[profile]", "close"), session.calls);
+        assertEquals(List.of("tracesSteps", "navigate[profile]",
+                "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", false]", "close"), session.calls);
         // a passing test still gets its User Steps report
         assertTrue(Files.exists(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("user-steps.txt")));
         assertTrue(Files.exists(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("user-steps.json")));
@@ -192,8 +203,8 @@ class TestLifecycleTest {
         List<Path> evidence = test.close(failure, SAVES);
 
         assertEquals(List.of(Path.of("evidence", "page.png")), evidence);
-        assertEquals(List.of("writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves]", "close"),
-                session.calls);
+        assertEquals(List.of("writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves]",
+                "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"), session.calls);
         Throwable[] suppressed = failure.getSuppressed();
         assertEquals(2, suppressed.length);
         assertTrue(suppressed[0].getMessage().startsWith("User Steps ("
@@ -214,6 +225,56 @@ class TestLifecycleTest {
         assertEquals("Failure evidence could not be written: java.io.IOException: disk full",
                 failure.getSuppressed()[1].getMessage());
         assertTrue(session.calls.contains("close"));
+    }
+
+    @Test
+    void takesASnapshotAfterEveryUserStepWhenAskedAndListsItInTheJson() throws Exception {
+        Path steps = evidenceDir.resolve("ProfileTest").resolve("saves").resolve("steps");
+        Files.createDirectories(steps);
+        Files.writeString(steps.resolve("009.png"), "an earlier run's");
+        TestLifecycle.OpenTest test = lifecycle("playwright", Map.of(Settings.USER_STEPS_SNAPSHOTS, "true"))
+                .open(new PlainContext(Plain.class, null), new StepRecorder(), SAVES);
+
+        test.page().navigate("profile");
+        test.page().navigate("people");
+        test.close(null, SAVES);
+
+        assertTrue(session.calls.contains("writeStepSnapshot[" + steps + ", 001]"), session.calls.toString());
+        assertTrue(session.calls.contains("writeStepSnapshot[" + steps + ", 002]"), session.calls.toString());
+        assertFalse(Files.exists(steps.resolve("009.png")));
+        String json = Files.readString(steps.getParent().resolve("user-steps.json"));
+        assertTrue(json.contains("\"snapshot\": \"steps/001.png\""), json);
+        assertTrue(json.contains("\"snapshot\": \"steps/002.png\""), json);
+    }
+
+    @Test
+    void takesNoSnapshotsByDefault() {
+        TestLifecycle.OpenTest test = lifecycle("playwright").open(new PlainContext(Plain.class, null),
+                new StepRecorder(), SAVES);
+
+        test.page().navigate("profile");
+        test.close(null, SAVES);
+
+        assertFalse(session.calls.stream().anyMatch(c -> c.startsWith("writeStepSnapshot")), session.calls.toString());
+    }
+
+    @Test
+    void groupsATracingSessionsActionsByUserStepAndUserTask() {
+        session.traces = true;
+        TestLifecycle.OpenTest test = lifecycle("playwright").open(new PlainContext(Plain.class, null),
+                new StepRecorder(), SAVES);
+        AssertionError failure = new AssertionError("expected 'Saved'");
+
+        test.page().step("Open the profile", () -> test.page().navigate("profile"));
+        test.close(failure, SAVES);
+
+        List<String> trace = session.calls.stream().filter(c -> c.startsWith("step")).toList();
+        assertEquals(List.of("stepStarted[Open the profile]", "stepStarted[open “profile”]", "stepEnded", "stepEnded"),
+                trace);
+        // the kept trace is named on the failure
+        assertTrue(java.util.Arrays.stream(failure.getSuppressed()).anyMatch(s -> s.getMessage().equals(
+                "Recording: " + evidenceDir.resolve("ProfileTest").resolve("saves").resolve("trace.zip")
+                        .toAbsolutePath())), java.util.Arrays.toString(failure.getSuppressed()));
     }
 
     @Test

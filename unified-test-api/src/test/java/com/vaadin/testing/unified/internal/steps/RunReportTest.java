@@ -123,6 +123,24 @@ class RunReportTest {
     }
 
     @Test
+    void linksEachStepsSnapshotAndTheTrace() {
+        String json = RunSummaryTest.EDIT_PERSON
+                .replace("\"text\": \"open People\", \"verb\": \"open\",",
+                        "\"text\": \"open People\", \"verb\": \"open\", \"snapshot\": \"steps/001.png\",")
+                .replace("\"verb\": \"fill\",", "\"verb\": \"fill\", \"snapshot\": \"steps/002.tree.txt\",");
+        String html = new RunReport(new RunSummary("Playwright", List.of(scenario(json, "EditPersonTest/editsAPerson")),
+                0, null), s -> List.of("EditPersonTest/editsAPerson/trace.zip")).html();
+
+        assertTrue(html.contains("<a class=\"snap\" href=\"EditPersonTest/editsAPerson/steps/001.png\" data-image>"
+                + "screenshot</a>"), html);
+        assertTrue(html.contains("<a class=\"snap\" href=\"EditPersonTest/editsAPerson/steps/002.tree.txt\">tree</a>"),
+                html);
+        // a passing scenario links its trace too, and the trace is not shown as failure evidence
+        assertTrue(html.contains(" · <a href=\"EditPersonTest/editsAPerson/trace.zip\""), html);
+        assertFalse(html.contains("class=\"evidence\""), html);
+    }
+
+    @Test
     void writesDurationsAsPeopleRead() {
         assertEquals("850 ms", RunReport.duration(850));
         assertEquals("1.2 s", RunReport.duration(1200));
