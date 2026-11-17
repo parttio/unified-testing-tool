@@ -84,7 +84,10 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public void pressKey(String key) {
-        record(() -> Phrases.pressKey(key), () -> run.session().pressKey(key));
+        record(() -> Phrases.pressKey(key), () -> {
+            run.session().pressKey(key);
+            run.session().settle();
+        });
     }
 
     @Override

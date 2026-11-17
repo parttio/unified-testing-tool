@@ -318,6 +318,19 @@ final class SeleniumSession implements AdapterSession {
         // nothing to flush: the browser runs on its own
     }
 
+    /** Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may start. */
+    @Override
+    public void settle() {
+        try {
+            ((JavascriptExecutor) driver()).executeAsyncScript("const done = arguments[arguments.length - 1];"
+                    + "(" + BrowserQueries.SETTLE_NAVIGATION + ")(arguments[0]).then(() => done(null), () => done(null));",
+                    BrowserQueries.SETTLE_NAVIGATION_CAP);
+        } catch (org.openqa.selenium.WebDriverException e) {
+            // the action loaded another page: nothing of Flow's left to wait for in this one
+        }
+        waitForVaadin();
+    }
+
     @Override
     public void pressKey(String key) {
         new Actions(driver()).sendKeys(SeleniumKeys.chord(key)).perform();

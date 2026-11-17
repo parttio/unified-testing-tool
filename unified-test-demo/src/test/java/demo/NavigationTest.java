@@ -1,13 +1,18 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.vaadin.testing.unified.RequiresTestingTool;
+import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import com.vaadin.flow.router.RouterLink;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.WebDriver;
 
 @UnifiedSpringBootTest
 class NavigationTest {
@@ -53,5 +58,42 @@ class NavigationTest {
         page.find(UnifiedButton.class).withText("Broken link").click();
 
         assertThat(page).isAt(NotFoundView.class).hasPath("no-such-page");
+    }
+
+    /**
+     * Flow changes the address bar after the response that navigated: in a timeout, or, in React mode, through
+     * React Router while {@code Vaadin.Flow.navigation} is set. Auto-Wait waits for that, so a one-shot read of
+     * the URL right after the click sees the new path (#233). The race was lost about one run in three; here the
+     * page holds the URL change back 300 ms with the flag set, so it is lost every time without the wait.
+     */
+    @Test
+    @RequiresTestingTool({ TestingTool.PLAYWRIGHT, TestingTool.SELENIUM })
+    @DisplayName("The address bar shows the profile as soon as the button that navigates there returns")
+    void updatesTheUrlBeforeAServerSideNavigationReturns(UnifiedPage page) {
+        page.navigate(HomeView.class);
+        // React Router's pushState waits 300 ms, and Vaadin.Flow.navigation reads as set until it has run
+        script(page, """
+                let pending = false;
+                const pushState = history.pushState.bind(history);
+                history.pushState = (state, title, url) => {
+                  pending = true;
+                  setTimeout(() => { pushState(state, title, url); pending = false; }, 300);
+                };
+                window.Vaadin.Flow = new Proxy(window.Vaadin.Flow, {
+                  get: (flow, name) => name === 'navigation' ? pending || flow.navigation : flow[name]
+                });""");
+
+        page.find(UnifiedButton.class).withText("Go to profile").click();
+
+        String href = script(page, "return location.href;");
+        assertTrue(href.endsWith("/profile"), href);
+    }
+
+    /** Runs a script in the page through the Escape Hatch: no retry, unlike hasPath. */
+    private static String script(UnifiedPage page, String body) {
+        var playwright = page.tryUnwrap(com.microsoft.playwright.Page.class);
+        Object result = playwright.isPresent() ? playwright.get().evaluate("() => { " + body + " }")
+                : ((JavascriptExecutor) page.unwrap(WebDriver.class)).executeScript(body);
+        return (String) result;
     }
 }

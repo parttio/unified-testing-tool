@@ -26,6 +26,8 @@ class WrappersTest {
     /** Buttons on a fake page; {@code find} applies TEXT filters. */
     private final List<String> buttons = new CopyOnWriteArrayList<>();
     private final List<String> clicked = new CopyOnWriteArrayList<>();
+    /** Every call to the session's settle(), in order with the clicks. */
+    private final List<String> settled = new CopyOnWriteArrayList<>();
     /** The filters of every query the fake page received. */
     private final List<List<Filter>> queried = new CopyOnWriteArrayList<>();
 
@@ -40,6 +42,9 @@ class WrappersTest {
                                         .allMatch(f -> f.kind() == Filter.Kind.TEXT && f.matches(text)))
                                 .map(this::button)
                                 .toList();
+                    }
+                    if (method.getName().equals("settle")) {
+                        settled.add("after " + clicked);
                     }
                     return null;
                 });
@@ -96,6 +101,18 @@ class WrappersTest {
         assertEquals(List.of(new Filter(Filter.Kind.CLASS_NAME, null, "primary", true),
                 new Filter(Filter.Kind.CLASS_NAME, null, "large", true),
                 new Filter(Filter.Kind.CLASS_NAME, null, "wide", true)), queried.get(queried.size() - 1));
+    }
+
+    @Test
+    void settlesAfterEveryAction() {
+        buttons.addAll(List.of("Save", "Cancel"));
+        UnifiedPageImpl page = page();
+
+        page.find(UnifiedButton.class).withText("Save").click();
+        page.find(UnifiedButton.class).withText("Cancel").click();
+        page.pressKey("Escape");
+
+        assertEquals(List.of("after [Save]", "after [Save, Cancel]", "after [Save, Cancel]"), settled);
     }
 
     @Test
