@@ -143,6 +143,44 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 """));
     }
 
+    /** TestBench's withClassName takes several names; the Unified one takes one (#259). */
+    @Test
+    void severalClassNamesBecomeWithClassNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void fillsTheName() {
+                        $(TextFieldElement.class).withClassName("name", "required").single().setValue("Alice");
+                        $(TextFieldElement.class).withClassName("name required").single().setValue("Bob");
+                        $(TextFieldElement.class).withClassName("name").withLabel("Name").single().setValue("Carol");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ProfileTest {
+
+                    @Test
+                    void fillsTheName(UnifiedPage page) {
+                        page.find(UnifiedTextField.class).withClassNames("name", "required").setValue("Alice");
+                        page.find(UnifiedTextField.class).withClassNames("name required").setValue("Bob");
+                        page.find(UnifiedTextField.class).withClassName("name").withLabel("Name").setValue("Carol");
+                    }
+                }
+                """));
+    }
+
     @Test
     void buttonLookupsFindTheUnifiedButton() {
         rewriteRun(java(

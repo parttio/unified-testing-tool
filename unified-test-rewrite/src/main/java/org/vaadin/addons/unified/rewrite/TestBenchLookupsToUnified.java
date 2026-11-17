@@ -68,8 +68,8 @@ public class TestBenchLookupsToUnified extends Recipe {
                     if (convertedLookup(method, m) && m.getSelect() instanceof J.MethodInvocation lookup
                             && (!FIRST.contains(m.getSimpleName()) || MigrationMarkers.add(getCursor(),
                                     "was " + m.getSimpleName() + "(); the lookup fails when several components match"))) {
-                        // the Wrapper is the lookup: no terminal (ADR 0007)
-                        return lookup.withPrefix(m.getPrefix());
+                        // the Wrapper is the lookup: no terminal (ADR 0007); several class names: withClassNames
+                        return Wrappers.withClassNames(lookup).withPrefix(m.getPrefix());
                     }
                     return m;
                 }

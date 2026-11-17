@@ -52,6 +52,42 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 """));
     }
 
+    /** Browserless's withClassName takes several names; the Unified one takes one (#259). */
+    @Test
+    void severalClassNamesBecomeWithClassNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.flow.component.button.Button;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class ProfileTest extends SpringBrowserlessTest {
+                    @Test
+                    void saves() {
+                        test($(Button.class).withClassName("primary", "large").single()).click();
+                        test($(Button.class).withClassName("primary").single()).click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ProfileTest {
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withClassNames("primary", "large").click();
+                        page.find(UnifiedButton.class).withClassName("primary").click();
+                    }
+                }
+                """));
+    }
+
     @Test
     void plainBrowserlessTestBecomesUnifiedUITestAndKeepsItsViewPackages() {
         rewriteRun(java(

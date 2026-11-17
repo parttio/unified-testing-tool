@@ -127,6 +127,38 @@ final class Wrappers {
     private Wrappers() {
     }
 
+    /**
+     * Whether a converted {@code withClassName(..)} call needs the Unified {@code withClassNames(..)}: TestBench's
+     * and Browserless's take several class names (varargs), the Unified one takes one, as Flow's
+     * {@code addClassName} does, and rejects a name with spaces (#259). So: two names or more, an array, or a
+     * single literal with a space.
+     */
+    static boolean needsClassNames(J.MethodInvocation call) {
+        if (!call.getSimpleName().equals("withClassName")) {
+            return false;
+        }
+        List<Expression> arguments = call.getArguments().stream().filter(a -> !(a instanceof J.Empty)).toList();
+        if (arguments.size() > 1) {
+            return true;
+        }
+        if (arguments.size() != 1) {
+            return false;
+        }
+        Expression argument = arguments.get(0);
+        return argument.getType() instanceof JavaType.Array
+                || argument instanceof J.Literal literal && literal.getValue() instanceof String s
+                        && s.strip().matches("(?s).*\\s.*");
+    }
+
+    /** The call, and the calls of the chain before it, with {@code withClassName} renamed where it needs to be. */
+    static J.MethodInvocation withClassNames(J.MethodInvocation call) {
+        J.MethodInvocation m = call;
+        if (m.getSelect() instanceof J.MethodInvocation before) {
+            m = m.withSelect(withClassNames(before));
+        }
+        return needsClassNames(m) ? m.withName(m.getName().withSimpleName("withClassNames")) : m;
+    }
+
     /** The Wrapper for the element, or {@code null} when it has none yet. */
     static Wrapper forElement(String elementFqn) {
         return BY_ELEMENT.get(elementFqn);
