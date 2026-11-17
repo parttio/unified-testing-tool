@@ -141,10 +141,20 @@ public final class BrowserQueries {
     }
 
     /**
-     * The element's text: its DOM text ({@code textContent}), whitespace collapsed. The same on every Testing
-     * Tool: Browserless reads the same text from the server-side elements.
+     * The element's text: its DOM text ({@code textContent}), whitespace collapsed, leaving out the text of a
+     * tooltip ({@code setTooltipText}: a {@code <vaadin-tooltip slot="tooltip">} child, its text in the DOM
+     * only in a browser). The same on every Testing Tool: Browserless reads the same text from the server-side
+     * elements.
      */
-    public static final String TEXT = "e => (e.textContent || '').replace(/\\s+/g, ' ').trim()";
+    public static final String TEXT = """
+            e => {
+              const tooltip = n => n.localName === 'vaadin-tooltip' && n.getAttribute('slot') === 'tooltip';
+              const text = n => n.nodeType === 3 ? n.data
+                  : n.nodeType === 1 && !tooltip(n) ? [...n.childNodes].map(text).join('') : '';
+              const all = e.querySelector('vaadin-tooltip[slot="tooltip"]')
+                  ? [...e.childNodes].map(text).join('') : e.textContent;
+              return (all || '').replace(/\\s+/g, ' ').trim();
+            }""";
 
     /**
      * The Item Name of a tab or a menu item: its text, whitespace collapsed, leaving out children in a named

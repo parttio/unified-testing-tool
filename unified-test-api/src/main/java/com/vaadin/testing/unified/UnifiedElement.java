@@ -16,7 +16,8 @@ public interface UnifiedElement extends HasEscapeHatch {
     /**
      * The element's text as in the DOM ({@code textContent}), whitespace collapsed and trimmed. The same on
      * every Testing Tool: CSS doesn't change it ({@code text-transform}, hidden descendants, line breaks
-     * between flex items). For the text as rendered, see {@link #getVisibleText()}.
+     * between flex items). A tooltip ({@code setTooltipText}) is not part of it. For the text as rendered, see
+     * {@link #getVisibleText()}.
      */
     String getText();
 

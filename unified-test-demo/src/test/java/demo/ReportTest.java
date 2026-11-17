@@ -1,6 +1,7 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.UnifiedPage;
@@ -40,5 +41,18 @@ class ReportTest {
         assertThat(dialog).isOpen().hasHeaderTitle("Export report");
         dialog.find(UnifiedButton.class).withText("Close").click();
         assertThat(dialog).isClosed();
+    }
+
+    /** A tooltip ({@code setTooltipText}) sits in the button's DOM, yet is not its text. */
+    @Test
+    @DisplayName("The Export and Print buttons show their own text, not their tooltips")
+    void aTooltipIsNotPartOfTheText(UnifiedPage page) {
+        page.navigate(ReportView.class);
+
+        UnifiedButton export = page.find(UnifiedButton.class).withText("Export");
+        UnifiedButton print = page.find(UnifiedButton.class).withAccessibleName("Print");
+
+        assertThat(export).hasText("Export");
+        assertEquals("", print.getText());
     }
 }
