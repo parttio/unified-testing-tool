@@ -89,6 +89,7 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 | test methods, `@BeforeEach` and helper methods that use Browserless | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test; a project base class converts too |
 | `navigate(ProfileView.class)`, `UI.getCurrent().navigate(..)` | `page.navigate(ProfileView.class)` |
 | `$(TextField.class).withCaption("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
+| `withClassName("a", "b")`, or one name with a space | `withClassNames("a", "b")`: the Unified `withClassName` takes one class name, as Flow's `addClassName` does |
 | `test(component).setValue("x")`, `.click()`, `.check()` | `component.setValue("x")`, `.click()`, `.check()` |
 | component getters: `getValue()`, `getText()`, `isEnabled()`, Checkbox `getValue()`, Dialog `isOpened()` | Wrapper getters: `getValue()`, `getText()`, `isEnabled()`, `isChecked()`, `isOpen()` |
 | a local `TextField name = $(..)...` | `UnifiedTextField name = page.find(..)...` |

@@ -153,7 +153,7 @@ public class BrowserlessLookupsToUnified extends Recipe {
                                 .build()
                                 .apply(getCursor(), m.getCoordinates().replace(), receiver(method));
                     } else {
-                        converted = unifiedCall(m, w.fqn(), w.filters().get(method.getSimpleName()),
+                        converted = unifiedCall(m, w.fqn(), filterName(w.filters().get(method.getSimpleName()), method),
                                 JavaType.ShallowClass.build(w.fqn()));
                     }
                     // a locator is lazy and unique, like the Wrapper it becomes
@@ -197,7 +197,7 @@ public class BrowserlessLookupsToUnified extends Recipe {
                     return lookup.withPrefix(m.getPrefix());
                 }
                 m = unifiedCall(m, wrapper.fqn(), m.getSimpleName(), JavaType.ShallowClass.build(wrapper.fqn()));
-                String filter = wrapper.filters().get(method.getSimpleName());
+                String filter = filterName(wrapper.filters().get(method.getSimpleName()), method);
                 if (wrapper.isButton() && method.getSimpleName().equals("withCaption")
                         && !MigrationMarkers.add(getCursor(), "was " + printCall(method)
                                 + "; use withAccessibleName(..) for a button without text")) {
@@ -286,6 +286,11 @@ public class BrowserlessLookupsToUnified extends Recipe {
         JavaType.Method unified = type.withDeclaringType(JavaType.ShallowClass.build(declaringType)).withName(name)
                 .withReturnType(returned).withParameterTypes(parameters);
         return m.withMethodType(unified).withName(m.getName().withSimpleName(name).withType(unified));
+    }
+
+    /** The Unified filter's name: {@code withClassNames} for several class names (#259). */
+    private static String filterName(String unified, J.MethodInvocation original) {
+        return "withClassName".equals(unified) && Wrappers.needsClassNames(original) ? "withClassNames" : unified;
     }
 
     private static String fqn(JavaType type) {
