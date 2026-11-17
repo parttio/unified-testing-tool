@@ -193,7 +193,14 @@ final class PlaywrightSession implements AdapterSession {
         Object query = scope == null
                 ? invokeStatic("find", new Class<?>[] { Page.class, Class.class }, page, type)
                 : invokeStatic("find", new Class<?>[] { Locator.class, Class.class }, scope, type);
+        List<Filter> inPage = new ArrayList<>();
         for (Filter f : filters) {
+            if (f.kind() == Filter.Kind.LABEL) {
+                // Dramafinder's withLabel reads the field's own label slot only; the label property or a FormLayout
+                // item's label is checked in the page, with the Unified API's matching, as on Selenium (#93)
+                inPage.add(f);
+                continue;
+            }
             String method = switch (f.kind()) {
                 case LABEL -> "withLabel";
                 case ACCESSIBLE_NAME -> "withAccessibleName";
@@ -217,10 +224,17 @@ final class PlaywrightSession implements AdapterSession {
         Locator candidates = (Locator) invoke(query, "getLocator", new Class<?>[0]);
         @SuppressWarnings("unchecked")
         List<VaadinElement> found = (List<VaadinElement>) invoke(query, "all", new Class<?>[0]);
+        java.util.Set<Integer> matching = null;
+        if (!inPage.isEmpty()) {
+            matching = new java.util.HashSet<>();
+            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, BrowserQueries.remaining(inPage))) {
+                matching.add(((Number) i).intValue());
+            }
+        }
         List<UnifiedElement> result = new ArrayList<>();
         for (int i = 0; i < found.size(); i++) {
             VaadinElement e = found.get(i);
-            if (support.include(e.getLocator())) {
+            if ((matching == null || matching.contains(i)) && support.include(e.getLocator())) {
                 result.add(new PlaywrightElement(this, e.getLocator(), e, support, candidates, i));
             }
         }

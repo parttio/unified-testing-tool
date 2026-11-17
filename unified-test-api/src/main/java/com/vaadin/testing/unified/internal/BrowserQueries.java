@@ -178,6 +178,26 @@ public final class BrowserQueries {
             }""".formatted(TEXT);
 
     /**
+     * The label of the FormLayout item holding the element ({@code formLayout.addFormItem(field, "Name")}): the
+     * text of the {@code <vaadin-form-item>}'s {@code slot="label"} child; null outside a form item. Browserless
+     * reads the same from the server-side elements.
+     */
+    public static final String FORM_ITEM_LABEL = """
+            e => {
+              const item = e.parentElement;
+              if (!item || item.localName !== 'vaadin-form-item') return null;
+              const label = item.querySelector(':scope > [slot="label"]');
+              return label ? (label.textContent || '').replace(/\s+/g, ' ').trim() : null;
+            }""";
+
+    /** The label {@code withLabel(..)} matches and a failure shows: the {@code label} property, else the form item's. */
+    public static final String LABEL = """
+            e => {
+              const formItemLabel = %s;
+              return e.label != null && String(e.label).trim() !== '' ? String(e.label) : formItemLabel(e);
+            }""".formatted(FORM_ITEM_LABEL);
+
+    /**
      * Browser function {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId]}:
      * what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages. The ancestor is the
      * nearest one with a {@code data-testid} or an {@code id}, crossing shadow roots to their hosts.
@@ -186,13 +206,14 @@ public final class BrowserQueries {
             e => {
               const text = %s;
               const accessibleName = %s;
+              const label = %s;
               const str = v => v == null ? null : String(v);
               const up = n => n.parentElement || (n.getRootNode() instanceof ShadowRoot ? n.getRootNode().host : null);
               let a = up(e);
               while (a && !a.getAttribute('data-testid') && !a.getAttribute('id')) a = up(a);
-              return [str(e.label), text(e), str(e.placeholder), e.getAttribute('data-testid'), accessibleName(e),
+              return [str(label(e)), text(e), str(e.placeholder), e.getAttribute('data-testid'), accessibleName(e),
                   a ? a.getAttribute('data-testid') : null, a && !a.getAttribute('data-testid') ? a.getAttribute('id') : null];
-            }""".formatted(TEXT, ACCESSIBLE_NAME);
+            }""".formatted(TEXT, ACCESSIBLE_NAME, LABEL);
 
     /** {@link #FACTS}' result as {@link com.vaadin.testing.unified.spi.ElementFacts}. */
     public static com.vaadin.testing.unified.spi.ElementFacts facts(Object result) {
@@ -226,6 +247,7 @@ public final class BrowserQueries {
             (elements, filters) => {
               const text = %s;
               const accessibleName = %s;
+              const formItemLabel = %s;
               const norm = v => v == null ? null : String(v).replace(/\\s+/g, ' ').trim();
               const matches = (actual, f) => {
                 const a = norm(actual);
@@ -235,7 +257,8 @@ public final class BrowserQueries {
               const check = (e, f) => {
                 switch (f.kind) {
                   case 'TEXT': return matches(text(e), f);
-                  case 'LABEL': return matches(e.label, f);
+                  // its own label, or the label of the FormLayout item holding it
+                  case 'LABEL': return matches(e.label, f) || matches(formItemLabel(e), f);
                   case 'PLACEHOLDER': return matches(e.placeholder, f);
                   case 'ACCESSIBLE_NAME': return matches(accessibleName(e), f);
                   case 'TEST_ID': return e.getAttribute('data-testid') === f.value;
@@ -250,5 +273,5 @@ public final class BrowserQueries {
               const found = [];
               elements.forEach((e, i) => { if (appContent(e) && filters.every(f => check(e, f))) found.push(i); });
               return found;
-            }""".formatted(TEXT, ACCESSIBLE_NAME, APP_CONTENT);
+            }""".formatted(TEXT, ACCESSIBLE_NAME, FORM_ITEM_LABEL, APP_CONTENT);
 }
