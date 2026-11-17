@@ -106,6 +106,7 @@ public final class LazyElement implements UnifiedElement {
                 return e.isVisible() && e.isEnabled() ? e : null;
             }, () -> LookupFailures.notUsable(this));
             body.accept(element);
+            run.session().settle();
             return null;
         }));
     }

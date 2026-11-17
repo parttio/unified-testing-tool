@@ -15,6 +15,7 @@ sequenceDiagram
     W->>W: wait: exactly one match, visible, enabled
     W->>A: user action
     W->>A: wait: server round-trip finished
+    W->>A: wait: address bar updated (browsers)
     W-->>T: returns
 ```
 
@@ -23,6 +24,8 @@ sequenceDiagram
 | Browserless | by construction | by construction (synchronous) |
 | Playwright (Dramafinder) | Playwright actionability | **adapter adds** wait for Vaadin idle |
 | Selenium (TestBench) | **adapter adds** element-state wait | `waitForVaadin` |
+
+**Address bar.** A server-side navigation (`ui.navigate(..)` in a listener) changes the address bar after Flow has handled the response: in a timeout, or in React mode through React Router while Flow's `Vaadin.Flow.navigation` flag is set. The round-trip wait is over by then. So after every action, the browser adapters also wait for that change (`AdapterSession.settle()`: one timeout, then while the flag is set, at most 2 s, then one more timeout, then the round trip the navigation may start). A one-shot read of the URL right after an action, through the Escape Hatch or a report, sees the new path ([#233](https://github.com/parttio/unified-testing-tool/issues/233)). The flag is Flow's internal, not an API.
 
 Grid row and column actions (`row().withCellText(..).click()`, `column(..).sort(..)`) are Wrapper actions and get the same Auto-Wait ([7. Grid](07-grid.md)).
 
@@ -79,7 +82,7 @@ Not part of the Unified API. Use the Escape Hatch and the tool's own switch (e.g
 
 ## Requirements on Testing Tool adapters
 
-- Guarantee both halves of Auto-Wait for every action.
+- Guarantee both halves of Auto-Wait for every action, including the address bar change of a server-side navigation (`settle()`).
 - Re-resolve Wrappers on every call, and count the matches for `exists()`, `doesNotExist()` and `hasCount(n)`.
 - Retry assertions until the timeout; on Browserless flush `UI.access` tasks and signals between attempts.
 - Give grid row and column actions the same Auto-Wait as every other action.

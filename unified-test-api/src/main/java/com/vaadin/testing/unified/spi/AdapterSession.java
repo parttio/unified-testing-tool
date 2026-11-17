@@ -30,6 +30,14 @@ public interface AdapterSession extends AutoCloseable {
     /** Called between retries: lets pending server work run (Browserless: UI.access tasks and signals). */
     void sync();
 
+    /**
+     * Called after every user action, once the action has waited for its round trip: waits for what the round
+     * trip set going in the page and doesn't wait for. In a browser, the address bar change of a server-side
+     * navigation, which Flow makes after handling the response (spec 05, Auto-Wait). The default does nothing.
+     */
+    default void settle() {
+    }
+
     void pressKey(String key);
     void screenshot(Path file);
 

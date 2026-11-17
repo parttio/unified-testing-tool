@@ -14,6 +14,26 @@ import java.util.regex.Pattern;
 public final class BrowserQueries {
     private BrowserQueries() {}
 
+    /**
+     * Resolves once Flow has changed the address bar for a navigation it has handled (#233), waiting for the
+     * navigation flag at most {@code cap} ms. Without React, Flow's {@code History} sends
+     * {@code setTimeout(() => history.pushState(..))}: the first timeout runs after it. In React mode, Flow.tsx
+     * sets {@code Vaadin.Flow.navigation} on {@code vaadin-navigate} and deletes it in a timeout once React Router
+     * has moved: wait while it is set, then one more timeout. The flag is Flow's internal, not an API.
+     */
+    public static final String SETTLE_NAVIGATION = """
+            async (cap) => {
+              const tick = (ms) => new Promise(r => setTimeout(r, ms));
+              await tick(0);
+              for (let t = 0; window.Vaadin?.Flow?.navigation && t < cap; t += 10) {
+                await tick(10);
+              }
+              await tick(0);
+            }""";
+
+    /** How long {@link #SETTLE_NAVIGATION} waits for the navigation flag at most, in ms. */
+    public static final int SETTLE_NAVIGATION_CAP = 2000;
+
     private static final Pattern ATTRIBUTE_NAME = Pattern.compile("[A-Za-z_][-A-Za-z0-9_]*");
 
     /** The selector part for a filter CSS can express, or null. */

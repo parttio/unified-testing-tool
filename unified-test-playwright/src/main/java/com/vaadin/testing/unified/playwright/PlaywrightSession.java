@@ -311,6 +311,17 @@ final class PlaywrightSession implements AdapterSession {
         // nothing to flush: the browser runs on its own
     }
 
+    /** Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may start. */
+    @Override
+    public void settle() {
+        try {
+            page.evaluate(BrowserQueries.SETTLE_NAVIGATION, BrowserQueries.SETTLE_NAVIGATION_CAP);
+        } catch (com.microsoft.playwright.PlaywrightException e) {
+            // the action loaded another page: nothing of Flow's left to wait for in this one
+        }
+        AutoWait.waitForVaadinIdle(page);
+    }
+
     /** A full-page screenshot. */
     @Override
     public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
