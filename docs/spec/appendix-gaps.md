@@ -4,7 +4,7 @@ Where a Testing Tool lacks something the Unified API needs, its adapter fills th
 
 ## Dramafinder
 
-The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, field and Tabs gaps in **2.0.1**, the Upload to Details gaps in **2.0.2**, the rest in **2.1.0**. The Playwright adapter delegates to Dramafinder for each.
+The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, field and Tabs gaps in **2.0.1**, the Upload to Details gaps in **2.0.2**, the last two in **2.2.0**, the rest in **2.1.0**. The Playwright adapter delegates to Dramafinder for each.
 
 | Gap | Issue |
 |---|---|
@@ -42,13 +42,8 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | No way to read the Vaadin UI id of the page | [parttio/dramafinder#280](https://github.com/parttio/dramafinder/issues/280) |
 | Grid: column indexes count the selection column (Flow's `getColumns()` doesn't) | [parttio/dramafinder#281](https://github.com/parttio/dramafinder/issues/281) |
 | Grid: no single locator for a column's header content across header rows | [parttio/dramafinder#282](https://github.com/parttio/dramafinder/issues/282) |
-
-Open:
-
-| Gap | Issue | Workaround in the adapter |
-|---|---|---|
-| A tag query takes a tag name only, not `*` for any element (`UnifiedContainer`) | to be filed in `parttio/dramafinder` | Builds the any-tag `TagQuery` on a `css:light=*` locator |
-| `GenericElement` has no focus or enabled state | to be filed in `parttio/dramafinder` | Subclasses it with `FocusableElement` and `HasDisabledAttributeElement` |
+| A tag query takes a tag name only, not `*` for any element (`UnifiedContainer`) | [parttio/dramafinder#295](https://github.com/parttio/dramafinder/issues/295) |
+| `GenericElement` has no focus or enabled state | [parttio/dramafinder#296](https://github.com/parttio/dramafinder/issues/296) |
 
 ## TestBench
 
