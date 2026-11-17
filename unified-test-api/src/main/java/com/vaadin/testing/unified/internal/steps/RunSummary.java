@@ -121,7 +121,7 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
      * {@code AssertionError: first line of the message}; for a Unified failure, {@code UnifiedAssertionError:
      * Expected …, found …} (the first line of its message is the scenario, already the heading).
      */
-    private static String error(Map<String, Object> failure) {
+    static String error(Map<String, Object> failure) {
         String type = Optional.ofNullable(ScenarioResult.string(failure, "type")).orElse("failure");
         String simple = type.substring(type.lastIndexOf('.') + 1);
         String expected = ScenarioResult.string(failure, "expected");
