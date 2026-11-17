@@ -161,7 +161,8 @@ class RunSummaryWriterTest {
                 ref -> Optional.of(ChangedFiles.of(ref, List.of(testFile), List.of(), Map.of(testFile, "void edits() {}"))))
                 .write(Set.of(), "1");
 
-        assertTrue(summary().contains("· changed · User Steps +1 −1 against the base run\n\n```diff\n- open Home\n"
+        assertTrue(summary().contains("· changed · User Steps +1 −1 against the base run\n\n"
+                + "Called from changed files: `EditPersonTest.java` (edits)\n\n```diff\n- open Home\n"
                 + "+ open People\n```\n"), summary());
         assertEquals(List.of(), log);
     }

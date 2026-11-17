@@ -88,27 +88,46 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
     }
 
     /**
-     * A changed scenario: its User Steps against the base run's when there is one, else in full. A scenario whose
-     * steps didn't change gets one line: the reviewer reads the code change instead.
+     * A changed scenario: why it is listed, then its User Steps against the base run's when there is one, else in
+     * full. A scenario whose steps didn't change gets no steps: the reviewer reads the code change instead.
      */
     private void changedSteps(StringBuilder md, ScenarioResult s) {
-        Optional<ScenarioResult> before = base == null ? Optional.empty() : base.find(s);
-        if (before.isEmpty()) {
-            md.append("changed").append(base == null || base.isEmpty() ? "" : " · not in the base run")
-                    .append("\n\n");
-            steps(md, s);
-            return;
-        }
-        StepsDiff diff = StepsDiff.of(before.get(), s);
+        Optional<StepsDiff> diff = diff(s);
+        md.append("changed");
         if (diff.isEmpty()) {
-            md.append("changed · same User Steps as the base run\n");
-            return;
+            md.append(base == null || base.isEmpty() ? "" : " · not in the base run");
+        } else if (diff.get().isEmpty()) {
+            md.append(" · same User Steps as the base run");
+        } else {
+            md.append(" · User Steps +").append(diff.get().added()).append(" −").append(diff.get().removed())
+                    .append(" against the base run");
         }
-        md.append("changed · User Steps +").append(diff.added()).append(" −").append(diff.removed())
-                .append(" against the base run\n\n");
-        String text = diff.text();
-        String fence = fence(text);
-        md.append(fence).append("diff\n").append(text).append(fence).append('\n');
+        md.append("\n\nCalled from changed files: ").append(String.join(", ", why(s).stream()
+                .map(w -> code(w.file()) + (w.methods().isEmpty() ? "" : " (" + markdown(String.join(", ",
+                        w.methods())) + ")")).toList())).append('\n');
+        if (diff.isEmpty()) {
+            md.append('\n');
+            steps(md, s);
+        } else if (!diff.get().isEmpty()) {
+            String text = diff.get().text();
+            String fence = fence(text);
+            md.append('\n').append(fence).append("diff\n").append(text).append(fence).append('\n');
+        }
+    }
+
+    /** A changed file a scenario calls from, and the methods calling from it. */
+    public record Why(String file, List<String> methods) {
+    }
+
+    /** Why a scenario is under "Changed in this PR": the changed files it calls from. Empty outside a PR. */
+    public List<Why> why(ScenarioResult s) {
+        return changes == null ? List.of()
+                : changes.callersByFile(s).entrySet().stream().map(e -> new Why(e.getKey(), e.getValue())).toList();
+    }
+
+    /** How a scenario's User Steps differ from the base run's; empty without a base run or without it in there. */
+    public Optional<StepsDiff> diff(ScenarioResult s) {
+        return base == null ? Optional.empty() : base.find(s).map(before -> StepsDiff.of(before, s));
     }
 
     private void failed(StringBuilder md, ScenarioResult s) {

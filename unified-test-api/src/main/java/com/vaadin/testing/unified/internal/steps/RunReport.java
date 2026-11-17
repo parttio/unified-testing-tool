@@ -16,7 +16,9 @@ import java.util.function.Function;
  * from a downloaded CI artifact; links are relative to the evidence directory, where it is written.
  * <p>
  * In order: the header, "Changed in this PR" when the summary has a base ref, the failed scenarios, then the
- * passing ones, hidden until the reader asks for them (or searches).
+ * passing ones, hidden until the reader asks for them (or searches). Under "Changed in this PR" each changed
+ * scenario says which changed files it calls from, and, with a base run, shows its User Steps as a diff against it;
+ * "Diff against base run" in the controls switches to the full steps.
  *
  * @param summary the run, as {@code summary.md} has it
  * @param evidenceFiles a scenario's evidence files, as paths relative to the evidence directory: its failure
@@ -41,7 +43,7 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 .append("<title>Unified UI Tests · ").append(esc(summary.tool())).append("</title>\n")
                 .append("<style>").append(CSS).append("</style>\n</head>\n<body>\n<main>\n");
         header(h, scenarios);
-        controls(h, passed.size(), changes != null);
+        controls(h, passed.size(), changes != null, summary.base() != null && !summary.base().isEmpty());
         if (changes != null) {
             changed(h, changes);
         }
@@ -49,10 +51,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         if (failed.isEmpty()) {
             h.append("<p class=\"none\">No scenario failed.</p>\n");
         }
-        failed.forEach(s -> scenario(h, s, true, true));
+        failed.forEach(s -> scenario(h, s, true, true, false));
         h.append("</section>\n");
         h.append("<section id=\"passing\" hidden>\n<h2>Passing scenarios</h2>\n");
-        passed.forEach(s -> scenario(h, s, false, false));
+        passed.forEach(s -> scenario(h, s, false, false, false));
         h.append("</section>\n<p id=\"no-match\" class=\"none\" hidden>No scenario matches.</p>\n");
         h.append("</main>\n<script>").append(SCRIPT).append("</script>\n</body>\n</html>\n");
         return h.toString();
@@ -75,12 +77,16 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         h.append("</p>\n</header>\n");
     }
 
-    private static void controls(StringBuilder h, int passing, boolean changes) {
+    private static void controls(StringBuilder h, int passing, boolean changes, boolean baseRun) {
         h.append("<nav class=\"controls\">\n")
                 .append("<label><input type=\"checkbox\" id=\"show-passing\"> Show passing (").append(passing)
                 .append(")</label>\n");
         if (changes) {
             h.append("<label><input type=\"checkbox\" id=\"changed-only\"> Changed only</label>\n");
+        }
+        if (baseRun) {
+            h.append("<label title=\"Changed scenarios: their User Steps against the base branch's last run, or in ")
+                    .append("full\"><input type=\"checkbox\" id=\"show-diff\" checked> Diff against base run</label>\n");
         }
         h.append("<input type=\"search\" id=\"search\" placeholder=\"Search scenarios and steps\" ")
                 .append("aria-label=\"Search scenarios and steps\">\n</nav>\n");
@@ -97,7 +103,7 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                     .append(" code changed since <code>").append(esc(changes.baseRef())).append("</code>.</p>\n");
         }
         // failed ones unfolded; passing ones a line each, as the reader scrolls past them
-        touched.forEach(s -> scenario(h, s, s.failed(), false));
+        touched.forEach(s -> scenario(h, s, s.failed(), false, true));
         h.append("</section>\n");
     }
 
@@ -106,11 +112,16 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
      *
      * @param open shown unfolded
      * @param failure with the failure's details and evidence
+     * @param changedSection under "Changed in this PR": with why, and the diff against the base run
      */
-    private void scenario(StringBuilder h, ScenarioResult s, boolean open, boolean failure) {
+    private void scenario(StringBuilder h, ScenarioResult s, boolean open, boolean failure, boolean changedSection) {
         ChangedFiles changes = summary.changes();
         boolean changed = changes != null && changes.touches(s);
-        h.append("<details class=\"scenario ").append(esc(s.status() == null ? "" : s.status())).append('"')
+        boolean isNew = changed && changes.isNew(s);
+        Optional<StepsDiff> diff = changedSection && !isNew ? summary.diff(s) : Optional.empty();
+        boolean showDiff = diff.isPresent() && !diff.get().isEmpty();
+        h.append("<details class=\"scenario ").append(esc(s.status() == null ? "" : s.status()))
+                .append(showDiff ? " has-diff" : "").append('"')
                 .append(" data-changed=\"").append(changed).append('"')
                 .append(" data-search=\"").append(esc(searchText(s))).append('"')
                 .append(open ? " open" : "").append(">\n<summary><span class=\"mark\" aria-label=\"")
@@ -119,16 +130,46 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 .append(esc(s.displayName())).append("</span> <span class=\"class\">")
                 .append(esc(s.simpleClassName())).append("</span>");
         if (changed) {
-            boolean isNew = changes.isNew(s);
             h.append(" <span class=\"badge ").append(isNew ? "new" : "changed").append("\">")
                     .append(isNew ? "new" : "changed").append("</span>");
+        }
+        if (diff.isPresent()) {
+            StepsDiff d = diff.get();
+            h.append(" <span class=\"diffstat\">").append(d.isEmpty() ? "same User Steps as the base run"
+                    : "<span class=\"add\">+" + d.added() + "</span> <span class=\"del\">−" + d.removed()
+                            + "</span> against the base run").append("</span>");
+        } else if (changedSection && !isNew && summary.base() != null && !summary.base().isEmpty()) {
+            h.append(" <span class=\"diffstat\">not in the base run</span>");
         }
         if (s.durationMs() > 0) {
             h.append(" <span class=\"dur\">").append(duration(s.durationMs())).append("</span>");
         }
         h.append("</summary>\n");
+        if (changedSection && changed && !isNew) {
+            h.append("<p class=\"why\">Called from changed files: ").append(String.join(", ", summary.why(s).stream()
+                    .map(w -> "<code>" + esc(w.file()) + "</code>" + (w.methods().isEmpty() ? ""
+                            : " (" + esc(String.join(", ", w.methods())) + ")")).toList())).append("</p>\n");
+        }
         if (failure) {
             failure(h, s);
+        }
+        if (showDiff) {
+            h.append("<pre class=\"diff\" aria-label=\"User Steps against the base run\">");
+            for (StepsDiff.Line line : diff.get().lines()) {
+                String kind = switch (line.kind()) {
+                    case ADDED -> "add";
+                    case REMOVED -> "del";
+                    case SAME -> "same";
+                };
+                String mark = switch (line.kind()) {
+                    case ADDED -> "+ ";
+                    case REMOVED -> "- ";
+                    case SAME -> "  ";
+                };
+                h.append("<span class=\"").append(kind).append("\">").append(mark).append(esc(line.text()))
+                        .append("</span>");
+            }
+            h.append("</pre>\n");
         }
         h.append("<ol class=\"steps\">\n");
         if (s.steps().isEmpty()) {
@@ -390,6 +431,14 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             .evidence a{overflow-wrap:anywhere}
             .evidence img{max-width:100%;border:1px solid var(--line);border-radius:6px;margin:4px 0 12px}
             .files{font-size:13px;margin:8px 0 12px}
+            .diffstat{color:var(--muted);font-weight:400;font-size:12px}
+            .diffstat .add,pre.diff .add{color:var(--pass)}.diffstat .del,pre.diff .del{color:var(--fail)}
+            .why{margin:0 0 8px;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+            pre.diff{margin:0 0 8px;padding:8px 10px;background:var(--code);border-radius:6px;overflow-x:auto;\
+            font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+            pre.diff span{display:block}pre.diff .add{background:color-mix(in srgb,var(--pass) 12%,transparent)}
+            pre.diff .del{background:color-mix(in srgb,var(--fail) 12%,transparent)}
+            main:not(.full-steps) .has-diff>ol.steps{display:none}main.full-steps pre.diff{display:none}
             a{color:var(--accent)}
             @media (max-width:600px){dl.failure{grid-template-columns:1fr}dl.failure dd{margin-bottom:6px}\
             li.step,li.group>details>summary{grid-template-columns:2.2em minmax(0,1fr)}\
@@ -419,6 +468,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 none.hidden=!(q||only)||shown>0;
               }
               [passing,changed].forEach(function(c){if(c){c.addEventListener('change',apply);}});
+              // changed scenarios: their diff against the base run, or their full steps
+              var diff=document.getElementById('show-diff');
+              if(diff){diff.addEventListener('change',function(){
+                document.querySelector('main').classList.toggle('full-steps',!diff.checked);});}
               // a step's screenshot opens under the step; a second click closes it
               document.addEventListener('click',function(e){
                 var a=e.target.closest('a.snap[data-image]');

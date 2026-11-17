@@ -163,6 +163,8 @@ class RunSummaryTest {
 
                 **✔ Editing a person updates the grid (EditPersonTest)** · changed
 
+                Called from changed files: `PeopleTasks.java` (editPerson)
+
                 ```text
                 1  open People
                 2  Edit Alan Turing
@@ -206,6 +208,8 @@ class RunSummaryTest {
 
                 **✔ Editing a person updates the grid (EditPersonTest)** · changed · User Steps +2 −3 against the base run
 
+                Called from changed files: `PeopleTasks.java` (editPerson)
+
                 ```diff
                   open People
                   Edit Alan Turing
@@ -233,6 +237,8 @@ class RunSummaryTest {
 
                 **✔ Editing a person updates the grid (EditPersonTest)** · changed · same User Steps as the base run
 
+                Called from changed files: `PeopleTasks.java` (editPerson)
+
                 """, changedSection(md));
     }
 
@@ -244,6 +250,8 @@ class RunSummaryTest {
 
         assertTrue(changedSection(md).contains("""
                 **✔ Editing a person updates the grid (EditPersonTest)** · changed · not in the base run
+
+                Called from changed files: `PeopleTasks.java` (editPerson)
 
                 ```text
                 1  open People
@@ -273,6 +281,21 @@ class RunSummaryTest {
         assertEquals(Optional.empty(), BaseRun.of(List.of(renamed, secondInvocation), "playwright").find(edit),
                 "two with the display name");
         assertTrue(BaseRun.of(List.of(edit), "selenium").isEmpty(), "another Testing Tool");
+    }
+
+    @Test
+    void whyNamesEachChangedFileAndTheMethodsCallingFromIt() {
+        ChangedFiles changes = ChangedFiles.of("origin/main", List.of("src/test/java/demo/tasks/PeopleTasks.java",
+                "src/test/java/demo/EditPersonTest.java"), List.of(), Map.of("src/test/java/demo/EditPersonTest.java",
+                "void editsAPerson() {}"));
+        RunSummary summary = new RunSummary("Playwright", run(), 0, changes);
+
+        assertEquals(List.of(new RunSummary.Why("EditPersonTest.java", List.of("editsAPerson")),
+                new RunSummary.Why("PeopleTasks.java", List.of("editPerson"))),
+                summary.why(scenario(EDIT_PERSON, "x")));
+        assertTrue(summary.markdown().contains("Called from changed files: `EditPersonTest.java` (editsAPerson), "
+                + "`PeopleTasks.java` (editPerson)\n"), summary.markdown());
+        assertEquals(List.of(), new RunSummary("Playwright", run(), 0, null).why(scenario(EDIT_PERSON, "x")));
     }
 
     @Test

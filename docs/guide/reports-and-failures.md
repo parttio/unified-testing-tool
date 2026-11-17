@@ -246,6 +246,7 @@ A scenario marked *changed* calls changed code, but that alone doesn't say what 
 ```
 ````
 
+- Under its title, a changed scenario says why it is listed: `Called from changed files: PeopleTasks.java (editPerson)`, each changed file one of its steps is called from, with the methods calling from it. A file counts as changed as a whole, so a method named there may itself be unchanged; the pull request's diff shows what changed in it. This line is there with or without a Base Run.
 - Steps are compared by their words, without their numbers, so an added step doesn't make every later one differ. User Tasks are lines too, and their steps are indented under them.
 - A scenario whose steps didn't change takes one line, `same User Steps as the base run`: the change is in code the steps don't show, such as a locator in a shared `…Tasks` class.
 - A scenario is matched by its test class and method (and invocation, `[2]`), or by its display name when the method was renamed. One the Base Run doesn't have says `not in the base run` and shows its steps.
@@ -258,7 +259,7 @@ The directory is any copy of the base branch's evidence directory, such as its d
 Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the same run in a browser. Open it after a local run (`target/surefire-reports/unified-evidence/report.html`), or from the evidence artifact a CI run uploaded. It is one file with nothing to load from the network, and its links point to files next to it, so keep the evidence directory together when you download or move it.
 
 - **At the top:** the Testing Tool, the counts, when the run started and how long it took. Below, a bar that stays in view: *Show passing*, *Changed only* (when the run has a base to compare against) and a search over scenario names and steps.
-- **Changed in this PR:** the scenarios the pull request touches, marked *new* or *changed*. Failed ones are unfolded; passing ones are one line each, unfolded on a click.
+- **Changed in this PR:** the scenarios the pull request touches, marked *new* or *changed*, each changed one with the files that put it there. Failed ones are unfolded; passing ones are one line each, unfolded on a click. With a Base Run, a changed scenario shows its User Steps as a diff against it, with the count of steps added and removed by its name; untick *Diff against base run* in the bar to see the full steps instead.
 - **Failed scenarios:** where it failed, what was expected and found, the Near Misses and *Did you mean*, the code path, and the failure evidence: the browser's screenshot shown in the page, Browserless's component tree as a link. Then the scenario's User Steps, with the failed one marked.
 - **Passing scenarios:** hidden until you tick *Show passing* or search, so a long run doesn't bury what needs attention.
 

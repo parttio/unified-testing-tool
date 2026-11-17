@@ -125,7 +125,7 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 **`summary.md`**, in order:
 
 1. **Header:** Testing Tool and counts.
-2. **Changed in this PR:** scenarios with any User Step or User Task called from a file changed against the base branch (`GITHUB_BASE_REF`, or `vaadin.testing.user-steps.changed-since`), marked new or changed. A change in a shared `…Tasks` class marks every scenario using it. A new scenario's steps are unfolded; a changed one's are diffed against the Base Run when there is one, else unfolded. Left out outside a PR.
+2. **Changed in this PR:** scenarios with any User Step or User Task called from a file changed against the base branch (`GITHUB_BASE_REF`, or `vaadin.testing.user-steps.changed-since`), marked new or changed. A change in a shared `…Tasks` class marks every scenario using it. A new scenario's steps are unfolded. A changed one says why it is listed (`Called from changed files: <file> (<methods>)`, each changed file it calls from with the methods calling from it, in call order), then its steps diffed against the Base Run when there is one, else unfolded. Left out outside a PR.
 3. **Failed scenarios:** `@DisplayName`, the failed User Step, Near Misses, evidence path.
 
 Passing scenarios count in the header only, unless they are under "Changed in this PR": a list of every passing scenario is long to scroll past on the job summary, and each one's User Steps are in its `user-steps.txt`. Skipped scenarios count in the header only too: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
@@ -143,8 +143,8 @@ How `summary.md` is made:
 **`report.html`** is written with `summary.md`, from the same files and the same `ChangedFiles`. One file with its CSS and script inline, so it opens from a downloaded CI artifact; its links are relative to the evidence directory. In order:
 
 1. **Header:** Testing Tool, counts, the run's start (UTC) and duration.
-2. **Controls:** show passing (off), changed only (with a base ref), and a search over scenario names, classes and step texts.
-3. **Changed in this PR:** as in `summary.md`, marked new or changed; failed scenarios unfolded, passing ones folded.
+2. **Controls:** show passing (off), changed only (with a base ref), diff against base run (on; with a Base Run that has this run's Testing Tool), and a search over scenario names, classes and step texts.
+3. **Changed in this PR:** as in `summary.md`, marked new or changed, with the diff's counts or `same User Steps as the base run` / `not in the base run` next to the badge, and the why line; failed scenarios unfolded, passing ones folded. A scenario whose steps differ shows the diff instead of its step tree; unticking *diff against base run* shows the tree instead. The failed and passing sections show the tree only.
 4. **Failed scenarios:** Failed at, Expected and Found (or the error line), Nearby, Did you mean, the code path, the failure evidence (`<test class>.<test method>.*` at the evidence directory's root: a screenshot shown inline, other files linked), then the User Steps tree with the failed step marked.
 5. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
 
@@ -157,7 +157,7 @@ Off by default; both settings below cost time and disk on every step.
 - **Snapshots** (`vaadin.testing.user-steps.snapshots=true`): after each User Step, passed or failed, the step's window writes the page into `<test evidence dir>/steps/<number>`: a viewport screenshot (`.png`) in a browser, the component tree with its location (`.tree.txt`) on Browserless. At most 200 per test. The step's `snapshot` field names it. A test's run starts by removing the snapshots an earlier run left. A text snapshot is masked like the reports; a Browserless tree shows a password field's value as `••••`. A snapshot that can't be taken is left out and never fails the test.
 - **Playwright's trace** (`vaadin.testing.playwright.trace`: `off`, `on`, `on-failure`): the test's browser context records a trace with screenshots and DOM snapshots, each User Task and User Step a group named in its words, so Playwright's trace viewer lists the test's steps with their actions inside. It is kept as `<test evidence dir>/trace.zip` always (`on`) or when the test failed (`on-failure`), and named on the failure (`Recording: …`). Windows from `openWindow()` share it; users from `openAsUser(..)` have browser contexts of their own and are not traced. Open it at trace.playwright.dev, or with `mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="show-trace trace.zip"`.
 
-Later outputs, built from the same `user-steps.json`: living documentation per view, and the diff against the Base Run in `report.html`.
+Later outputs, built from the same `user-steps.json`: living documentation per view.
 
 ### `user-steps.json`, schema version 1
 
