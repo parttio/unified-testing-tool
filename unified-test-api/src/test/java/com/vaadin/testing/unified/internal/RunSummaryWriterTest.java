@@ -80,7 +80,6 @@ class RunSummaryWriterTest {
         assertEquals(Optional.of(evidence().resolve("summary.md")), written);
         String md = summary();
         assertTrue(md.startsWith("### Unified UI Tests · Playwright · 2 passed, 0 failed, 1 skipped\n"), md);
-        assertTrue(md.contains("✔ edits (EditPersonTest)") && md.contains("✔ orders (OrderTest)"), md);
         assertFalse(md.contains("fromAnEarlierRun"), md);
         assertTrue(Files.exists(evidence().resolve(".summary/skipped-42.txt")));
     }

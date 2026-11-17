@@ -176,8 +176,9 @@ When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the
 
 1. a header with the Testing Tool and the counts;
 2. **Changed in this PR**: the scenarios that call code changed against the base branch, with their User Steps unfolded, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. Left out when the run has no base to compare against;
-3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory;
-4. **Passing scenarios**: one line each, User Steps folded.
+3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory.
+
+Passing scenarios count in the header only, unless the pull request changed them: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
 
 The demo's run, with the base set to the commit before `UserStepsTest` was added (shortened):
 
@@ -221,17 +222,11 @@ The demo's run, with the base set to the commit before `UserStepsTest` was added
 - Nearby: text field “Email”, text field “Name”
 - Did you mean: `find(UnifiedTextField.class).withLabel("Email")`
 - Evidence: `target/surefire-reports/unified-evidence/EditEmailTest/changesTheEmail/`
-
-#### Passing scenarios
-
-<details><summary>✔ The user picks a person in the grid, renames them and saves (EditPersonUnifiedTest)</summary>
-…
-</details>
 ````
 
 A scenario is *changed* when any of its User Steps or User Tasks is called from a file changed against the base: `git diff` from the merge base of the base ref and `HEAD`, plus uncommitted and untracked files. It is *new* when its test class's file was added, or when its test method wasn't in that file at the base. Without git, or with a base ref git doesn't know, the section is left out and one line is logged.
 
-Skipped scenarios (disabled, aborted, or lacking a Capability) count in the header only.
+Skipped scenarios (disabled, aborted, or lacking a Capability) count in the header only, as passing ones do.
 
 ## The GitHub job summary
 
