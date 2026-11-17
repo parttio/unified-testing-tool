@@ -124,6 +124,37 @@ public record ScenarioResult(String testClass, String testMethod, String display
         }
     }
 
+    /**
+     * The entries as lines without their indices, for comparing two runs: each line indented by its depth, a
+     * User Step or gap as its window and text, a step group as its name.
+     */
+    public List<String> stepLines() {
+        List<String> lines = new ArrayList<>();
+        stepLines(lines, steps, 0);
+        return lines;
+    }
+
+    private static void stepLines(List<String> lines, List<Map<String, Object>> entries, int depth) {
+        for (Map<String, Object> entry : entries) {
+            boolean group = "group".equals(string(entry, "type"));
+            lines.add(UserStepsReport.indent(depth)
+                    + UserStepsReport.line(null, string(entry, "window"), orEmpty(string(entry, group ? "name" : "text")),
+                            false));
+            if (group) {
+                stepLines(lines, entries(entry.get("steps")), depth + 1);
+            }
+        }
+    }
+
+    /**
+     * Where the scenario's files are under the evidence directory, {@code EditPersonTest/editsAPerson} or
+     * {@code PersonTest/savesAll[2]}: the same in every run of the same test and invocation.
+     */
+    public String evidenceKey() {
+        String[] parts = evidencePath.replace('\\', '/').replaceAll("/+$", "").split("/");
+        return parts.length < 2 ? evidencePath : parts[parts.length - 2] + "/" + parts[parts.length - 1];
+    }
+
     static String string(Map<String, Object> map, String key) {
         return map.get(key) instanceof String s ? s : null;
     }

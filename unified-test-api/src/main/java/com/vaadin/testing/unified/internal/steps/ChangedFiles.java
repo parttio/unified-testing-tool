@@ -126,6 +126,30 @@ public record ChangedFiles(String baseRef, Map<String, Boolean> files, Function<
     }
 
     /**
+     * Why the scenario is listed: each changed file one of its entries or step groups is called from, by file name,
+     * with the methods calling from it, both in the order the scenario first calls them. A file is matched as a
+     * whole, so a listed method may itself be unchanged.
+     */
+    public Map<String, List<String>> callersByFile(ScenarioResult scenario) {
+        Map<String, List<String>> callers = new LinkedHashMap<>();
+        for (Map<String, Object> site : scenario.callSites()) {
+            String className = ScenarioResult.string(site, "className");
+            if (className == null) {
+                continue;
+            }
+            changedFile(className, ScenarioResult.string(site, "file")).ifPresent(path -> {
+                List<String> methods = callers.computeIfAbsent(path.substring(path.lastIndexOf('/') + 1),
+                        k -> new java.util.ArrayList<>());
+                String method = ScenarioResult.string(site, "method");
+                if (method != null && !methods.contains(method)) {
+                    methods.add(method);
+                }
+            });
+        }
+        return callers;
+    }
+
+    /**
      * Whether the scenario is new: its test class's file was added, or that file on the base has no method of
      * the test method's name ({@code name(}). A plain text check: a method renamed counts as new, a test whose
      * method name also appears elsewhere in the old file does not.

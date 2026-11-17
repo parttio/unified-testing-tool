@@ -9,6 +9,7 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /** {@code summary.md} from the run's {@code user-steps.json}, and which scenarios a change touches. */
@@ -162,6 +163,8 @@ class RunSummaryTest {
 
                 **✔ Editing a person updates the grid (EditPersonTest)** · changed
 
+                Called from changed files: `PeopleTasks.java` (editPerson)
+
                 ```text
                 1  open People
                 2  Edit Alan Turing
@@ -172,6 +175,137 @@ class RunSummaryTest {
 
                 """, changed);
         assertTrue(md.startsWith("### Unified UI Tests · Playwright · 1 passed, 2 failed, 1 skipped\n\n#### Changed"), md);
+    }
+
+    /** {@link #EDIT_PERSON} on the base branch: another name, and a click and a check instead of the notification. */
+    static final String EDIT_PERSON_BASE = EDIT_PERSON
+            .replace("\\u201cAlan M. Turing\\u201d", "\\u201cAlan Turing\\u201d")
+            .replace("{\"type\": \"step\", \"index\": \"3\", \"number\": 3, \"text\": \"see notification “Saved”\",",
+                    "{\"type\": \"step\", \"index\": \"3\", \"number\": 3, \"text\": \"click button “Save”\","
+                            + " \"status\": \"passed\"}, {\"type\": \"step\", \"index\": \"4\", \"number\": 4,"
+                            + " \"text\": \"see grid “People”\",");
+
+    private static ChangedFiles peopleTasksChanged() {
+        return ChangedFiles.of("origin/main", List.of("unified-test-demo/src/test/java/demo/tasks/PeopleTasks.java"),
+                List.of(), Map.of());
+    }
+
+    private static String changedSection(String md) {
+        int failed = md.indexOf("#### Failed scenarios");
+        return md.substring(md.indexOf("#### Changed in this PR"), failed < 0 ? md.length() : failed);
+    }
+
+    @Test
+    void aChangedScenarioShowsHowItsStepsDifferFromTheBaseRun() {
+        BaseRun base = BaseRun.of(List.of(scenario(EDIT_PERSON_BASE, "EditPersonTest/editsAPerson")), "playwright");
+
+        String md = new RunSummary("Playwright", run(), 0, peopleTasksChanged(), base).markdown();
+
+        assertEquals("""
+                #### Changed in this PR
+
+                1 scenario calls code changed since `origin/main`.
+
+                **✔ Editing a person updates the grid (EditPersonTest)** · changed · User Steps +2 −3 against the base run
+
+                Called from changed files: `PeopleTasks.java` (editPerson)
+
+                ```diff
+                  open People
+                  Edit Alan Turing
+                -    fill text field “Name” with “Alan Turing”
+                +    fill text field “Name” with “Alan M. Turing”
+                  … 1 call outside the Unified API (Escape Hatch)
+                - click button “Save”
+                - [window 2] see grid “People”
+                + [window 2] see notification “Saved”
+                ```
+
+                """, changedSection(md));
+    }
+
+    @Test
+    void sameStepsAsTheBaseRunTakeOneLine() {
+        BaseRun base = BaseRun.of(List.of(scenario(EDIT_PERSON, "EditPersonTest/editsAPerson")), "playwright");
+
+        String md = new RunSummary("Playwright", run(), 0, peopleTasksChanged(), base).markdown();
+
+        assertEquals("""
+                #### Changed in this PR
+
+                1 scenario calls code changed since `origin/main`.
+
+                **✔ Editing a person updates the grid (EditPersonTest)** · changed · same User Steps as the base run
+
+                Called from changed files: `PeopleTasks.java` (editPerson)
+
+                """, changedSection(md));
+    }
+
+    @Test
+    void withoutTheScenarioInTheBaseRunItsStepsShowInFull() {
+        BaseRun base = BaseRun.of(List.of(scenario(ORDER_FAILED, "OrderTest/totals")), "playwright");
+
+        String md = new RunSummary("Playwright", run(), 0, peopleTasksChanged(), base).markdown();
+
+        assertTrue(changedSection(md).contains("""
+                **✔ Editing a person updates the grid (EditPersonTest)** · changed · not in the base run
+
+                Called from changed files: `PeopleTasks.java` (editPerson)
+
+                ```text
+                1  open People
+                """), md);
+    }
+
+    @Test
+    void noBaseRunSaysSoAndShowsStepsInFull() {
+        String withNone = new RunSummary("Playwright", run(), 0, peopleTasksChanged(), BaseRun.NONE).markdown();
+        String withoutBaseline = new RunSummary("Playwright", run(), 0, peopleTasksChanged()).markdown();
+
+        assertEquals(changedSection(withoutBaseline).replace("since `origin/main`.\n",
+                "since `origin/main`.\nNo base run found to compare their User Steps with.\n"),
+                changedSection(withNone));
+    }
+
+    @Test
+    void theBaseRunMatchesByEvidenceDirectoryThenDisplayNameOnTheSameTool() {
+        ScenarioResult edit = scenario(EDIT_PERSON, "EditPersonTest/editsAPerson");
+        ScenarioResult renamed = scenario(EDIT_PERSON.replace("\"editsAPerson\"", "\"editsSomeone\""),
+                "EditPersonTest/editsSomeone");
+        ScenarioResult secondInvocation = scenario(EDIT_PERSON, "EditPersonTest/editsAPerson[2]");
+
+        assertEquals("EditPersonTest/editsAPerson[2]", secondInvocation.evidenceKey());
+        assertEquals(Optional.of(edit), BaseRun.of(List.of(secondInvocation, edit), "playwright").find(edit));
+        assertEquals(Optional.of(renamed), BaseRun.of(List.of(renamed), "playwright").find(edit), "same display name");
+        assertEquals(Optional.empty(), BaseRun.of(List.of(renamed, secondInvocation), "playwright").find(edit),
+                "two with the display name");
+        assertTrue(BaseRun.of(List.of(edit), "selenium").isEmpty(), "another Testing Tool");
+    }
+
+    @Test
+    void whyNamesEachChangedFileAndTheMethodsCallingFromIt() {
+        ChangedFiles changes = ChangedFiles.of("origin/main", List.of("src/test/java/demo/tasks/PeopleTasks.java",
+                "src/test/java/demo/EditPersonTest.java"), List.of(), Map.of("src/test/java/demo/EditPersonTest.java",
+                "void editsAPerson() {}"));
+        RunSummary summary = new RunSummary("Playwright", run(), 0, changes);
+
+        assertEquals(List.of(new RunSummary.Why("EditPersonTest.java", List.of("editsAPerson")),
+                new RunSummary.Why("PeopleTasks.java", List.of("editPerson"))),
+                summary.why(scenario(EDIT_PERSON, "x")));
+        assertTrue(summary.markdown().contains("Called from changed files: `EditPersonTest.java` (editsAPerson), "
+                + "`PeopleTasks.java` (editPerson)\n"), summary.markdown());
+        assertEquals(List.of(), new RunSummary("Playwright", run(), 0, null).why(scenario(EDIT_PERSON, "x")));
+    }
+
+    @Test
+    void stepsDiffPutsRemovedLinesBeforeTheAddedOnes() {
+        StepsDiff diff = StepsDiff.of(List.of("a", "b", "c"), List.of("a", "x", "c", "d"));
+
+        assertEquals("  a\n- b\n+ x\n  c\n+ d\n", diff.text());
+        assertEquals(2, diff.added());
+        assertEquals(1, diff.removed());
+        assertTrue(StepsDiff.of(List.of("a"), List.of("a")).isEmpty());
     }
 
     @Test

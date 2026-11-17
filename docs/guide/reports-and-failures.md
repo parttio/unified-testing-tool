@@ -176,7 +176,7 @@ What the recorder can't see is never left out silently. Escape Hatch calls, `pag
 When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the run's scenarios in the words of the reports, for the reviewer of a pull request. In order:
 
 1. a header with the Testing Tool and the counts;
-2. **Changed in this PR**: the scenarios that call code changed against the base branch, with their User Steps unfolded, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. Left out when the run has no base to compare against;
+2. **Changed in this PR**: the scenarios that call code changed against the base branch, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. A new scenario shows its User Steps; a changed one shows how its User Steps differ from the base branch's last run, when the build gives it that run ([below](#how-a-changed-scenarios-steps-changed)). Left out when the run has no base to compare against;
 3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory.
 
 Passing scenarios count in the header only, unless the pull request changed them: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
@@ -229,12 +229,37 @@ A scenario is *changed* when any of its User Steps or User Tasks is called from 
 
 Skipped scenarios (disabled, aborted, or lacking a Capability) count in the header only, as passing ones do.
 
+### How a changed scenario's steps changed
+
+A scenario marked *changed* calls changed code, but that alone doesn't say what the test does differently. Did it gain a step? Did an agent drop the check that was failing? Give the run the evidence of the base branch's last run, the Base Run, with `-Dvaadin.testing.user-steps.baseline-dir=<directory>`, and each changed scenario shows its User Steps against the Base Run's:
+
+````markdown
+**✔ Editing a person in the dialog updates the grid (EditPersonTest)** · changed · User Steps +1 −2 against the base run
+
+```diff
+  open People
+  click row where Name is “Alan Turing” in grid
+- fill text field “Email” with “alan@bletchley.uk”
++ fill text field “E-mail” with “alan@bletchley.uk”
+  click button “Save”
+- see row where Name is “Alan Turing” in grid
+```
+````
+
+- Under its title, a changed scenario says why it is listed: `Called from changed files: PeopleTasks.java (editPerson)`, each changed file one of its steps is called from, with the methods calling from it. A file counts as changed as a whole, so a method named there may itself be unchanged; the pull request's diff shows what changed in it. This line is there with or without a Base Run.
+- Steps are compared by their words, without their numbers, so an added step doesn't make every later one differ. User Tasks are lines too, and their steps are indented under them.
+- A scenario whose steps didn't change takes one line, `same User Steps as the base run`: the change is in code the steps don't show, such as a locator in a shared `…Tasks` class.
+- A scenario is matched by its test class and method (and invocation, `[2]`), or by its display name when the method was renamed. One the Base Run doesn't have says `not in the base run` and shows its steps.
+- Only the Base Run's tests on the same Testing Tool count. When the directory has none, the summary says `No base run found to compare their User Steps with.` and shows the steps.
+
+The directory is any copy of the base branch's evidence directory, such as its downloaded CI artifact; `user-steps.json` files are found at any depth. [Running in CI](ci-setup.md#github-actions) downloads it in a pull request.
+
 ## The HTML report
 
 Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the same run in a browser. Open it after a local run (`target/surefire-reports/unified-evidence/report.html`), or from the evidence artifact a CI run uploaded. It is one file with nothing to load from the network, and its links point to files next to it, so keep the evidence directory together when you download or move it.
 
 - **At the top:** the Testing Tool, the counts, when the run started and how long it took. Below, a bar that stays in view: *Show passing*, *Changed only* (when the run has a base to compare against) and a search over scenario names and steps.
-- **Changed in this PR:** the scenarios the pull request touches, marked *new* or *changed*. Failed ones are unfolded; passing ones are one line each, unfolded on a click.
+- **Changed in this PR:** the scenarios the pull request touches, marked *new* or *changed*, each changed one with the files that put it there. Failed ones are unfolded; passing ones are one line each, unfolded on a click. With a Base Run, a changed scenario shows its User Steps as a diff against it, with the count of steps added and removed by its name; untick *Diff against base run* in the bar to see the full steps instead.
 - **Failed scenarios:** where it failed, what was expected and found, the Near Misses and *Did you mean*, the code path, and the failure evidence: the browser's screenshot shown in the page, Browserless's component tree as a link. Then the scenario's User Steps, with the failed one marked.
 - **Passing scenarios:** hidden until you tick *Show passing* or search, so a long run doesn't bury what needs attention.
 
@@ -290,6 +315,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
+| `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step, as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |

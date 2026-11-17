@@ -9,11 +9,12 @@ The Unified API needs no CI plugin. When the tests have run, it writes its repor
 | `report.html`: the same run in a browser, with every scenario's User Steps and the failure screenshots | nothing: written next to `summary.md`; read it from the artifact |
 | The summary on the GitHub job's page | GitHub Actions: nothing |
 | **Changed in this PR** in the summary | the git history and the base branch in the checkout |
+| How each changed scenario's User Steps differ from the base branch's | the base branch's evidence artifact, downloaded |
 | Every test's User Steps and failure screenshots after the build | an artifact upload of the evidence directory |
 
 ## GitHub Actions
 
-A complete workflow: the tests on Browserless on every push and pull request, and the same tests in a browser with Playwright.
+A complete workflow, saved as `.github/workflows/ui-tests.yml`: the tests on Browserless on every push and pull request, and the same tests in a browser with Playwright.
 
 ```yaml
 name: UI tests
@@ -22,6 +23,10 @@ on:
   push:
     branches: [main]
   pull_request:
+
+permissions:
+  contents: read
+  actions: read   # to download the base branch's evidence
 
 jobs:
   browserless:
@@ -34,13 +39,25 @@ jobs:
       - name: Fetch the pull request's base branch
         if: github.event_name == 'pull_request'
         run: git fetch --no-tags origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+      # the base branch's last evidence, to diff each changed scenario's User Steps against it
+      - name: Download the base branch's last User Steps
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for run in $(gh run list --workflow ui-tests.yml --branch "$GITHUB_BASE_REF" --event push \
+              --status completed --limit 5 --json databaseId --jq '.[].databaseId'); do
+            gh run download "$run" --name unified-evidence-browserless --dir "$RUNNER_TEMP/base-user-steps" && break
+            rm -rf "$RUNNER_TEMP/base-user-steps"
+          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
       - name: Tests on Browserless
-        run: mvn -B -ntp verify
+        run: mvn -B -ntp verify -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       # every test's User Steps and failure evidence, also when the build passes
       - name: Upload Unified evidence
         if: always()
@@ -59,6 +76,18 @@ jobs:
       - name: Fetch the pull request's base branch
         if: github.event_name == 'pull_request'
         run: git fetch --no-tags origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+      # the base branch's last evidence, to diff each changed scenario's User Steps against it
+      - name: Download the base branch's last User Steps
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for run in $(gh run list --workflow ui-tests.yml --branch "$GITHUB_BASE_REF" --event push \
+              --status completed --limit 5 --json databaseId --jq '.[].databaseId'); do
+            gh run download "$run" --name unified-evidence-playwright --dir "$RUNNER_TEMP/base-user-steps" && break
+            rm -rf "$RUNNER_TEMP/base-user-steps"
+          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -75,7 +104,9 @@ jobs:
           -Dexec.args="install --with-deps chromium"
       # a failed test keeps Playwright's trace, grouped by User Step
       - name: Tests on Playwright
-        run: mvn -B -ntp verify -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure
+        run: >
+          mvn -B -ntp verify -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure
+          -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload Unified evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -91,6 +122,7 @@ What each part does:
 
 - **The job summary.** GitHub Actions sets `GITHUB_STEP_SUMMARY` in every job, and the Unified API appends `summary.md` to it, so the summary shows on the job's page and on the pull request's checks. Each job adds its own block, headed with its Testing Tool. To leave it out, set `vaadin.testing.user-steps.github-summary` to `false`.
 - **Changed in this PR.** In a pull request GitHub sets `GITHUB_BASE_REF`, and the Unified API compares `HEAD` with `origin/<base branch>`. `actions/checkout` fetches one commit and no other branch by default, so the workflow asks for the history (`fetch-depth: 0`) and fetches the base branch. Without them the section is left out and one line is logged; the rest of the summary is unchanged.
+- **The base branch's User Steps.** In a pull request, the job downloads the evidence artifact its Testing Tool's job uploaded in the base branch's last finished push run (skipping runs without one, such as cancelled runs), and `vaadin.testing.user-steps.baseline-dir` points the run summary at it. Each changed scenario then shows how its User Steps differ, as a diff. The download needs `actions: read`; when it finds nothing, for example after the artifact expired, the summary says so in one line and shows the steps in full. On a push the directory isn't there and isn't read: the diff is only in **Changed in this PR**.
 - **The evidence artifact.** `target/surefire-reports/unified-evidence/` holds `summary.md` and `report.html`, and for every test, passed or failed, its `user-steps.txt` and `user-steps.json`, plus a screenshot (browsers) or the component tree (Browserless) when it failed. `if: always()` keeps it when the build passes too. A reviewer downloads it from the run's page, unzips it and opens `report.html`; an agent reads the `user-steps.json` files.
 
 ### Selenium (TestBench)
@@ -113,6 +145,7 @@ TestBench is under the Vaadin Commercial License and checks it when it loads. Gi
 The reports are written the same way on any CI server: only the GitHub job summary needs GitHub. Two things to set up yourself:
 
 - **The base for Changed in this PR.** Pass the base branch as `-Dvaadin.testing.user-steps.changed-since=origin/<branch>`, and make sure the checkout has the history and that branch. Any git ref works; outside a merge request, leave it unset.
+- **The base branch's User Steps.** Keep the evidence directory of the base branch's builds, and pass a copy of the last one as `-Dvaadin.testing.user-steps.baseline-dir=<directory>` to show how each changed scenario's User Steps differ.
 - **Publishing.** Keep `target/surefire-reports/unified-evidence/` as a build artifact, also when the build passes, so `summary.md` and every test's User Steps can be read after the build.
 
 Settings are read from JUnit configuration parameters, which fall back to system properties, so `-D` on the Maven command line reaches the tests.

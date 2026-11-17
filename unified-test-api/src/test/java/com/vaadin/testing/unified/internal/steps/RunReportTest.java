@@ -56,6 +56,37 @@ class RunReportTest {
     }
 
     @Test
+    void aChangedScenarioSaysWhyAndShowsItsDiffWithASwitchToTheFullSteps() {
+        BaseRun base = BaseRun.of(List.of(scenario(RunSummaryTest.EDIT_PERSON_BASE, "EditPersonTest/editsAPerson")),
+                "playwright");
+        String html = new RunReport(new RunSummary("Playwright", run(), 0, CHANGES, base), s -> List.of()).html();
+
+        assertTrue(html.contains("<input type=\"checkbox\" id=\"show-diff\" checked> Diff against base run"), html);
+        String changed = html.substring(html.indexOf("<section id=\"changed\">"), html.indexOf("<section id=\"failed\">"));
+        assertTrue(changed.contains("<details class=\"scenario passed has-diff\""), changed);
+        assertTrue(changed.contains("<span class=\"diffstat\"><span class=\"add\">+2</span> <span class=\"del\">−3</span>"
+                + " against the base run</span>"), changed);
+        assertTrue(changed.contains("<p class=\"why\">Called from changed files: <code>PeopleTasks.java</code> (editPerson)</p>"),
+                changed);
+        assertTrue(changed.contains("<span class=\"del\">-    fill text field “Name” with “Alan Turing”</span>"
+                + "<span class=\"add\">+    fill text field “Name” with “Alan M. Turing”</span>"), changed);
+        // the full steps stay in the page, for the switch; a new scenario has no why and no diff
+        assertTrue(changed.contains("<ol class=\"steps\">"), changed);
+        String checkout = changed.substring(changed.indexOf("A guest pays by card"),
+                changed.indexOf("Editing a person updates the grid"));
+        assertFalse(checkout.contains("class=\"why\""), checkout);
+        // the failed and passing sections show the steps only
+        assertEquals(1, html.split("<pre class=\"diff\"", -1).length - 1, html);
+    }
+
+    @Test
+    void withoutABaseRunThereIsNoDiffSwitch() {
+        assertFalse(report(CHANGES).contains("id=\"show-diff\""));
+        assertFalse(new RunReport(new RunSummary("Playwright", run(), 0, CHANGES, BaseRun.NONE), s -> List.of()).html()
+                .contains("id=\"show-diff\""));
+    }
+
+    @Test
     void changedInThisPrMarksNewAndChangedScenarios() {
         String html = report(CHANGES);
         String changed = html.substring(html.indexOf("<section id=\"changed\">"),
