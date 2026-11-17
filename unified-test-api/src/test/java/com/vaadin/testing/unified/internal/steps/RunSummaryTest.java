@@ -133,20 +133,6 @@ class RunSummaryTest {
                 - Failed at: outside any User Step, `OrderTest.java:21 (totals)`
                 - Error: `AssertionFailedError: expected: <3> but was: <4>`
                 - Evidence: `target/surefire-reports/unified-evidence/OrderTest/totals/`
-
-                #### Passing scenarios
-
-                <details><summary>✔ Editing a person updates the grid (EditPersonTest)</summary>
-
-                ```text
-                1  open People
-                2  Edit Alan Turing
-                   2.1  fill text field “Name” with “Alan M. Turing”
-                … 1 call outside the Unified API (Escape Hatch)
-                3  [window 2] see notification “Saved”
-                ```
-
-                </details>
                 """, md);
     }
 

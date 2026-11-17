@@ -7,8 +7,9 @@ import java.util.Optional;
 
 /**
  * The run's {@code summary.md} (spec chapter 12, "Reports"), built from the {@code user-steps.json} of the run's
- * tests: a header with the counts, "Changed in this PR" when a base ref is known, the failed scenarios, then the
- * passing ones, folded.
+ * tests: a header with the counts, "Changed in this PR" when a base ref is known, then the failed scenarios.
+ * Passing scenarios count in the header only: a run's list of them is long to scroll past on the job summary,
+ * and each one's User Steps are in its own {@code user-steps.txt}.
  *
  * @param tool the Testing Tool as shown, {@code Playwright}
  * @param scenarios the run's tests that injected a {@code UnifiedPage}
@@ -50,15 +51,6 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
         if (!failed.isEmpty()) {
             md.append("\n#### Failed scenarios\n");
             failed.forEach(s -> failed(md, s));
-        }
-        List<ScenarioResult> passed = scenarios.stream().filter(ScenarioResult::passed).toList();
-        if (!passed.isEmpty()) {
-            md.append("\n#### Passing scenarios\n\n");
-            for (ScenarioResult s : passed) {
-                md.append("<details><summary>").append(html(mark(s) + " " + title(s))).append("</summary>\n\n");
-                steps(md, s);
-                md.append("\n</details>\n");
-            }
         }
         return md.toString();
     }

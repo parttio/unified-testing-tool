@@ -126,9 +126,8 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 1. **Header:** Testing Tool and counts.
 2. **Changed in this PR:** scenarios with any User Step or User Task called from a file changed against the base branch (`GITHUB_BASE_REF`, or `vaadin.testing.user-steps.changed-since`), steps unfolded, marked new or changed. A change in a shared `…Tasks` class marks every scenario using it. Left out outside a PR.
 3. **Failed scenarios:** `@DisplayName`, the failed User Step, Near Misses, evidence path.
-4. **Passing scenarios:** one line each, User Steps folded in `<details>`.
 
-Skipped scenarios count in the header only: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
+Passing scenarios count in the header only, unless they are under "Changed in this PR": a list of every passing scenario is long to scroll past on the job summary, and each one's User Steps are in its `user-steps.txt`. Skipped scenarios count in the header only too: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
 
 How `summary.md` is made:
 
