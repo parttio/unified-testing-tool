@@ -15,12 +15,13 @@ import java.util.Optional;
  * @param tool the Testing Tool, lower case
  * @param status {@code passed}, {@code failed} or {@code aborted}
  * @param startedAt when the test started
+ * @param durationMs how long it ran, 0 when unknown
  * @param failure the {@code failure} object, or null
  * @param steps the entries, as read
  * @param evidencePath the test's evidence directory, as the summary shows it
  */
 public record ScenarioResult(String testClass, String testMethod, String displayName, String tool, String status,
-        Instant startedAt, Map<String, Object> failure, List<Map<String, Object>> steps, String evidencePath) {
+        Instant startedAt, long durationMs, Map<String, Object> failure, List<Map<String, Object>> steps, String evidencePath) {
 
     /**
      * Reads a {@code user-steps.json}.
@@ -40,8 +41,9 @@ public record ScenarioResult(String testClass, String testMethod, String display
         String displayName = Optional.ofNullable(string(test, "displayName")).orElse(testMethod);
         Instant startedAt = Optional.ofNullable(string(test, "startedAt")).map(Instant::parse).orElse(Instant.EPOCH);
         Map<String, Object> failure = test.get("failure") instanceof Map<?, ?> f ? cast(f) : null;
+        long durationMs = test.get("durationMs") instanceof Number n ? n.longValue() : 0;
         return new ScenarioResult(testClass, testMethod, displayName, string(test, "tool"), string(test, "status"),
-                startedAt, failure, entries(test.get("steps")), evidencePath);
+                startedAt, durationMs, failure, entries(test.get("steps")), evidencePath);
     }
 
     public boolean passed() {

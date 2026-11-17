@@ -85,6 +85,27 @@ class RunSummaryWriterTest {
     }
 
     @Test
+    void writesTheHtmlReportNextToTheSummaryWithItsFailureEvidence() throws Exception {
+        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z");
+        test("demo.EditPersonTest", "editsAll", "passed", "2026-11-16T10:00:06Z");
+        Files.writeString(evidence().resolve("demo.EditPersonTest.edits.png"), "png");
+        Files.writeString(evidence().resolve("demo.EditPersonTest.editsAll.tree.txt"), "an earlier run's");
+
+        writer(Map.of(), Map.of()).write(Set.of(), "1");
+
+        String html = Files.readString(evidence().resolve("report.html"), StandardCharsets.UTF_8);
+        assertTrue(html.startsWith("<!doctype html>"), html);
+        assertTrue(html.contains("<img src=\"demo.EditPersonTest.edits.png\""), html);
+        // another method's file with the same start, and evidence of a passing scenario, are not linked
+        assertFalse(html.contains("editsAll.tree.txt"), html);
+        assertEquals(List.of("demo.A.save.png", "demo.A.save.tree.txt"), RunSummaryWriter.failureEvidence(
+                List.of("demo.A.save.png", "demo.A.save.tree.txt", "demo.A.saveAll.png", "summary.md"),
+                com.vaadin.testing.unified.internal.steps.ScenarioResult.parse("""
+                        {"schemaVersion": 1, "testClass": "demo.A", "testMethod": "save", "status": "failed",
+                         "steps": []}""", "A/save/")));
+    }
+
+    @Test
     void skippedTestsOfOtherProcessesOfTheRunCount() throws Exception {
         test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
         writer(Map.of(), Map.of()).write(Set.of("demo.A#a#[1]", "demo.B#b#[2]"), "1");

@@ -1,6 +1,7 @@
 package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.internal.steps.ChangedFiles;
+import com.vaadin.testing.unified.internal.steps.RunReport;
 import com.vaadin.testing.unified.internal.steps.RunSummary;
 import com.vaadin.testing.unified.internal.steps.ScenarioResult;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
@@ -25,8 +26,8 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
- * Writes the run's {@code summary.md} to the evidence directory's root and, in GitHub Actions, puts it in the job
- * summary. Test Runner-neutral: the JUnit integration calls it at the end of the run.
+ * Writes the run's {@code summary.md} and {@code report.html} to the evidence directory's root and, in GitHub
+ * Actions, puts the summary in the job summary. Test Runner-neutral: the JUnit integration calls it at the end of the run.
  * <p>
  * <b>Which files belong to the run.</b> The {@code user-steps.json} under the evidence directory whose
  * {@code startedAt} is not before {@code runStart}. With Surefire's forks every fork rewrites the summary when it
@@ -54,7 +55,8 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
     }
 
     /**
-     * Writes {@code summary.md}, if the run has any Unified UI Test, and appends it to the GitHub job summary.
+     * Writes {@code summary.md} and {@code report.html}, if the run has any Unified UI Test, and appends the summary
+     * to the GitHub job summary.
      *
      * @param skippedHere the Unified UI Tests this process skipped without running ({@code class#method})
      * @param processId names this process's list of skipped tests
@@ -78,6 +80,9 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         Path file = evidenceDir.resolve(RunSummary.FILE);
         Files.createDirectories(evidenceDir);
         Files.writeString(file, markdown, StandardCharsets.UTF_8);
+        List<String> rootFiles = rootFiles(evidenceDir);
+        String report = new RunReport(summary, s -> failureEvidence(rootFiles, s)).html();
+        Files.writeString(evidenceDir.resolve(RunReport.FILE), report, StandardCharsets.UTF_8);
         String stepSummary = env.get(GITHUB_STEP_SUMMARY);
         if (stepSummary != null && !stepSummary.isBlank() && settings.userStepsGithubSummary()) {
             putInJobSummary(Path.of(stepSummary), key(evidenceDir), markdown);
@@ -115,6 +120,25 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
             }
         }
         return scenarios;
+    }
+
+    /** The file names at the evidence directory's root, sorted: where failure evidence is written. */
+    private static List<String> rootFiles(Path evidenceDir) throws IOException {
+        try (Stream<Path> files = Files.list(evidenceDir)) {
+            return files.filter(Files::isRegularFile).map(p -> p.getFileName().toString()).sorted().toList();
+        }
+    }
+
+    /**
+     * A scenario's failure evidence: the files named {@code <test class>.<test method>.*} at the root
+     * ({@code AdapterSession.writeFailureEvidence}), for a failed scenario only.
+     */
+    static List<String> failureEvidence(List<String> rootFiles, ScenarioResult scenario) {
+        if (!scenario.failed()) {
+            return List.of();
+        }
+        String prefix = scenario.testClass() + "." + scenario.testMethod() + ".";
+        return rootFiles.stream().filter(f -> f.startsWith(prefix)).toList();
     }
 
     /** The tests skipped without running, listed by this run's processes. */

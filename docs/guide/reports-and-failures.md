@@ -7,6 +7,7 @@ Every Wrapper action and every retrying assertion is recorded as a **User Step**
 | [The CI log](#the-ci-log) | stdout and the test report | failed tests, by default | whoever reads CI |
 | [`user-steps.txt`, `user-steps.json`](#the-user-steps-of-a-test) | the evidence directory, per test | every test | people, agents and tools |
 | [`summary.md`](#the-run-summary) | the evidence directory, per run | every run | the reviewer |
+| [`report.html`](#the-html-report) | the evidence directory, per run | every run | the reviewer, in a browser |
 | [GitHub job summary](#the-github-job-summary) | the job's summary page | every run in GitHub Actions | the reviewer |
 
 The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
@@ -227,6 +228,17 @@ The demo's run, with the base set to the commit before `UserStepsTest` was added
 A scenario is *changed* when any of its User Steps or User Tasks is called from a file changed against the base: `git diff` from the merge base of the base ref and `HEAD`, plus uncommitted and untracked files. It is *new* when its test class's file was added, or when its test method wasn't in that file at the base. Without git, or with a base ref git doesn't know, the section is left out and one line is logged.
 
 Skipped scenarios (disabled, aborted, or lacking a Capability) count in the header only, as passing ones do.
+
+## The HTML report
+
+Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the same run in a browser. Open it after a local run (`target/surefire-reports/unified-evidence/report.html`), or from the evidence artifact a CI run uploaded. It is one file with nothing to load from the network, and its links point to files next to it, so keep the evidence directory together when you download or move it.
+
+- **At the top:** the Testing Tool, the counts, when the run started and how long it took. Below, a bar that stays in view: *Show passing*, *Changed only* (when the run has a base to compare against) and a search over scenario names and steps.
+- **Changed in this PR:** the scenarios the pull request touches, marked *new* or *changed*. Failed ones are unfolded; passing ones are one line each, unfolded on a click.
+- **Failed scenarios:** where it failed, what was expected and found, the Near Misses and *Did you mean*, the code path, and the failure evidence: the browser's screenshot shown in the page, Browserless's component tree as a link. Then the scenario's User Steps, with the failed one marked.
+- **Passing scenarios:** hidden until you tick *Show passing* or search, so a long run doesn't bury what needs attention.
+
+Each User Step shows its number, its text, how long it took and the line that called it. User Tasks fold, and calls outside the Unified API show as dimmed gap lines. Each scenario links its `user-steps.txt` and `user-steps.json`.
 
 ## The GitHub job summary
 

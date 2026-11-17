@@ -119,6 +119,7 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 | `user-steps.txt` | evidence directory, per test | every test | agents, people |
 | `user-steps.json` | evidence directory, per test | every test | the later outputs and tools. Versioned: `"schemaVersion": 1` |
 | `summary.md` | evidence directory, per run | every run | the reviewer |
+| `report.html` | evidence directory, per run | every run | the reviewer, in a browser |
 | GitHub job summary | `summary.md` appended when `GITHUB_STEP_SUMMARY` is set | every run in GitHub Actions | the reviewer |
 
 **`summary.md`**, in order:
@@ -138,7 +139,17 @@ How `summary.md` is made:
 - **New or changed.** New when the test class's file was added (renamed files count as added), or when that file at the merge base has no `<test method>(`. Otherwise changed.
 - **GitHub job summary.** Put in a marked block, one per evidence directory and run: a later fork replaces the block an earlier one wrote.
 
-Later outputs, built from the same `user-steps.json`: an HTML run report with per-step evidence, living documentation per view, and a step-level diff against the base branch's last run.
+**`report.html`** is written with `summary.md`, from the same files and the same `ChangedFiles`. One file with its CSS and script inline, so it opens from a downloaded CI artifact; its links are relative to the evidence directory. In order:
+
+1. **Header:** Testing Tool, counts, the run's start (UTC) and duration.
+2. **Controls:** show passing (off), changed only (with a base ref), and a search over scenario names, classes and step texts.
+3. **Changed in this PR:** as in `summary.md`, marked new or changed; failed scenarios unfolded, passing ones folded.
+4. **Failed scenarios:** Failed at, Expected and Found (or the error line), Nearby, Did you mean, the code path, the failure evidence (`<test class>.<test method>.*` at the evidence directory's root: a screenshot shown inline, other files linked), then the User Steps tree with the failed step marked.
+5. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
+
+Each step shows its index, window, text, duration and call site; step groups nest and fold; gaps are dimmed. Every value is HTML-escaped. Aborted scenarios count in the header only. Each scenario links its `user-steps.txt` and `user-steps.json`.
+
+Later outputs, built from the same `user-steps.json`: per-step evidence in the HTML report ([#207](https://github.com/parttio/unified-testing-tool/issues/207)), living documentation per view, and a step-level diff against the base branch's last run ([#264](https://github.com/parttio/unified-testing-tool/issues/264)).
 
 ### `user-steps.json`, schema version 1
 
