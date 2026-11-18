@@ -16,6 +16,7 @@ import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -85,11 +86,10 @@ class OrderTest {
     void listsEveryItemOfALazyComboBox(UnifiedPage page) {
         page.navigate(OrderView.class);
 
-        List<String> airports = page.find(UnifiedComboBox.class).withLabel("Airport").getItems();
+        UnifiedComboBox airport = page.find(UnifiedComboBox.class).withLabel("Airport");
 
-        assertEquals(OrderView.AIRPORT_COUNT, airports.size());
-        assertEquals("Airport 1", airports.get(0));
-        assertEquals("Airport 120", airports.get(OrderView.AIRPORT_COUNT - 1));
+        assertThat(airport).hasItems(IntStream.rangeClosed(1, OrderView.AIRPORT_COUNT).mapToObj(i -> "Airport " + i)
+                .toArray(String[]::new));
     }
 
     @Test

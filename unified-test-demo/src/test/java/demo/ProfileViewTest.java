@@ -152,7 +152,9 @@ class ProfileViewTest {
     @DisplayName("After typing a name, a real browser takes a screenshot of the profile")
     void screenshotOnlyWithARealBrowser(UnifiedPage page) throws Exception {
         page.navigate(ProfileView.class);
-        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
+        name.setValue("Alice");
+        assertThat(name).hasValue("Alice");
 
         Path file = Path.of("target/screenshots/profile-alice.png");
         Files.deleteIfExists(file);
