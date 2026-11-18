@@ -7,8 +7,9 @@ import java.util.Optional;
 
 /**
  * The run's {@code summary.md} (spec chapter 12, "Reports"), built from the {@code user-steps.json} of the run's
- * tests: a header with the counts, "Changed in this PR" when a base ref is known, then the failed scenarios. A
- * changed scenario's User Steps are diffed against the {@link BaseRun} when there is one.
+ * tests: a header with the counts, "Changed in this PR" when a base ref is known, the failed scenarios, then the
+ * passing scenarios without a check. A changed scenario's User Steps are diffed against the {@link BaseRun} when
+ * there is one.
  * Passing scenarios count in the header only: a run's list of them is long to scroll past on the job summary,
  * and each one's User Steps are in its own {@code user-steps.txt}.
  *
@@ -61,7 +62,45 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
             md.append("\n#### Failed scenarios\n");
             failed.forEach(s -> failed(md, s));
         }
+        unchecked(md);
         return md.toString();
+    }
+
+    /** At most this many scenarios without a check are listed; the rest are counted. */
+    static final int UNCHECKED_LISTED = 10;
+
+    /** The passing scenarios that end without a check ({@link ScenarioResult#unchecked()}). */
+    public List<ScenarioResult> unchecked() {
+        return scenarios.stream().filter(s -> s.unchecked().isPresent()).toList();
+    }
+
+    private void unchecked(StringBuilder md) {
+        List<ScenarioResult> unchecked = unchecked();
+        if (unchecked.isEmpty()) {
+            return;
+        }
+        md.append("\n#### Scenarios without a check\n\n").append(unchecked.size())
+                .append(unchecked.size() == 1 ? " passing scenario ends" : " passing scenarios end")
+                .append(" on User Steps that nothing checks: no `see` step follows them. A plain assertion on a")
+                .append(" value read from a Wrapper is not a User Step, and does not retry.\n\n");
+        for (ScenarioResult s : unchecked.subList(0, Math.min(UNCHECKED_LISTED, unchecked.size()))) {
+            md.append("- **").append(markdown(title(s))).append("** · ")
+                    .append(uncheckedLine(s.unchecked().orElseThrow(), RunSummary::code)).append('\n');
+        }
+        if (unchecked.size() > UNCHECKED_LISTED) {
+            md.append("- … and ").append(unchecked.size() - UNCHECKED_LISTED).append(" more, in `")
+                    .append(RunReport.FILE).append("`\n");
+        }
+    }
+
+    /** {@code no check}, or {@code no check after: <the last steps>}: at most three steps, then the count. */
+    static String uncheckedLine(ScenarioResult.Unchecked unchecked, java.util.function.UnaryOperator<String> step) {
+        if (unchecked.all()) {
+            return "no check";
+        }
+        List<String> steps = unchecked.steps();
+        String shown = String.join(", ", steps.stream().limit(3).map(step).toList());
+        return "no check after: " + shown + (steps.size() > 3 ? " and " + (steps.size() - 3) + " more" : "");
     }
 
     private void changed(StringBuilder md) {

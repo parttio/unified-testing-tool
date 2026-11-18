@@ -351,6 +351,97 @@ class RunSummaryTest {
                 .isNew(edit), "only a User Task changed");
     }
 
+    private static ScenarioResult passing(String method, String steps) {
+        return ScenarioResult.parse("""
+                {"schemaVersion": 1, "testClass": "demo.SaveTest", "testMethod": "%s", "displayName": "%s",
+                 "tool": "playwright", "status": "passed", "startedAt": "2026-11-16T10:00:09Z", "durationMs": 5,
+                 "steps": [%s]}
+                """.formatted(method, method, steps), "evidence/SaveTest/" + method + "/");
+    }
+
+    private static String step(String verb, String text) {
+        return "{\"type\": \"step\", \"index\": \"1\", \"number\": 1, \"text\": \"" + text + "\", \"verb\": \""
+                + verb + "\", \"status\": \"passed\"}";
+    }
+
+    private static String gap(String reason) {
+        return "{\"type\": \"gap\", \"text\": \"… 1 call outside the Unified API (" + reason + ")\", \"reason\": \""
+                + reason + "\", \"count\": 1, \"status\": \"passed\"}";
+    }
+
+    @Test
+    void aPassedScenarioIsUncheckedFromItsLastCheckOn() {
+        String open = step("open", "open People");
+        String click = step("click", "click button “Save”");
+        String see = step("see", "see notification “Saved”");
+        String task = "{\"type\": \"group\", \"index\": \"2\", \"name\": \"Save\", \"status\": \"passed\", \"steps\": ["
+                + click + "]}";
+
+        assertEquals(Optional.of(new ScenarioResult.Unchecked(true, List.of("open People", "click button “Save”"))),
+                passing("noCheck", open + "," + task).unchecked());
+        assertEquals(Optional.of(new ScenarioResult.Unchecked(false, List.of("click button “Save”"))),
+                passing("endsOnAnAction", open + "," + see + "," + task).unchecked());
+        assertEquals(Optional.of(new ScenarioResult.Unchecked(true, List.of())), passing("nothing", "").unchecked());
+        assertEquals(Optional.empty(), passing("endsOnACheck", open + "," + click + "," + see).unchecked());
+        assertEquals(Optional.empty(), passing("seesNothing", open + "," + step("see no", "see no dialog")).unchecked());
+    }
+
+    @Test
+    void whatMayHoldACheckCountsAsOne() {
+        String open = step("open", "open People");
+
+        // the reports can't see into these, so they don't call the scenario unchecked
+        assertEquals(Optional.empty(), passing("waits", open + "," + gap("waitUntil")).unchecked());
+        assertEquals(Optional.empty(), passing("escapes", open + "," + gap("Escape Hatch")).unchecked());
+        // a passing test with a failed step expected the failure (assertThrows)
+        assertEquals(Optional.empty(), passing("expectsAFailure",
+                open + "," + step("choose", "choose “Mars” in combo box “Country”").replace("passed", "failed")).unchecked());
+        // a where(..) condition narrows a lookup: it checks nothing
+        assertEquals(Optional.of(new ScenarioResult.Unchecked(true, List.of("open People"))),
+                passing("filters", open + "," + gap("where(..) condition")).unchecked());
+        // failed and aborted scenarios are not judged
+        assertEquals(Optional.empty(), scenario(ORDER_FAILED, "OrderTest/totals").unchecked());
+        assertEquals(Optional.empty(), scenario(ABORTED, "OrderTest/onlyOnFriday").unchecked());
+    }
+
+    @Test
+    void theSummaryListsPassingScenariosWithoutACheck() {
+        String open = step("open", "open People");
+        String see = step("see", "see grid “People”");
+        List<ScenarioResult> run = List.of(scenario(EDIT_PERSON, "EditPersonTest/editsAPerson"),
+                passing("readsTheGrid", open),
+                passing("savesFourTimes", see + "," + step("click", "click button “A`”") + "," + step("click", "click b")
+                        + "," + step("click", "click c") + "," + step("click", "click d")));
+
+        String md = new RunSummary("Playwright", run, 0, null).markdown();
+
+        assertEquals("""
+                ### Unified UI Tests · Playwright · 3 passed, 0 failed, 0 skipped
+
+                #### Scenarios without a check
+
+                2 passing scenarios end on User Steps that nothing checks: no `see` step follows them. \
+                A plain assertion on a value read from a Wrapper is not a User Step, and does not retry.
+
+                - **readsTheGrid (SaveTest)** · no check
+                - **savesFourTimes (SaveTest)** · no check after: ``click button “A`”``, `click b`, `click c` and 1 more
+                """, md);
+        assertFalse(new RunSummary("Playwright", List.of(scenario(EDIT_PERSON, "x/y")), 0, null).markdown()
+                .contains("without a check"));
+    }
+
+    @Test
+    void aLongListOfScenariosWithoutACheckIsCutWithACount() {
+        List<ScenarioResult> run = java.util.stream.IntStream.range(0, 12)
+                .mapToObj(i -> passing("reads" + i, step("open", "open People"))).toList();
+
+        String md = new RunSummary("Playwright", run, 0, null).markdown();
+
+        assertTrue(md.contains("12 passing scenarios end on"), md);
+        assertEquals(10, md.lines().filter(l -> l.endsWith("· no check")).count(), md);
+        assertTrue(md.endsWith("- … and 2 more, in `report.html`\n"), md);
+    }
+
     @Test
     void stepsReadBackFromJsonReadLikeUserStepsTxt() {
         FakePage fake = new FakePage().add("vaadin-text-field", "label", "Name").add("vaadin-button", "text", "Save");

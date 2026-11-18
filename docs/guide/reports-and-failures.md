@@ -178,9 +178,10 @@ When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the
 
 1. a header with the Testing Tool and the counts;
 2. **Changed in this PR**: the scenarios that call code changed against the base branch, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. A new scenario shows its User Steps; a changed one shows how its User Steps differ from the base branch's last run, when the build gives it that run ([below](#how-a-changed-scenarios-steps-changed)). Left out when the run has no base to compare against;
-3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory.
+3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory;
+4. **Scenarios without a check**: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
 
-Passing scenarios count in the header only, unless the pull request changed them: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
+Passing scenarios count in the header only, unless the pull request changed them or they have no check: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
 
 The demo's run, with the base set to the commit before `UserStepsTest` was added (shortened):
 
@@ -255,6 +256,25 @@ A scenario marked *changed* calls changed code, but that alone doesn't say what 
 
 The directory is any copy of the base branch's evidence directory, such as its downloaded CI artifact; `user-steps.json` files are found at any depth. [Running in CI](ci-setup.md#github-actions) downloads it in a pull request.
 
+### Scenarios without a check
+
+A test that fills a form, clicks *Save* and stops there passes whether or not the save works. The run summary lists the passing scenarios that end this way, so the author, or the reviewer of a test an agent wrote, sees them without reading each test:
+
+```markdown
+#### Scenarios without a check
+
+2 passing scenarios end on User Steps that nothing checks: no `see` step follows them. A plain assertion on a value read from a Wrapper is not a User Step, and does not retry.
+
+- **A cell is read by the index of its column (GridTest)** · no check
+- **Saving a person closes the dialog (EditPersonTest)** · no check after: `click button “Save”`
+```
+
+- **A check** is a retrying assertion, `assertThat(..)` from `UnifiedAssertions`, which shows as a `see` or `see no` User Step. The steps after a scenario's last check are the ones listed.
+- **`assertEquals("Alan", name.getValue())` is not seen.** Reading a value records no User Step, so a scenario checked only that way is listed as `no check`. Write `assertThat(name).hasValue("Alan")` instead: it is recorded, it waits for the value on every Testing Tool, and its failure names the User Step ([Assertions and waiting](assertions-and-waiting.md)).
+- **Not listed:** a scenario that ends on `page.waitUntil(..)` or an Escape Hatch call, since the check may be in there, and a passing scenario with a failed User Step, since the test expected that failure (`assertThrows`).
+
+The section reports; it fails no test. In `report.html` these scenarios have a section of their own and a *no check* badge, and `summary.json` marks them with `unchecked`.
+
 ## The HTML report
 
 Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the same run in a browser. Open it after a local run (`target/surefire-reports/unified-evidence/report.html`), or from the evidence artifact a CI run uploaded. It is one file with nothing to load from the network, and its links point to files next to it, so keep the evidence directory together when you download or move it.
@@ -303,6 +323,7 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the 
 - **The verdict:** `status` is `failed` when any scenario failed. The counts are those of the summary's header.
 - **Every scenario** is listed, passed or failed, with the directory of its files. Paths are relative to the evidence directory, so they work in a downloaded CI artifact too.
 - **A failed scenario** carries the text of the failed User Step, the `failure` object of its `user-steps.json` unchanged (expected, found, Near Misses, *Did you mean*, the code path), and its failure evidence.
+- **A passing scenario without a check** says `unchecked` (`all` or `end`) and lists the User Steps nothing checks.
 - **A scenario the pull request changed** says `new` or `changed`, the changed files it calls from, and how many User Steps were added and removed against the Base Run.
 
 The User Steps themselves stay in each test's `user-steps.json`. The file is versioned (`schemaVersion`); the fields are in the spec, [`summary.json`, schema version 1](../spec/12-readable-tests.md#summaryjson-schema-version-1).

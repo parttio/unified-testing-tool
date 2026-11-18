@@ -58,6 +58,60 @@ public record ScenarioResult(String testClass, String testMethod, String display
         return "aborted".equals(status);
     }
 
+    /**
+     * The User Steps of a passed scenario that no check follows.
+     *
+     * @param all true when the scenario has no check at all
+     * @param steps the steps' texts, in order: every one when {@code all}, else those after the last check
+     */
+    public record Unchecked(boolean all, List<String> steps) {
+    }
+
+    /**
+     * What a passed scenario leaves unchecked, as far as its User Steps tell: the steps after its last check, or
+     * all of them when it has none. Empty when it ends on a check, and for a failed or aborted scenario.
+     * <p>
+     * A check is a retrying assertion ({@code see}, {@code see no}). A failed step counts as one, since a passing
+     * test that has it expected the failure, and so does a gap that may hold one ({@code waitUntil}, the Escape
+     * Hatch). A plain assertion on a value read from a Wrapper is no User Step, so it is not seen here.
+     */
+    public Optional<Unchecked> unchecked() {
+        if (!passed()) {
+            return Optional.empty();
+        }
+        List<String> pending = new ArrayList<>();
+        boolean[] checked = { false };
+        unchecked(steps, pending, checked);
+        return pending.isEmpty() && checked[0] ? Optional.empty()
+                : Optional.of(new Unchecked(!checked[0], List.copyOf(pending)));
+    }
+
+    private static void unchecked(List<Map<String, Object>> entries, List<String> pending, boolean[] checked) {
+        for (Map<String, Object> entry : entries) {
+            String type = string(entry, "type");
+            if ("group".equals(type)) {
+                unchecked(entries(entry.get("steps")), pending, checked);
+            } else if (isCheck(entry, type)) {
+                checked[0] = true;
+                pending.clear();
+            } else if (!"gap".equals(type)) {
+                pending.add(orEmpty(string(entry, "text")));
+            }
+        }
+    }
+
+    private static boolean isCheck(Map<String, Object> entry, String type) {
+        if ("failed".equals(string(entry, "status"))) {
+            return true;
+        }
+        if ("gap".equals(type)) {
+            String reason = string(entry, "reason");
+            return "waitUntil".equals(reason) || "Escape Hatch".equals(reason);
+        }
+        String verb = string(entry, "verb");
+        return "see".equals(verb) || "see no".equals(verb);
+    }
+
     /** The test class without its package, nested classes with a dot: {@code UsersTest.AsAlice}. */
     public String simpleClassName() {
         return testClass.substring(testClass.lastIndexOf('.') + 1).replace('$', '.');

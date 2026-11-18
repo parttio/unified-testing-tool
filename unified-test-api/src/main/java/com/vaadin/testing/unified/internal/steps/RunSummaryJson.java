@@ -13,7 +13,7 @@ import java.util.function.Function;
  * The run's {@code summary.json} (spec chapter 12, "summary.json, schema version 1"): the run of {@code summary.md}
  * as data, for agents and CI tooling. The verdict and the counts, then every scenario with where its files are;
  * a failed one with its {@code failure} object as in its {@code user-steps.json}, a scenario under "Changed in this
- * PR" with why it is there. Paths are relative to the evidence directory, where the file is written.
+ * PR" with why it is there, a passing one without a check with the User Steps nothing checks. Paths are relative to the evidence directory, where the file is written.
  *
  * @param summary the run, as {@code summary.md} has it
  * @param evidenceFiles a scenario's evidence files, as paths relative to the evidence directory: its failure
@@ -65,6 +65,10 @@ public record RunSummaryJson(RunSummary summary, Function<ScenarioResult, List<S
         json.field("evidenceDir", dir);
         json.field("userSteps", dir + UserStepsReport.JSON_FILE);
         changed(json, s);
+        s.unchecked().ifPresent(unchecked -> {
+            json.field("unchecked", unchecked.all() ? "all" : "end");
+            json.key("uncheckedSteps").any(unchecked.steps());
+        });
         if (s.failed()) {
             failed(json, s);
         }
