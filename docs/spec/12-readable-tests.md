@@ -120,6 +120,7 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 | `user-steps.json` | evidence directory, per test | every test | the later outputs and tools. Versioned: `"schemaVersion": 1` |
 | `summary.md` | evidence directory, per run | every run | the reviewer |
 | `report.html` | evidence directory, per run | every run | the reviewer, in a browser |
+| `summary.json` | evidence directory, per run | every run | agents and CI tooling. Versioned: `"schemaVersion": 1` |
 | GitHub job summary | `summary.md` appended when `GITHUB_STEP_SUMMARY` is set | every run in GitHub Actions | the reviewer |
 
 **`summary.md`**, in order:
@@ -149,6 +150,8 @@ How `summary.md` is made:
 5. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
 
 Each step shows its index, window, text, duration and call site, and its snapshot when it has one: a screenshot opens under the step, a tree is a link. Step groups nest and fold; gaps are dimmed. Every value is HTML-escaped. Aborted scenarios count in the header only. Each scenario links its `user-steps.txt`, `user-steps.json`, and the Playwright trace this run kept for it (`trace.zip`).
+
+**`summary.json`** is written with `summary.md`, from the same files, the same `ChangedFiles` and the same Base Run: the run as data, so an agent or a CI tool reads the verdict without parsing Markdown or walking the evidence directory. Its fields are [below](#summaryjson-schema-version-1).
 
 ### Evidence per User Step
 
@@ -222,6 +225,39 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 **Call site:** `{ "file": "EditPersonTest.java", "line": 24, "className": "demo.EditPersonTest", "method": "editPerson" }`. `file` is left out without debug information; `line` is `-1` when unknown; a lambda's method is the method that declares it.
 
 Values typed into a password field, and every value passed through `page.secret(..)`, are written as `••••` in every field. Values longer than 80 characters are cut with `…`.
+
+### `summary.json`, schema version 1
+
+One file per run, at `<vaadin.testing.evidence-dir>/summary.json`, next to `summary.md` and made as it is (which files, changed files, the Base Run). UTF-8. Every path in it is relative to the evidence directory, so the file reads the same in a downloaded CI artifact.
+
+**The run**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schemaVersion` | number | `1` |
+| `tool` | string | the Testing Tool, lower case, as in `user-steps.json` |
+| `status` | string | `failed` when any scenario failed, else `passed` |
+| `startedAt` | string, optional | when the first scenario started (UTC, ISO-8601); left out for a run whose tests were all skipped without running |
+| `durationMs` | number, optional | from `startedAt` to the end of the scenario that ended last |
+| `passed`, `failed`, `skipped` | number | the counts of `summary.md`'s header. `skipped` is the aborted scenarios plus the Unified UI Tests skipped without running, which have no entry in `scenarios` |
+| `changedSince` | string, optional | the base ref of "Changed in this PR"; left out outside a PR |
+| `scenarios` | array | every scenario of the run, passed, failed or aborted, by test class, then start |
+
+**A scenario**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `testClass`, `testMethod`, `displayName`, `status`, `startedAt`, `durationMs` | | as in its `user-steps.json` |
+| `evidenceDir` | string | the test's evidence directory, `EditPersonTest/editsAPerson/` |
+| `userSteps` | string | its `user-steps.json`, `EditPersonTest/editsAPerson/user-steps.json`; `user-steps.txt` is next to it |
+| `change` | string, optional | under "Changed in this PR": `new` or `changed` |
+| `calledFromChangedFiles` | array, optional | for a changed scenario: `{ "file": "PeopleTasks.java", "methods": ["editPerson"] }` for each changed file it calls from |
+| `stepsDiff` | object, optional | for a changed scenario found in the Base Run: `{ "added": 1, "removed": 2 }`, the counts of the diff's lines; both `0` for the same User Steps |
+| `failedStep` | string, optional | for a failure in a User Step: the step's text |
+| `failure` | object, optional | for a failed scenario: the `failure` object of its `user-steps.json`, unchanged |
+| `evidence` | array of strings, optional | for a failed scenario: its failure evidence at the evidence directory's root, and the Playwright trace this run kept for it |
+
+The steps themselves are not repeated: they are in each scenario's `user-steps.json`. A reader ignores fields it doesn't know.
 
 ## Failures
 

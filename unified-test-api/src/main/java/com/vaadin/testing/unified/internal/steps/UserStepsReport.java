@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * One test's User Steps as {@code user-steps.txt} (also the CI log) and {@code user-steps.json}, schema version 1
@@ -347,6 +348,27 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                 sb.append("null");
             } else {
                 string(value);
+            }
+        }
+
+        /** A value read back from JSON, written as it was: an object, an array, a string, a number, a boolean or null. */
+        void any(Object value) {
+            if (value instanceof Map<?, ?> map) {
+                open('{');
+                map.forEach((k, v) -> {
+                    key(String.valueOf(k));
+                    any(v);
+                });
+                close('}');
+            } else if (value instanceof List<?> list) {
+                open('[');
+                list.forEach(this::any);
+                close(']');
+            } else if (value instanceof String s) {
+                value(s);
+            } else {
+                beforeValue();
+                sb.append(value);
             }
         }
 
