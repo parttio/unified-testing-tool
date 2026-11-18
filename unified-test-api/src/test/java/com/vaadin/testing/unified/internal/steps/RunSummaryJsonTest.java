@@ -133,4 +133,21 @@ class RunSummaryJsonTest {
         assertFalse(untouched.containsKey("change"));
         assertFalse(untouched.containsKey("calledFromChangedFiles"));
     }
+
+    @Test
+    void aPassingScenarioWithoutACheckSaysWhichStepsNothingChecks() {
+        String readsOnly = RunSummaryTest.EDIT_PERSON.replace("\"verb\": \"see\"", "\"verb\": \"click\"");
+        String endsOnAnAction = RunSummaryTest.EDIT_PERSON.replace("editsAPerson", "savesLast")
+                .replace("\"verb\": \"open\"", "\"verb\": \"see\"").replace("\"verb\": \"fill\"", "\"verb\": \"see\"");
+
+        Map<String, Object> run = read(new RunSummary("Playwright", List.of(
+                scenario(readsOnly, "EditPersonTest/editsAPerson"), scenario(endsOnAnAction, "EditPersonTest/savesLast"),
+                scenario(RunSummaryTest.CHECKOUT_FAILED, "CheckoutTest$AsGuest/paysByCard")), 0, null), Map.of());
+
+        // the Escape Hatch gap of EDIT_PERSON may hold a check: only the steps after it are unchecked
+        assertEquals("end", scenarioOf(run, "editsAPerson").get("unchecked"));
+        assertEquals(List.of("see notification “Saved”"), scenarioOf(run, "editsAPerson").get("uncheckedSteps"));
+        assertFalse(scenarioOf(run, "savesLast").containsKey("unchecked"), "it ends on a check");
+        assertFalse(scenarioOf(run, "paysByCard").containsKey("unchecked"), "a failed scenario is not judged");
+    }
 }

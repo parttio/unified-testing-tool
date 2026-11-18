@@ -63,6 +63,7 @@ public final class LazyElement implements UnifiedElement {
      * that can't be singled out right now counts as no match.
      */
     public int countNow() {
+        run.steps().read();
         if (source instanceof ElementSource s) {
             return s.resolveNow().size();
         }
@@ -111,9 +112,15 @@ public final class LazyElement implements UnifiedElement {
         }));
     }
 
-    /** Reads from the element, finding it again if it went stale meanwhile. */
+    /** Reads from the element, finding it again if it went stale meanwhile; counted as a read by the reports. */
     private <T> T read(java.util.function.Function<UnifiedElement, T> reader) {
-        return StaleRetry.call(run, () -> reader.apply(concrete()));
+        run.steps().read();
+        return on(reader);
+    }
+
+    /** Calls the element, finding it again if it went stale meanwhile. */
+    private <T> T on(java.util.function.Function<UnifiedElement, T> call) {
+        return StaleRetry.call(run, () -> call.apply(concrete()));
     }
 
     @Override public String getTag() { return read(UnifiedElement::getTag); }
@@ -134,19 +141,19 @@ public final class LazyElement implements UnifiedElement {
     @Override public List<UnifiedElement> findChildren(String tag) { return read(e -> e.findChildren(tag)); }
     @Override public List<UnifiedElement> findDescendants(String tag) { return read(e -> e.findDescendants(tag)); }
 
-    @Override public void setProperty(String name, Object value) { read(e -> { e.setProperty(name, value); return null; }); }
+    @Override public void setProperty(String name, Object value) { on(e -> { e.setProperty(name, value); return null; }); }
     @Override public void click() { act("click", UnifiedElement::click); }
     @Override public void setValueAsUser(Object value) {
         act(() -> Phrases.forElementAction("set the value of", this, value), "set the value of",
                 e -> e.setValueAsUser(value));
     }
     @Override public void focus() { act("focus", UnifiedElement::focus); }
-    @Override public void blur() { read(e -> { e.blur(); return null; }); }
+    @Override public void blur() { on(e -> { e.blur(); return null; }); }
     @Override public void pressKey(String key) {
         act(() -> Phrases.forElementAction("press " + key + " on", this, key), "press " + key + " on",
                 e -> e.pressKey(key));
     }
-    @Override public void dispatchEvent(String eventName) { read(e -> { e.dispatchEvent(eventName); return null; }); }
+    @Override public void dispatchEvent(String eventName) { on(e -> { e.dispatchEvent(eventName); return null; }); }
 
     @Override
     public <T> T unwrap(Class<T> type) {
@@ -161,6 +168,9 @@ public final class LazyElement implements UnifiedElement {
         if (!type.getName().startsWith("com.vaadin.testing.unified.")) {
             // the Testing Tool's own type: the Escape Hatch, which the User Steps can't see into
             run.steps().gap(ESCAPE_HATCH, run.window());
+        } else {
+            // a Testing Tool's access (grid, selection, tabs): what Wrapper getters read through
+            run.steps().read();
         }
         return concrete().tryUnwrap(type);
     }

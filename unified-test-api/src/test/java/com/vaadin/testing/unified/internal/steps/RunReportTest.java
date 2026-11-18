@@ -56,6 +56,24 @@ class RunReportTest {
     }
 
     @Test
+    void passingScenariosWithoutACheckHaveASectionAndABadge() {
+        String endsOnAnAction = RunSummaryTest.EDIT_PERSON.replace("\"verb\": \"see\"", "\"verb\": \"click\"");
+        String html = new RunReport(new RunSummary("Playwright",
+                List.of(scenario(endsOnAnAction, "EditPersonTest/editsAPerson")), 0, null), s -> List.of()).html();
+
+        int failed = html.indexOf("<section id=\"failed\">");
+        int unchecked = html.indexOf("<section id=\"unchecked\">");
+        int passing = html.indexOf("<section id=\"passing\" hidden>");
+        assertTrue(failed < unchecked && unchecked < passing, html);
+        String section = html.substring(unchecked, passing);
+        assertTrue(section.contains("1 passing scenario ends on User Steps that nothing checks"), section);
+        assertTrue(section.contains("<span class=\"badge unchecked\">no check</span>"), section);
+        assertTrue(section.contains("<p class=\"why\">no check after: “see notification “Saved””</p>"), section);
+        // a run whose scenarios all end on a check has no such section
+        assertFalse(report(null).contains("id=\"unchecked\""));
+    }
+
+    @Test
     void aChangedScenarioSaysWhyAndShowsItsDiffWithASwitchToTheFullSteps() {
         BaseRun base = BaseRun.of(List.of(scenario(RunSummaryTest.EDIT_PERSON_BASE, "EditPersonTest/editsAPerson")),
                 "playwright");

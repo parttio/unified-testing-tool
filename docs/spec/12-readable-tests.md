@@ -128,8 +128,9 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 1. **Header:** Testing Tool and counts.
 2. **Changed in this PR:** scenarios with any User Step or User Task called from a file changed against the base branch (`GITHUB_BASE_REF`, or `vaadin.testing.user-steps.changed-since`), marked new or changed. A change in a shared `…Tasks` class marks every scenario using it. A new scenario's steps are unfolded. A changed one says why it is listed (`Called from changed files: <file> (<methods>)`, each changed file it calls from with the methods calling from it, in call order), then its steps diffed against the Base Run when there is one, else unfolded. Left out outside a PR.
 3. **Failed scenarios:** `@DisplayName`, the failed User Step, Near Misses, evidence path.
+4. **Scenarios without a check:** the passing scenarios that end on User Steps nothing checks, one line each: `no check`, or `no check after:` and the steps after the last check (three, then a count). At most ten are listed, then a count. Left out when there is none.
 
-Passing scenarios count in the header only, unless they are under "Changed in this PR": a list of every passing scenario is long to scroll past on the job summary, and each one's User Steps are in its `user-steps.txt`. Skipped scenarios count in the header only too: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
+Passing scenarios count in the header only, unless they are under "Changed in this PR" or "Scenarios without a check": a list of every passing scenario is long to scroll past on the job summary, and each one's User Steps are in its `user-steps.txt`. Skipped scenarios count in the header only too: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
 
 How `summary.md` is made:
 
@@ -139,6 +140,7 @@ How `summary.md` is made:
 - **Matching.** A call site matches a changed file whose path ends with `<package as directories>/<callSite.file>` (the outermost class's name plus `.java` when `file` is missing). A change anywhere in a file marks every scenario calling from it.
 - **New or changed.** New when the test class's file was added (renamed files count as added), or when that file at the merge base has no `<test method>(`. Otherwise changed.
 - **Diff against the Base Run.** With `vaadin.testing.user-steps.baseline-dir` set, every `user-steps.json` under that directory, at any depth, whose `tool` is this run's. A changed scenario matches the Base Run's scenario with the same test class and evidence directory (`<class>/<method>[n]`), else the only one of the test class with the same display name. Its steps are compared as lines without indices (an added step renumbers the ones after it): each User Step and gap as its window and text, each step group as its name, indented by depth. A longest-common-subsequence diff, removed lines before the added ones, shown in full as a `diff` block headed `User Steps +<added> −<removed> against the base run`. Same steps: `same User Steps as the base run`, without the block. Not matched: `not in the base run`, steps unfolded. No `user-steps.json` for the tool, or no directory: one line, `No base run found to compare their User Steps with.`, and steps unfolded. Steps' status, durations and call sites are not compared. In this project's CI the Base Run is the evidence artifact of the base branch's last finished push run of the workflow (`scripts/download-base-user-steps.sh`).
+- **Without a check.** Read from a passed scenario's entries in order, step groups opened. A check is a User Step whose verb is `see` or `see no`. These count as one too, since a check may be behind them: a failed step (a passing test that has one expected the failure), a gap whose reason is `waitUntil` or `Escape Hatch`, and a value the test read (`readsAfter` on the entry before it, or `readsBeforeFirstEntry`), which a plain assertion in the test is taken to check. A `where(..) condition` gap doesn't. The steps after the last check are unchecked; a scenario with no check at all is unchecked as a whole, also when it has no User Step. Failed and aborted scenarios are not judged. Reported only: it fails no test.
 - **GitHub job summary.** Put in a marked block, one per evidence directory and run: a later fork replaces the block an earlier one wrote.
 
 **`report.html`** is written with `summary.md`, from the same files and the same `ChangedFiles`. One file with its CSS and script inline, so it opens from a downloaded CI artifact; its links are relative to the evidence directory. In order:
@@ -147,7 +149,8 @@ How `summary.md` is made:
 2. **Controls:** show passing (off), changed only (with a base ref), diff against base run (on; with a Base Run that has this run's Testing Tool), and a search over scenario names, classes and step texts.
 3. **Changed in this PR:** as in `summary.md`, marked new or changed, with the diff's counts or `same User Steps as the base run` / `not in the base run` next to the badge, and the why line; failed scenarios unfolded, passing ones folded. A scenario whose steps differ shows the diff instead of its step tree; unticking *diff against base run* shows the tree instead. The failed and passing sections show the tree only.
 4. **Failed scenarios:** Failed at, Expected and Found (or the error line), Nearby, Did you mean, the code path, the failure evidence (`<test class>.<test method>.*` at the evidence directory's root: a screenshot shown inline, other files linked), then the User Steps tree with the failed step marked.
-5. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
+5. **Scenarios without a check:** as in `summary.md`, every one of them, folded; left out when there is none. Such a scenario carries a `no check` badge wherever it is listed.
+6. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
 
 Each step shows its index, window, text, duration and call site, and its snapshot when it has one: a screenshot opens under the step, a tree is a link. Step groups nest and fold; gaps are dimmed. Every value is HTML-escaped. Aborted scenarios count in the header only. Each scenario links its `user-steps.txt`, `user-steps.json`, and the Playwright trace this run kept for it (`trace.zip`).
 
@@ -220,9 +223,12 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `durationMs` | step, group | number | |
 | `callSite` | all, optional | call site | the first stack frame outside the Unified API, its adapters, Wrapper interfaces and the JDK; for a group, the line calling `page.step(..)` |
 | `error` | all, optional | string | when `failed`: exception class and first line of the message |
+| `readsAfter` | all, optional | number | how many values the test read after this entry and before the next one, outside any User Step: a Unified Element's getter, a Wrapper's getter, a grid row's cell. For a group: after it started and before its first entry. Left out when none. The reads are listed nowhere; the count tells a scenario that reads a value after its last action from one that checks nothing |
 | `snapshot` | step, optional | string | with `vaadin.testing.user-steps.snapshots` on: the page right after the step, relative to the test's evidence directory: `steps/003.png` (browsers) or `steps/003.tree.txt` (Browserless) |
 
 **Call site:** `{ "file": "EditPersonTest.java", "line": 24, "className": "demo.EditPersonTest", "method": "editPerson" }`. `file` is left out without debug information; `line` is `-1` when unknown; a lambda's method is the method that declares it.
+
+The test itself has `readsBeforeFirstEntry` (number, optional): the values read before its first entry.
 
 Values typed into a password field, and every value passed through `page.secret(..)`, are written as `••••` in every field. Values longer than 80 characters are cut with `…`.
 
@@ -253,6 +259,8 @@ One file per run, at `<vaadin.testing.evidence-dir>/summary.json`, next to `summ
 | `change` | string, optional | under "Changed in this PR": `new` or `changed` |
 | `calledFromChangedFiles` | array, optional | for a changed scenario: `{ "file": "PeopleTasks.java", "methods": ["editPerson"] }` for each changed file it calls from |
 | `stepsDiff` | object, optional | for a changed scenario found in the Base Run: `{ "added": 1, "removed": 2 }`, the counts of the diff's lines; both `0` for the same User Steps |
+| `unchecked` | string, optional | for a passing scenario without a check: `all` when it has no check, `end` when User Steps follow its last check |
+| `uncheckedSteps` | array of strings, optional | with `unchecked`: the texts of the User Steps nothing checks, in order |
 | `failedStep` | string, optional | for a failure in a User Step: the step's text |
 | `failure` | object, optional | for a failed scenario: the `failure` object of its `user-steps.json`, unchanged |
 | `evidence` | array of strings, optional | for a failed scenario: its failure evidence at the evidence directory's root, and the Playwright trace this run kept for it |

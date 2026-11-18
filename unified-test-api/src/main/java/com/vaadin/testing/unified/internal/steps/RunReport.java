@@ -53,6 +53,16 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         }
         failed.forEach(s -> scenario(h, s, true, true, false));
         h.append("</section>\n");
+        List<ScenarioResult> unchecked = summary.unchecked();
+        if (!unchecked.isEmpty()) {
+            h.append("<section id=\"unchecked\">\n<h2>Scenarios without a check</h2>\n<p class=\"lead\">")
+                    .append(unchecked.size()).append(unchecked.size() == 1 ? " passing scenario ends"
+                            : " passing scenarios end")
+                    .append(" on User Steps that nothing checks: no <code>see</code> step follows them, and the")
+                    .append(" test reads no value after them.</p>\n");
+            unchecked.forEach(s -> scenario(h, s, false, false, false));
+            h.append("</section>\n");
+        }
         h.append("<section id=\"passing\" hidden>\n<h2>Passing scenarios</h2>\n");
         passed.forEach(s -> scenario(h, s, false, false, false));
         h.append("</section>\n<p id=\"no-match\" class=\"none\" hidden>No scenario matches.</p>\n");
@@ -141,10 +151,18 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         } else if (changedSection && !isNew && summary.base() != null && !summary.base().isEmpty()) {
             h.append(" <span class=\"diffstat\">not in the base run</span>");
         }
+        Optional<ScenarioResult.Unchecked> unchecked = s.unchecked();
+        if (unchecked.isPresent()) {
+            h.append(" <span class=\"badge unchecked\">no check</span>");
+        }
         if (s.durationMs() > 0) {
             h.append(" <span class=\"dur\">").append(duration(s.durationMs())).append("</span>");
         }
         h.append("</summary>\n");
+        if (unchecked.isPresent() && !unchecked.get().all()) {
+            h.append("<p class=\"why\">").append(esc(RunSummary.uncheckedLine(unchecked.get(), t -> "“" + t + "”")))
+                    .append("</p>\n");
+        }
         if (changedSection && changed && !isNew) {
             h.append("<p class=\"why\">Called from changed files: ").append(String.join(", ", summary.why(s).stream()
                     .map(w -> "<code>" + esc(w.file()) + "</code>" + (w.methods().isEmpty() ? ""

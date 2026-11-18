@@ -69,6 +69,47 @@ public class UserStepsReportTest {
     }
 
     @Test
+    void valuesReadBetweenUserStepsAreCountedAndListedNowhere() throws Exception {
+        UnifiedPage page = fake.page;
+        UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
+        UnifiedButton save = page.find(UnifiedButton.class).withText("Save");
+
+        name.element().getTag();                     // before the first entry
+        page.navigate(UserStepWordingTest.PeopleView.class);
+        name.setValue("Alan");
+        name.getValue();                             // a Wrapper getter
+        name.element().getProperty("value");         // a Unified Element getter
+        assertThat(name).hasValue("Alan");           // the getters a check polls are part of its step
+        page.step("Save", () -> {
+            save.isEnabled();                        // after the step group started
+            save.click();
+        });
+
+        fake.steps.finish();
+        UserStepsReport report = new UserStepsReport("demo.EditPersonTest", "editsAPerson", "Edits", "browserless",
+                "passed", null, fake.steps);
+        JsonNode json = new ObjectMapper().readTree(report.json());
+        assertEquals(1, json.get("readsBeforeFirstEntry").asInt());
+        JsonNode steps = json.get("steps");
+        assertFalse(steps.get(0).has("readsAfter"), "open People");
+        assertEquals(2, steps.get(1).get("readsAfter").asInt(), "after the fill");
+        assertFalse(steps.get(2).has("readsAfter"), "the check");
+        assertEquals(1, steps.get(3).get("readsAfter").asInt(), "the step group");
+        assertFalse(steps.get(3).get("steps").get(0).has("readsAfter"), "the click");
+        assertEquals(List.of("1  open People", "2  fill text field “Name” with “Alan”",
+                "3  see text field “Name” with value “Alan”", "4  Save", "   4.1  click button “Save”"),
+                report.text().lines().skip(1).map(l -> l.substring(3)).toList());
+
+        // the scenario ends on a click nothing checks, until the test reads a value after it
+        ScenarioResult scenario = ScenarioResult.parse(report.json(), "EditPersonTest/editsAPerson/");
+        assertEquals(java.util.Optional.of(new ScenarioResult.Unchecked(false, List.of("click button “Save”"))),
+                scenario.unchecked());
+        save.getText();
+        assertEquals(java.util.Optional.empty(),
+                ScenarioResult.parse(report.json(), "EditPersonTest/editsAPerson/").unchecked());
+    }
+
+    @Test
     void jsonFollowsSchemaVersion1() throws Exception {
         AssertionError failure = runFailingScenario();
         JsonNode json = new ObjectMapper().readTree(report(failure).json());
