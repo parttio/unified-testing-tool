@@ -32,6 +32,10 @@ _Avoid_: Implicit wait, waitForVaadin
 A test written only against the Unified API, so it runs on whichever Testing Tool the test run selects.
 _Avoid_: Vaadin test, browser test, integration test
 
+**Direct Test**:
+A UI test written against a Testing Tool's own API (Browserless Test, Dramafinder, TestBench) rather than the Unified API; the counterpart a Unified UI Test is compared with.
+_Avoid_: Plain test, native test, raw test
+
 **Capability**:
 Something a Unified UI Test can require from the Testing Tool running it, such as a real browser; a test whose Capability is missing is skipped.
 _Avoid_: Feature flag, tag
