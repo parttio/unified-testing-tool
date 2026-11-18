@@ -8,6 +8,7 @@ Every Wrapper action and every retrying assertion is recorded as a **User Step**
 | [`user-steps.txt`, `user-steps.json`](#the-user-steps-of-a-test) | the evidence directory, per test | every test | people, agents and tools |
 | [`summary.md`](#the-run-summary) | the evidence directory, per run | every run | the reviewer |
 | [`report.html`](#the-html-report) | the evidence directory, per run | every run | the reviewer, in a browser |
+| [`summary.json`](#the-run-as-data) | the evidence directory, per run | every run | agents and CI tooling |
 | [GitHub job summary](#the-github-job-summary) | the job's summary page | every run in GitHub Actions | the reviewer |
 
 The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
@@ -264,6 +265,47 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the s
 - **Passing scenarios:** hidden until you tick *Show passing* or search, so a long run doesn't bury what needs attention.
 
 Each User Step shows its number, its text, how long it took and the line that called it. User Tasks fold, and calls outside the Unified API show as dimmed gap lines. Each scenario links its `user-steps.txt` and `user-steps.json`.
+
+## The run as data
+
+Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the same run for a program to read. An agent that has run the tests, or a CI step that posts a comment, reads the verdict from one file instead of parsing Markdown or walking the evidence directory.
+
+```json
+{
+  "schemaVersion": 1,
+  "tool": "browserless",
+  "status": "failed",
+  "startedAt": "2026-11-16T10:00:01Z",
+  "durationMs": 4120,
+  "passed": 2,
+  "failed": 1,
+  "skipped": 0,
+  "changedSince": "origin/main",
+  "scenarios": [
+    {
+      "testClass": "com.vaadin.testing.unified.demo.EditEmailTest",
+      "testMethod": "changesTheEmail",
+      "displayName": "Changing a person's email updates the grid",
+      "status": "failed",
+      "startedAt": "2026-11-16T10:00:01Z",
+      "durationMs": 310,
+      "evidenceDir": "EditEmailTest/changesTheEmail/",
+      "userSteps": "EditEmailTest/changesTheEmail/user-steps.json",
+      "change": "new",
+      "failedStep": "fill text field “E-mail” with “alan@bletchley.uk”",
+      "failure": { "type": "com.vaadin.testing.unified.UnifiedAssertionError", "…": "…" },
+      "evidence": ["com.vaadin.testing.unified.demo.EditEmailTest.changesTheEmail.tree.txt"]
+    }
+  ]
+}
+```
+
+- **The verdict:** `status` is `failed` when any scenario failed. The counts are those of the summary's header.
+- **Every scenario** is listed, passed or failed, with the directory of its files. Paths are relative to the evidence directory, so they work in a downloaded CI artifact too.
+- **A failed scenario** carries the text of the failed User Step, the `failure` object of its `user-steps.json` unchanged (expected, found, Near Misses, *Did you mean*, the code path), and its failure evidence.
+- **A scenario the pull request changed** says `new` or `changed`, the changed files it calls from, and how many User Steps were added and removed against the Base Run.
+
+The User Steps themselves stay in each test's `user-steps.json`. The file is versioned (`schemaVersion`); the fields are in the spec, [`summary.json`, schema version 1](../spec/12-readable-tests.md#summaryjson-schema-version-1).
 
 ## What the page looked like at each step
 

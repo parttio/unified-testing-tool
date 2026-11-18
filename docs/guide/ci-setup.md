@@ -7,6 +7,7 @@ The Unified API needs no CI plugin. When the tests have run, it writes its repor
 | Failed tests' User Steps in the CI log | nothing |
 | `summary.md`: the counts, the scenarios changed in the pull request, the failed scenarios | nothing: written to `target/surefire-reports/unified-evidence/` |
 | `report.html`: the same run in a browser, with every scenario's User Steps and the failure screenshots | nothing: written next to `summary.md`; read it from the artifact |
+| `summary.json`: the same run as data, for a script or an agent | nothing: written next to `summary.md` |
 | The summary on the GitHub job's page | GitHub Actions: nothing |
 | **Changed in this PR** in the summary | the git history and the base branch in the checkout |
 | How each changed scenario's User Steps differ from the base branch's | the base branch's evidence artifact, downloaded |
@@ -123,7 +124,7 @@ What each part does:
 - **The job summary.** GitHub Actions sets `GITHUB_STEP_SUMMARY` in every job, and the Unified API appends `summary.md` to it, so the summary shows on the job's page and on the pull request's checks. Each job adds its own block, headed with its Testing Tool. To leave it out, set `vaadin.testing.user-steps.github-summary` to `false`.
 - **Changed in this PR.** In a pull request GitHub sets `GITHUB_BASE_REF`, and the Unified API compares `HEAD` with `origin/<base branch>`. `actions/checkout` fetches one commit and no other branch by default, so the workflow asks for the history (`fetch-depth: 0`) and fetches the base branch. Without them the section is left out and one line is logged; the rest of the summary is unchanged.
 - **The base branch's User Steps.** In a pull request, the job downloads the evidence artifact its Testing Tool's job uploaded in the base branch's last finished push run (skipping runs without one, such as cancelled runs), and `vaadin.testing.user-steps.baseline-dir` points the run summary at it. Each changed scenario then shows how its User Steps differ, as a diff. The download needs `actions: read`; when it finds nothing, for example after the artifact expired, the summary says so in one line and shows the steps in full. On a push the directory isn't there and isn't read: the diff is only in **Changed in this PR**.
-- **The evidence artifact.** `target/surefire-reports/unified-evidence/` holds `summary.md` and `report.html`, and for every test, passed or failed, its `user-steps.txt` and `user-steps.json`, plus a screenshot (browsers) or the component tree (Browserless) when it failed. `if: always()` keeps it when the build passes too. A reviewer downloads it from the run's page, unzips it and opens `report.html`; an agent reads the `user-steps.json` files.
+- **The evidence artifact.** `target/surefire-reports/unified-evidence/` holds `summary.md`, `report.html` and `summary.json`, and for every test, passed or failed, its `user-steps.txt` and `user-steps.json`, plus a screenshot (browsers) or the component tree (Browserless) when it failed. `if: always()` keeps it when the build passes too. A reviewer downloads it from the run's page, unzips it and opens `report.html`; an agent reads `summary.json`, then the `user-steps.json` of the scenarios it names.
 
 ### Selenium (TestBench)
 

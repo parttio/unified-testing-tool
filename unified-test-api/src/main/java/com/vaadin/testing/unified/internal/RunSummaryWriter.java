@@ -4,6 +4,7 @@ import com.vaadin.testing.unified.internal.steps.BaseRun;
 import com.vaadin.testing.unified.internal.steps.ChangedFiles;
 import com.vaadin.testing.unified.internal.steps.RunReport;
 import com.vaadin.testing.unified.internal.steps.RunSummary;
+import com.vaadin.testing.unified.internal.steps.RunSummaryJson;
 import com.vaadin.testing.unified.internal.steps.ScenarioResult;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
 import java.io.IOException;
@@ -27,8 +28,8 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
- * Writes the run's {@code summary.md} and {@code report.html} to the evidence directory's root and, in GitHub
- * Actions, puts the summary in the job summary. Test Runner-neutral: the JUnit integration calls it at the end of the run.
+ * Writes the run's {@code summary.md}, {@code report.html} and {@code summary.json} to the evidence directory's root
+ * and, in GitHub Actions, puts the summary in the job summary. Test Runner-neutral: the JUnit integration calls it at the end of the run.
  * <p>
  * <b>Which files belong to the run.</b> The {@code user-steps.json} under the evidence directory whose
  * {@code startedAt} is not before {@code runStart}. With Surefire's forks every fork rewrites the summary when it
@@ -60,8 +61,8 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
     }
 
     /**
-     * Writes {@code summary.md} and {@code report.html}, if the run has any Unified UI Test, and appends the summary
-     * to the GitHub job summary.
+     * Writes {@code summary.md}, {@code report.html} and {@code summary.json}, if the run has any Unified UI Test,
+     * and appends the summary to the GitHub job summary.
      *
      * @param skippedHere the Unified UI Tests this process skipped without running ({@code class#method})
      * @param processId names this process's list of skipped tests
@@ -87,8 +88,11 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         Files.createDirectories(evidenceDir);
         Files.writeString(file, markdown, StandardCharsets.UTF_8);
         List<String> rootFiles = rootFiles(evidenceDir);
-        String report = new RunReport(summary, s -> evidence(evidenceDir, rootFiles, s)).html();
-        Files.writeString(evidenceDir.resolve(RunReport.FILE), report, StandardCharsets.UTF_8);
+        Function<ScenarioResult, List<String>> evidence = s -> evidence(evidenceDir, rootFiles, s);
+        Files.writeString(evidenceDir.resolve(RunReport.FILE), new RunReport(summary, evidence).html(),
+                StandardCharsets.UTF_8);
+        Files.writeString(evidenceDir.resolve(RunSummaryJson.FILE), new RunSummaryJson(summary, evidence).json(),
+                StandardCharsets.UTF_8);
         String stepSummary = env.get(GITHUB_STEP_SUMMARY);
         if (stepSummary != null && !stepSummary.isBlank() && settings.userStepsGithubSummary()) {
             putInJobSummary(Path.of(stepSummary), key(evidenceDir), markdown);

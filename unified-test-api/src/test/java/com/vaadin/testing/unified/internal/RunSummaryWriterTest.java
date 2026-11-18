@@ -106,6 +106,25 @@ class RunSummaryWriterTest {
     }
 
     @Test
+    void writesTheRunAsJsonNextToTheSummaryWithPathsRelativeToTheEvidenceDirectory() throws Exception {
+        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z");
+        test("demo.OldTest", "fromAnEarlierRun", "failed", "2019-12-31T23:59:59Z");
+        Files.writeString(evidence().resolve("demo.EditPersonTest.edits.png"), "png");
+
+        writer(Map.of(), Map.of()).write(Set.of("demo.SkippedTest#skips#[id]"), "1");
+
+        String json = Files.readString(evidence().resolve("summary.json"), StandardCharsets.UTF_8);
+        assertTrue(json.startsWith("{\n  \"schemaVersion\": 1,\n  \"tool\": \"playwright\",\n  \"status\": \"failed\","),
+                json);
+        assertTrue(json.contains("\"passed\": 0,\n  \"failed\": 1,\n  \"skipped\": 1,"), json);
+        assertTrue(json.contains("\"evidenceDir\": \"EditPersonTest/edits/\""), json);
+        assertTrue(json.contains("\"userSteps\": \"EditPersonTest/edits/user-steps.json\""), json);
+        assertTrue(json.contains("\"demo.EditPersonTest.edits.png\""), json);
+        assertFalse(json.contains("fromAnEarlierRun"), json);
+        assertFalse(json.contains(dir.toString()), "no absolute path: the directory is read from a CI artifact too");
+    }
+
+    @Test
     void skippedTestsOfOtherProcessesOfTheRunCount() throws Exception {
         test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
         writer(Map.of(), Map.of()).write(Set.of("demo.A#a#[1]", "demo.B#b#[2]"), "1");
