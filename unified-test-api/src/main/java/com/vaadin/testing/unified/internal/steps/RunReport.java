@@ -58,8 +58,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             h.append("<section id=\"unchecked\">\n<h2>Scenarios without a check</h2>\n<p class=\"lead\">")
                     .append(unchecked.size()).append(unchecked.size() == 1 ? " passing scenario ends"
                             : " passing scenarios end")
-                    .append(" on User Steps that nothing checks: no <code>see</code> step follows them. A plain")
-                    .append(" assertion on a value read from a Wrapper is not a User Step, and does not retry.</p>\n");
+                    .append(" on User Steps that nothing checks: no <code>see</code> step follows them, and the")
+                    .append(" test reads no value after them.</p>\n");
             unchecked.forEach(s -> scenario(h, s, false, false, false));
             h.append("</section>\n");
         }

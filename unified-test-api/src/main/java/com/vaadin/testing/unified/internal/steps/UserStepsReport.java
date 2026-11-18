@@ -184,6 +184,9 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         json.field("startedAt", steps.startedAt().toString());
         json.field("durationMs", steps.durationNanos() / 1_000_000);
         json.field("stepCount", steps.stepCount());
+        if (steps.readsBeforeFirstEntry() > 0) {
+            json.field("readsBeforeFirstEntry", steps.readsBeforeFirstEntry());
+        }
         if (failure != null && status.equals("failed")) {
             json.key("failure").open('{');
             json.field("type", failure.getClass().getName());
@@ -247,6 +250,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     }
                     common(json, step.window(), step.status(), step.durationNanos(), step.callSite(), step.error());
                     json.optional("snapshot", step.snapshot());
+                    readsAfter(json, step);
                 }
                 case Group group -> {
                     json.field("type", "group");
@@ -254,6 +258,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     json.field("name", steps.mask(group.name()));
                     common(json, group.window(), group.status(), group.durationNanos(), group.callSite(),
                             group.error());
+                    readsAfter(json, group);
                     json.key("steps");
                     entries(json, group.children());
                 }
@@ -263,11 +268,20 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     json.field("reason", gap.reason());
                     json.field("count", gap.count());
                     common(json, gap.window(), gap.status(), -1, gap.callSite(), gap.error());
+                    readsAfter(json, gap);
                 }
             }
             json.close('}');
         }
         json.close(']');
+    }
+
+    /** Before a group's {@code steps}, so the file reads in the order things happened. */
+    private void readsAfter(Json json, Entry entry) {
+        int reads = steps.readsAfter(entry);
+        if (reads > 0) {
+            json.field("readsAfter", reads);
+        }
     }
 
     private void common(Json json, String window, Status status, long durationNanos, CallSite callSite,

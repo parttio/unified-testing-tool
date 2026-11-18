@@ -81,8 +81,8 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
         }
         md.append("\n#### Scenarios without a check\n\n").append(unchecked.size())
                 .append(unchecked.size() == 1 ? " passing scenario ends" : " passing scenarios end")
-                .append(" on User Steps that nothing checks: no `see` step follows them. A plain assertion on a")
-                .append(" value read from a Wrapper is not a User Step, and does not retry.\n\n");
+                .append(" on User Steps that nothing checks: no `see` step follows them, and the test reads no")
+                .append(" value after them.\n\n");
         for (ScenarioResult s : unchecked.subList(0, Math.min(UNCHECKED_LISTED, unchecked.size()))) {
             md.append("- **").append(markdown(title(s))).append("** · ")
                     .append(uncheckedLine(s.unchecked().orElseThrow(), RunSummary::code)).append('\n');

@@ -18,10 +18,12 @@ import java.util.Optional;
  * @param durationMs how long it ran, 0 when unknown
  * @param failure the {@code failure} object, or null
  * @param steps the entries, as read
+ * @param readsBeforeFirstEntry how many values the test read before its first entry
  * @param evidencePath the test's evidence directory, as the summary shows it
  */
 public record ScenarioResult(String testClass, String testMethod, String displayName, String tool, String status,
-        Instant startedAt, long durationMs, Map<String, Object> failure, List<Map<String, Object>> steps, String evidencePath) {
+        Instant startedAt, long durationMs, Map<String, Object> failure, List<Map<String, Object>> steps, int readsBeforeFirstEntry,
+        String evidencePath) {
 
     /**
      * Reads a {@code user-steps.json}.
@@ -43,7 +45,8 @@ public record ScenarioResult(String testClass, String testMethod, String display
         Map<String, Object> failure = test.get("failure") instanceof Map<?, ?> f ? cast(f) : null;
         long durationMs = test.get("durationMs") instanceof Number n ? n.longValue() : 0;
         return new ScenarioResult(testClass, testMethod, displayName, string(test, "tool"), string(test, "status"),
-                startedAt, durationMs, failure, entries(test.get("steps")), evidencePath);
+                startedAt, durationMs, failure, entries(test.get("steps")),
+                test.get("readsBeforeFirstEntry") instanceof Number n ? n.intValue() : 0, evidencePath);
     }
 
     public boolean passed() {
@@ -73,14 +76,15 @@ public record ScenarioResult(String testClass, String testMethod, String display
      * <p>
      * A check is a retrying assertion ({@code see}, {@code see no}). A failed step counts as one, since a passing
      * test that has it expected the failure, and so does a gap that may hold one ({@code waitUntil}, the Escape
-     * Hatch). A plain assertion on a value read from a Wrapper is no User Step, so it is not seen here.
+     * Hatch). So does a value the test read ({@code readsAfter}): a plain assertion on it is no User Step, but
+     * the read says the test looked at the result of the steps before it.
      */
     public Optional<Unchecked> unchecked() {
         if (!passed()) {
             return Optional.empty();
         }
         List<String> pending = new ArrayList<>();
-        boolean[] checked = { false };
+        boolean[] checked = { readsBeforeFirstEntry > 0 };
         unchecked(steps, pending, checked);
         return pending.isEmpty() && checked[0] ? Optional.empty()
                 : Optional.of(new Unchecked(!checked[0], List.copyOf(pending)));
@@ -89,13 +93,19 @@ public record ScenarioResult(String testClass, String testMethod, String display
     private static void unchecked(List<Map<String, Object>> entries, List<String> pending, boolean[] checked) {
         for (Map<String, Object> entry : entries) {
             String type = string(entry, "type");
-            if ("group".equals(type)) {
-                unchecked(entries(entry.get("steps")), pending, checked);
-            } else if (isCheck(entry, type)) {
+            boolean group = "group".equals(type);
+            if (!group && isCheck(entry, type)) {
                 checked[0] = true;
                 pending.clear();
-            } else if (!"gap".equals(type)) {
+            } else if (!group && !"gap".equals(type)) {
                 pending.add(orEmpty(string(entry, "text")));
+            }
+            if (entry.get("readsAfter") instanceof Number reads && reads.intValue() > 0) {
+                checked[0] = true;
+                pending.clear();
+            }
+            if (group) {
+                unchecked(entries(entry.get("steps")), pending, checked);
             }
         }
     }

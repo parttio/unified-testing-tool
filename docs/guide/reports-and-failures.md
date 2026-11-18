@@ -263,17 +263,17 @@ A test that fills a form, clicks *Save* and stops there passes whether or not th
 ```markdown
 #### Scenarios without a check
 
-2 passing scenarios end on User Steps that nothing checks: no `see` step follows them. A plain assertion on a value read from a Wrapper is not a User Step, and does not retry.
+2 passing scenarios end on User Steps that nothing checks: no `see` step follows them, and the test reads no value after them.
 
-- **A cell is read by the index of its column (GridTest)** · no check
+- **Opening the dashboard shows the charts (DashboardTest)** · no check
 - **Saving a person closes the dialog (EditPersonTest)** · no check after: `click button “Save”`
 ```
 
 - **A check** is a retrying assertion, `assertThat(..)` from `UnifiedAssertions`, which shows as a `see` or `see no` User Step. The steps after a scenario's last check are the ones listed.
-- **`assertEquals("Alan", name.getValue())` is not seen.** Reading a value records no User Step, so a scenario checked only that way is listed as `no check`. Write `assertThat(name).hasValue("Alan")` instead: it is recorded, it waits for the value on every Testing Tool, and its failure names the User Step ([Assertions and waiting](assertions-and-waiting.md)).
-- **Not listed:** a scenario that ends on `page.waitUntil(..)` or an Escape Hatch call, since the check may be in there, and a passing scenario with a failed User Step, since the test expected that failure (`assertThrows`).
+- **Reading a value counts too.** `assertEquals("Alan", name.getValue())` records no User Step, but the Unified API counts that the test read a value after its last action, and takes the test to assert on it. Such a scenario is not listed. The retrying form, `assertThat(name).hasValue("Alan")`, is still the better one: it waits for the value on every Testing Tool, and its failure names the User Step ([Assertions and waiting](assertions-and-waiting.md)).
+- **Not listed either:** a scenario that ends on `page.waitUntil(..)` or an Escape Hatch call, since the check may be in there, and a passing scenario with a failed User Step, since the test expected that failure (`assertThrows`).
 
-The section reports; it fails no test. In `report.html` these scenarios have a section of their own and a *no check* badge, and `summary.json` marks them with `unchecked`.
+The section reports; it fails no test. It can't tell whether a check is the right one, only that the last steps have none. In `report.html` these scenarios have a section of their own and a *no check* badge, and `summary.json` marks them with `unchecked`.
 
 ## The HTML report
 

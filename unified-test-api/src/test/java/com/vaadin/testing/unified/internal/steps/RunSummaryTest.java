@@ -399,6 +399,14 @@ class RunSummaryTest {
         // a where(..) condition narrows a lookup: it checks nothing
         assertEquals(Optional.of(new ScenarioResult.Unchecked(true, List.of("open People"))),
                 passing("filters", open + "," + gap("where(..) condition")).unchecked());
+        // a value read after the last action: the test looked at the result, and asserts on it in plain Java
+        assertEquals(Optional.empty(), passing("readsAfterTheClick",
+                open + "," + step("click", "click b").replace("}", ", \"readsAfter\": 2}")).unchecked());
+        assertEquals(Optional.of(new ScenarioResult.Unchecked(false, List.of("click b"))), passing("readsBeforeTheClick",
+                open.replace("}", ", \"readsAfter\": 1}") + "," + step("click", "click b")).unchecked());
+        assertEquals(Optional.empty(), ScenarioResult.parse("""
+                {"schemaVersion": 1, "testClass": "demo.T", "testMethod": "onlyReads", "status": "passed",
+                 "readsBeforeFirstEntry": 1, "steps": []}""", "T/onlyReads/").unchecked());
         // failed and aborted scenarios are not judged
         assertEquals(Optional.empty(), scenario(ORDER_FAILED, "OrderTest/totals").unchecked());
         assertEquals(Optional.empty(), scenario(ABORTED, "OrderTest/onlyOnFriday").unchecked());
@@ -420,8 +428,8 @@ class RunSummaryTest {
 
                 #### Scenarios without a check
 
-                2 passing scenarios end on User Steps that nothing checks: no `see` step follows them. \
-                A plain assertion on a value read from a Wrapper is not a User Step, and does not retry.
+                2 passing scenarios end on User Steps that nothing checks: no `see` step follows them, \
+                and the test reads no value after them.
 
                 - **readsTheGrid (SaveTest)** · no check
                 - **savesFourTimes (SaveTest)** · no check after: ``click button “A`”``, `click b`, `click c` and 1 more

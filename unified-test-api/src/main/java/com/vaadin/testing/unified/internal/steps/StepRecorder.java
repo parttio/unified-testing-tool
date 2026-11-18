@@ -146,6 +146,9 @@ public final class StepRecorder {
         final CallSite callSite = CallSite.here();
         final long start = System.nanoTime();
         boolean acted;
+        boolean read;
+        /** A User Step or a gap already: what is read inside belongs to it. */
+        boolean step;
     }
 
     private final ThreadLocal<Frame> frame = new ThreadLocal<>();
@@ -155,6 +158,10 @@ public final class StepRecorder {
     private final Instant startedAt = Instant.now();
     private final long start = System.nanoTime();
     private int steps;
+    /** The entry recorded last, where the reads that follow it are counted; null before the first one. */
+    private Entry last;
+    private final Map<Entry, Integer> readsAfter = new java.util.IdentityHashMap<>();
+    private int readsBeforeFirstEntry;
     private int windows = 1;
     private volatile String scenario;
     private volatile String evidenceDir;
@@ -174,7 +181,7 @@ public final class StepRecorder {
     /**
      * A Wrapper default method called through its proxy. It becomes a User Step when it is the outermost call
      * and acted through Auto-Wait ({@link #action}) or is a void non-getter; a call that only read becomes a
-     * "read" step when it fails, and is forgotten otherwise.
+     * "read" step when it fails, and is counted as a read otherwise ({@link #read()}).
      */
     public Object wrapperCall(Supplier<Phrase> action, Supplier<Phrase> read, boolean voidAction, String window,
             Body<Object> body) throws Throwable {
@@ -189,6 +196,8 @@ public final class StepRecorder {
             Object result = body.run();
             if (f.acted || voidAction) {
                 add(f, action.get(), window, null);
+            } else if (f.read) {
+                countRead();
             }
             return result;
         } catch (Throwable t) {
@@ -198,6 +207,40 @@ public final class StepRecorder {
             frame.remove();
             traceEnd(traced);
         }
+    }
+
+    /**
+     * The test read a value from a component: a Unified Element's getter, or a Wrapper getter built on a Testing
+     * Tool's access. A read is no User Step and is listed nowhere; the recorder only counts the reads that
+     * follow each entry ({@link #readsAfter}), so the reports can tell a scenario that reads a value after its
+     * last action, to assert on it in plain Java, from one that checks nothing. Reads inside a User Step, such
+     * as the getters an assertion polls, are part of that step and not counted.
+     */
+    public void read() {
+        Frame current = frame.get();
+        if (current == null) {
+            countRead();
+        } else if (!current.step) {
+            current.read = true;
+        }
+    }
+
+    private synchronized void countRead() {
+        if (last == null) {
+            readsBeforeFirstEntry++;
+        } else {
+            readsAfter.merge(last, 1, Integer::sum);
+        }
+    }
+
+    /** How many values the test read after this entry and before the next one, outside any User Step. */
+    public synchronized int readsAfter(Entry entry) {
+        return readsAfter.getOrDefault(entry, 0);
+    }
+
+    /** How many values the test read before its first entry. */
+    public synchronized int readsBeforeFirstEntry() {
+        return readsBeforeFirstEntry;
     }
 
     /**
@@ -230,6 +273,7 @@ public final class StepRecorder {
 
     private <T> T step(Supplier<Phrase> phrase, String window, Body<T> body) {
         Frame f = new Frame();
+        f.step = true;
         frame.set(f);
         AdapterSession traced = traceStart(window, () -> phrase.get().render());
         try {
@@ -252,6 +296,7 @@ public final class StepRecorder {
             return;
         }
         Frame f = new Frame();
+        f.step = true;
         frame.set(f);
         Throwable failure = null;
         try {
@@ -284,11 +329,13 @@ public final class StepRecorder {
                 && container.children.get(container.children.size() - 1) instanceof Gap last
                 && last.reason.equals(reason) && last.error == null && java.util.Objects.equals(last.window, window)) {
             last.count++;
+            this.last = last;
             return last;
         }
         Gap gap = new Gap(reason, window, callSite);
         gap.count = 1;
         container.children.add(gap);
+        this.last = gap;
         return gap;
     }
 
@@ -301,6 +348,7 @@ public final class StepRecorder {
             group = new Group(container.nextIndex(), name, window, callSite);
             container.children.add(group);
             open.push(group);
+            last = group;
         }
         long t0 = System.nanoTime();
         AdapterSession traced = traceStart(window, () -> name);
@@ -322,6 +370,7 @@ public final class StepRecorder {
     private synchronized void add(Frame f, Phrase phrase, String window, Throwable error) {
         Group container = current();
         Step step = new Step(container.nextIndex(), ++steps, phrase, window, f.callSite);
+        last = step;
         step.durationNanos = System.nanoTime() - f.start;
         if (error != null) {
             step.status = Status.FAILED;
