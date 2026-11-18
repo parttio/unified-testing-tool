@@ -46,6 +46,20 @@ public record RunSummaryJson(RunSummary summary, Function<ScenarioResult, List<S
         if (changes != null) {
             json.field("changedSince", changes.baseRef());
         }
+        if (!summary.comparisons().isEmpty()) {
+            json.key("comparedWith").open('[');
+            for (RunComparison c : summary.comparisons()) {
+                json.open('{');
+                json.field("tool", c.otherTool().toLowerCase(Locale.ROOT));
+                json.field("both", c.both());
+                json.field("endDifferently", c.endDifferently());
+                json.field("takeDifferentSteps", c.takeDifferentSteps());
+                json.field("onlyHere", c.onlyHere());
+                json.field("onlyThere", c.onlyThere());
+                json.close('}');
+            }
+            json.close(']');
+        }
         json.key("scenarios").open('[');
         scenarios.forEach(s -> scenario(json, s));
         json.close(']');
@@ -65,6 +79,7 @@ public record RunSummaryJson(RunSummary summary, Function<ScenarioResult, List<S
         json.field("evidenceDir", dir);
         json.field("userSteps", dir + UserStepsReport.JSON_FILE);
         changed(json, s);
+        differs(json, s);
         s.unchecked().ifPresent(unchecked -> {
             json.field("unchecked", unchecked.all() ? "all" : "end");
             json.key("uncheckedSteps").any(unchecked.steps());
@@ -100,6 +115,35 @@ public record RunSummaryJson(RunSummary summary, Function<ScenarioResult, List<S
             json.field("removed", diff.removed());
             json.close('}');
         });
+    }
+
+    /** How the scenario differs on other Testing Tools: one object per tool it differs on. */
+    private void differs(Json json, ScenarioResult s) {
+        List<Map.Entry<RunComparison, RunComparison.Difference>> differences = summary.comparisons().stream()
+                .flatMap(c -> c.differences().stream().filter(d -> d.here() == s).map(d -> Map.entry(c, d)))
+                .toList();
+        if (differences.isEmpty()) {
+            return;
+        }
+        json.key("differsOn").open('[');
+        for (Map.Entry<RunComparison, RunComparison.Difference> e : differences) {
+            RunComparison.Difference d = e.getValue();
+            json.open('{');
+            json.field("tool", e.getKey().otherTool().toLowerCase(Locale.ROOT));
+            json.field("status", d.there().status());
+            d.parting().ifPresent(p -> {
+                json.key("partsAt").open('{');
+                json.field("step", p.position());
+                json.optional("here", p.here());
+                json.optional("there", p.there());
+                json.close('}');
+            });
+            if (d.there().failure() != null) {
+                json.key("failure").any(d.there().failure());
+            }
+            json.close('}');
+        }
+        json.close(']');
     }
 
     private void failed(Json json, ScenarioResult s) {

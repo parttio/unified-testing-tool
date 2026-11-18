@@ -21,6 +21,7 @@ public final class Settings {
     public static final String USER_STEPS_GITHUB_SUMMARY = "vaadin.testing.user-steps.github-summary";
     public static final String USER_STEPS_CHANGED_SINCE = "vaadin.testing.user-steps.changed-since";
     public static final String USER_STEPS_BASELINE_DIR = "vaadin.testing.user-steps.baseline-dir";
+    public static final String USER_STEPS_COMPARE_DIR = "vaadin.testing.user-steps.compare-dir";
     public static final String USER_STEPS_SNAPSHOTS = "vaadin.testing.user-steps.snapshots";
 
     /** Which tests print their User Steps to stdout, the CI log. */
@@ -97,6 +98,14 @@ public final class Settings {
      */
     public Optional<Path> userStepsBaselineDir() {
         return get(USER_STEPS_BASELINE_DIR).map(v -> Path.of(v.trim()));
+    }
+
+    /**
+     * {@code vaadin.testing.user-steps.compare-dir}: the evidence of a run of the same tests on another Testing
+     * Tool. The run summary says which scenarios differ between the two.
+     */
+    public Optional<Path> userStepsCompareDir() {
+        return get(USER_STEPS_COMPARE_DIR).map(v -> Path.of(v.trim()));
     }
 
     static Duration parseDuration(String value) {

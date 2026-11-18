@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.internal.steps.BaseRun;
 import com.vaadin.testing.unified.internal.steps.ChangedFiles;
+import com.vaadin.testing.unified.internal.steps.RunComparison;
 import com.vaadin.testing.unified.internal.steps.RunReport;
 import com.vaadin.testing.unified.internal.steps.RunSummary;
 import com.vaadin.testing.unified.internal.steps.RunSummaryJson;
@@ -82,7 +83,9 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         }
         ChangedFiles changes = settings.userStepsChangedSince(env).flatMap(changedFiles).orElse(null);
         BaseRun base = changes == null ? null : settings.userStepsBaselineDir().map(this::baseRun).orElse(null);
-        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes, base);
+        List<RunComparison> comparisons = settings.userStepsCompareDir()
+                .map(dir -> RunComparison.of(settings.tool().name(), scenarios, otherRuns(dir))).orElse(List.of());
+        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes, base, comparisons);
         String markdown = summary.markdown();
         Path file = evidenceDir.resolve(RunSummary.FILE);
         Files.createDirectories(evidenceDir);
@@ -132,8 +135,8 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         return scenarios;
     }
 
-    /** The base run's scenarios under {@code dir} on this run's Testing Tool; none when it has no readable one. */
-    private BaseRun baseRun(Path dir) {
+    /** Every readable {@code user-steps.json} under {@code dir}, at any depth; {@code what} names the run in the log. */
+    private List<ScenarioResult> runIn(Path dir, String what) {
         List<ScenarioResult> scenarios = new ArrayList<>();
         if (Files.isDirectory(dir)) {
             List<Path> files;
@@ -142,17 +145,33 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
                         .toList();
             } catch (IOException | RuntimeException e) {
                 files = List.of();
-                log.accept("the base run could not be read: " + dir + " (" + e.getMessage() + ")");
+                log.accept(what + " could not be read: " + dir + " (" + e.getMessage() + ")");
             }
             for (Path json : files) {
                 String evidencePath = (json.getParent().toString() + "/").replace('\\', '/');
                 try {
                     scenarios.add(ScenarioResult.parse(Files.readString(json, StandardCharsets.UTF_8), evidencePath));
                 } catch (IOException | RuntimeException e) {
-                    log.accept("left out of the base run, unreadable: " + json + " (" + e.getMessage() + ")");
+                    log.accept("left out of " + what + ", unreadable: " + json + " (" + e.getMessage() + ")");
                 }
             }
         }
+        return scenarios;
+    }
+
+    /** The scenarios under {@code dir} that ran on another Testing Tool than this run's; says so when there is none. */
+    private List<ScenarioResult> otherRuns(Path dir) {
+        List<ScenarioResult> others = runIn(dir, "the run to compare with").stream()
+                .filter(s -> s.tool() != null && !s.tool().equalsIgnoreCase(settings.tool().name())).toList();
+        if (others.isEmpty()) {
+            log.accept("no run on another Testing Tool in " + dir + " to compare with");
+        }
+        return others;
+    }
+
+    /** The base run's scenarios under {@code dir} on this run's Testing Tool; none when it has no readable one. */
+    private BaseRun baseRun(Path dir) {
+        List<ScenarioResult> scenarios = runIn(dir, "the base run");
         BaseRun base = BaseRun.of(scenarios, settings.tool().name());
         if (base.isEmpty()) {
             log.accept("no base run in " + dir + " to compare User Steps with");
