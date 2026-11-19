@@ -200,6 +200,9 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 
 ## Fixed
 
+- A run without the adapter of its Testing Tool named the dependency to add as `com.vaadin:unified-test-<tool>`,
+  which the alphas aren't published as. It now names `org.vaadin.addons:unified-test-<tool>`
+  ([#435](https://github.com/parttio/unified-testing-tool/issues/435)).
 - `hasSelectedItems(..)` worded its User Step in an order that changed from run to run
   ([#309](https://github.com/parttio/unified-testing-tool/pull/309)).
 - On Browserless, a lookup inside a Scope also found the Scope itself: `dialog.find(UnifiedDialog.class)` found

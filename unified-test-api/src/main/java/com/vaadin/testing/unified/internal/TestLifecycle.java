@@ -335,8 +335,9 @@ public final class TestLifecycle {
                 return adapter;
             }
         }
+        // the alphas' group id; it becomes com.vaadin when the Unified API ships with Vaadin (spec 10, Packaging)
         throw new IllegalStateException("No adapter for vaadin.testing.tool=" + tool.name().toLowerCase()
-                + ". Add the test dependency com.vaadin:unified-test-" + tool.name().toLowerCase()
-                + ".");
+                + ". Add the test dependency org.vaadin.addons:unified-test-" + tool.name().toLowerCase()
+                + " (its version is in unified-test-bom).");
     }
 }

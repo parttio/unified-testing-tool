@@ -55,7 +55,7 @@ These fail every test of a run the same way, with a message that names the cause
 
 | The message starts with | Cause | Fix |
 |---|---|---|
-| `No adapter for vaadin.testing.tool=…` | The run asks for a Testing Tool whose adapter isn't on the test classpath. | Add the test dependency `org.vaadin.addons:unified-test-<tool>`. For the alphas the group id is `org.vaadin.addons`, not the `com.vaadin` the message names ([Getting started](getting-started.md#1-add-the-dependencies)). |
+| `No adapter for vaadin.testing.tool=…` | The run asks for a Testing Tool whose adapter isn't on the test classpath. | Add the test dependency `org.vaadin.addons:unified-test-<tool>`. Its version is in `unified-test-bom` ([Getting started](getting-started.md#1-add-the-dependencies)). |
 | `This is a Spring test, but com.vaadin:browserless-test-spring is not on the test classpath` | A `@UnifiedSpringBootTest` on Browserless needs it, and the Browserless adapter doesn't bring it. | Add the test dependency `com.vaadin:browserless-test-spring`; the BOM sets its version. |
 | `The Unified API needs Vaadin 25.3 or newer` | The application runs on an older Vaadin. | Move the application to Vaadin 25.3. |
 | `Could not install Playwright's …` | Playwright couldn't download its browser, for example behind a proxy or on an offline CI agent. | Install it with the command in the message, or point `vaadin.testing.playwright.executable` at an installed browser ([Configuration](configuration.md)). |

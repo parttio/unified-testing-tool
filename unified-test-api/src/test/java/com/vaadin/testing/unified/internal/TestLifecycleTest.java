@@ -299,6 +299,6 @@ class TestLifecycleTest {
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> lifecycle.open(new PlainContext(Plain.class, null), new StepRecorder()));
         assertEquals("No adapter for vaadin.testing.tool=selenium. Add the test dependency"
-                + " com.vaadin:unified-test-selenium.", e.getMessage());
+                + " org.vaadin.addons:unified-test-selenium (its version is in unified-test-bom).", e.getMessage());
     }
 }
