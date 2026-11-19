@@ -61,8 +61,4 @@ The same test runs in a real browser when the run says so (`-Dvaadin.testing.too
 
 ## Rules of thumb
 
-- **Find components the way a user does:** by type and label, accessible name or text. Use a test id only when there is nothing the user can read.
-- **Check state with `assertThat`**, not with getters and `assertEquals`: getters don't retry, and in a browser the update may arrive a moment later.
-- **Keep Wrappers, not values.** A Wrapper finds its component again on every call, so it never goes stale: declare a field's Wrapper once, use it for the whole test.
-- **Name the scenario and the user's work:** `@DisplayName` with a sentence, `page.step(..)` around a piece of user work ([Structuring a scenario](structuring-a-scenario.md)).
-- **Never name a Testing Tool in a test**, unless it needs one ([When a test needs one Testing Tool](tool-specific.md)).
+--8<-- "docs/snippets/rules-of-thumb.md"
