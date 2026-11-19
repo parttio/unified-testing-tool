@@ -6,9 +6,11 @@ description: >-
   Imports unified-test-bom, adds the Browserless adapter (and the Spring integration in Spring Boot projects) as
   test dependencies, and removes direct Browserless Test and TestBench UI Unit dependencies, which the Browserless
   adapter brings in. Keeps `browserless-test-spring`, which Browserless runs of Spring tests need.
+  Leaves a Migration Marker at the top of the pom when the project's Vaadin is older than 25.3.
 preconditions:
   - org.vaadin.addons.unified.rewrite.FindBrowserlessDependencies
 recipeList:
+  - org.vaadin.addons.unified.rewrite.CheckVaadinVersion
   - org.openrewrite.maven.AddManagedDependency:
       groupId: org.vaadin.addons
       artifactId: unified-test-bom
@@ -96,7 +98,11 @@ recipeList:
   - org.openrewrite.java.testing.junit5.UpdateBeforeAfterAnnotations
   - org.openrewrite.java.testing.junit5.UpdateTestAnnotation
   - org.openrewrite.java.testing.junit5.AssertToAssertions
-  - org.openrewrite.java.testing.junit5.IgnoreToDisabled
+  # rewrite-testing-frameworks' IgnoreToDisabled is declarative: the composites load only this module's YAML, so
+  # it would never resolve (#386). Its whole recipe:
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: org.junit.Ignore
+      newFullyQualifiedTypeName: org.junit.jupiter.api.Disabled
   - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
   - org.openrewrite.java.ChangeType:
       oldFullyQualifiedTypeName: com.vaadin.testbench.unit.UIUnitTest

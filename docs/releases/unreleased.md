@@ -38,6 +38,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Playwright decides its own download at the JVM's first `Playwright.create()`, so code that creates a `Playwright`
   before the first test still downloads everything. A CI step that ran `install --with-deps chromium` before the
   tests can run `install-deps chromium` instead, for the system libraries only.
+- **`AddUnifiedTestingSkill` writes its pointer to `CLAUDE.md` when a project has no `AGENTS.md`**
+  ([#365](https://github.com/parttio/unified-testing-tool/issues/365)). Claude Code reads `CLAUDE.md`, not
+  `AGENTS.md`, so the marked section goes at the end of the existing `CLAUDE.md`, and no `AGENTS.md` is created.
+  The rest of `CLAUDE.md` is left as it is. A project with both files, or with neither, gets the section in
+  `AGENTS.md`, as before.
 - **Chrome on Selenium is started with a logging capability**
   ([#315](https://github.com/parttio/unified-testing-tool/pull/315)), and its console is read after every User
   Step.
@@ -46,6 +51,17 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   the screenshot can't be.
 - **`Scope` has a new method, `describe()`.** The Unified API implements it for the page and for every Wrapper
   that is a Scope, custom ones included. Only a class of your own that implements `Scope` must add it.
+- **`unified-test-bom` no longer sets Browserless Test's version**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)): `browserless-test-junit6` and
+  `browserless-test-spring` come at the version the project's Vaadin BOM manages, as TestBench always did. With
+  `unified-test-bom` imported before the Vaadin BOM, a project ran on 25.3.2; it now runs on its Vaadin's
+  Browserless Test, also 25.3.2 on Vaadin 25.3.5. The BOM still sets Dramafinder's version.
+- **A test on a Vaadin older than 25.3 fails at once**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), with a message that names the version it
+  found, before its Spring context starts. It used to fail later, with an error from Browserless Test or Flow that
+  didn't say why. A test without Flow on its classpath is not checked.
+- **The Migration Recipes leave a Migration Marker at the top of `pom.xml`** on a project older than Vaadin 25.3
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), and migrate it all the same.
 - **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
   outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
 
@@ -147,6 +163,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `includePageObjects` ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). OpenRewrite matches
   options to a recipe's constructor parameters by name, and `unified-test-rewrite` was compiled without the names,
   so the recipe ran with its defaults and said nothing. It is now compiled with `-parameters`.
+- A JUnit 4 test that `@Ignore` skipped ran again after the TestBench or Browserless (UI Unit) Migration Recipe
+  ([#386](https://github.com/parttio/unified-testing-tool/issues/386)): `@Test` became JUnit 6's, but `@Ignore`
+  stayed JUnit 4's, which JUnit 6 doesn't read. The recipes named OpenRewrite's `IgnoreToDisabled`, a declarative
+  recipe in another jar that they never loaded, and the plugin logged a validation error. `@Ignore` now becomes
+  `@Disabled`.
 
 ## Known limitations
 

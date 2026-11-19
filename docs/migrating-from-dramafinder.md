@@ -24,7 +24,7 @@ The demo's `EditPersonDramafinderTest`, and what the recipe makes of it. CI chec
 ## Run it
 
 !!! warning "Vaadin 25.3 first"
-    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. The recipe doesn't check: on an older Vaadin it migrates the build all the same, and the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the recipe migrates the build all the same and *(unreleased)* leaves a Migration Marker at the top of `pom.xml`; the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
 
 Commit or stash your work first: the recipe changes files in place.
 
@@ -146,7 +146,7 @@ In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the BOM manages its version). It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the project's Vaadin BOM manages its version). It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
 
 So the migrated project runs on Dramafinder 2.2.0, the version `unified-test-bom` manages, whichever version it had. For a 1.x project that is a major version: the class and method names are the same, so the code the recipe leaves behind the Escape Hatch still compiles, but its lookups now follow 2.x rules ([Dramafinder 1.x](#dramafinder-1x)). A `getByLabel` or `getByText` that matched a substring, or took the first of several matches, now fails; so does a 1.x `getByHeaderText`, which the recipe always leaves behind the Escape Hatch. Run the Playwright tests once after the migration, and fix such a lookup, ideally by converting it to a Wrapper.
 
@@ -175,6 +175,7 @@ void savesTheProfile(UnifiedPage page) {
 | `was findRowIndexesWithColumnText(n, ..).get(0): any column matches now; ...` | Name the column: `withCellText("Header", text)` |
 | `was getCell(..).click(); a row's click() clicks the row, not that cell` | Fine when the cell holds nothing clickable; else find the component in the cell, `row.cell("Header").find(..)` |
 | `was first(); the lookup fails when several components match`, `was getByText(..), a substring and first match; ...` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
+| `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
@@ -196,6 +197,6 @@ The same `resolve-migration-markers` skill works through the Dramafinder Migrati
 
 Only you can start it. The skill is user-invoked (`disable-model-invocation: true`), so it adds nothing to an agent's context in a session that doesn't migrate, but an agent can't start it either: one driving the migration end to end stops at this step. Type the command yourself, or tell the agent to read `.claude/skills/resolve-migration-markers/SKILL.md` and follow its steps.
 
-Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md` (of `CLAUDE.md` *(unreleased)*, when the project has that and no `AGENTS.md`). It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 How it is evaluated, and what it scores: [Migrating from TestBench](migrating-from-testbench.md#the-agent-skill).

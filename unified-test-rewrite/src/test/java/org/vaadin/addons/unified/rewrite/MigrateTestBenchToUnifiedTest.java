@@ -1751,6 +1751,42 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void anIgnoredJUnit4TestBenchTestStaysDisabled() {
+        // #386: JUnit 4's @Ignore means nothing to Jupiter, so a skipped test would start running
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.TestBenchTestCase;
+                import org.junit.Ignore;
+                import org.junit.Test;
+
+                public class ProfileIT extends TestBenchTestCase {
+                    @Ignore
+                    @Test
+                    public void saves() {
+                        $(ButtonElement.class).withText("Save").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Disabled;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                public class ProfileIT {
+                    @Disabled
+                    @Test
+                    public void saves(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void runnersAndBrowserSetupGoWithAMarker() {
         rewriteRun(java(
                 """
