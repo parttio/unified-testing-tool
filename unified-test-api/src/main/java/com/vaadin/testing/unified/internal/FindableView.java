@@ -16,6 +16,8 @@ import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedIntegerField;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
+import com.vaadin.testing.unified.component.UnifiedMessageInput;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
@@ -77,7 +79,8 @@ public final class FindableView {
             UnifiedBigDecimalField.class, UnifiedComboBox.class, UnifiedMultiSelectComboBox.class,
             UnifiedDatePicker.class, UnifiedDateTimePicker.class, UnifiedRadioButtonGroup.class,
             UnifiedCheckbox.class, UnifiedButton.class, UnifiedGrid.class, UnifiedTabs.class, UnifiedTabSheet.class,
-            UnifiedMenuBar.class, UnifiedDetails.class, UnifiedUpload.class);
+            UnifiedMenuBar.class, UnifiedDetails.class, UnifiedUpload.class, UnifiedMessageList.class,
+            UnifiedMessageInput.class);
 
     /**
      * The fields whose {@code value} property is what a user sees. A combo box's or a radio button group's is an

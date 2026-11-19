@@ -106,6 +106,16 @@ When several notifications can be open at once, filter by text: an unfiltered `f
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:uploadsAFile"
 ```
 
+## Chat
+
+An app built on Vaadin's AI components has a `MessageInput` and a `MessageList`. `send` types the text and submits it as a user does; the reply is checked with an assertion, which waits for it:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ChatTest.java:sendsAMessage"
+```
+
+A message's text is the text the application gave it: with Markdown on, the Markdown source (`**Pancakes**`), not the rendered text, so that it reads the same on every Testing Tool. `getMessages()` gives each message's user name and text, `getMessageTexts()` the texts only. `hasMessageTexts(..)` checks every message, in order; `isEmpty()` checks there are none.
+
 ## Keyboard and DOM events
 
 ```java

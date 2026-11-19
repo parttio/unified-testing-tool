@@ -47,6 +47,7 @@ public final class Phrases {
             case "open" -> Phrase.of(target.kind().equals("details") ? "expand" : "open", target);
             case "close" -> Phrase.of(target.kind().equals("details") ? "collapse" : "close", target);
             case "upload" -> Phrase.template("upload", "upload {value} to", target, uploadName(args));
+            case "send" -> Phrase.template("send", "send {value} in", target, values(args));
             case "pressKey" -> Phrase.template("press", "press {value} on", target, values(args));
             default -> {
                 String verb = String.join(" ", StepTarget.splitWords(name)).toLowerCase(Locale.ROOT);

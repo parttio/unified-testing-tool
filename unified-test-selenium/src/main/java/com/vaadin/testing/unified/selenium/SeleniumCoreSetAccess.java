@@ -6,14 +6,18 @@ import com.vaadin.flow.component.menubar.testbench.MenuBarButtonElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarItemElement;
 import com.vaadin.flow.component.menubar.testbench.MenuBarSubMenuElement;
+import com.vaadin.flow.component.messages.testbench.MessageInputElement;
 import com.vaadin.flow.component.timepicker.testbench.TimePickerElement;
 import com.vaadin.flow.component.upload.testbench.UploadElement;
 import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
+import com.vaadin.testing.unified.spi.MessageInputAccess;
+import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -23,7 +27,7 @@ import java.util.List;
 import org.openqa.selenium.WebElement;
 
 /**
- * Access to Details, MenuBar, Upload and DateTimePicker on Selenium, through TestBench's element classes; a bare Tabs bar
+ * Access to Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Selenium, through TestBench's element classes; a bare Tabs bar
  * uses {@link SeleniumTabSheetAccess}.
  */
 final class SeleniumCoreSetAccess {
@@ -190,6 +194,23 @@ final class SeleniumCoreSetAccess {
                     // a temporary file
                 }
             }
+        }
+    }
+
+    /** Through TestBench's MessageInputElement, which types the text and clicks the send button. */
+    record MessageInputAccessImpl(SeleniumSession session, WebElement element) implements MessageInputAccess {
+        @Override
+        public void send(String text) {
+            session.testBench(element).wrap(MessageInputElement.class).submit(text);
+            session.waitForVaadin();
+        }
+    }
+
+    /** The list's {@code items}, as the server set them. */
+    record MessageListAccessImpl(SeleniumSession session, WebElement element) implements MessageListAccess {
+        @Override
+        public List<UnifiedMessageList.Message> messages() {
+            return BrowserQueries.messages(session.js("return (" + BrowserQueries.MESSAGES + ")(arguments[0]);", element));
         }
     }
 }

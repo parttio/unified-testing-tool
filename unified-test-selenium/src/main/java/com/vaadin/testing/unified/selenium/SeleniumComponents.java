@@ -222,6 +222,10 @@ final class SeleniumComponents {
                 (element, session) -> new SeleniumCoreSetAccess.MenuBarAccessImpl(session, element)));
         register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
                 (element, session) -> new SeleniumCoreSetAccess.UploadAccessImpl(session, element)));
+        register(com.vaadin.flow.component.messages.MessageInput.class, access(com.vaadin.testing.unified.spi.MessageInputAccess.class,
+                (element, session) -> new SeleniumCoreSetAccess.MessageInputAccessImpl(session, element)));
+        register(com.vaadin.flow.component.messages.MessageList.class, access(com.vaadin.testing.unified.spi.MessageListAccess.class,
+                (element, session) -> new SeleniumCoreSetAccess.MessageListAccessImpl(session, element)));
     }
 
     static {

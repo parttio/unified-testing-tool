@@ -18,6 +18,7 @@ import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
+import com.vaadin.testing.unified.component.UnifiedMessageInput;
 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
@@ -183,7 +184,8 @@ public class UserStepWordingTest {
         fake.add("vaadin-combo-box", "label", "Role")
                 .add("vaadin-menu-bar", "testId", "menu")
                 .add("vaadin-upload", "testId", "receipt")
-                .add("vaadin-multi-select-combo-box", "label", "Tags");
+                .add("vaadin-multi-select-combo-box", "label", "Tags")
+                .add("vaadin-message-input", "testId", "chat");
 
         assertEquals("choose “Admin” in combo box “Role”",
                 phrase(fake.page.find(UnifiedComboBox.class).withLabel("Role"), "selectItem", "Admin"));
@@ -196,6 +198,8 @@ public class UserStepWordingTest {
         assertEquals("upload “receipt.pdf” to upload (test id “receipt”)",
                 phrase(fake.page.find(UnifiedUpload.class).withTestId("receipt"), "upload", "receipt.pdf",
                         "application/pdf", new byte[1]));
+        assertEquals("send “Hello” in message input (test id “chat”)",
+                phrase(fake.page.find(UnifiedMessageInput.class).withTestId("chat"), "send", "Hello"));
     }
 
     private static String phrase(UnifiedWrapper wrapper, String method, Object... args) throws Exception {
