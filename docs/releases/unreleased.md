@@ -27,6 +27,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   can show one changed line for a scenario that uses it, once.
 - **Every run asks git for its commit** ([#312](https://github.com/parttio/unified-testing-tool/pull/312)): two
   calls when the run ends, for `summary.json`. Without git the fields are left out.
+- **Playwright downloads no browsers when `vaadin.testing.playwright.executable` is set**
+  ([#299](https://github.com/parttio/unified-testing-tool/pull/299)). `Playwright.create()` used to download every
+  browser it supports, some 1.3 GB, though the run used none of them; `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` is no
+  longer needed beside the executable. The download is decided at the JVM's first `Playwright.create()`, so code
+  that creates a `Playwright` before the first test still downloads.
 - **Chrome on Selenium is started with a logging capability**
   ([#315](https://github.com/parttio/unified-testing-tool/pull/315)), and its console is read after every User
   Step.
