@@ -62,8 +62,8 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   didn't say why. A test without Flow on its classpath is not checked.
 - **The Migration Recipes leave a Migration Marker at the top of `pom.xml`** on a project older than Vaadin 25.3
   ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), and migrate it all the same.
-- **Adapters:** `AdapterSession` has a new method with a default, `consoleErrors()`. An adapter outside this
-  repository keeps compiling.
+- **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
+  outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
 
 ## New
 
@@ -115,6 +115,12 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   text field “Name” = “Alan Turing”    page.find(UnifiedTextField.class).withLabel("Name")
   button “Archive” (disabled)          page.find(UnifiedButton.class).withText("Archive")
   button “Delete account”              page.find(UnifiedButton.class).withAccessibleName("Delete account")
+  ```
+- **`assertThat(page).hasTitle(..)`** ([#360](https://github.com/parttio/unified-testing-tool/issues/360)): the
+  page's title, from the view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)`, on every Testing Tool.
+  Browserless reads the title the UI last set; a "page has its title" test no longer needs the Escape Hatch.
+  ```java
+  assertThat(page).isAt(ProfileView.class).hasTitle("Profile");
   ```
 - **Wrappers for a chat** ([#357](https://github.com/parttio/unified-testing-tool/issues/357)):
   `UnifiedMessageInput` and `UnifiedMessageList`, for apps built on Vaadin's AI components. `send(text)` types and
