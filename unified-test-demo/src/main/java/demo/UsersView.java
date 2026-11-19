@@ -72,6 +72,17 @@ public class UsersView extends VerticalLayout {
         archived.setTestId("archived");
         archived.addColumn(User::name).setHeader("Name");
         archived.setItems(List.of());
+        // reshaping a grid from the server: a column comes and goes after a round trip
+        Button archivedOn = new Button("Show archive date");
+        archivedOn.addClickListener(e -> {
+            if (archived.getColumnByKey("archivedOn") == null) {
+                archived.addColumn(User::role).setHeader("Archived on").setKey("archivedOn");
+                archivedOn.setText("Hide archive date");
+            } else {
+                archived.removeColumnByKey("archivedOn");
+                archivedOn.setText("Show archive date");
+            }
+        });
 
         // the first column is a button: clicking the row must not click it
         Grid<User> tasks = new Grid<>();
@@ -83,7 +94,7 @@ public class UsersView extends VerticalLayout {
         tasks.setAllRowsVisible(true);
         tasks.addItemClickListener(e -> Notification.show("Clicked " + e.getItem().name()));
 
-        add(users, roles, archived, tasks);
+        add(users, roles, archived, archivedOn, tasks);
     }
 
     private java.util.stream.Stream<User> filtered() {

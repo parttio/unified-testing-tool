@@ -195,6 +195,12 @@ final class BrowserlessComponents {
         register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
                 (session, c) -> new BrowserlessCoreSetAccess.UploadAccessImpl(session,
                         (com.vaadin.flow.component.upload.Upload) c)));
+        register(com.vaadin.flow.component.messages.MessageInput.class, access(com.vaadin.testing.unified.spi.MessageInputAccess.class,
+                (session, c) -> new BrowserlessCoreSetAccess.MessageInputAccessImpl(session,
+                        (com.vaadin.flow.component.messages.MessageInput) c)));
+        register(com.vaadin.flow.component.messages.MessageList.class, access(com.vaadin.testing.unified.spi.MessageListAccess.class,
+                (session, c) -> new BrowserlessCoreSetAccess.MessageListAccessImpl(
+                        (com.vaadin.flow.component.messages.MessageList) c)));
         register(com.vaadin.flow.component.datepicker.DatePicker.class, new Support() {
             /** A String: text typed as it is (UnifiedDatePicker.typeText); ISO dates are parsed. */
             @Override

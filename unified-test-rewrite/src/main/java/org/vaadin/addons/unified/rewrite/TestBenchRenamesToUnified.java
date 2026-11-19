@@ -13,6 +13,8 @@ import org.openrewrite.java.tree.J;
  */
 public class TestBenchRenamesToUnified extends Recipe {
 
+    private static final String MESSAGE_LIST = "com.vaadin.flow.component.messages.testbench.MessageListElement";
+
     @Override
     public String getDisplayName() {
         return "Rename TestBench element calls to their Unified names";
@@ -51,6 +53,13 @@ public class TestBenchRenamesToUnified extends Recipe {
                         && method.getSelect() instanceof J.MethodInvocation original && original.getSelect() != null
                         && isTabSheet(wrapperOf(original.getSelect()))) {
                     return selected.withName(selected.getName().withSimpleName("getSelectedTab")).withPrefix(m.getPrefix());
+                }
+                // l.getMessageElements().size() → l.getMessageCount()
+                if (m.getSimpleName().equals("size") && m.getSelect() instanceof J.MethodInvocation elements
+                        && elements.getSimpleName().equals("getMessageElements")
+                        && method.getSelect() instanceof J.MethodInvocation original && original.getSelect() != null
+                        && wrapperOf(original.getSelect()) == Wrappers.forElement(MESSAGE_LIST)) {
+                    return elements.withName(elements.getName().withSimpleName("getMessageCount")).withPrefix(m.getPrefix());
                 }
                 Wrappers.Wrapper wrapper = wrapperOf(method.getSelect());
                 // t.setSelectedTabIndex(t.getTab(label)) → t.selectTab(label)

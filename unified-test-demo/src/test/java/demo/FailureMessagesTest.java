@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedSpan;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
@@ -94,6 +95,13 @@ class FailureMessagesTest {
         }
 
         @Test
+        @DisplayName("A grid without the column lists the columns it has")
+        void missingColumn(UnifiedPage page) {
+            page.navigate(UsersView.class);
+            assertThat(page.find(UnifiedGrid.class).withTestId("archived")).hasColumn("Archived on");
+        }
+
+        @Test
         @DisplayName("A renamed button lists Near Misses by their own text, not their tooltips")
         void renamedButton(UnifiedPage page) {
             page.navigate(ReportView.class);
@@ -118,7 +126,7 @@ class FailureMessagesTest {
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
         TestExecutionSummary summary = listener.getSummary();
-        assertEquals(7, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+        assertEquals(8, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
         failures = summary.getFailures().stream().collect(Collectors.toMap(
                 f -> f.getTestIdentifier().getDisplayName(),
                 f -> assertInstanceOf(UnifiedAssertionError.class, f.getException(), f.getException()::toString)));
@@ -226,5 +234,14 @@ class FailureMessagesTest {
         assertEquals("exactly one button with text “Export CSV”", failure.getExpected());
         assertTrue(failure.getNearMisses().contains("button “Export”"), failure.getMessage());
         failure.getNearMisses().forEach(n -> assertFalse(n.contains("report"), failure.getMessage()));
+    }
+
+    @Test
+    void aMissingColumnListsTheGridsColumns() {
+        UnifiedAssertionError failure = failures.get("A grid without the column lists the columns it has");
+
+        assertEquals("grid (test id “archived”) to have column “Archived on”", failure.getExpected());
+        assertEquals("[“Name”]", failure.getFound(), failure.getMessage());
+        assertEquals(Optional.of("see grid (test id “archived”) with column “Archived on”"), failure.getFailedStep());
     }
 }

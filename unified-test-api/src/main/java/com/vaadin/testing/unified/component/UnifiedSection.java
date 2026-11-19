@@ -8,12 +8,15 @@ import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.TextFilter;
 
 /**
- * A {@code <section>} ({@link Section}), to read its text or search inside it. Bound to its tag, so a browser
+ * A {@code <section>} ({@link Section}), to read its text, search inside it or click it. Bound to its tag, so a browser
  * finds it with one query, unlike {@link UnifiedContainer} (any tag).
  */
 @UnifiedComponent(Section.class)
 public interface UnifiedSection extends UnifiedWrapper, Scope,
         CommonFilters<UnifiedSection>, TextFilter<UnifiedSection> {
+
+    /** Clicks it as a user does, for a click listener ({@code addClickListener}); Auto-Wait. */
+    default void click() { element().click(); }
 
     /** {@link com.vaadin.testing.unified.UnifiedElement#getText()}: the DOM text, the same on every tool. */
     default String getText() { return element().getText(); }

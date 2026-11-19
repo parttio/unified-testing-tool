@@ -23,6 +23,9 @@ The demo's `EditPersonDramafinderTest`, and what the recipe makes of it. CI chec
 
 ## Run it
 
+!!! warning "Vaadin 25.3 first"
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the recipe migrates the build all the same and *(unreleased)* leaves a Migration Marker at the top of `pom.xml`; the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+
 Commit or stash your work first: the recipe changes files in place.
 
 === "Maven"
@@ -76,6 +79,8 @@ Commit or stash your work first: the recipe changes files in place.
 | `addSelenium` | `false` | Also adds the Selenium adapter, `unified-test-selenium` |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
+*(unreleased)* Up to 0.1.0-alpha3 the recipe ignores the options a `rewrite.yml` sets, without a warning, and runs with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). With those versions, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
+
 Without another adapter the migrated suite keeps running on Playwright only, as before; adding one is the step that makes it run elsewhere (see **Running on the other Testing Tools**).
 
 ## What it converts
@@ -99,9 +104,11 @@ Without another adapter the migrated suite keeps running on Playwright only, as 
 | `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
 | `grid.findRowIndexesWithColumnText(0, s).get(0)` | `grid.row().withCellText(s).getIndex()`, with a Migration Marker: any column matches now |
 | `row.getCell(col).getText()`, `row.getCell("Header").assertText(s)`, `row.getCell(col).click()` | `row.getCellText(col)`, `assertThat(row).hasCellText("Header", s)`, `row.click()` with a Migration Marker |
+| `MessageInputElement.get(page).typeAndSubmit(s)` | `page.find(UnifiedMessageInput.class).send(s)` |
+| `MessageListElement.get(page)`, `assertMessageCount(n)`, `assertEmpty()` | `page.find(UnifiedMessageList.class)`, `assertThat(list).hasMessageCount(n)`, `isEmpty()` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()`, `waitForGridToStopLoading()`, `scrollToRow(i)` | removed: Auto-Wait |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog and Grid; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
+A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
 
 A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left exactly as it is: convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again.
 
@@ -141,7 +148,9 @@ In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the BOM manages its version). It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the project's Vaadin BOM manages its version). It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
+
+So the migrated project runs on Dramafinder 2.2.0, the version `unified-test-bom` manages, whichever version it had. For a 1.x project that is a major version: the class and method names are the same, so the code the recipe leaves behind the Escape Hatch still compiles, but its lookups now follow 2.x rules ([Dramafinder 1.x](#dramafinder-1x)). A `getByLabel` or `getByText` that matched a substring, or took the first of several matches, now fails; so does a 1.x `getByHeaderText`, which the recipe always leaves behind the Escape Hatch. Run the Playwright tests once after the migration, and fix such a lookup, ideally by converting it to a Wrapper.
 
 ## What it leaves for you
 
@@ -168,6 +177,7 @@ void savesTheProfile(UnifiedPage page) {
 | `was findRowIndexesWithColumnText(n, ..).get(0): any column matches now; ...` | Name the column: `withCellText("Header", text)` |
 | `was getCell(..).click(); a row's click() clicks the row, not that cell` | Fine when the cell holds nothing clickable; else find the component in the cell, `row.cell("Header").find(..)` |
 | `was first(); the lookup fails when several components match`, `was getByText(..), a substring and first match; ...` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
+| `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
@@ -187,6 +197,8 @@ The same `resolve-migration-markers` skill works through the Dramafinder Migrati
 /resolve-migration-markers
 ```
 
-Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
+Only you can start it. The skill is user-invoked (`disable-model-invocation: true`), so it adds nothing to an agent's context in a session that doesn't migrate, but an agent can't start it either: one driving the migration end to end stops at this step. Type the command yourself, or tell the agent to read `.claude/skills/resolve-migration-markers/SKILL.md` and follow its steps.
+
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md` (of `CLAUDE.md` *(unreleased)*, when the project has that and no `AGENTS.md`). It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 How it is evaluated, and what it scores: [Migrating from TestBench](migrating-from-testbench.md#the-agent-skill).

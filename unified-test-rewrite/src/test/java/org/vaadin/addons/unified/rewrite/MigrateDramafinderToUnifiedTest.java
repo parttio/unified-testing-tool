@@ -2,7 +2,13 @@ package org.vaadin.addons.unified.rewrite;
 
 import static org.openrewrite.java.Assertions.java;
 
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
+import org.openrewrite.Recipe;
+import org.openrewrite.config.YamlResourceLoader;
 import org.openrewrite.config.Environment;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.test.RecipeSpec;
@@ -27,6 +33,32 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
         spec.recipe(Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite").build()
                         .activateRecipes("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified"))
                 .parser(JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath()));
+    }
+
+    /** A recipe declared in a project's {@code rewrite.yml}, found with this jar's recipes as the plugins find it. */
+    private static Recipe projectRecipe(String yaml, String name) {
+        return Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite")
+                .load(new YamlResourceLoader(new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)),
+                        URI.create("rewrite.yml"), new Properties()))
+                .build().activateRecipes(name);
+    }
+
+    @Test
+    void addAgentSkillSetInAProjectsCompositeRecipeWritesTheMigrationMarkersSkill() {
+        // issue #353: OpenRewrite builds a recipe from its options by constructor parameter name
+        rewriteRun(
+                spec -> spec.recipe(projectRecipe("""
+                        type: specs.openrewrite.org/v1beta/recipe
+                        name: com.example.MigrateToUnified
+                        displayName: Migrate to Unified
+                        description: The options as a project sets them.
+                        recipeList:
+                          - org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified:
+                              addAgentSkill: true
+                        """, "com.example.MigrateToUnified")),
+                java(VIEW),
+                org.openrewrite.test.SourceSpecs.text(null, AddMigrationMarkersSkill.skill(),
+                        source -> source.path(AddMigrationMarkersSkill.PATH)));
     }
 
     @Test
@@ -61,6 +93,59 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     void opensPeople(UnifiedPage page) {
                         page.navigate(PeopleView.class);
                         assertThat(page).isAt(PeopleView.class);
+                    }
+                }
+                """));
+    }
+
+
+    /** A chat: MessageInputElement and MessageListElement (#357). */
+    @Test
+    void chatElementsBecomeTheUnifiedMessageInputAndList() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import static org.vaadin.addons.dramafinder.element.query.ElementQueries.find;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.MessageInputElement;
+                import org.vaadin.addons.dramafinder.element.MessageListElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class ChatTest extends SpringPlaywrightIT {
+                    @Test
+                    void asks() {
+                        navigate(PeopleView.class);
+                        MessageListElement messages = MessageListElement.get(page);
+                        messages.assertEmpty();
+                        MessageInputElement.get(page).typeAndSubmit("Pancakes");
+                        messages.assertMessageCount(2);
+                        find(page, MessageInputElement.class).withTestId("chat").single().assertEnabled();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+                        assertThat(messages).isEmpty();
+                        page.find(UnifiedMessageInput.class).send("Pancakes");
+                        assertThat(messages).hasMessageCount(2);
+                        assertThat(page.find(UnifiedMessageInput.class).withTestId("chat")).isEnabled();
                     }
                 }
                 """));
