@@ -66,6 +66,7 @@ class ProfileViewTest {
 |---|---|
 | Narrow Spring context (`@ContextConfiguration`, no web server) | Browserless only: declare `@RequiresTestingTool(BROWSERLESS)`. Portable alternative: `@UnifiedSpringBootTest` + `@MockitoBean`. |
 | Browser runs | Need `com.vaadin:vaadin-dev` (dev mode with the pre-built dev bundle). |
+| Development tools | Off in a `@UnifiedSpringBootTest`'s application: `vaadin.devmode.devTools.enabled=false`, as the last property source, so the test's `properties`, the application's configuration, system properties and the environment win over it. In development mode Vaadin Copilot starts file watchers for every browser session and stops them when the application stops; a run's sessions add up to the machine's limit (about two watchers per test, 128 instances on a usual Linux), after which each session logs an error. |
 | Quarkus | Not specified yet ([open-questions.md](open-questions.md)). |
 
 ## Test data

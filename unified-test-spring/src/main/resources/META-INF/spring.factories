@@ -1,0 +1,3 @@
+# the settings a Unified UI Test's application starts with unless something sets them
+org.springframework.test.context.ContextCustomizerFactory=\
+com.vaadin.testing.unified.spring.TestApplicationDefaults
