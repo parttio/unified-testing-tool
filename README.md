@@ -107,13 +107,7 @@ Run the tests on Browserless with `mvn test`, and on another Testing Tool with `
 
 ## Not in this first version
 
-| Area | State |
-|---|---|
-| Browserless: searching inside Grid row details (`row.details()`) | throws; toggling and checking details works |
-| Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/parttio/unified-testing-tool/issues/66)) |
-| Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/parttio/unified-testing-tool/issues/61)) |
-| Selenium: a combo box's `getItems()` | the drop-down's first page only (50 items by default; [#127](https://github.com/parttio/unified-testing-tool/issues/127)) |
-| The browser's console errors *(unreleased)* (under each User Step, and in `hasNoErrors()`) | Playwright, and Selenium with Chrome; Firefox on Selenium has no browser log ([#316](https://github.com/parttio/unified-testing-tool/issues/316)) |
+What doesn't work the same on every Testing Tool yet is listed in [Troubleshooting: Known limitations by Testing Tool](docs/guide/troubleshooting.md#known-limitations-by-testing-tool), with the full list in the specification's [Appendix: gaps](docs/spec/appendix-gaps.md).
 
 ## Contributing
 
