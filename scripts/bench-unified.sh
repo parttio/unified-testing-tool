@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# Runs the Performance Pairs (unified-test-demo, package demo.perf) on one Testing Tool and checks their round trips
-# against the committed round-trip counts (#341, part of the performance plan #294).
+# Runs the Performance Pairs (unified-test-demo, package demo.perf) on one Testing Tool: checks their round trips
+# against the committed round-trip counts (#341), or times them against the budget (#342). Part of the
+# performance plan #294.
 #
-#   scripts/bench-unified.sh --tool browserless|playwright|selenium [--scenario NAME] [--counts|--update-counts]
-#                            [--runs N] [--skip-build] [-- extra Maven arguments]
+#   scripts/bench-unified.sh --tool browserless|playwright|selenium [--scenario NAME]
+#                            [--counts|--update-counts|--time] [--runs N] [--warmup N] [--rounds N]
+#                            [--skip-build] [-- extra Maven arguments]
 #
 #   --counts         count the round trips per user action and compare them with the committed counts (default)
 #   --update-counts  count them --runs times (default 3) and write them as the committed counts; a user action
 #                    whose count differs between runs is written as a range, min-max
+#   --time           time each pair in ABBA rounds (--warmup, default 5, then --rounds, default 30) and judge the
+#                    median ratio against the budget: 10 % or 2 ms per user action, whichever is larger. Writes
+#                    unified-test-demo/target/benchmark/<tool>.csv and .md; exit code 1 when a scenario fails
 #   --scenario       only this scenario: smallForm, longForm, largeGrid or comboBox
 #   --skip-build     don't install the modules first
 #
@@ -17,7 +22,8 @@
 # the file, with the reason in the PR. Selenium needs the TestBench licence (VAADIN_OFFLINE_KEY or a local key).
 # Playwright downloads its browser, or uses -- -Dvaadin.testing.playwright.executable=PATH.
 #
-# Exit code 0 when the counts match, 1 when they don't, 2 when the tests failed.
+# Exit code 0 when the counts match (or no scenario fails the time budget), 1 when they don't, 2 when the tests
+# failed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$(pwd)
@@ -26,6 +32,8 @@ tool=""
 scenario=""
 mode=counts
 runs=3
+warmup=5
+rounds=30
 build=true
 maven_args=()
 while [ $# -gt 0 ]; do
@@ -34,6 +42,9 @@ while [ $# -gt 0 ]; do
         --scenario) scenario="$2"; shift 2 ;;
         --counts) mode=counts; shift ;;
         --update-counts) mode=update; shift ;;
+        --time) mode=time; shift ;;
+        --warmup) warmup="$2"; shift 2 ;;
+        --rounds) rounds="$2"; shift 2 ;;
         --runs) runs="$2"; shift 2 ;;
         --skip-build) build=false; shift ;;
         --) shift; maven_args=("$@"); break ;;
@@ -48,6 +59,21 @@ esac
 
 if $build; then
     mvn -B -q -ntp install -DskipTests "${maven_args[@]}"
+fi
+
+if [ "$mode" = time ]; then
+    bench_args="--warmup $warmup --rounds $rounds --out $root/unified-test-demo/target/benchmark"
+    [ -n "$scenario" ] && bench_args="$bench_args --scenario $scenario"
+    extra=()
+    # TestBench's own setting, as the demo's Surefire configuration passes it
+    [ "$tool" = selenium ] && extra=(-Dcom.vaadin.testbench.Parameters.headless=true)
+    echo "Timing the Performance Pairs on $tool: $warmup warm-up and $rounds measured rounds"
+    status=0
+    # from the demo module, as Surefire runs its tests: the application's dev mode writes its front-end files there
+    (cd unified-test-demo && mvn -B -ntp -q test-compile exec:java -Dexec.mainClass=demo.perf.bench.TimeBenchmark \
+        -Dexec.classpathScope=test -Dexec.args="$bench_args" -Dvaadin.testing.tool="$tool" \
+        "${extra[@]}" "${maven_args[@]}") || status=$?
+    exit $status
 fi
 
 tests=()
