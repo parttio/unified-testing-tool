@@ -47,7 +47,7 @@ public final class SeleniumAdapter implements TestingToolAdapter {
     public AdapterSession open(AdapterContext context) {
         String baseUrl = baseUrl(context);
         java.util.function.Supplier<TestBenchDriverProxy> browsers = () -> {
-            TestBenchDriverProxy driver = TestBench.createDriver(newBrowser(context));
+            TestBenchDriverProxy driver = com.vaadin.testing.unified.internal.Proto.time("se-launch", () -> TestBench.createDriver(newBrowser(context)));
             driver.manage().timeouts().scriptTimeout(context.timeout());
             return driver;
         };

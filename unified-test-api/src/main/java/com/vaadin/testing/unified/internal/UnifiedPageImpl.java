@@ -44,12 +44,12 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public void navigate(Class<? extends Component> view) {
-        record(() -> Phrases.open(view, null), () -> run.session().navigate(view));
+        record(() -> Phrases.open(view, null), () -> Proto.time("navigate", () -> run.session().navigate(view)));
     }
 
     @Override
     public <T, C extends Component & HasUrlParameter<T>> void navigate(Class<C> view, T parameter) {
-        record(() -> Phrases.open(view, parameter), () -> run.session().navigate(view, parameter));
+        record(() -> Phrases.open(view, parameter), () -> Proto.time("navigate", () -> run.session().navigate(view, parameter)));
     }
 
     @Override
@@ -65,7 +65,7 @@ public final class UnifiedPageImpl implements UnifiedPage {
             if (path.matches("^[a-zA-Z][a-zA-Z0-9+.-]*://.*")) {
                 run.requireBrowser("Navigating to an absolute URL");
             }
-            run.session().navigate(path);
+            Proto.time("navigate", () -> run.session().navigate(path));
         });
     }
 

@@ -1,0 +1,53 @@
+# PROTOTYPE (#302), never merged: a rough measurement of a Unified UI Test against its Direct Test, per Testing Tool.
+name: Prototype 302 benchmark
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VAADIN_OFFLINE_KEY: ${{ secrets.VAADIN_OFFLINE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build
+        run: mvn -B -ntp install -DskipTests
+      - name: Classpath
+        working-directory: unified-test-demo
+        run: mvn -B -ntp -q dependency:build-classpath -Dmdep.outputFile=cp.txt && mvn -B -ntp -q test-compile
+      - name: Install Chromium for Playwright
+        run: >
+          mvn -B -ntp -pl unified-test-demo exec:java
+          -Dexec.mainClass=com.microsoft.playwright.CLI
+          -Dexec.classpathScope=test
+          -Dexec.args="install --with-deps chromium"
+      - name: Benchmark
+        working-directory: unified-test-demo
+        run: |
+          CP="target/test-classes:target/classes:$(cat cp.txt)"
+          for i in 1 2; do
+            java -Dvaadin.testing.tool=browserless -cp "$CP" ../prototype-302/Bench302.java 36 demo.ProfileBrowserlessTest demo.ProfileBrowserlessMigratedTest 2>&1 >/dev/null | grep ^BENCH > browserless-$i.csv || true
+            java -Dvaadin.testing.tool=playwright -cp "$CP" ../prototype-302/Bench302.java 26 demo.ProfileDramafinderTest demo.ProfileMigratedTest 2>&1 >/dev/null | grep ^BENCH > playwright-$i.csv || true
+            java -Dvaadin.testing.tool=selenium -cp "$CP" ../prototype-302/Bench302.java 26 demo.ProfileTestBenchTest demo.ProfileMigratedTest 2>&1 >/dev/null | grep ^BENCH > selenium-$i.csv || true
+          done
+          for i in 1 2; do
+            python3 -I ../prototype-302/an302.py browserless-$i.csv ProfileBrowserlessTest ProfileBrowserlessMigratedTest savesTheProfile
+            python3 -I ../prototype-302/an302.py playwright-$i.csv ProfileDramafinderTest ProfileMigratedTest savesTheProfile pw-launch
+            python3 -I ../prototype-302/an302.py selenium-$i.csv ProfileTestBenchTest ProfileMigratedTest savesTheProfile
+            python3 -I ../prototype-302/an302.py selenium-$i.csv ProfileTestBenchTest ProfileMigratedTest savesTheProfile se-launch
+          done | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prototype-302
+          path: unified-test-demo/*.csv

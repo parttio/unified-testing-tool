@@ -102,12 +102,12 @@ public final class LazyElement implements UnifiedElement {
 
     private void act(Supplier<Phrase> phrase, String action, Consumer<UnifiedElement> body) {
         run.steps().action(phrase, run.window(), () -> StaleRetry.call(run, () -> {
-            UnifiedElement element = run.pollFor(() -> {
+            UnifiedElement element = run.pollFor(() -> Proto.time("usable", () -> {
                 UnifiedElement e = concrete();
                 return e.isVisible() && e.isEnabled() ? e : null;
-            }, () -> LookupFailures.notUsable(this));
-            body.accept(element);
-            run.session().settle();
+            }), () -> LookupFailures.notUsable(this));
+            Proto.time("action", () -> body.accept(element));
+            Proto.time("settle", () -> run.session().settle());
             return null;
         }));
     }
@@ -120,7 +120,7 @@ public final class LazyElement implements UnifiedElement {
 
     /** Calls the element, finding it again if it went stale meanwhile. */
     private <T> T on(java.util.function.Function<UnifiedElement, T> call) {
-        return StaleRetry.call(run, () -> call.apply(concrete()));
+        return Proto.time("read", () -> StaleRetry.call(run, () -> call.apply(concrete())));
     }
 
     @Override public String getTag() { return read(UnifiedElement::getTag); }

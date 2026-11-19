@@ -70,8 +70,14 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
             }
             session.sync();
             try {
-                Thread.sleep(POLL_MILLIS);
-            } catch (InterruptedException e) {
+                Proto.time("poll-sleep", () -> {
+                    try {
+                        Thread.sleep(POLL_MILLIS);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            } catch (RuntimeException e) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Interrupted while waiting", e);
             }

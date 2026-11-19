@@ -397,7 +397,7 @@ public final class StepRecorder {
         if (frame.get() != null) {
             return body.get();
         }
-        return step(phrase, window, body::get);
+        return com.vaadin.testing.unified.internal.Proto.time("assert", () -> step(phrase, window, body::get));
     }
 
     private <T> T step(Supplier<Phrase> phrase, String window, Body<T> body) {

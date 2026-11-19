@@ -67,7 +67,8 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
     public List<UnifiedElement> resolve() {
         return StaleRetry.call(run, () -> {
             UnifiedElement parentElement = parent == null ? null : parent.concrete();
-            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement)));
+            UnifiedElement scope = parentElement;
+            return Proto.time("find", () -> filter(run.session().find(new QuerySpec(componentType, tag, filters, scope))));
         });
     }
 
@@ -85,7 +86,8 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
                 }
                 parentElement = found.get();
             }
-            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement)));
+            UnifiedElement scope = parentElement;
+            return Proto.time("find", () -> filter(run.session().find(new QuerySpec(componentType, tag, filters, scope))));
         });
     }
 

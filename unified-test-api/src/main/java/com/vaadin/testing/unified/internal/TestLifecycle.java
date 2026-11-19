@@ -149,7 +149,7 @@ public final class TestLifecycle {
             steps.describeTest(test.displayName(), evidenceDirName(test));
         }
         TestingTool tool = settings.tool();
-        AdapterSession session = adapters.apply(tool).open(context);
+        AdapterSession session = Proto.time("session-open", () -> adapters.apply(tool).open(context));
         steps.session(null, session);
         if (test != null && settings.userStepsSnapshots()) {
             Path snapshots = testEvidenceDir(test).resolve(StepRecorder.SNAPSHOT_DIR);
@@ -196,12 +196,12 @@ public final class TestLifecycle {
                 if (logs != null) {
                     logs.close();
                 }
-                reportUserSteps(steps, failure, test);
+                Proto.time("report", () -> reportUserSteps(steps, failure, test));
                 List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, test.evidenceName());
                 keepRecording(failure, test);
                 return evidence;
             } finally {
-                session.close();
+                Proto.time("session-close", session::close);
             }
         }
 

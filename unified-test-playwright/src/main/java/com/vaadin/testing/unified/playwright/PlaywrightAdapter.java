@@ -45,9 +45,9 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
 
     @Override
     public AdapterSession open(AdapterContext context) {
-        Browser browser = context.runScoped(SharedBrowser.class, () -> SharedBrowser.launch(context)).browser();
-        String baseUrl = baseUrl(context);
-        BrowserContext browserContext = browser.newContext();
+        Browser browser = com.vaadin.testing.unified.internal.Proto.time("pw-shared-browser", () -> context.runScoped(SharedBrowser.class, () -> com.vaadin.testing.unified.internal.Proto.time("pw-launch", () -> SharedBrowser.launch(context))).browser());
+        String baseUrl = com.vaadin.testing.unified.internal.Proto.time("pw-base-url", () -> baseUrl(context));
+        BrowserContext browserContext = com.vaadin.testing.unified.internal.Proto.time("pw-new-context", () -> browser.newContext());
         browserContext.setDefaultTimeout(context.timeout().toMillis()); // also for windows opened later
         PlaywrightSession.TraceMode trace = PlaywrightSession.TraceMode.parse(context.configuration(TRACE).orElse("off"));
         if (trace != PlaywrightSession.TraceMode.OFF) {
@@ -55,12 +55,12 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
             browserContext.tracing().start(new com.microsoft.playwright.Tracing.StartOptions().setScreenshots(true)
                     .setSnapshots(true));
         }
-        Page page = browserContext.newPage();
+        Page page = com.vaadin.testing.unified.internal.Proto.time("pw-new-page", () -> browserContext.newPage());
         PlaywrightSession session = new PlaywrightSession(browserContext, page, baseUrl, context.timeout().toMillis(),
                 trace);
         // @WithMockUser / @WithUserDetails: log the browser in before the test body
         if (LoginSupport.isAvailable()) {
-            LoginSupport.testUserUrl(baseUrl).ifPresent(session::logIn);
+            com.vaadin.testing.unified.internal.Proto.time("pw-login", () -> LoginSupport.testUserUrl(baseUrl).ifPresent(session::logIn));
         }
         return session;
     }
