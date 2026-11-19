@@ -130,6 +130,14 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
   [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown and the guide in
   one file.
+- **`click()` on `UnifiedDiv`, `UnifiedSpan`, `UnifiedContainer` and the other plain HTML Wrappers**
+  ([#358](https://github.com/parttio/unified-testing-tool/issues/358)): a `Div` or `Span` with a click listener,
+  such as a navigation tab, or a layout such as a card, is clicked like a button, where a test used to write
+  `element().click()`.
+  ```java
+  page.find(UnifiedDiv.class).withText("Shop").click();
+  page.find(UnifiedContainer.class).withTestId("recipe-card").click();
+  ```
 - **Retrying assertions for a grid's columns** ([#359](https://github.com/parttio/unified-testing-tool/issues/359)):
   `assertThat(grid).hasColumn("Cooked times")`, `doesNotHaveColumn(..)` and `hasColumnHeaders(..)`, for a column
   the application adds or removes while the test runs. They replace `page.waitUntil(() ->

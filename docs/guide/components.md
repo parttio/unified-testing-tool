@@ -135,3 +135,13 @@ On Browserless, key presses fire the server-side listeners and shortcuts; client
 ```
 
 `getText()` is the DOM text, the same on every Testing Tool: CSS such as `text-transform` doesn't change it. In a browser, `element().getVisibleText()` gives the text as rendered.
+
+*(unreleased)* A `Div`, `Span` or other plain HTML element with a click listener, such as a navigation tab or a wordmark, is clicked like a button. So is a layout, through `UnifiedContainer`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ClickableHtmlTest.java:clicksADiv"
+
+--8<-- "unified-test-demo/src/test/java/demo/ClickableHtmlTest.java:clicksAContainer"
+```
+
+`click()` reads as a User Step, `click div “Shop”`. A click on an element without a listener does nothing, as for a user.

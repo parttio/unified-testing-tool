@@ -28,6 +28,7 @@ Every Wrapper of the Unified API with its filters, actions, reads and checks. Ge
 Article, Flow's `Article`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -37,6 +38,7 @@ Article, Flow's `Article`.
 Aside, Flow's `Aside`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -81,6 +83,7 @@ Combo box, Flow's `ComboBox`.
 
 Container, Flow's `Component`.
 
+- **Actions:** `click()`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
 
@@ -127,6 +130,7 @@ Dialog, Flow's `Dialog`.
 Div, Flow's `Div`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -136,6 +140,7 @@ Div, Flow's `Div`.
 Footer, Flow's `Footer`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -169,6 +174,7 @@ Grid, Flow's `Grid`.
 Header, Flow's `Header`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -187,6 +193,7 @@ Integer field, Flow's `IntegerField`.
 Main, Flow's `Main`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -228,6 +235,7 @@ Multi-select combo box, Flow's `MultiSelectComboBox`.
 Nav, Flow's `Nav`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -254,6 +262,7 @@ Number field, Flow's `NumberField`.
 Paragraph, Flow's `Paragraph`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -272,6 +281,7 @@ Radio button group, Flow's `RadioButtonGroup`.
 Section, Flow's `Section`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
@@ -281,6 +291,7 @@ Section, Flow's `Section`.
 Span, Flow's `Span`.
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
+- **Actions:** `click()`
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
 - **Checks:** those of every Wrapper
