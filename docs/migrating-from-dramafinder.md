@@ -112,6 +112,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `@EnabledIfSystemProperty(named = "vaadin.testing.tool", ..)` | removed: the run's Testing Tool decides |
 | test methods, `@BeforeEach` and helper methods that use the base class | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test |
 | `navigate(View.class)`, `assertAt(View.class)`, `assertPath(..)`, `assertQueryParameter(..)` | `page.navigate(View.class)`, `assertThat(page).isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)` |
+| `page.navigate(getUrl() + "/plan?week=" + monday)` *(unreleased)* | `page.navigate("plan?week=" + monday)`: the path after the base URL |
 | `TextFieldElement.getByLabel(page, "Name")`, `getByText`, `getById`, `getByTestId`, `…Containing` | `page.find(UnifiedTextField.class).withLabel("Name")`, `withText`, `withId`, `withTestId`, `…Containing` |
 | `find(page, TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | query `first()` / `get(i)` | the same lookup, with a `was first()` Migration Marker / `all().get(i)` |
@@ -129,7 +130,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 
 A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
 
-A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left as it is, with a Migration Marker above the class naming those members (`// TODO unified: not migrated: calls loginAs(..) of SpringPlaywrightIT; ...`): convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again. A `setupTest()` override that seeds data and then calls `super.setupTest()` is not one of them: it becomes a plain `@BeforeEach` without the `super.setupTest()`, since each test now navigates itself.
+A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left as it is, with a Migration Marker above the class naming those members (`// TODO unified: not migrated: calls loginAs(..) of SpringPlaywrightIT; ...`): convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again. `getUrl()` is one of them only where the test does something else with it than `page.navigate(getUrl() + ..)` *(unreleased)*, such as keep it in a variable. A `setupTest()` override that seeds data and then calls `super.setupTest()` is not one of them: it becomes a plain `@BeforeEach` without the `super.setupTest()`, since each test now navigates itself.
 
 ### Dramafinder 1.x
 

@@ -57,6 +57,7 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 
 | Dramafinder | Unified API |
 |---|---|
+| `page.navigate(getUrl() + "/path?q=" + q)` *(unreleased)* | `page.navigate("path?q=" + q)` |
 | `XElement.getByLabel(page, s)` / `getByText` / `getById` / `getByTestId` / `…Containing` | `page.find(UnifiedX.class).withLabel(s)` / `withText` / `withId` / `withTestId` / `…Containing` |
 | `ButtonElement.getByLabel(page, s)` | `.withAccessibleName(s)` |
 | `DialogElement.getByHeaderText(page, s)` | `.withHeaderTitle(s)` |

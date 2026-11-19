@@ -34,7 +34,8 @@ import org.openrewrite.marker.Markers;
  * {@code extends AbstractBasePlaywrightIT} and its {@code getUrl()} / {@code getView()} overrides, makes the class a
  * {@code @UnifiedSpringBootTest} or {@code @UnifiedUITest}, removes an {@code @EnabledIfSystemProperty} guard on
  * the Testing Tool, gives every test method and every helper using the test base a {@code UnifiedPage page}
- * parameter, and converts the base class's navigation calls and checks to the Unified Page. A test starts at the
+ * parameter, and converts the base class's navigation calls and checks to the Unified Page, as well as
+ * {@code page.navigate(getUrl() + "/path")} on the base class's page. A test starts at the
  * view {@code getView()} named, unless it navigates first itself. A test extending a project's copy of
  * {@code SpringPlaywrightIT} gets the copy's class annotations ({@code @SpringBootTest}'s attributes,
  * {@code @ActiveProfiles}, {@code @Import}, ...), which applied to it through the copy, or a Migration Marker
@@ -315,6 +316,14 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                         }
                     }
                     return m.withArguments(arguments);
+                }
+                Expression path = Dramafinder.baseUrlNavigationPath(m);
+                if (path != null) { // page.navigate(getUrl() + "/plan?week=" + monday): the base URL is configuration
+                    return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.navigate(#{any(String)})")
+                            .javaParser(Stubs.parser())
+                            .build()
+                            .<J.MethodInvocation>apply(getCursor(), m.getCoordinates().replace(), Stubs.page(), path)
+                            .withPrefix(m.getPrefix());
                 }
                 if (!Dramafinder.isBaseCall(method)) {
                     return m;

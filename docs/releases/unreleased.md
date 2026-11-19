@@ -220,6 +220,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - The documented migration commands ran whichever OpenRewrite plugin was newest. They now name the versions the
   recipes are tested against, 6.46.1 for Maven and 7.39.0 for Gradle
   ([#355](https://github.com/parttio/unified-testing-tool/issues/355)).
+- The Dramafinder recipe skipped every test class that navigated with `page.navigate(getUrl() + "/plan?week=" +
+  monday)`, the usual way to open a view with query parameters: `getUrl()` was a base class member no rule
+  converted ([#351](https://github.com/parttio/unified-testing-tool/issues/351)). The call now becomes
+  `page.navigate("plan?week=" + monday)`, the path after the base URL, also on `getPage()` and in helpers. A class
+  that uses `getUrl()` in any other way is still skipped, with its Migration Marker.
 
 ## Known limitations
 
