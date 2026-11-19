@@ -1,6 +1,6 @@
 # 3. Navigation
 
-Decided in [#16](https://github.com/jcgueriaud1/unified-testing-tool/issues/16).
+Decided in [#16](https://github.com/parttio/unified-testing-tool/issues/16).
 
 ```java
 page.navigate(ProfileView.class);                              // recommended

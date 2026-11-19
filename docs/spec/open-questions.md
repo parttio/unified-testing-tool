@@ -1,6 +1,6 @@
 # Open questions
 
-What the spec does not decide yet. Each item is either an open ticket on the [map](https://github.com/jcgueriaud1/unified-testing-tool/issues/2) or still too unclear to ticket. Before hand-off (`spec-v1`), each is decided or marked here as deliberately left to implementation.
+What the spec does not decide yet. Each item is either an open ticket on the [map](https://github.com/parttio/unified-testing-tool/issues/2) or still too unclear to ticket. Before hand-off (`spec-v1`), each is decided or marked here as deliberately left to implementation.
 
 ## Open tickets
 

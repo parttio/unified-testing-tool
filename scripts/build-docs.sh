@@ -8,6 +8,9 @@ cd "$(dirname "$0")/.."
 repo_url="https://github.com/parttio/unified-testing-tool/blob/main"
 src=target/docs-src
 
+# every page names the same release version, the latest from docs/releases/
+python3 scripts/doc_version.py
+
 rm -rf "$src"
 mkdir -p "$src"
 cp -r docs/spec docs/adr docs/guide docs/releases "$src"/
@@ -34,6 +37,8 @@ find "$src"/spec "$src"/adr "$src"/guide -name '*.md' -exec sed -i -E \
   -e "s#\]\(\.\./\.\./#](${repo_url}/#g" \
   -e 's#\]\(\.\./adr\)#](../adr/index.md)#g' {} +
 sed -i -E 's#\]\(adr\)#](adr/index.md)#g' "$src"/index.md
+# CONTRIBUTING.md is for this repository, not the site: link it on GitHub
+sed -i -E "s#\]\(CONTRIBUTING\.md#](${repo_url}/CONTRIBUTING.md#g" "$src"/index.md
 
 # Index page for the ADRs
 {

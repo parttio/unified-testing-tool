@@ -14,26 +14,7 @@ Every Wrapper action and every retrying assertion is recorded as a **User Step**
 The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
 
 ```java
-@Test
-@DisplayName("Changing a person's email updates the grid")
-void changesTheEmail(UnifiedPage page) {
-    // given
-    page.navigate(PeopleView.class);
-
-    // when
-    changeEmail(page, "Alan Turing", "alan@bletchley.uk");
-
-    // then
-    assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan Turing");
-}
-
-private static void changeEmail(UnifiedPage page, String name, String email) {
-    page.step("Change the email of " + name, () -> {
-        page.find(UnifiedGrid.class).row().withCellText("Name", name).click();
-        page.find(UnifiedTextField.class).withLabel("E-mail").setValue(email);
-        page.find(UnifiedButton.class).withText("Save").click();
-    });
-}
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:changesTheEmail"
 ```
 
 ## The failure message

@@ -1,6 +1,6 @@
 # 10. Packaging
 
-Decided in [#29](https://github.com/jcgueriaud1/unified-testing-tool/issues/29). Inputs from [#10](https://github.com/jcgueriaud1/unified-testing-tool/issues/10), [#16](https://github.com/jcgueriaud1/unified-testing-tool/issues/16), [#24](https://github.com/jcgueriaud1/unified-testing-tool/issues/24), [#25](https://github.com/jcgueriaud1/unified-testing-tool/issues/25) and [ADR 0003](../adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md).
+Decided in [#29](https://github.com/parttio/unified-testing-tool/issues/29). Inputs from [#10](https://github.com/parttio/unified-testing-tool/issues/10), [#16](https://github.com/parttio/unified-testing-tool/issues/16), [#24](https://github.com/parttio/unified-testing-tool/issues/24), [#25](https://github.com/parttio/unified-testing-tool/issues/25) and [ADR 0003](../adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md).
 
 ## Artifacts
 

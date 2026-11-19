@@ -14,15 +14,7 @@ Every Wrapper has:
 ## Text fields
 
 ```java
-UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
-name.setValue("Alice");     // types as a user: fires input and change
-name.clear();
-String value = name.getValue();
-
-assertThat(name).hasValue("Alice").isValid().hasLabel("Name");
-assertThat(page.find(UnifiedTextField.class).withLabel("Email"))
-        .isInvalid()
-        .hasErrorMessage("Email is required");
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:textFields"
 ```
 
 `UnifiedTextArea` works the same way.
@@ -46,11 +38,7 @@ Number and date fields take and return Java types, `null` when empty:
 To check how the field handles text it can't parse, type it:
 
 ```java
-UnifiedDatePicker returnDate = page.find(UnifiedDatePicker.class).withLabel("Return date");
-returnDate.typeText("dsdds");
-assertThat(returnDate).isInvalid();
-
-departure.typeText("dsdds", "10:00");   // UnifiedDateTimePicker: date text, time text
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:unparsableText"
 ```
 
 ## Checkbox
@@ -81,8 +69,7 @@ Selecting an item that doesn't exist fails with the list of items there are, e.g
 ## Buttons and menus
 
 ```java
-page.find(UnifiedButton.class).withText("Save").click();
-assertThat(page.find(UnifiedButton.class).withText("Archive")).isDisabled();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:buttons"
 ```
 
 A MenuBar opens its sub-menus as a user does: give the path of item names.
@@ -96,17 +83,7 @@ An icon-only item is named by its `aria-label`. `isItemEnabled("Actions for Hote
 ## Tabs and Details
 
 ```java
-UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
-tabs.selectTab("Security");
-assertThat(tabs).hasTabs("Profile", "Security", "Billing").hasSelectedTab("Security");
-tabs.content().find(UnifiedButton.class).withText("Change password").click();
-
-UnifiedTabs filter = page.find(UnifiedTabs.class).withTab("Approved");   // Tabs without content
-filter.selectTab("Rejected");
-
-UnifiedDetails advanced = page.find(UnifiedDetails.class).withSummaryText("Advanced");
-advanced.open();
-advanced.content().find(UnifiedTextField.class).withLabel("Cost center").setValue("CC-7");
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:tabsAndDetails"
 ```
 
 A tab holding a `RouterLink` is named by the link's text.
@@ -116,16 +93,7 @@ A tab holding a `RouterLink` is named by the link's text.
 Only open dialogs and notifications are found. A dialog is a [Scope](finding-components.md#scopes):
 
 ```java
-page.find(UnifiedButton.class).withText("Change email").click();
-UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Change email");
-dialog.find(UnifiedTextField.class).withLabel("Email").setValue("new@example.com");
-dialog.find(UnifiedButton.class).withText("Save").click();
-assertThat(dialog).isClosed();
-
-dialog.close();                  // as pressing Escape
-
-assertThat(page.find(UnifiedNotification.class)).isOpen().hasText("Saved Alice");
-assertThat(page.find(UnifiedNotification.class).withText("Account deleted")).isOpen();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:overlays"
 ```
 
 When several notifications can be open at once, filter by text: an unfiltered `find(UnifiedNotification.class)` fails with "found 2".
@@ -141,10 +109,7 @@ When several notifications can be open at once, filter by text: an unfiltered `f
 ## Keyboard and DOM events
 
 ```java
-search.element().pressKey("Enter");                          // to a component
-page.find(UnifiedTextField.class).withLabel("Search").element().pressKey("Control+s");
-page.pressKey("Escape");                                     // to the focused component or the open dialog
-dropZone.element().dispatchEvent("item-dropped");            // a custom DOM event, for a Flow listener
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:keysAndEvents"
 ```
 
 ```java
@@ -156,9 +121,7 @@ On Browserless, key presses fire the server-side listeners and shortcuts; client
 ## Plain HTML and text
 
 ```java
-assertThat(page.findComponent(Span.class).withId("status")).hasText("Approved");
-String total = page.find(UnifiedDiv.class).withClassName("summary").getText();
-page.findComponent(Input.class).withTestId("code").element().setValueAsUser("ABC");
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:withoutWrapper"
 ```
 
 `getText()` is the DOM text, the same on every Testing Tool: CSS such as `text-transform` doesn't change it. In a browser, `element().getVisibleText()` gives the text as rendered.

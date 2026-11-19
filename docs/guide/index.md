@@ -2,7 +2,7 @@
 
 How to write Unified UI Tests, by example. The [Specification](../spec/README.md) says what the Unified API guarantees and why; this guide shows how to use it. The [API reference](../../unified-test-api/src/main/resources/META-INF/unified/api-reference.md) lists every Wrapper with its filters, actions, reads and checks.
 
-Most examples below are included from the tests in [`unified-test-demo`](https://github.com/parttio/unified-testing-tool/tree/main/unified-test-demo/src/test/java/demo). They run in CI on every Testing Tool, so they can't go out of date.
+The examples are included from [`unified-test-demo`](https://github.com/parttio/unified-testing-tool/tree/main/unified-test-demo/src/test/java/demo): most from its tests, which run in CI on every Testing Tool, and the short ones from `GuideExamples`, which CI compiles. So they can't go out of date.
 
 ## Your first test
 
@@ -66,6 +66,7 @@ Then, when you need more:
 - [When a test needs one Testing Tool](tool-specific.md): the Escape Hatch, `@RequiresBrowser`, `@RequiresTestingTool`.
 - [Wrappers for your own components](custom-wrappers.md): add-ons, custom components, custom filters.
 - [Checking the style](style-rules.md): scenario sentences, no raw waits and `@RequiresTestingTool`, checked by a test.
+- [Configuration](configuration.md): every setting, from the Testing Tool and the timeout to the reports and each Testing Tool's browser.
 
 ## Running it in a browser
 

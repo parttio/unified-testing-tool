@@ -64,8 +64,7 @@ use tryUnwrap(..) for a check that runs everywhere, or stay in the Unified API
 To adopt the rules in a suite that breaks them today, wrap them in ArchUnit's `FreezingArchRule`. The first run records the current violations in a store; later runs fail only on new ones, and the store shrinks as you fix old ones:
 
 ```java
-FreezingArchRule.freeze(UnifiedStyleRules.SCENARIO_SENTENCE)
-        .check(new ClassFileImporter().importPackages("com.example"));
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:freeze"
 ```
 
 The store is a directory, `archunit_store` by default; commit it. ArchUnit's [user guide](https://www.archunit.org/userguide/html/000_Index.html#_freezing_arch_rules) has the settings.

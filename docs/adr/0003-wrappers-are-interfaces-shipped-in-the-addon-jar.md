@@ -17,4 +17,4 @@ A Unified API wrapper is an interface with default methods written on a portable
 - The Unified Element defines what "portable" means; on Browserless a property is the server-side value, equal to the browser's only for properties Flow synchronises.
 - Add-on jars gain a compile-time-only reference to the Unified API; the optional dependency must never become a runtime requirement.
 
-Decided in "How does a user add a Unified API wrapper for a custom or add-on component?" (jcgueriaud1/unified-testing-tool#18).
+Decided in "How does a user add a Unified API wrapper for a custom or add-on component?" ([#18](https://github.com/parttio/unified-testing-tool/issues/18)).

@@ -13,4 +13,4 @@ Unified API wrappers carry a `Unified` prefix (`UnifiedTextField`, `UnifiedButto
 - **Type-token constants** (`ui.find(TEXT_FIELD)`): open and per-type, but needs static imports; unnecessary once class literals were shown to infer the query type.
 - **`*Element` suffix**: familiar to TestBench and Dramafinder users, but those two libraries already both use it.
 
-Decided in "What does a component wrapper look like for Button and TextField?" (jcgueriaud1/unified-testing-tool#12); prototype and comparison on branch `prototype/component-wrapper`.
+Decided in "What does a component wrapper look like for Button and TextField?" ([#12](https://github.com/parttio/unified-testing-tool/issues/12)); prototype and comparison on branch `prototype/component-wrapper`.

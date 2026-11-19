@@ -3,9 +3,7 @@
 Rows are found by **what they show**, like any other component. Spec: [7. Grid](../spec/07-grid.md).
 
 ```java
-UnifiedGrid users = page.find(UnifiedGrid.class).withTestId("users");
-UnifiedGrid.UnifiedGridRow alice = users.row().withCellText("Name", "Alice");
-alice.click();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:gridRow"
 ```
 
 ## Finding rows
@@ -42,12 +40,7 @@ Row actions (`click()`, `select()`, `toggleDetails()`) are actions like any othe
 ## Reading and checking rows
 
 ```java
-assertThat(alice).hasCellText("Email", "alice@example.com").hasCellText("Role", "Admin");
-String email = alice.getCellText("Email");
-String first = users.row(0).getCellText(0);     // by column index, for columns without a header
-int index = alice.getIndex();
-assertThat(users).hasRowCount(120);             // all rows, not only the rendered ones
-assertThat(archived).isEmpty();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:gridCells"
 ```
 
 ## Components in cells
@@ -65,9 +58,7 @@ assertThat(archived).isEmpty();
 Find a column by its header text; `columnWithId("owner")` (`Column.setId`) or `column(1)` for a column without header text.
 
 ```java
-users.column("Name").sort(SortDirection.ASCENDING);
-assertThat(users.column("Name")).isSortedAscending().hasCellTexts("Alice", "Bob", "Carol");
-List<String> headers = users.getColumnHeaders();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:gridColumns"
 ```
 
 `column.header()` is a Scope, for filter fields in the header:
@@ -85,12 +76,7 @@ A column's key (`Column.setKey`) stays on the server, so no browser can find a c
 ```
 
 ```java
-users.row(1).click();            // as a user clicking the row (not a button in it)
-users.row(4).doubleClick();
-
-row.toggleDetails();             // clicks the row, as a user does
-assertThat(row).hasDetailsOpen();
-row.details().find(UnifiedButton.class).withText("Reset password").click();   // browser only for now
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:gridRowActions"
 ```
 
 The multi-select checkbox column is not a column: column indexes count only the application's columns.
