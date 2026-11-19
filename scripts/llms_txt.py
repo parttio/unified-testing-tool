@@ -100,6 +100,13 @@ def pages(nav, group=None):
                 yield group, title, target
 
 
+def rules(base):
+    """The guide's rules of thumb (docs/snippets/rules-of-thumb.md), with their links made absolute."""
+    text = (ROOT / "docs/snippets/rules-of-thumb.md").read_text(encoding="utf-8")
+    text = re.sub(r"\]\(([\w-]+\.md(?:#[\w-]+)?)\)", lambda m: f"]({base}guide/{m.group(1)})", text)
+    return text.rstrip("\n").split("\n")
+
+
 def main():
     config = yaml.load((ROOT / "mkdocs.yml").read_text(encoding="utf-8"), Loader=Loader)
     source, site = ROOT / config["docs_dir"], ROOT / config["site_dir"]
@@ -124,7 +131,11 @@ def main():
              "Each link is the page as Markdown, with its code examples included. "
              f"[llms-full.txt]({base}llms-full.txt) holds the home page, the API reference, the developer guide "
              "and the glossary in one file. The same API reference is in the `unified-test-api` jar, at "
-             "`META-INF/unified/api-reference.md`.", ""]
+             "`META-INF/unified/api-reference.md`.", "",
+             "Rules for writing Unified UI Tests, for people and for tools that generate them. In a project, the "
+             "`write-unified-ui-tests` skill, installed by the `AddUnifiedTestingSkill` OpenRewrite recipe of "
+             "`org.vaadin.addons:unified-test-rewrite`, has the same rules and the steps to prove a test.", "",
+             *rules(base), ""]
     for section in ["Docs"] + [s for s in sections if s not in ("Docs", "Optional")] + ["Optional"]:
         if section in sections:
             lines += [f"## {section}", "", *sections[section], ""]
