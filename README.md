@@ -28,6 +28,8 @@ class ProfileViewTest {
 - **Migrating from TestBench:** [docs/migrating-from-testbench.md](docs/migrating-from-testbench.md), OpenRewrite Migration Recipes.
 - **Migrating from Browserless:** [docs/migrating-from-browserless.md](docs/migrating-from-browserless.md), the same for Browserless Test and TestBench UI Unit tests.
 - **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, structure scenarios and read their reports, with examples from the demo.
+- **API reference:** [every Wrapper](unified-test-api/src/main/resources/META-INF/unified/api-reference.md) with its filters, actions, reads and checks, generated from the code and shipped in the `unified-test-api` jar (`META-INF/unified/api-reference.md`).
+- **For agents:** the site has an [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown, and the whole guide in [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt); the `write-unified-ui-tests` skill is installed by the `AddUnifiedTestingSkill` recipe.
 - **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
 - **Status:** first version. Spec draft, not yet `spec-v1`.
 
