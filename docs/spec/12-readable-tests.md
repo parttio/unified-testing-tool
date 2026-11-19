@@ -387,6 +387,7 @@ The skill covers:
 - `@DisplayName`, comments and User Tasks;
 - proving the test on Browserless then Playwright, plus `UnifiedStyleTest` and `user-steps.txt`;
 - reading a failure;
+- reviewing a test: the scenario against its User Steps, the code against the canonical forms, the runs, and what a change made to pass took away *(unreleased)*;
 - when the Escape Hatch is acceptable.
 
 How the recipe decides:
