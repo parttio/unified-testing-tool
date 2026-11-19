@@ -158,6 +158,56 @@ class MigrateDramafinder1Test implements RewriteTest {
     }
 
     @Test
+    void theCopiedBasesClassAnnotationsMoveToEachTest() {
+        rewriteRun(
+                pomXml(pom("2.0.2"), pom(null)),
+                java("""
+                        package com.example.config;
+
+                        public class TestAiConfig {
+                        }
+                        """),
+                java("""
+                        package com.example;
+
+                        import com.example.config.TestAiConfig;
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.springframework.context.annotation.Import;
+                        import org.springframework.test.context.ActiveProfiles;
+                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                        @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "a=b")
+                        @ActiveProfiles("it")
+                        @Import(TestAiConfig.class)
+                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                        }
+                        """, (String) null),
+                java(TEST, """
+                        package com.example;
+
+                        import com.example.config.TestAiConfig;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                        import org.junit.jupiter.api.Test;
+                        import org.springframework.context.annotation.Import;
+                        import org.springframework.test.context.ActiveProfiles;
+
+                        @UnifiedSpringBootTest(properties = "a=b")
+                        @ActiveProfiles("it")
+                        @Import(TestAiConfig.class)
+                        class PeopleTest {
+                            @Test
+                            void saves(UnifiedPage page) {
+                                page.navigate("");
+                                page.find(UnifiedButton.class).withText("Save").click();
+                            }
+                        }
+                        """),
+                InstalledSkill.files());
+    }
+
+    @Test
     void aCopiedBaseATestStillExtendsStays() {
         rewriteRun(
                 pomXml(pom("1.2.4"), pom(null)),
