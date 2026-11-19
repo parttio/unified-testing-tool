@@ -32,6 +32,7 @@ Every action and assertion is reported as a User Step, in the user's words. To m
 - [Reading reports and failures](reports-and-failures.md): the CI log, `user-steps.txt`, the run summary, the failure message with its Near Misses.
 - [Reviewing a test](reviewing-tests.md): what to read, in order, and a checklist for a test a colleague or an agent wrote.
 - [Common mistakes](common-mistakes.md): code to look for in a test, and what to write instead.
+- [Troubleshooting](troubleshooting.md): what a failure, a skip or a setup error says, its likely cause and the fix.
 - [Running in CI](ci-setup.md): a GitHub Actions workflow that puts the run summary on the job's page, and the setup for other CI servers.
 
 Then, when you need more:

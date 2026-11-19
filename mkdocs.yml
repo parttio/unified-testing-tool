@@ -62,6 +62,7 @@ nav:
       - Common mistakes: guide/common-mistakes.md
       - Reading reports and failures: guide/reports-and-failures.md
       - Reviewing a test: guide/reviewing-tests.md
+      - Troubleshooting: guide/troubleshooting.md
       - Running in CI: guide/ci-setup.md
       - Configuration: guide/configuration.md
       - Navigation, users and windows: guide/navigation-and-users.md
