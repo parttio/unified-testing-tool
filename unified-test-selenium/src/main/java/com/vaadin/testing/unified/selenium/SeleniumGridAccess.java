@@ -152,12 +152,72 @@ final class SeleniumGridAccess implements GridAccess {
         return BrowserQueries.normalize(cellElement(row, column).getText());
     }
 
-    /** Reads a whole column a page at a time, as the Playwright adapter does (#155, #159). */
+    /**
+     * Reads a whole column a page at a time (#155, #159): in the browser, in one asynchronous script that scrolls,
+     * waits for each page and reads it (#404); if that doesn't finish, from here, a few commands per page.
+     */
     @Override
     @SuppressWarnings("unchecked")
     public List<String> columnTexts(int column) {
         GridColumnElement columnElement = column(column);
         int count = rowCount();
+        try {
+            Object read = session.jsAsync(COLUMN_IN_PAGE, grid, columnElement, count, PAGE_WAIT_MS);
+            if (read instanceof List<?> texts && texts.size() == count && !texts.contains(null)) {
+                return texts.stream().map(t -> BrowserQueries.normalize(String.valueOf(t))).toList();
+            }
+        } catch (org.openqa.selenium.ScriptTimeoutException | org.openqa.selenium.JavascriptException e) {
+            // the page by page reading below
+        }
+        return columnTextsPageByPage(columnElement, count);
+    }
+
+    /** How long {@link #COLUMN_IN_PAGE} waits for one page to load, in ms, before giving up. */
+    private static final int PAGE_WAIT_MS = 5000;
+
+    /**
+     * Scrolls the grid a page at a time from the first row not read yet, waits until that row is rendered and
+     * Flow is idle, reads the column's rendered cells as {@link #RENDERED_CELLS} does: every row's text, or null
+     * when a page didn't load in time.
+     */
+    private static final String COLUMN_IN_PAGE = """
+            const g = arguments[0], column = arguments[1], count = arguments[2], pageMs = arguments[3];
+            const done = arguments[arguments.length - 1];
+            const tick = (ms) => new Promise(r => setTimeout(r, ms));
+            const busy = () => {
+              const flow = window.Vaadin && window.Vaadin.Flow;
+              return !!(flow && flow.clients && Object.values(flow.clients).some(c => c.isActive()));
+            };
+            (async () => {
+              const texts = new Array(count).fill(null);
+              const read = () => {
+                for (const tr of g._getRenderedRows()) {
+                  const i = tr.index;
+                  if (tr.hidden || tr.hasAttribute('loading') || i < 0 || i >= count || texts[i] !== null) continue;
+                  const cell = [...tr.children].find(td => td._column === column);
+                  const slot = cell && cell.firstElementChild;
+                  const nodes = slot && slot.assignedNodes ? slot.assignedNodes() : null;
+                  if (nodes) texts[i] = nodes.map(n => n.textContent).join('');
+                }
+              };
+              let next = 0;
+              while (next < count) {
+                g._scrollToFlatIndex(next);
+                const start = Date.now();
+                for (;;) {
+                  await tick(10);
+                  read();
+                  if (texts[next] !== null && !busy()) break;
+                  if (Date.now() - start > pageMs) return null;
+                }
+                while (next < count && texts[next] !== null) next++;
+              }
+              return texts;
+            })().then(done, () => done(null));""";
+
+    @SuppressWarnings("unchecked")
+    private List<String> columnTextsPageByPage(GridColumnElement columnElement, int count) {
+        int column = dataColumns().indexOf(columnElement);
         String[] texts = new String[count];
         int next = 0;
         while (next < count) {
