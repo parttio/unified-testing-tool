@@ -103,6 +103,7 @@ Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `
 | NumberField `setValue("42")` | `setValue(42.0)` (numeric string literals only) |
 | `dialog.$(X.class)`, `tabs.getContent().$(X.class)` | `dialog.find(UnifiedX.class)`, `tabs.content().find(UnifiedX.class)` |
 | TabSheet `setSelectedTabIndex(t.getTab("Security"))` | `selectTab("Security")` |
+| MessageInput `submit(s)`, MessageList `getMessageElements().size()` | `send(s)`, `getMessageCount()` |
 | Button `withLabel(..)`, `withCaption(..)` | `withText(..)`, with a Migration Marker suggesting `withAccessibleName(..)` for a button without text |
 | JUnit 4: `@Before`, `@Test`, `Assert`, `@Ignore`, `ExpectedException` | JUnit 6 |
 | `setDriver(..)`, `getDriver().quit()`, `ScreenshotOnFailureRule`, `@RunWith(SpringRunner.class)` | removed: the Unified API owns the browser and writes failure evidence |

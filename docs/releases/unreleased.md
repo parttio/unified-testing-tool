@@ -113,7 +113,9 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   page.find(UnifiedMessageInput.class).send("Pancakes");
   assertThat(page.find(UnifiedMessageList.class)).hasMessageCount(3).hasMessageContaining("Pancakes");
   ```
-  See [Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat).
+  See [Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat). The Migration Recipes convert
+  the message elements and testers too: Dramafinder's `typeAndSubmit`, `assertMessageCount` and `assertEmpty`,
+  TestBench's `submit` and `getMessageElements().size()`, Browserless's `send` and `size()`.
 - **For agents** ([#319](https://github.com/parttio/unified-testing-tool/pull/319)): the `unified-test-api` jar
   ships [`META-INF/unified/api-reference.md`](https://parttio.github.io/unified-testing-tool/api-reference/), every
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an

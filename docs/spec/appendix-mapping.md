@@ -74,6 +74,9 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `row.getCell(col).click()` | `row.click()` + Migration Marker (the row, not that cell) |
 | `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |
 | `waitForGridToStopLoading()`, `scrollToRow(i)` | dropped (Auto-Wait) |
+| `MessageInputElement.get(page)`, `MessageListElement.get(page)` | `page.find(UnifiedMessageInput.class)`, `page.find(UnifiedMessageList.class)` (no marker: a second one fails loudly) |
+| message input `typeAndSubmit(s)` | `send(s)` |
+| message list `assertMessageCount(n)` / `assertEmpty()` | `assertThat(list).hasMessageCount(n)` / `isEmpty()` |
 
 ## Escape Hatch
 

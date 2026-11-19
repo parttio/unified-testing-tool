@@ -129,7 +129,14 @@ final class Browserless {
             "com.vaadin.flow.component.dialog.Dialog", new Wrapper("com.vaadin.testing.unified.component.UnifiedDialog",
                     COMMON_FILTERS, Map.of(), Map.of("isOpened", "isOpen", "getHeaderTitle", "getHeaderTitle")));
 
-    private static final Map<String, Wrapper> BY_COMPONENT = Stream.concat(CORE.entrySet().stream(), MORE.entrySet().stream())
+    /** A chat, on Vaadin's AI components (#357). */
+    private static final Map<String, Wrapper> CHAT = Map.of(
+            "com.vaadin.flow.component.messages.MessageInput", new Wrapper(COMPONENT + "UnifiedMessageInput", COMMON_FILTERS,
+                    Map.of("send", "send"), Map.of("isEnabled", "isEnabled")),
+            "com.vaadin.flow.component.messages.MessageList", new Wrapper(COMPONENT + "UnifiedMessageList", COMMON_FILTERS,
+                    Map.of("size", "getMessageCount"), Map.of("isEnabled", "isEnabled")));
+
+    private static final Map<String, Wrapper> BY_COMPONENT = Stream.of(CORE, MORE, CHAT).flatMap(m -> m.entrySet().stream())
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     private Browserless() {

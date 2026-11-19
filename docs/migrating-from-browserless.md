@@ -108,8 +108,9 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 | a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class)` |
 | the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.row().withCellText(text).getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
 | ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
+| MessageInput `send(s)`, MessageList `size()` | `send(s)`, `getMessageCount()` |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details and Grid; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
+A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
 
 ### Context API and extension tests
 

@@ -66,7 +66,7 @@ final class DramafinderWrappers {
     private static final Map<String, String> TEXT_FIELD_METHODS = same("setValue", "getValue", "clear", "getLabel",
             "getPlaceholder", "getHelperText", "isEnabled", "isVisible");
 
-    private static final Map<String, Wrapper> BY_ELEMENT = Map.of(
+    private static final Map<String, Wrapper> BY_ELEMENT = Stream.of(Map.of(
             ELEMENT + "TextFieldElement", new Wrapper(COMPONENT + "UnifiedTextField",
                     union(COMMON_FILTERS, LABEL_FILTERS, Set.of("withPlaceholder")), TEXT_FIELD_METHODS, FIELD_ASSERTIONS),
             ELEMENT + "TextAreaElement", new Wrapper(COMPONENT + "UnifiedTextArea",
@@ -83,7 +83,17 @@ final class DramafinderWrappers {
                     Map.of("isOpen", "isOpen", "getHeaderText", "getHeaderTitle", "closeWithEscape", "close"),
                     Map.of("assertOpen", "isOpen", "assertClosed", "isClosed", "assertHeaderText", "hasHeaderTitle")),
             ELEMENT + "GridElement", new Wrapper(COMPONENT + "UnifiedGrid", COMMON_FILTERS,
-                    Map.of("getTotalRowCount", "getRowCount"), Map.of("assertRowCount", "hasRowCount")));
+                    Map.of("getTotalRowCount", "getRowCount"), Map.of("assertRowCount", "hasRowCount"))), Map.of(
+            // a chat, on Vaadin's AI components (#357)
+            ELEMENT + "MessageInputElement", new Wrapper(COMPONENT + "UnifiedMessageInput", COMMON_FILTERS,
+                    Map.of("typeAndSubmit", "send", "isEnabled", "isEnabled", "isVisible", "isVisible"), VISIBILITY),
+            ELEMENT + "MessageListElement", new Wrapper(COMPONENT + "UnifiedMessageList", COMMON_FILTERS,
+                    same("isVisible"), with(VISIBILITY, Map.of("assertMessageCount", "hasMessageCount", "assertEmpty", "isEmpty")))))
+            .flatMap(m -> m.entrySet().stream()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    /** Elements whose {@code get(page)} finds the first one on the page: the Wrapper finds it, and a second one fails loudly. */
+    private static final Set<String> GET_FIRST = Set.of(ELEMENT + "GridElement", ELEMENT + "MessageInputElement",
+            ELEMENT + "MessageListElement");
 
     /** A grid row: what {@code grid.findRow(index).orElseThrow()} becomes, {@code grid.row(index)}. */
     static final Wrapper ROW = new Wrapper(COMPONENT + "UnifiedGrid$UnifiedGridRow", Set.of(),
@@ -141,8 +151,8 @@ final class DramafinderWrappers {
             return null;
         }
         String name = call.getSimpleName();
-        if (name.equals("get") && call.getArguments().size() == 1 && declaring.getFullyQualifiedName().endsWith("GridElement")) {
-            return new Lookup(wrapper, List.of(), null, null); // the first grid; a second one fails loudly
+        if (name.equals("get") && call.getArguments().size() == 1 && GET_FIRST.contains(declaring.getFullyQualifiedName())) {
+            return new Lookup(wrapper, List.of(), null, null); // the first one; a second one fails loudly
         }
         String filter = name.equals("getByLabel") && wrapper.simpleName().equals("UnifiedButton")
                 ? "withAccessibleName" : FACTORIES.get(name);

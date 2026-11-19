@@ -104,9 +104,11 @@ Without another adapter the migrated suite keeps running on Playwright only, as 
 | `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
 | `grid.findRowIndexesWithColumnText(0, s).get(0)` | `grid.row().withCellText(s).getIndex()`, with a Migration Marker: any column matches now |
 | `row.getCell(col).getText()`, `row.getCell("Header").assertText(s)`, `row.getCell(col).click()` | `row.getCellText(col)`, `assertThat(row).hasCellText("Header", s)`, `row.click()` with a Migration Marker |
+| `MessageInputElement.get(page).typeAndSubmit(s)` | `page.find(UnifiedMessageInput.class).send(s)` |
+| `MessageListElement.get(page)`, `assertMessageCount(n)`, `assertEmpty()` | `page.find(UnifiedMessageList.class)`, `assertThat(list).hasMessageCount(n)`, `isEmpty()` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()`, `waitForGridToStopLoading()`, `scrollToRow(i)` | removed: Auto-Wait |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog and Grid; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
+A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
 
 A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left exactly as it is: convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again.
 
