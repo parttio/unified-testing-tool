@@ -72,7 +72,7 @@ Commit or stash your work first: the recipe changes files in place.
 
 | Option | Default | Effect |
 |---|---|---|
-| `addBrowserless` | `false` | Also adds the Browserless adapter, `unified-test-browserless` |
+| `addBrowserless` | `false` | Also adds the Browserless adapter, `unified-test-browserless`, and `browserless-test-spring` in Spring Boot projects |
 | `addSelenium` | `false` | Also adds the Selenium adapter, `unified-test-selenium` |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
@@ -141,7 +141,7 @@ In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the BOM manages its version). It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
 
 ## What it leaves for you
 
@@ -173,7 +173,7 @@ Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
 ## Running on the other Testing Tools
 
-A migrated test that needs nothing Playwright-only can run on Browserless and Selenium too. Add the adapter (`addBrowserless`, `addSelenium`, or the dependency by hand) and run with `-Dvaadin.testing.tool=browserless` or `selenium`. Selenium is a real browser too, so tests that pass on Playwright usually pass there. Browserless runs in the test JVM without a browser ([limitations](spec/09-capabilities.md#limitations)); expect a few failures on the first run:
+A migrated test that needs nothing Playwright-only can run on Browserless and Selenium too. Add the adapter (`addBrowserless`, `addSelenium`, or the dependency by hand; for Browserless in a Spring Boot project, by hand also add `com.vaadin:browserless-test-spring` in test scope) and run with `-Dvaadin.testing.tool=browserless` or `selenium`. Selenium is a real browser too, so tests that pass on Playwright usually pass there. Browserless runs in the test JVM without a browser ([limitations](spec/09-capabilities.md#limitations)); expect a few failures on the first run:
 
 - "Visible" means `setVisible(true)` on the server: a component hidden by CSS counts as visible.
 - No CSS, layout or client-side JavaScript: a test that depends on them belongs on a real browser, `@RequiresBrowser`.

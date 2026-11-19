@@ -16,6 +16,9 @@
     <properties>
         <!-- 3.38.0 imports rewrite-bom 8.91.0, which is not on Maven Central -->
         <rewrite-recipe-bom.version>3.37.0</rewrite-recipe-bom.version>
+        <!-- filtered into the recipes that add browserless-test-spring; keep in step with unified-test-bom, whose
+             import, added first, manages the version, so the migrated pom gets none -->
+        <browserless-test.version>25.3.2</browserless-test.version>
     </properties>
 
     <dependencyManagement>

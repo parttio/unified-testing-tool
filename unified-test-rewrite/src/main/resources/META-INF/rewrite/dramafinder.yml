@@ -30,12 +30,33 @@ recipeList:
 type: specs.openrewrite.org/v1beta/recipe
 name: org.vaadin.addons.unified.rewrite.AddBrowserlessAdapter
 displayName: Add the Unified API's Browserless adapter
-description: Adds `unified-test-browserless` as a test dependency, to run Unified UI Tests on Browserless.
+description: >-
+  Adds `unified-test-browserless` as a test dependency, to run Unified UI Tests on Browserless, and
+  `browserless-test-spring` in Spring Boot projects, which Browserless runs of Spring tests need.
 recipeList:
   - org.openrewrite.maven.AddDependency:
       groupId: org.vaadin.addons
       artifactId: unified-test-browserless
       version: ${project.version}
+      scope: test
+  - org.vaadin.addons.unified.rewrite.AddBrowserlessSpringToSpringBootProjects
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.vaadin.addons.unified.rewrite.AddBrowserlessSpringToSpringBootProjects
+displayName: Add Browserless Test's Spring support to Spring Boot projects
+description: >-
+  Adds `browserless-test-spring` as a test dependency to projects with a direct Spring Boot dependency: a
+  `@UnifiedSpringBootTest` needs it on Browserless, and `unified-test-browserless` declares it optional.
+preconditions:
+  - org.openrewrite.maven.search.DependencyInsight:
+      groupIdPattern: org.springframework.boot
+      artifactIdPattern: "*"
+      onlyDirect: true
+recipeList:
+  - org.openrewrite.maven.AddDependency:
+      groupId: com.vaadin
+      artifactId: browserless-test-spring
+      version: ${browserless-test.version}
       scope: test
 ---
 type: specs.openrewrite.org/v1beta/recipe
