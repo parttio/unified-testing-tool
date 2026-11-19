@@ -62,6 +62,12 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   didn't say why. A test without Flow on its classpath is not checked.
 - **The Migration Recipes leave a Migration Marker at the top of `pom.xml`** on a project older than Vaadin 25.3
   ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), and migrate it all the same.
+- **The Dramafinder recipe marks the test classes it skips** ([#350](https://github.com/parttio/unified-testing-tool/issues/350)):
+  a class that uses a base class member no rule converts gets a Migration Marker above it, naming those members
+  (`not migrated: calls loginAs(..) of SpringPlaywrightIT, uses chatModel of SpringPlaywrightIT; ...`). Such a
+  class used to stay unchanged, with nothing saying why. A `setupTest()` override that seeds data and then calls
+  `super.setupTest()` no longer keeps a class from migrating: it becomes a plain `@BeforeEach`, without the
+  `super.setupTest()`, since each test now navigates itself.
 - **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
   outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
 

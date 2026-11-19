@@ -247,6 +247,48 @@ class MigrateDramafinder1Test implements RewriteTest {
     }
 
     @Test
+    void aTestUsingAFieldOfTheCopiedBaseStaysAndSaysWhy() {
+        rewriteRun(
+                pomXml(pom("2.0.2"), pom(null)),
+                java("""
+                        package com.example;
+
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                        @SpringBootTest
+                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                            protected String chatModel;
+                        }
+                        """),
+                java("""
+                        package com.example;
+
+                        import org.junit.jupiter.api.Test;
+
+                        class ChatTest extends SpringPlaywrightIT {
+                            @Test
+                            void answers() {
+                                chatModel = "stub";
+                            }
+                        }
+                        """, """
+                        package com.example;
+
+                        import org.junit.jupiter.api.Test;
+
+                        // TODO unified: not migrated: uses chatModel of SpringPlaywrightIT; convert them by hand, then run the migration again
+                        class ChatTest extends SpringPlaywrightIT {
+                            @Test
+                            void answers() {
+                                chatModel = "stub";
+                            }
+                        }
+                        """),
+                InstalledSkill.files());
+    }
+
+    @Test
     void aCopiedBaseATestStillExtendsStays() {
         rewriteRun(
                 pomXml(pom("1.2.4"), pom(null)),
@@ -256,6 +298,18 @@ class MigrateDramafinder1Test implements RewriteTest {
 
                         import org.junit.jupiter.api.Test;
 
+                        class AdminTest extends SpringPlaywrightIT {
+                            @Test
+                            void opensAsAdmin() {
+                                loginAsAdmin();
+                            }
+                        }
+                        """, """
+                        package com.example;
+
+                        import org.junit.jupiter.api.Test;
+
+                        // TODO unified: not migrated: calls loginAsAdmin() of SpringPlaywrightIT; convert them by hand, then run the migration again
                         class AdminTest extends SpringPlaywrightIT {
                             @Test
                             void opensAsAdmin() {
