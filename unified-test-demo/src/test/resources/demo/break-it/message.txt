@@ -1,0 +1,10 @@
+The user saves a name and an email and sees a confirmation
+  Failed at     User Step 3 of 3: fill text field “E-mail” with “alice@example.com”
+  Expected      exactly one text field labelled “E-mail”
+  Found         none
+  Nearby        text field “Email”, text field “Name”
+  Did you mean  find(UnifiedTextField.class).withLabel("Email")
+  Waited        10 s (vaadin.testing.timeout)
+  Tool          browserless
+  Code          ProfileViewTest.java:36 (savesName)
+  Evidence      target/surefire-reports/unified-evidence/ProfileViewTest/savesName/

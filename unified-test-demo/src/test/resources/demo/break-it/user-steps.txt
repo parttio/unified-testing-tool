@@ -1,0 +1,6 @@
+✘ ProfileViewTest › The user saves a name and an email and sees a confirmation   browserless · 3.2 s
+   1  open Profile
+   2  fill text field “Name” with “Alice”
+   3  fill text field “E-mail” with “alice@example.com”   ✘
+   ✘ UnifiedAssertionError: Expected exactly one text field labelled “E-mail”, found none
+     at ProfileViewTest.java:36 (savesName)
