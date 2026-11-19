@@ -16,6 +16,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.router.Location;
 import com.vaadin.flow.router.NavigationTrigger;
 import com.vaadin.flow.router.PreserveOnRefresh;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.AdapterSession;
@@ -303,6 +304,12 @@ final class BrowserlessSession implements AdapterSession {
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         window().getUI().navigate(view, parameters);
+        window().roundTrip();
+    }
+
+    @Override
+    public void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        window().getUI().navigate(view, parameters, query);
         window().roundTrip();
     }
 

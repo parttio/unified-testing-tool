@@ -1,6 +1,7 @@
 package com.vaadin.testing.unified.selenium;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testbench.TestBenchDriverProxy;
 import com.vaadin.testbench.TestBenchElement;
@@ -248,6 +249,11 @@ final class SeleniumSession implements AdapterSession {
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         open(RoutePaths.pathOf(view, parameters));
+    }
+
+    @Override
+    public void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        open(RoutePaths.pathOf(view, parameters, query));
     }
 
     @Override

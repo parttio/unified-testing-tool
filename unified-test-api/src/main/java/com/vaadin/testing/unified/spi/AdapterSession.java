@@ -1,8 +1,10 @@
 package com.vaadin.testing.unified.spi;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.internal.RoutePaths;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +21,15 @@ public interface AdapterSession extends AutoCloseable {
     void navigate(Class<? extends Component> view);
     void navigate(Class<? extends Component> view, Object urlParameter);
     void navigate(Class<? extends Component> view, RouteParameters parameters);
+
+    /**
+     * The view with a query string ({@code RouteParameters.empty()} when the route has none). The default opens the
+     * path the annotations give ({@link RoutePaths}), so that an adapter outside this repository keeps compiling.
+     */
+    default void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        navigate(RoutePaths.pathOf(view, parameters, query));
+    }
+
     void navigate(String path);
     void reload();
 

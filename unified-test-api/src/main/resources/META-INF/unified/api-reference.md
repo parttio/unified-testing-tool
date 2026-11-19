@@ -10,7 +10,7 @@ Every Wrapper of the Unified API with its filters, actions, reads and checks. Ge
 
 ## The page: `UnifiedPage`
 
-- **Actions:** `navigate(Class<? extends Component>)`, `navigate(Class<? extends Component>, RouteParameters)`, `navigate(Class<C>, T)`, `navigate(String)`, `pressKey(String)`, `reload()`, `screenshot(Path)`, `step(String, Runnable)`, `waitUntil(BooleanSupplier)`
+- **Actions:** `navigate(Class<? extends Component>)`, `navigate(Class<? extends Component>, QueryParameters)`, `navigate(Class<? extends Component>, RouteParameters)`, `navigate(Class<? extends Component>, RouteParameters, QueryParameters)`, `navigate(Class<C>, T)`, `navigate(String)`, `pressKey(String)`, `reload()`, `screenshot(Path)`, `step(String, Runnable)`, `waitUntil(BooleanSupplier)`
 - **Reads:** `hasRealBrowser() → boolean`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `openAsUser(String, String...) → UnifiedPage`, `openWindow() → UnifiedPage`, `secret(String) → String`, `tryUnwrap(Class<T>) → Optional<T>`, `unwrap(Class<T>) → T`
 - **Checks, `assertThat(UnifiedPage)`:** `hasNoErrors()`, `hasPath(String)`, `hasQueryParameter(String, String)`, `hasTitle(String)`, `isAt(Class<? extends Component>)`

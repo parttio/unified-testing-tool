@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.internal;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.HasUrlParameter;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
@@ -11,7 +12,6 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.List;
 import com.vaadin.testing.unified.internal.steps.Phrase;
 import com.vaadin.testing.unified.internal.steps.Phrases;
@@ -59,9 +59,27 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
-        record(() -> Phrases.open(view, parameters.getParameterNames().stream()
-                .map(name -> name + "=" + parameters.get(name).orElse(""))
-                .collect(Collectors.joining(", "))), () -> run.session().navigate(view, parameters));
+        record(() -> Phrases.open(view, named(parameters, QueryParameters.empty())),
+                () -> run.session().navigate(view, parameters));
+    }
+
+    @Override
+    public void navigate(Class<? extends Component> view, QueryParameters query) {
+        navigate(view, RouteParameters.empty(), query);
+    }
+
+    @Override
+    public void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        record(() -> Phrases.open(view, named(parameters, query)),
+                () -> run.session().navigate(view, parameters, query));
+    }
+
+    /** {@code owner=ada, week=2026-11-02}, or null for none: route parameters first, then the query's. */
+    private static String named(RouteParameters parameters, QueryParameters query) {
+        List<String> named = new java.util.ArrayList<>();
+        parameters.getParameterNames().forEach(name -> named.add(name + "=" + parameters.get(name).orElse("")));
+        query.getParameters().forEach((name, values) -> values.forEach(value -> named.add(name + "=" + value)));
+        return named.isEmpty() ? null : String.join(", ", named);
     }
 
     @Override

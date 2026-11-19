@@ -6,6 +6,8 @@ Decided in [#16](https://github.com/parttio/unified-testing-tool/issues/16).
 page.navigate(ProfileView.class);                              // recommended
 page.navigate(OrderView.class, 42L);                           // HasUrlParameter
 page.navigate(OrderView.class, new RouteParameters("id", "42"));
+page.navigate(PlanView.class, QueryParameters.of("week", "2026-11-02"));   // unreleased
+page.navigate(OrderView.class, new RouteParameters("id", "42"), QueryParameters.of("tab", "2")); // unreleased
 page.navigate("profile?tab=2");                                // path, relative to the base URL
 page.reload();
 
@@ -16,7 +18,8 @@ assertThat(page).hasTitle("Profile");                          // unreleased
 
 | Rule | Detail |
 |---|---|
-| Two forms | Route class (refactor-safe, recommended) or path. Path form covers query strings and routes registered at runtime. |
+| Two forms | Route class (refactor-safe, recommended) or path. Path form covers routes registered at runtime. |
+| Query parameters *(unreleased)* | Either form: `QueryParameters` after the route class, with or without `RouteParameters`, as Flow's `UI.navigate(..)` takes them, or a query string in the path. The User Step names them: `open Plan with “week=2026-11-02”`. |
 | Relative only | Paths are relative to the base URL. Absolute or external URLs need `@RequiresBrowser`. |
 | Returns nothing | Auto-Waits until the view is shown and the server is idle. The view instance is available only via the Escape Hatch (Browserless). |
 | Flow types | Route classes, `RouteParameters`, `QueryParameters` from `flow-server`. |
@@ -39,7 +42,9 @@ Routes registered at runtime (`RouteConfiguration`) use the path form.
 
 ## Requirements on Testing Tool adapters
 
-- Resolve route classes from `@Route` and parent layouts' `@RoutePrefix`, plus route and URL parameters.
+- Resolve route classes from `@Route` and parent layouts' `@RoutePrefix`, plus route and URL parameters, and query
+  parameters (`AdapterSession.navigate(view, parameters, query)`; its default opens the path the annotations give)
+  *(unreleased)*.
 - After navigation, wait for the target view and an idle server.
 - Read the page's title as it is now (`AdapterSession.title()`) *(unreleased)*.
 - Location and title assertions retry until the timeout.

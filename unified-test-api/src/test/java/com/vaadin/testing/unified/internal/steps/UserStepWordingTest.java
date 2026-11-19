@@ -260,6 +260,18 @@ public class UserStepWordingTest {
     static class PeopleView extends com.vaadin.flow.component.html.Div {}
 
     @Test
+    void openingAViewWithQueryParametersNamesThem() {
+        // issue #370
+        fake.page.navigate(PeopleView.class, com.vaadin.flow.router.QueryParameters.of("week", "2026-11-02"));
+        fake.page.navigate(PeopleView.class, new com.vaadin.flow.router.RouteParameters("owner", "ada"),
+                com.vaadin.flow.router.QueryParameters.of("week", "2026-11-02"));
+        fake.page.navigate(PeopleView.class, com.vaadin.flow.router.QueryParameters.empty());
+
+        assertEquals(List.of("open People with “week=2026-11-02”", "open People with “owner=ada, week=2026-11-02”",
+                "open People"), texts());
+    }
+
+    @Test
     void passwordValuesAndSecretsAreMasked() {
         fake.add("vaadin-password-field", "label", "Password")
                 .add("vaadin-text-field", "label", "API key", "value", "k-123");

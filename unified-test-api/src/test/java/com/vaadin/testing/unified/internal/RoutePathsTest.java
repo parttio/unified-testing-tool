@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.router.ParentLayout;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.router.RoutePrefix;
@@ -43,5 +44,15 @@ class RoutePathsTest {
         assertEquals("order/7/items", RoutePaths.pathOf(OrderView.class, new RouteParameters(
                 java.util.Map.of("id", "7", "tab", "items"))));
         assertEquals("order/7", RoutePaths.pathOf(OrderView.class, new RouteParameters("id", "7")));
+    }
+
+    @Test
+    void queryParameters() {
+        // issue #370: navigate(view, query) and navigate(view, parameters, query) on the browser Testing Tools
+        assertEquals("order/7?week=2026-11-02", RoutePaths.pathOf(OrderView.class, new RouteParameters("id", "7"),
+                QueryParameters.of("week", "2026-11-02")));
+        assertEquals("profile?q=a%20b", RoutePaths.pathOf(ProfileView.class, RouteParameters.empty(),
+                QueryParameters.of("q", "a b")));
+        assertEquals("profile", RoutePaths.pathOf(ProfileView.class, RouteParameters.empty(), QueryParameters.empty()));
     }
 }

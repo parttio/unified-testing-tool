@@ -71,8 +71,14 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `SpringPlaywrightIT`: each migrated test gets the copy's fields and helpers it uses, and its `@BeforeEach`,
   `@AfterEach` and `@RegisterExtension` members, as its own. A member that uses the test base where no rule
   converts it (an extension reading `page`, an override of `setupTest()`) still keeps the test from migrating.
-- **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
-  outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
+- **The Dramafinder recipe navigates by route class** ([#370](https://github.com/parttio/unified-testing-tool/issues/370)):
+  a `getView()` returning `"/plan"` now starts each test with `page.navigate(PlanView.class)`, when exactly one
+  `@Route("plan")` is among the migrated sources, where it used to write `page.navigate("/plan")`. A renamed route
+  then breaks at compile time, and the User Step reads `open Plan`. With no such view, several, or one under a
+  layout with a `@RoutePrefix`, the path stays.
+- **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()`, `title()` and
+  `navigate(view, parameters, query)`. An adapter outside this repository keeps compiling; its `hasTitle(..)` fails
+  until it implements `title()`, and its navigation with query parameters opens the path the annotations give.
 
 ## New
 
@@ -154,6 +160,13 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   ```java
   page.find(UnifiedDiv.class).withText("Shop").click();
   page.find(UnifiedContainer.class).withTestId("recipe-card").click();
+  ```
+- **Navigating by route class with query parameters** ([#370](https://github.com/parttio/unified-testing-tool/issues/370)):
+  `page.navigate(view, QueryParameters)` and `page.navigate(view, RouteParameters, QueryParameters)`, as Flow's
+  `UI.navigate(..)`, on every Testing Tool. A navigation with a query string no longer needs the path form; its User
+  Step names the parameters, `open Plan with “week=2026-11-02”`.
+  ```java
+  page.navigate(PlanView.class, QueryParameters.of("week", "2026-11-02"));
   ```
 - **Retrying assertions for a grid's columns** ([#359](https://github.com/parttio/unified-testing-tool/issues/359)):
   `assertThat(grid).hasColumn("Cooked times")`, `doesNotHaveColumn(..)` and `hasColumnHeaders(..)`, for a column
