@@ -47,7 +47,15 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         };
     }
 
-    /** Combo boxes: opens the drop-down, waits for its items, reads the loaded ones, closes it. */
+    /** The index of the first item a lazy combo box hasn't loaded yet (a placeholder), or -1. */
+    private static final String FIRST_PLACEHOLDER = "const items = arguments[0].filteredItems || [];"
+            + " return items.findIndex(i => i === undefined || i === null"
+            + " || (typeof i === 'object' && Object.keys(i).length === 0));";
+
+    /**
+     * Combo boxes: opens the drop-down, scrolls it until a lazy data provider has loaded every page (as
+     * Dramafinder does), reads the items, closes it.
+     */
     @Override
     public List<String> items() {
         if (kind == Kind.RADIO_BUTTON_GROUP) {
@@ -61,12 +69,27 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         }
         try {
             waitUntil("const c = arguments[0]; return c.opened && !c.loading;");
+            loadEveryPage();
             return strings("const c = arguments[0]; return (c.filteredItems || [])"
                     + ".filter(i => i && i[c.itemLabelPath] !== undefined).map(i => String(i[c.itemLabelPath]));");
         } finally {
             if (!wasOpen) {
                 session.js("arguments[0].opened = false;", element);
             }
+        }
+    }
+
+    /** A lazy combo box loads items a page at a time as its drop-down scrolls: scroll to each missing page. */
+    private void loadEveryPage() {
+        long deadline = System.nanoTime() + session.timeout().toNanos();
+        for (Object index = session.js(FIRST_PLACEHOLDER, element); ((Number) index).intValue() >= 0;
+                index = session.js(FIRST_PLACEHOLDER, element)) {
+            if (System.nanoTime() > deadline) {
+                throw new IllegalStateException("Timed out waiting for the drop-down's items");
+            }
+            session.js("arguments[0]._scroller.scrollIntoView(arguments[1]);", element, index);
+            session.waitForVaadin();
+            waitUntil("return !arguments[0].loading;");
         }
     }
 
