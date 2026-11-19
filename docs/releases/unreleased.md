@@ -193,6 +193,9 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Vaadin BOM: a project on the old standalone add-on, 1.1.2, ended up with it beside Browserless 25
   ([#354](https://github.com/parttio/unified-testing-tool/issues/354)). The Browserless, TestBench and Dramafinder
   recipes now remove it when the project's Vaadin BOM manages the version.
+- The documented migration commands ran whichever OpenRewrite plugin was newest. They now name the versions the
+  recipes are tested against, 6.46.1 for Maven and 7.39.0 for Gradle
+  ([#355](https://github.com/parttio/unified-testing-tool/issues/355)).
 
 ## Known limitations
 
