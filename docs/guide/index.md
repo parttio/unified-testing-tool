@@ -66,6 +66,7 @@ Then, when you need more:
 - [When a test needs one Testing Tool](tool-specific.md): the Escape Hatch, `@RequiresBrowser`, `@RequiresTestingTool`.
 - [Wrappers for your own components](custom-wrappers.md): add-ons, custom components, custom filters.
 - [Checking the style](style-rules.md): scenario sentences, no raw waits and `@RequiresTestingTool`, checked by a test.
+- [Configuration](configuration.md): every setting, from the Testing Tool and the timeout to the reports and each Testing Tool's browser.
 
 ## Rules of thumb
 

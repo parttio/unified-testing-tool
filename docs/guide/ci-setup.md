@@ -189,4 +189,4 @@ In a multibranch pipeline building a pull request, Jenkins sets `CHANGE_TARGET` 
 | `vaadin.testing.playwright.trace` | `off`; `on-failure` keeps the trace of failed tests as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 
-All settings: [Reading reports and failures](reports-and-failures.md#settings) and [2. Test setup](../spec/02-test-setup.md).
+All settings: [Configuration](configuration.md), [Reading reports and failures](reports-and-failures.md#settings) and [2. Test setup](../spec/02-test-setup.md).
