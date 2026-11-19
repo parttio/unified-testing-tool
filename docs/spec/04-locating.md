@@ -100,6 +100,8 @@ address.find(UnifiedTextField.class).withLabel("City").setValue("Turku");
 
 A lookup inside a scope finds the scope again first, on every use: a missing scope fails with Near Misses for the scope.
 
+It searches what the scope holds, not the scope itself: `dialog.find(UnifiedDialog.class)` finds a dialog inside the dialog, never the dialog. A part whose component is its content (a grid cell, a column header, `UnifiedDetails.content()`, `UnifiedTabSheet.content()`) finds that component, as a browser finds it in the cell or panel that holds it.
+
 Components created by renderers (e.g. Grid cells) and the content of closed overlays are reached through their **owning Wrapper** on every Testing Tool ([7. Grid](07-grid.md)).
 
 ## Components without a Wrapper

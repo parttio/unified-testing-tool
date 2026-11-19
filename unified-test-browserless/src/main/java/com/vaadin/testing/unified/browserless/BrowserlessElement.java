@@ -23,22 +23,47 @@ final class BrowserlessElement implements UnifiedElement {
     private final Component component;
     private final BrowserlessComponents.Support support;
     private final List<Component> scopeRoots;
+    private final boolean rootsIncluded;
 
+    /**
+     * A part whose component is its own content, such as a grid cell's renderer component or a tab sheet's
+     * selected content: a search inside it can find the component itself, as a browser finds it inside the
+     * cell or the panel that holds it.
+     */
     BrowserlessElement(BrowserlessSession session, Component component) {
-        this(session, component, List.of(component));
+        this(session, component, List.of(component), true);
     }
 
-    /** An element whose scope is several components (e.g. a grid column's header cells). */
+    /** A part whose content is several components (a grid column's header cells, a Details' content). */
     BrowserlessElement(BrowserlessSession session, Component component, List<Component> scopeRoots) {
+        this(session, component, scopeRoots, true);
+    }
+
+    private BrowserlessElement(BrowserlessSession session, Component component, List<Component> scopeRoots,
+            boolean rootsIncluded) {
         this.session = session;
         this.component = component;
         this.support = BrowserlessComponents.of(component.getClass());
         this.scopeRoots = scopeRoots;
+        this.rootsIncluded = rootsIncluded;
+    }
+
+    /**
+     * A component a lookup found: a search inside it finds its descendants only, not the component itself, as
+     * in a browser ({@code dialog.find(UnifiedDialog.class)} finds no dialog).
+     */
+    static BrowserlessElement found(BrowserlessSession session, Component component) {
+        return new BrowserlessElement(session, component, List.of(component), false);
     }
 
     /** Where queries scoped to this element search: these components and their descendants. */
     List<Component> scopeRoots() {
         return scopeRoots;
+    }
+
+    /** Whether a query scoped to this element can match its {@link #scopeRoots()} themselves. */
+    boolean rootsIncluded() {
+        return rootsIncluded;
     }
 
     Component component() {
@@ -190,7 +215,7 @@ final class BrowserlessElement implements UnifiedElement {
     }
 
     private UnifiedElement toUnified(Element e) {
-        return new BrowserlessElement(session, e.getComponent().orElseGet(() -> new PlainElement(e)));
+        return found(session, e.getComponent().orElseGet(() -> new PlainElement(e)));
     }
 
     /** A component for an element that has none; no tag of its own, it takes the element's. */
@@ -204,7 +229,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void setProperty(String name, Object value) {
-        session.act(() -> {
+        session.act(component, () -> {
             if (value instanceof Boolean b) {
                 element().setProperty(name, b);
             } else if (value instanceof Number n) {
@@ -218,7 +243,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void click() {
-        session.act(() -> {
+        session.act(component, () -> {
             if (tester().getClass() != ComponentTester.class && hasTesterMethod("click", 0)) {
                 invokeTester("click"); // a component's own tester (Button, ...): its usability checks
             } else {
@@ -231,7 +256,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void setValueAsUser(Object value) {
-        session.act(() -> {
+        session.act(component, () -> {
             if (support.setValue(component, value, session.window())) {
                 session.window().roundTrip();
                 return;
@@ -259,7 +284,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void focus() {
-        session.act(() -> {
+        session.act(component, () -> {
             if (component instanceof Focusable<?> focusable) {
                 focusable.focus();
             }
@@ -269,7 +294,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void blur() {
-        session.act(() -> {
+        session.act(component, () -> {
             if (component instanceof Focusable<?> focusable) {
                 focusable.blur();
             }
@@ -279,7 +304,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void pressKey(String key) {
-        session.act(() -> {
+        session.act(component, () -> {
             pressKey(session, component, key);
         });
     }
@@ -294,7 +319,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void dispatchEvent(String eventName) {
-        session.act(() -> {
+        session.act(component, () -> {
             BrowserlessKeys.dispatch(component, eventName);
             session.window().roundTrip();
         });

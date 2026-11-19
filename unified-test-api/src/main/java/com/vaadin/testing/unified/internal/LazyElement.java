@@ -104,12 +104,18 @@ public final class LazyElement implements UnifiedElement {
         run.steps().action(phrase, run.window(), () -> StaleRetry.call(run, () -> {
             UnifiedElement element = run.pollFor(() -> {
                 UnifiedElement e = concrete();
-                return e.isVisible() && e.isEnabled() ? e : null;
+                return usable(e) ? e : null;
             }, () -> LookupFailures.notUsable(this));
             body.accept(element);
             run.session().settle();
             return null;
         }));
+    }
+
+    /** Auto-Wait's check: visible and enabled, in one read where the adapter offers it (#402). */
+    private static boolean usable(UnifiedElement e) {
+        return e instanceof com.vaadin.testing.unified.spi.UsabilityCheck check ? check.isVisibleAndEnabled()
+                : e.isVisible() && e.isEnabled();
     }
 
     /** Reads from the element, finding it again if it went stale meanwhile; counted as a read by the reports. */

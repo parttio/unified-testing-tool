@@ -97,13 +97,13 @@ jobs:
           cache: maven
       - name: Compile
         run: mvn -B -ntp test-compile
-      # the browser and the libraries it needs on the runner
-      - name: Install Chromium for Playwright
+      # the libraries the browser needs on the runner; the run downloads the browser itself
+      - name: Install the libraries Chromium needs
         run: >
           mvn -B -ntp exec:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
-          -Dexec.args="install --with-deps chromium"
+          -Dexec.args="install-deps chromium"
       # a failed test keeps Playwright's trace, grouped by User Step
       - name: Tests on Playwright
         run: >
@@ -157,6 +157,64 @@ With a job per Testing Tool, the jobs run side by side and none has another's ev
 It needs `actions: read`, and the evidence artifacts named as above (`unified-evidence-<tool>`). The job's summary page then says, for each Testing Tool against Browserless, which scenarios pass on one and fail on the other, which take different User Steps and where they part, and whether both runs tested the same commit ([what it says](reports-and-failures.md#compared-with-another-testing-tool)). It reports and fails nothing: exit code 2 means fewer than two Testing Tools left evidence, which the jobs before it already show.
 
 On another CI server the command is the same: give it the evidence directories the jobs kept.
+
+### Both Testing Tools in one build
+
+The jobs above run the tests once each. To run them on two Testing Tools in one `mvn verify`, give the plugin an execution per Testing Tool, and give each execution its own directories. Executions share the defaults, so without them the second execution silently overwrites the first's reports, its `summary.md` and `report.html`, and Failsafe's summary, and `verify` then checks only the last Testing Tool:
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-failsafe-plugin</artifactId>
+    <executions>
+        <!-- spring-boot-starter-parent declares this one: without it, the tests run a third time, on Browserless -->
+        <execution>
+            <id>default</id>
+            <configuration>
+                <skip>true</skip>
+            </configuration>
+        </execution>
+        <execution>
+            <id>it-browserless</id>
+            <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+            </goals>
+            <configuration>
+                <reportsDirectory>${project.build.directory}/failsafe-reports/browserless</reportsDirectory>
+                <summaryFile>${project.build.directory}/failsafe-reports/browserless/failsafe-summary.xml</summaryFile>
+                <systemPropertyVariables>
+                    <vaadin.testing.tool>browserless</vaadin.testing.tool>
+                    <vaadin.testing.evidence-dir>${project.build.directory}/failsafe-reports/browserless/unified-evidence</vaadin.testing.evidence-dir>
+                </systemPropertyVariables>
+            </configuration>
+        </execution>
+        <execution>
+            <id>it-playwright</id>
+            <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+            </goals>
+            <configuration>
+                <reportsDirectory>${project.build.directory}/failsafe-reports/playwright</reportsDirectory>
+                <summaryFile>${project.build.directory}/failsafe-reports/playwright/failsafe-summary.xml</summaryFile>
+                <systemPropertyVariables>
+                    <vaadin.testing.tool>playwright</vaadin.testing.tool>
+                    <vaadin.testing.evidence-dir>${project.build.directory}/failsafe-reports/playwright/unified-evidence</vaadin.testing.evidence-dir>
+                    <!-- unreleased: the run before this one, for "Compared with Browserless" in this run's summary -->
+                    <vaadin.testing.user-steps.compare-dir>${project.build.directory}/failsafe-reports/browserless/unified-evidence</vaadin.testing.user-steps.compare-dir>
+                </systemPropertyVariables>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+- **Three settings per execution.** `reportsDirectory` and `summaryFile` are Failsafe's; `vaadin.testing.evidence-dir` is the Unified API's. Each `verify` goal reads its own execution's summary, so a failure on either Testing Tool fails the build.
+- **The parent's execution.** `spring-boot-starter-parent` binds Failsafe with an execution of its own, `default`, which runs the tests on the default Testing Tool, Browserless. Skip it as above. Without that parent there is no `default` execution to skip.
+- **The comparison.** Executions bound to the same phase run in the order of the POM, so the second can read the first's evidence: its `summary.md` gets [Compared with Browserless](reports-and-failures.md#compared-with-another-testing-tool) *(unreleased)*, with no `CompareRuns` job.
+- **CI.** Upload `target/failsafe-reports/*/unified-evidence/`. On GitHub Actions each run adds its own block, headed with its Testing Tool, to the job summary.
+- **Surefire** (tests named `*Test`) is the same with `maven-surefire-plugin`: its own execution is `default-test`, give it the first Testing Tool's settings, and it has no `summaryFile`.
 
 ### Selenium (TestBench)
 

@@ -38,6 +38,17 @@ class NavigationTest {
     }
     // --8<-- [end:navigatesByPathWithQuery]
 
+    /** The title comes from the view's @PageTitle; the page's title is read on every Testing Tool. */
+    @Test
+    @DisplayName("The profile has its title once the user goes there from the home view")
+    void showsTheViewsTitle(UnifiedPage page) {
+        page.navigate(HomeView.class);
+
+        page.find(UnifiedButton.class).withText("Go to profile").click();
+
+        assertThat(page).isAt(ProfileView.class).hasTitle("Profile");
+    }
+
     /** A RouterLink navigates on the client only; isAt still sees the new location. */
     @Test
     @DisplayName("The user follows the Reports link from the home view")

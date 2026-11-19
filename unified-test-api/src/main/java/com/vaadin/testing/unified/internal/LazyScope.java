@@ -20,6 +20,11 @@ public record LazyScope(LazyElement element) implements Scope {
     }
 
     @Override
+    public String describe() {
+        return FindableView.ofScope(element);
+    }
+
+    @Override
     public String toString() {
         return element.describe();
     }

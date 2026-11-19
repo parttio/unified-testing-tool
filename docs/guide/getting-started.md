@@ -1,6 +1,6 @@
 # Getting started
 
-From a Vaadin Flow application to a Unified UI Test that passes on Browserless and in a browser. You need Java 21, Maven, Vaadin 25.3 or later, and JUnit 6 (Jupiter).
+From a Vaadin Flow application to a Unified UI Test that passes on Browserless and in a browser. You need Java 21, Maven, Vaadin 25.3 or later, JUnit 6 (Jupiter) and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the tests fail when they run.
 
 ## 1. Add the dependencies
 

@@ -43,6 +43,11 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
+    public String describe() {
+        return FindableView.ofPage(run);
+    }
+
+    @Override
     public void navigate(Class<? extends Component> view) {
         record(() -> Phrases.open(view, null), () -> run.session().navigate(view));
     }

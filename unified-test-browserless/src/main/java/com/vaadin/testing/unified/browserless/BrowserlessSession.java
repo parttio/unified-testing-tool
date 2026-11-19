@@ -6,7 +6,10 @@ import com.vaadin.browserless.BrowserlessUserContext;
 import com.vaadin.browserless.SecuredBrowserlessApplicationContext;
 import java.util.ArrayList;
 import com.vaadin.flow.component.Component;
+import com.vaadin.browserless.internal.PrettyPrintTree;
 import com.vaadin.browserless.internal.PrettyPrintTreeKt;
+import com.vaadin.browserless.internal.TestingLifecycleHookKt;
+import com.vaadin.testing.unified.internal.steps.TreePage;
 import com.vaadin.flow.component.UI;
 import java.nio.file.Files;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -39,6 +42,8 @@ final class BrowserlessSession implements AdapterSession {
     private final boolean ownsApp;
     private final List<BrowserlessSession> children = new ArrayList<>();
     private boolean routeErrorsToSession;
+    /** The component the current User Step acts on: set by an action, cleared by the next lookup or snapshot. */
+    private Component target;
 
     /** The test's own page: owns the app and the user. */
     BrowserlessSession(BrowserlessApplicationContext app, BrowserlessUserContext user) {
@@ -97,6 +102,12 @@ final class BrowserlessSession implements AdapterSession {
      * Test itself (a component that isn't usable) are always thrown.
      */
     void act(Runnable action) {
+        act(null, action);
+    }
+
+    /** {@link #act(Runnable)} on a component, which the step's snapshot and failure evidence then mark. */
+    void act(Component on, Runnable action) {
+        target = on;
         try {
             action.run();
         } catch (RuntimeException e) {
@@ -129,18 +140,27 @@ final class BrowserlessSession implements AdapterSession {
      */
     @Override
     public List<UnifiedElement> find(QuerySpec spec) {
-        List<Component> roots = spec.parent() == null ? List.of(window().getUI())
-                : ((BrowserlessElement) spec.parent()).scopeRoots();
+        target = null; // a new lookup: a new step, or one that has not acted yet
+        BrowserlessElement parent = (BrowserlessElement) spec.parent();
+        List<Component> roots = parent == null ? List.of(window().getUI()) : parent.scopeRoots();
+        // as Browserless Test does before a lookup: run the UI's pending access() tasks (one round trip)
+        com.vaadin.browserless.internal.TestingLifecycleHook hook =
+                com.vaadin.browserless.internal.TestingLifecycleHookKt.getTestingLifecycleHook();
+        hook.awaitBeforeLookup();
         java.util.Set<Component> found = new java.util.LinkedHashSet<>();
+        java.util.Set<com.vaadin.flow.component.grid.Grid<?>> grids = new java.util.LinkedHashSet<>();
+        // one walk per root finds the matches and the Grids under it (#401)
         for (Component root : roots) {
-            found.addAll(findIn(root, spec, spec.parent() != null));
+            found.addAll(findIn(root, spec, parent != null && parent.rootsIncluded(), grids));
         }
         // a Grid's cell components are not in the component tree: add those the grid rendered for the client,
-        // as a browser has them in the page
-        for (Component cell : renderedGridCells(roots)) {
-            found.addAll(findIn(cell, spec, true));
+        // as a browser has them in the page, and those of Grids inside them
+        java.util.Set<com.vaadin.flow.component.grid.Grid<?>> seen = new java.util.HashSet<>(grids);
+        for (com.vaadin.flow.component.grid.Grid<?> grid : grids) {
+            addRenderedCells(grid, spec, found, seen);
         }
-        return found.stream().map(c -> (UnifiedElement) new BrowserlessElement(this, c)).toList();
+        hook.awaitAfterLookup();
+        return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
     }
 
     /** In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id. */
@@ -178,14 +198,23 @@ final class BrowserlessSession implements AdapterSession {
                         .findFirst().map(l -> com.vaadin.testing.unified.internal.BrowserQueries.normalize(l.getTextRecursively())).orElse(null);
     }
 
-    /** Matching components under {@code root}, and {@code root} itself when {@code includeRoot}. */
-    private List<Component> findIn(Component root, QuerySpec spec, boolean includeRoot) {
+    /**
+     * Matching components under {@code root}, and {@code root} itself when {@code includeRoot}, in one walk that
+     * also adds to {@code grids} the Grids it passes: {@code root} if it is one, and the visible ones under it, as
+     * Browserless Test's own query finds them.
+     */
+    private List<Component> findIn(Component root, QuerySpec spec, boolean includeRoot,
+            java.util.Set<com.vaadin.flow.component.grid.Grid<?>> grids) {
         BrowserlessComponents.Support support = BrowserlessComponents.of(spec.componentType());
         List<Component> found = new ArrayList<>();
         for (Component c : com.vaadin.browserless.internal.LocatorKt._walkAll(root)) {
             if ((c != root || includeRoot) && spec.componentType().isInstance(c) && support.include(c)
                     && spec.filters().stream().allMatch(f -> matches(c, f))) {
                 found.add(c);
+            }
+            if (c instanceof com.vaadin.flow.component.grid.Grid<?> grid
+                    && (c == root || com.vaadin.browserless.internal.BasicUtilsKt.isEffectivelyVisible(c))) {
+                grids.add(grid);
             }
         }
         return found;
@@ -216,48 +245,42 @@ final class BrowserlessSession implements AdapterSession {
     private static final int GRID_ROWS_CHECKED = 500;
 
     /**
-     * The components that Grids under {@code roots} have rendered for the rows the client has, in their
-     * component columns: what a browser has in the page. Grids inside those components count too.
+     * Adds to {@code found} the matches among the components {@code grid} has rendered for the rows the client
+     * has, in its component columns (what a browser has in the page), then those of Grids inside them.
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private List<Component> renderedGridCells(List<Component> roots) {
-        List<Component> cells = new ArrayList<>();
-        java.util.Set<com.vaadin.flow.component.grid.Grid> grids = new java.util.LinkedHashSet<>();
-        for (Component root : roots) {
-            if (root instanceof com.vaadin.flow.component.grid.Grid grid) {
-                grids.add(grid);
-            }
-            grids.addAll(window().find(com.vaadin.flow.component.grid.Grid.class, root).all());
+    private void addRenderedCells(com.vaadin.flow.component.grid.Grid<?> grid, QuerySpec spec,
+            java.util.Set<Component> found, java.util.Set<com.vaadin.flow.component.grid.Grid<?>> seen) {
+        List<com.vaadin.flow.component.grid.Grid.Column<?>> columns = (List) grid.getColumns().stream()
+                .filter(c -> c.isVisible() && c.getRenderer() instanceof com.vaadin.flow.data.renderer.ComponentRenderer)
+                .toList();
+        if (columns.isEmpty()) {
+            return;
         }
-        for (com.vaadin.flow.component.grid.Grid<?> grid : grids) {
-            List<com.vaadin.flow.component.grid.Grid.Column<?>> columns = (List) grid.getColumns().stream()
-                    .filter(c -> c.isVisible() && c.getRenderer() instanceof com.vaadin.flow.data.renderer.ComponentRenderer)
-                    .toList();
-            if (columns.isEmpty()) {
+        com.vaadin.flow.data.provider.DataCommunicator<Object> communicator =
+                (com.vaadin.flow.data.provider.DataCommunicator<Object>) grid.getDataCommunicator();
+        com.vaadin.flow.component.grid.GridTester<?, Object> tester =
+                (com.vaadin.flow.component.grid.GridTester<?, Object>) (Object) window().test(grid);
+        int size = Math.min(tester.size(), GRID_ROWS_CHECKED);
+        for (int row = 0; row < size; row++) {
+            Object item = tester.getRow(row);
+            if (!communicator.isItemActive(item)) {
                 continue;
             }
-            com.vaadin.flow.data.provider.DataCommunicator<Object> communicator =
-                    (com.vaadin.flow.data.provider.DataCommunicator<Object>) grid.getDataCommunicator();
-            com.vaadin.flow.component.grid.GridTester<?, Object> tester =
-                    (com.vaadin.flow.component.grid.GridTester<?, Object>) (Object) window().test(grid);
-            int size = Math.min(tester.size(), GRID_ROWS_CHECKED);
-            for (int row = 0; row < size; row++) {
-                Object item = tester.getRow(row);
-                if (!communicator.isItemActive(item)) {
-                    continue;
-                }
-                String key = communicator.getKeyMapper().key(item);
-                for (com.vaadin.flow.component.grid.Grid.Column<?> column : columns) {
-                    Component cell = com.vaadin.browserless.internal.RenderedComponentSupport
-                            .getRenderedComponent(column, key);
-                    if (cell != null) {
-                        cells.add(cell);
-                        cells.addAll(renderedGridCells(List.of(cell)));
+            String key = communicator.getKeyMapper().key(item);
+            for (com.vaadin.flow.component.grid.Grid.Column<?> column : columns) {
+                Component cell = com.vaadin.browserless.internal.RenderedComponentSupport.getRenderedComponent(column, key);
+                if (cell != null) {
+                    java.util.Set<com.vaadin.flow.component.grid.Grid<?>> inner = new java.util.LinkedHashSet<>();
+                    found.addAll(findIn(cell, spec, true, inner));
+                    for (com.vaadin.flow.component.grid.Grid<?> nested : inner) {
+                        if (seen.add(nested)) {
+                            addRenderedCells(nested, spec, found, seen);
+                        }
                     }
                 }
             }
         }
-        return cells;
     }
 
     // ---------------------------------------------------------------- navigation
@@ -326,6 +349,13 @@ final class BrowserlessSession implements AdapterSession {
         return values == null || values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
     }
 
+    /** The title the UI last set; Flow keeps it on the server as it sends it to the browser. */
+    @Override
+    public String title() {
+        String title = window().getUI().getInternals().getTitle();
+        return title == null ? "" : title;
+    }
+
     private Location activeLocation() {
         return window().getUI().getInternals().getActiveViewLocation();
     }
@@ -357,17 +387,34 @@ final class BrowserlessSession implements AdapterSession {
     /** The component tree after the step: Browserless has no screenshot, and the tree is cheap. */
     @Override
     public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
-        return writeTree(directory, name);
+        try {
+            return writeTree(directory, name);
+        } finally {
+            target = null;
+        }
     }
 
     private List<Path> writeTree(Path directory, String name) throws java.io.IOException {
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".tree.txt");
         Location location = activeLocation();
-        String tree = maskPasswords(PrettyPrintTreeKt.toPrettyTree(window().getUI()));
+        String tree = maskPasswords(tree(window().getUI(), target).print());
         Files.writeString(file, "Location: /" + (location == null ? "" : location.getPathWithQueryParameters())
                 + "\n\n" + tree);
         return List.of(file);
+    }
+
+    /**
+     * Karibu's pretty tree ({@code PrettyPrintTreeKt.toPrettyTree}), built the same way, with the component the
+     * step acted on marked at the end of its line ({@link TreePage#TARGET_MARK}).
+     */
+    static PrettyPrintTree tree(Component component, Component target) {
+        List<PrettyPrintTree> children = new ArrayList<>();
+        for (Component child : TestingLifecycleHookKt.getTestingLifecycleHook().getAllChildren(component)) {
+            children.add(tree(child, target));
+        }
+        String line = PrettyPrintTreeKt.toPrettyString(component);
+        return new PrettyPrintTree(component == target ? line + TreePage.TARGET_MARK : line, children);
     }
 
     /** A password field's value shows as the reports show it: {@code ••••}. */

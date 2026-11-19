@@ -8,6 +8,7 @@ import com.vaadin.testing.unified.internal.steps.Revision;
 import com.vaadin.testing.unified.internal.steps.RunSummary;
 import com.vaadin.testing.unified.internal.steps.RunSummaryJson;
 import com.vaadin.testing.unified.internal.steps.ScenarioResult;
+import com.vaadin.testing.unified.internal.steps.TreePage;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -96,6 +97,7 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         Files.createDirectories(evidenceDir);
         Files.writeString(file, markdown, StandardCharsets.UTF_8);
         List<String> rootFiles = rootFiles(evidenceDir);
+        scenarios.forEach(s -> treePages(evidenceDir, rootFiles, s));
         Function<ScenarioResult, List<String>> evidence = s -> evidence(evidenceDir, rootFiles, s);
         Files.writeString(evidenceDir.resolve(RunReport.FILE), new RunReport(summary, evidence).html(),
                 StandardCharsets.UTF_8);
@@ -210,6 +212,46 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         } catch (IOException e) {
             return false;
         }
+    }
+
+    /**
+     * A readable page beside each of the scenario's component trees ({@code .tree.txt}: Browserless's snapshots and
+     * failure evidence), for the report to show; a tree whose page can't be written keeps its text only.
+     */
+    private void treePages(Path evidenceDir, List<String> rootFiles, ScenarioResult scenario) {
+        List<Path> trees = new ArrayList<>();
+        failureEvidence(rootFiles, scenario).stream().filter(TreePage::isTree).map(evidenceDir::resolve)
+                .forEach(trees::add);
+        Path scenarioDir = Path.of(scenario.evidencePath());
+        snapshots(scenario.steps()).stream().filter(TreePage::isTree).map(scenarioDir::resolve).forEach(trees::add);
+        for (Path tree : trees) {
+            try {
+                if (Files.isRegularFile(tree)) {
+                    TreePage.writeBeside(tree);
+                }
+            } catch (IOException | RuntimeException e) {
+                log.accept("no readable page for " + tree + " (" + e.getMessage() + ")");
+            }
+        }
+    }
+
+    /** The steps' snapshots, groups' steps included, as paths relative to the scenario's evidence directory. */
+    private static List<String> snapshots(List<Map<String, Object>> entries) {
+        List<String> files = new ArrayList<>();
+        for (Map<String, Object> entry : entries) {
+            if (entry.get("snapshot") instanceof String snapshot) {
+                files.add(snapshot);
+            }
+            if (entry.get("steps") instanceof List<?> steps) {
+                files.addAll(snapshots(steps.stream().filter(Map.class::isInstance)
+                        .map(m -> {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> step = (Map<String, Object>) m;
+                            return step;
+                        }).toList()));
+            }
+        }
+        return files;
     }
 
     /** The file names at the evidence directory's root, sorted: where failure evidence is written. */

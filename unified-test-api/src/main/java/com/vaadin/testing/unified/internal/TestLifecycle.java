@@ -16,6 +16,7 @@ import java.lang.annotation.Inherited;
 import java.lang.reflect.AnnotatedElement;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -73,8 +74,11 @@ public final class TestLifecycle {
     /**
      * Whether the test runs on this run's Testing Tool, from its Capabilities ({@link RequiresTestingTool},
      * {@link RequiresBrowser}) on {@code element} (a test method or class) or else on {@code testClass}.
+     * Throws {@link IllegalStateException} when the test's Vaadin is older than the Unified API needs: this runs
+     * before anything else of the test, a Spring context included, so that failure comes first.
      */
     public Decision decide(AnnotatedElement element, Class<?> testClass) {
+        VaadinVersionCheck.check();
         TestingTool tool = settings.tool();
         Optional<RequiresTestingTool> requiredTool = find(element, testClass, RequiresTestingTool.class);
         if (requiredTool.isPresent() && Arrays.stream(requiredTool.get().value()).noneMatch(t -> t == tool)) {
@@ -219,16 +223,27 @@ public final class TestLifecycle {
             }
         }
 
+        /** The Testing Tool's evidence, then the Findable View, each written even when the other can't be. */
         private List<Path> writeEvidence(Throwable failure, String name) {
+            List<Path> files = new ArrayList<>();
             try {
-                List<Path> files = session.writeFailureEvidence(settings.evidenceDir(), name);
-                if (!files.isEmpty()) {
-                    failure.addSuppressed(new FailureEvidence("Failure evidence: " + describe(files)));
-                }
-                return files;
+                files.addAll(session.writeFailureEvidence(settings.evidenceDir(), name));
             } catch (Exception | LinkageError e) {
                 failure.addSuppressed(new FailureEvidence("Failure evidence could not be written: " + e));
-                return List.of();
+            }
+            findableView(name).ifPresent(files::add);
+            if (!files.isEmpty()) {
+                failure.addSuppressed(new FailureEvidence("Failure evidence: " + describe(files)));
+            }
+            return List.copyOf(files);
+        }
+
+        /** The Findable View of the test's first window, {@code <name>.view.txt}; none if it can't be read. */
+        private Optional<Path> findableView(String name) {
+            try {
+                return Optional.of(FindableView.write(((UnifiedPageImpl) page).run(), settings.evidenceDir(), name));
+            } catch (Exception | LinkageError e) {
+                return Optional.empty();
             }
         }
     }

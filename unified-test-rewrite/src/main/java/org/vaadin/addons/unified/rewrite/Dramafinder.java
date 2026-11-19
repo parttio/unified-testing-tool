@@ -1,5 +1,10 @@
 package org.vaadin.addons.unified.rewrite;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -127,49 +132,125 @@ final class Dramafinder {
     /**
      * Whether the recipes can migrate the class: it uses no base class member they don't convert. A test that
      * calls {@code loginAs(..)}, overrides {@code prepareBrowserContext(..)} or computes its view is left as it is.
+     * Members of a project's copy of {@code SpringPlaywrightIT} count as the test's own when the copy is among
+     * {@code copies} ({@link DramafinderCopies}).
      */
-    static boolean migratable(J.ClassDeclaration c) {
-        for (Statement s : c.getBody().getStatements()) {
-            if (s instanceof J.MethodDeclaration m && overridesBase(c, m)
-                    && !(CONVERTED_OVERRIDES.contains(m.getSimpleName()) && (m.getSimpleName().equals("getUrl")
-                            || viewOf(c) != null))) {
-                return false;
-            }
-        }
-        AtomicBoolean ok = new AtomicBoolean(true);
-        new JavaIsoVisitor<Integer>() {
-            @Override
-            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, Integer p) {
-                if (isBaseCall(m) && !CONVERTED_CALLS.contains(m.getSimpleName())) {
-                    ok.set(false);
-                }
-                return super.visitMethodInvocation(m, p);
-            }
-
-            @Override
-            public J.Identifier visitIdentifier(J.Identifier id, Integer p) {
-                // a base class field other than page (the page itself the Escape Hatch replaces)
-                if (id.getFieldType() != null && isBaseType(id.getFieldType().getOwner()) && !id.getSimpleName().equals("page")) {
-                    ok.set(false);
-                }
-                return id;
-            }
-        }.visit(c.getBody(), 0);
-        return ok.get();
+    static boolean migratable(J.ClassDeclaration c, Map<String, J.ClassDeclaration> copies) {
+        return blockers(c, copies).isEmpty();
     }
 
-    private static boolean overridesBase(J.ClassDeclaration c, J.MethodDeclaration m) {
-        if (m.getMethodType() == null || m.hasModifier(J.Modifier.Type.Static)) {
+    /**
+     * What keeps the recipes from migrating the class, one phrase per base class member they don't convert
+     * ({@code calls loginAs(..) of SpringPlaywrightIT}); empty when they can migrate it.
+     */
+    static List<String> blockers(J.ClassDeclaration c, Map<String, J.ClassDeclaration> copies) {
+        DramafinderCopies.Merged merged = DramafinderCopies.merge(c, copies);
+        Set<String> blockers = new LinkedHashSet<>(merged.blockers());
+        blockers.addAll(ownBlockers(merged.c(), merged.inlined()));
+        return new ArrayList<>(blockers);
+    }
+
+    /** The blockers of a class whose given members came from its copied base class, each saying where. */
+    private static List<String> ownBlockers(J.ClassDeclaration c, Map<java.util.UUID, String> inlined) {
+        Set<String> blockers = new LinkedHashSet<>();
+        Set<java.util.UUID> seedingSuperCalls = new HashSet<>();
+        Set<String> overridden = new HashSet<>(); // super.x() in an override of x(): the override says it
+        for (Statement s : c.getBody().getStatements()) {
+            if (!(s instanceof J.MethodDeclaration m)) {
+                continue;
+            }
+            overridden.add(m.getSimpleName());
+            if (isSeedingSetup(m)) {
+                List<Statement> body = m.getBody().getStatements();
+                seedingSuperCalls.add(body.get(body.size() - 1).getId());
+                continue;
+            }
+            String owner = inlined.containsKey(m.getId()) ? null : overriddenBaseOf(c, m);
+            if (owner == null || m.getSimpleName().equals("getUrl")
+                    || m.getSimpleName().equals("getView") && viewOf(c) != null) {
+                continue;
+            }
+            blockers.add(m.getSimpleName().equals("getView") ? "getView() returns no string literal"
+                    : "overrides " + m.getSimpleName() + (m.getParameters().stream().allMatch(p -> p instanceof J.Empty)
+                            ? "()" : "(..)") + " of " + owner);
+        }
+        for (Statement s : c.getBody().getStatements()) {
+            String where = inlined.containsKey(s.getId()) ? " in " + inlined.get(s.getId()) : "";
+            new JavaIsoVisitor<Integer>() {
+                @Override
+                public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, Integer p) {
+                    boolean superOfOverride = m.getSelect() instanceof J.Identifier sel && sel.getSimpleName().equals("super")
+                            && overridden.contains(m.getSimpleName());
+                    if (isBaseCall(m) && !CONVERTED_CALLS.contains(m.getSimpleName()) && !seedingSuperCalls.contains(m.getId())
+                            && !superOfOverride) {
+                        blockers.add("calls " + m.getSimpleName() + (m.getMethodType().getParameterTypes().isEmpty() ? "()" : "(..)")
+                                + " of " + m.getMethodType().getDeclaringType().getClassName() + where);
+                    }
+                    return super.visitMethodInvocation(m, p);
+                }
+
+                @Override
+                public J.Identifier visitIdentifier(J.Identifier id, Integer p) {
+                    // a base class field other than page (the page itself the Escape Hatch replaces)
+                    if (id.getFieldType() != null && isBaseType(id.getFieldType().getOwner()) && !id.getSimpleName().equals("page")) {
+                        blockers.add("uses " + id.getSimpleName() + " of "
+                                + TypeUtils.asFullyQualified(id.getFieldType().getOwner()).getClassName() + where);
+                    }
+                    return id;
+                }
+            }.visit(s, 0);
+        }
+        return new ArrayList<>(blockers);
+    }
+
+    /**
+     * An override of the base class's {@code setupTest()} that prepares the test, typically seeding data, and then
+     * calls {@code super.setupTest()}, which opens the browser page and navigates: a plain {@code @BeforeEach}
+     * once the test navigates itself.
+     */
+    static boolean isSeedingSetup(J.MethodDeclaration m) {
+        if (!m.getSimpleName().equals("setupTest") || m.getBody() == null || m.getBody().getStatements().isEmpty()
+                || !m.getParameters().stream().allMatch(p -> p instanceof J.Empty)) {
             return false;
+        }
+        List<Statement> body = m.getBody().getStatements();
+        if (!isSuperSetupTest(body.get(body.size() - 1))) {
+            return false;
+        }
+        AtomicBoolean earlier = new AtomicBoolean();
+        new JavaIsoVisitor<Integer>() {
+            @Override
+            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation call, Integer p) {
+                if (isSuperSetupTest(call)) {
+                    earlier.set(true);
+                }
+                return super.visitMethodInvocation(call, p);
+            }
+        }.visit(m.getBody().withStatements(body.subList(0, body.size() - 1)), 0);
+        return !earlier.get();
+    }
+
+    /** {@code super.setupTest()}: the base class's per-test setup. */
+    static boolean isSuperSetupTest(J j) {
+        return j instanceof J.MethodInvocation call && call.getSimpleName().equals("setupTest")
+                && call.getSelect() instanceof J.Identifier s && s.getSimpleName().equals("super")
+                && call.getArguments().stream().allMatch(a -> a instanceof J.Empty) && isBaseCall(call);
+    }
+
+    /** The simple name of the base class whose method {@code m} overrides, or {@code null}. */
+    static String overriddenBaseOf(J.ClassDeclaration c, J.MethodDeclaration m) {
+        if (m.getMethodType() == null || m.hasModifier(J.Modifier.Type.Static)) {
+            return null;
         }
         for (JavaType.FullyQualified t = c.getType() == null ? null : c.getType().getSupertype(); t != null; t = t.getSupertype()) {
             if (isBaseType(t) && t.getMethods().stream()
                     .anyMatch(b -> b.getName().equals(m.getSimpleName()) && b.getParameterTypes().size() == m.getMethodType().getParameterTypes().size())) {
-                return true;
+                return t.getClassName();
             }
         }
         // HasTestView, the interface the base class implements
-        return CONVERTED_OVERRIDES.contains(m.getSimpleName()) && m.getParameters().stream().allMatch(p -> p instanceof J.Empty);
+        return CONVERTED_OVERRIDES.contains(m.getSimpleName()) && m.getParameters().stream().allMatch(p -> p instanceof J.Empty)
+                ? "HasTestView" : null;
     }
 
     /**

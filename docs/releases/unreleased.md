@@ -27,11 +27,52 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   can show one changed line for a scenario that uses it, once.
 - **Every run asks git for its commit** ([#312](https://github.com/parttio/unified-testing-tool/pull/312)): two
   calls when the run ends, for `summary.json`. Without git the fields are left out.
+- **Playwright downloads only the browser a run launches**
+  ([#299](https://github.com/parttio/unified-testing-tool/pull/299),
+  [#337](https://github.com/parttio/unified-testing-tool/issues/337)). `Playwright.create()` used to download every
+  browser it supports, some 1.3 GB, though a run opens one. Now the run installs the browser of
+  `vaadin.testing.playwright.browser`, with Playwright's `install` command: for headless Chromium, the default,
+  Chromium's headless shell, about 280 MB. With `vaadin.testing.playwright.executable` set it downloads nothing,
+  and `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` is no longer needed beside the executable. The environment still has
+  the last word: with `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` or `SELENIUM_REMOTE_URL` set, the run installs nothing.
+  Playwright decides its own download at the JVM's first `Playwright.create()`, so code that creates a `Playwright`
+  before the first test still downloads everything. A CI step that ran `install --with-deps chromium` before the
+  tests can run `install-deps chromium` instead, for the system libraries only.
+- **`AddUnifiedTestingSkill` writes its pointer to `CLAUDE.md` when a project has no `AGENTS.md`**
+  ([#365](https://github.com/parttio/unified-testing-tool/issues/365)). Claude Code reads `CLAUDE.md`, not
+  `AGENTS.md`, so the marked section goes at the end of the existing `CLAUDE.md`, and no `AGENTS.md` is created.
+  The rest of `CLAUDE.md` is left as it is. A project with both files, or with neither, gets the section in
+  `AGENTS.md`, as before.
 - **Chrome on Selenium is started with a logging capability**
   ([#315](https://github.com/parttio/unified-testing-tool/pull/315)), and its console is read after every User
   Step.
-- **Adapters:** `AdapterSession` has a new method with a default, `consoleErrors()`. An adapter outside this
-  repository keeps compiling.
+- **A failed test writes one more evidence file**, `<test>.view.txt`, the Findable View below, and the failure's
+  `Failure evidence` line names it. Writing it makes about 20 lookups, on failure only. It is written even when
+  the screenshot can't be.
+- **`Scope` has a new method, `describe()`.** The Unified API implements it for the page and for every Wrapper
+  that is a Scope, custom ones included. Only a class of your own that implements `Scope` must add it.
+- **`unified-test-bom` no longer sets Browserless Test's version**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)): `browserless-test-junit6` and
+  `browserless-test-spring` come at the version the project's Vaadin BOM manages, as TestBench always did. With
+  `unified-test-bom` imported before the Vaadin BOM, a project ran on 25.3.2; it now runs on its Vaadin's
+  Browserless Test, also 25.3.2 on Vaadin 25.3.5. The BOM still sets Dramafinder's version.
+- **A test on a Vaadin older than 25.3 fails at once**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), with a message that names the version it
+  found, before its Spring context starts. It used to fail later, with an error from Browserless Test or Flow that
+  didn't say why. A test without Flow on its classpath is not checked.
+- **The Migration Recipes leave a Migration Marker at the top of `pom.xml`** on a project older than Vaadin 25.3
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), and migrate it all the same.
+- **The Dramafinder recipe marks the test classes it skips** ([#350](https://github.com/parttio/unified-testing-tool/issues/350)):
+  a class that uses a base class member no rule converts gets a Migration Marker above it, naming those members
+  (`not migrated: calls loginAs(..) of SpringPlaywrightIT, uses chatModel of SpringPlaywrightIT; ...`). Such a
+  class used to stay unchanged, with nothing saying why. A `setupTest()` override that seeds data and then calls
+  `super.setupTest()` no longer keeps a class from migrating: it becomes a plain `@BeforeEach`, without the
+  `super.setupTest()`, since each test now navigates itself. Nor do the members of a project's copy of
+  `SpringPlaywrightIT`: each migrated test gets the copy's fields and helpers it uses, and its `@BeforeEach`,
+  `@AfterEach` and `@RegisterExtension` members, as its own. A member that uses the test base where no rule
+  converts it (an extension reading `page`, an override of `setupTest()`) still keeps the test from migrating.
+- **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
+  outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
 
 ## New
 
@@ -75,11 +116,50 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `unified-test-rewrite`: after a failed run, it writes each failure's `Did you mean` into the test.
   `withLabel("Email")` becomes `withLabel("E-mail")`. No model, nothing at test time: a diff to review. See
   [Applying it](https://parttio.github.io/unified-testing-tool/guide/reports-and-failures/#applying-it).
+- **The Findable View** ([#204](https://github.com/parttio/unified-testing-tool/issues/204)): `page.describe()`,
+  or `describe()` on a dialog or any other Scope, lists what a test can find there, one line each, with the lookup
+  that singles it out. It reads the same on every Testing Tool, and a failed test writes the page's view next to
+  its evidence. See [What is there to find?](https://parttio.github.io/unified-testing-tool/guide/finding-components/#what-is-there-to-find)
+  ```text
+  text field “Name” = “Alan Turing”    page.find(UnifiedTextField.class).withLabel("Name")
+  button “Archive” (disabled)          page.find(UnifiedButton.class).withText("Archive")
+  button “Delete account”              page.find(UnifiedButton.class).withAccessibleName("Delete account")
+  ```
+- **`assertThat(page).hasTitle(..)`** ([#360](https://github.com/parttio/unified-testing-tool/issues/360)): the
+  page's title, from the view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)`, on every Testing Tool.
+  Browserless reads the title the UI last set; a "page has its title" test no longer needs the Escape Hatch.
+  ```java
+  assertThat(page).isAt(ProfileView.class).hasTitle("Profile");
+  ```
+- **Wrappers for a chat** ([#357](https://github.com/parttio/unified-testing-tool/issues/357)):
+  `UnifiedMessageInput` and `UnifiedMessageList`, for apps built on Vaadin's AI components. `send(text)` types and
+  submits a message; the list's `getMessages()` reads each message's user name and text, the text the application
+  gave it (the Markdown source), the same on every Testing Tool. Its checks wait for a reply:
+  ```java
+  page.find(UnifiedMessageInput.class).send("Pancakes");
+  assertThat(page.find(UnifiedMessageList.class)).hasMessageCount(3).hasMessageContaining("Pancakes");
+  ```
+  See [Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat). The Migration Recipes convert
+  the message elements and testers too: Dramafinder's `typeAndSubmit`, `assertMessageCount` and `assertEmpty`,
+  TestBench's `submit` and `getMessageElements().size()`, Browserless's `send` and `size()`.
 - **For agents** ([#319](https://github.com/parttio/unified-testing-tool/pull/319)): the `unified-test-api` jar
   ships [`META-INF/unified/api-reference.md`](https://parttio.github.io/unified-testing-tool/api-reference/), every
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
   [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown and the guide in
   one file.
+- **`click()` on `UnifiedDiv`, `UnifiedSpan`, `UnifiedContainer` and the other plain HTML Wrappers**
+  ([#358](https://github.com/parttio/unified-testing-tool/issues/358)): a `Div` or `Span` with a click listener,
+  such as a navigation tab, or a layout such as a card, is clicked like a button, where a test used to write
+  `element().click()`.
+  ```java
+  page.find(UnifiedDiv.class).withText("Shop").click();
+  page.find(UnifiedContainer.class).withTestId("recipe-card").click();
+  ```
+- **Retrying assertions for a grid's columns** ([#359](https://github.com/parttio/unified-testing-tool/issues/359)):
+  `assertThat(grid).hasColumn("Cooked times")`, `doesNotHaveColumn(..)` and `hasColumnHeaders(..)`, for a column
+  the application adds or removes while the test runs. They replace `page.waitUntil(() ->
+  grid.getColumnHeaders().contains(..))`, a gap in the reports, and fail with the headers the grid has. See
+  [Columns](https://parttio.github.io/unified-testing-tool/guide/grid/#columns).
 
 ## New settings
 
@@ -92,6 +172,37 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 
 - `hasSelectedItems(..)` worded its User Step in an order that changed from run to run
   ([#309](https://github.com/parttio/unified-testing-tool/pull/309)).
+- On Browserless, a lookup inside a Scope also found the Scope itself: `dialog.find(UnifiedDialog.class)` found
+  the dialog, where a browser finds none ([#333](https://github.com/parttio/unified-testing-tool/issues/333)).
+  A grid cell, a column header, and Details and TabSheet content still find the components they hold.
+- In a browser, a failure with several matches outside any container named Flow's root as their container,
+  `in container (id “ROOT-2521314”)`, an id that changes on every page load and tells none of them apart
+  ([#334](https://github.com/parttio/unified-testing-tool/issues/334)). It now reads as on Browserless.
+- A `@UnifiedSpringBootTest` application without Spring Security failed to start, with `NoClassDefFoundError:
+  org/springframework/security/core/Authentication`
+  ([#348](https://github.com/parttio/unified-testing-tool/issues/348)). It now starts without the test login
+  endpoint, and `spring-security-core` is no longer needed as a workaround.
+- The Migration Recipes ignored the options a project's `rewrite.yml` set: `addAgentSkill`, the adapters,
+  `includePageObjects` ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). OpenRewrite matches
+  options to a recipe's constructor parameters by name, and `unified-test-rewrite` was compiled without the names,
+  so the recipe ran with its defaults and said nothing. It is now compiled with `-parameters`.
+- A JUnit 4 test that `@Ignore` skipped ran again after the TestBench or Browserless (UI Unit) Migration Recipe
+  ([#386](https://github.com/parttio/unified-testing-tool/issues/386)): `@Test` became JUnit 6's, but `@Ignore`
+  stayed JUnit 4's, which JUnit 6 doesn't read. The recipes named OpenRewrite's `IgnoreToDisabled`, a declarative
+  recipe in another jar that they never loaded, and the plugin logged a validation error. `@Ignore` now becomes
+  `@Disabled`.
+- The Dramafinder recipe dropped the class annotations of a project's copy of `SpringPlaywrightIT`: a test that
+  extended it lost `@ActiveProfiles`, `@Import` and `@SpringBootTest(properties = ..)`, and ran against the
+  default profile without a marker ([#349](https://github.com/parttio/unified-testing-tool/issues/349)). Each
+  migrated test now gets the copy's annotations it doesn't have itself, or, when the copy isn't among
+  the migrated sources, a Migration Marker naming them.
+- The Migration Recipes kept the explicit version of a project's `browserless-test-spring`, which wins over the
+  Vaadin BOM: a project on the old standalone add-on, 1.1.2, ended up with it beside Browserless 25
+  ([#354](https://github.com/parttio/unified-testing-tool/issues/354)). The Browserless, TestBench and Dramafinder
+  recipes now remove it when the project's Vaadin BOM manages the version.
+- The documented migration commands ran whichever OpenRewrite plugin was newest. They now name the versions the
+  recipes are tested against, 6.46.1 for Maven and 7.39.0 for Gradle
+  ([#355](https://github.com/parttio/unified-testing-tool/issues/355)).
 
 ## Known limitations
 
@@ -108,5 +219,6 @@ Those of [0.1.0-alpha3](0.1.0-alpha3.md), and:
   assertion follows.
 - The comparison with another Testing Tool doesn't say whether a difference is a documented Limitation
   ([#310](https://github.com/parttio/unified-testing-tool/issues/310)).
-- The `write-unified-ui-tests` skill names the API reference but none of the other additions, and its evaluation
-  was not rerun after that change.
+- The `write-unified-ui-tests` skill names the API reference and the Findable View but none of the other
+  additions, and its evaluation was not rerun after those changes.
+- The Findable View lists components grouped by Wrapper type, not in the order of the page.

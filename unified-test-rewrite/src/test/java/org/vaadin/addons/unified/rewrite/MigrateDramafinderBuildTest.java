@@ -103,6 +103,40 @@ class MigrateDramafinderBuildTest implements RewriteTest {
     }
 
     @Test
+    void browserlessInASpringProjectAlsoGetsBrowserlessTestSpring() {
+        // a @UnifiedSpringBootTest fails on Browserless without it, and unified-test-browserless has it optional
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified(true, null, null)),
+                pomXml(pom(false, DRAMAFINDER + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
+                        pom(true, dependency("com.vaadin", "browserless-test-spring", null)
+                                + unified("unified-test-playwright") + unified("unified-test-spring")
+                                + dependency("org.springframework.boot", "spring-boot-starter-test", null)
+                                + unified("unified-test-browserless"))));
+    }
+
+    @Test
+    void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
+        // 1.1.2 is the old standalone add-on line: its explicit version would win over the Vaadin BOM's 25.x (#354)
+        rewriteRun(pomXml(
+                pom(false, DRAMAFINDER + dependency("com.vaadin", "browserless-test-spring", "1.1.2")
+                        + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
+                pom(true, unified("unified-test-playwright") + unified("unified-test-spring")
+                        + dependency("com.vaadin", "browserless-test-spring", null)
+                        + dependency("org.springframework.boot", "spring-boot-starter-test", null))));
+    }
+
+    @Test
+    void withBrowserlessAStaleBrowserlessTestSpringVersionAlsoGivesWayToTheBoms() {
+        // the Browserless adapter's recipe leaves an existing browserless-test-spring as it is (#354)
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified(true, null, null)),
+                pomXml(pom(false, DRAMAFINDER + dependency("com.vaadin", "browserless-test-spring", "1.1.2")
+                                + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
+                        pom(true, unified("unified-test-playwright") + unified("unified-test-spring")
+                                + dependency("com.vaadin", "browserless-test-spring", null)
+                                + dependency("org.springframework.boot", "spring-boot-starter-test", null)
+                                + unified("unified-test-browserless"))));
+    }
+
+    @Test
     void aProjectWithoutDramafinderIsLeftAlone() {
         rewriteRun(pomXml(pom(false, dependency("org.springframework.boot", "spring-boot-starter-test", null))));
     }

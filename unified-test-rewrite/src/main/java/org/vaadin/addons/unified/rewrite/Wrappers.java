@@ -122,7 +122,18 @@ final class Wrappers {
                     COMMON_FILTERS,
                     // row is what GridCells writes for getCell(..)
                     Set.of("getRowCount", "row"),
-                    GridCells::converts)));
+                    GridCells::converts)),
+            Map.entry("com.vaadin.flow.component.messages.testbench.MessageInputElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedMessageInput",
+                    COMMON_FILTERS,
+                    Set.of("isEnabled"),
+                    Map.of("submit", "send"))),
+            Map.entry("com.vaadin.flow.component.messages.testbench.MessageListElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedMessageList",
+                    COMMON_FILTERS,
+                    // getMessageCount is what TestBenchRenamesToUnified writes for getMessageElements().size()
+                    Set.of("getMessageCount"),
+                    Wrappers::isMessageCount)));
 
     private Wrappers() {
     }
@@ -157,6 +168,13 @@ final class Wrappers {
             m = m.withSelect(withClassNames(before));
         }
         return needsClassNames(m) ? m.withName(m.getName().withSimpleName("withClassNames")) : m;
+    }
+
+    /** {@code list.getMessageElements().size()}: the message count, {@code getMessageCount()}. */
+    static boolean isMessageCount(J.MethodInvocation call, Cursor callCursor) {
+        return call.getSimpleName().equals("getMessageElements") && call.getArguments().stream().allMatch(a -> a instanceof J.Empty)
+                && callCursor.getParentTreeCursor().getValue() instanceof J.MethodInvocation size
+                && size.getSimpleName().equals("size") && size.getSelect() == call;
     }
 
     /** The Wrapper for the element, or {@code null} when it has none yet. */

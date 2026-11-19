@@ -23,15 +23,20 @@ The demo's `EditPersonDramafinderTest`, and what the recipe makes of it. CI chec
 
 ## Run it
 
+!!! warning "Vaadin 25.3 first"
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the recipe migrates the build all the same and *(unreleased)* leaves a Migration Marker at the top of `pom.xml`; the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+
 Commit or stash your work first: the recipe changes files in place.
 
 === "Maven"
 
     ```bash
-    mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+    mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
       -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha3 \
       -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified
     ```
+
+    The plugin version is the one whose OpenRewrite the recipes are built and tested against.
 
     To set options, declare your own recipe in a `rewrite.yml` at the project root and activate it instead:
 
@@ -45,7 +50,7 @@ Commit or stash your work first: the recipe changes files in place.
     ```
 
     ```bash
-    mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+    mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
       -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha3 \
       -Drewrite.activeRecipes=com.example.MigrateDramafinder
     ```
@@ -54,7 +59,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```kotlin
     plugins {
-        id("org.openrewrite.rewrite") version "latest.release"
+        id("org.openrewrite.rewrite") version "7.39.0"
     }
     rewrite {
         activeRecipe("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified")
@@ -68,13 +73,17 @@ Commit or stash your work first: the recipe changes files in place.
     gradle rewriteRun
     ```
 
+    As with Maven, the plugin version is the one whose OpenRewrite the recipes are built and tested against.
+
     The build changes are Maven only: on Gradle, add the dependencies by hand (see **The build** below). Without a Maven build the recipe can't read the Dramafinder version from it, and finds it from the classpath instead (see **Dramafinder 1.x**).
 
 | Option | Default | Effect |
 |---|---|---|
-| `addBrowserless` | `false` | Also adds the Browserless adapter, `unified-test-browserless` |
+| `addBrowserless` | `false` | Also adds the Browserless adapter, `unified-test-browserless`, and `browserless-test-spring` in Spring Boot projects |
 | `addSelenium` | `false` | Also adds the Selenium adapter, `unified-test-selenium` |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
+
+*(unreleased)* Up to 0.1.0-alpha3 the recipe ignores the options a `rewrite.yml` sets, without a warning, and runs with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). With those versions, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
 
 Without another adapter the migrated suite keeps running on Playwright only, as before; adding one is the step that makes it run elsewhere (see **Running on the other Testing Tools**).
 
@@ -99,11 +108,13 @@ Without another adapter the migrated suite keeps running on Playwright only, as 
 | `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
 | `grid.findRowIndexesWithColumnText(0, s).get(0)` | `grid.row().withCellText(s).getIndex()`, with a Migration Marker: any column matches now |
 | `row.getCell(col).getText()`, `row.getCell("Header").assertText(s)`, `row.getCell(col).click()` | `row.getCellText(col)`, `assertThat(row).hasCellText("Header", s)`, `row.click()` with a Migration Marker |
+| `MessageInputElement.get(page).typeAndSubmit(s)` | `page.find(UnifiedMessageInput.class).send(s)` |
+| `MessageListElement.get(page)`, `assertMessageCount(n)`, `assertEmpty()` | `page.find(UnifiedMessageList.class)`, `assertThat(list).hasMessageCount(n)`, `isEmpty()` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()`, `waitForGridToStopLoading()`, `scrollToRow(i)` | removed: Auto-Wait |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog and Grid; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
+A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
 
-A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left exactly as it is: convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again.
+A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left as it is, with a Migration Marker above the class naming those members (`// TODO unified: not migrated: calls loginAs(..) of SpringPlaywrightIT; ...`): convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again. A `setupTest()` override that seeds data and then calls `super.setupTest()` is not one of them: it becomes a plain `@BeforeEach` without the `super.setupTest()`, since each test now navigates itself.
 
 ### Dramafinder 1.x
 
@@ -111,7 +122,7 @@ Dramafinder 1.x and 2.x share their class and method names, but not what a looku
 
 In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)` and `getByText(page, s)` `withTextContaining(s)`, each with a Migration Marker to tighten it to `withLabel`/`withText` once the test passes. A 1.x `getByHeaderText` stays behind the Escape Hatch: the Unified API has no substring header filter.
 
-1.x projects copied `SpringPlaywrightIT` from Dramafinder's template into their own package. The recipe recognises such a copy (an abstract class extending `AbstractBasePlaywrightIT` with `@SpringBootTest`), migrates the tests that extend it as if they extended Dramafinder's, and deletes the copy once nothing extends it any more.
+1.x projects copied `SpringPlaywrightIT` from Dramafinder's template into their own package. The recipe recognises such a copy (an abstract class extending `AbstractBasePlaywrightIT` with `@SpringBootTest`), migrates the tests that extend it as if they extended Dramafinder's, gives each of them the copy's class annotations (`@ActiveProfiles`, `@Import`, `@SpringBootTest`'s `properties`, ...) and the copy's members it needs as its own (the fields and helpers it uses, the copy's `@BeforeEach`, `@AfterEach` and `@RegisterExtension` members), and deletes the copy once nothing extends it any more. When the copy isn't among the migrated sources (another module, a jar), the recipe can't read those annotations' arguments: it leaves a Migration Marker on each test naming them instead.
 
 === "Before (Dramafinder 1.x)"
 
@@ -141,7 +152,9 @@ In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the project's Vaadin BOM manages its version). It removes the direct `dramafinder` dependency (the Playwright adapter brings Dramafinder), and the version of a `browserless-test-spring` the project already has, when its Vaadin BOM manages one.
+
+So the migrated project runs on Dramafinder 2.2.0, the version `unified-test-bom` manages, whichever version it had. For a 1.x project that is a major version: the class and method names are the same, so the code the recipe leaves behind the Escape Hatch still compiles, but its lookups now follow 2.x rules ([Dramafinder 1.x](#dramafinder-1x)). A `getByLabel` or `getByText` that matched a substring, or took the first of several matches, now fails; so does a 1.x `getByHeaderText`, which the recipe always leaves behind the Escape Hatch. Run the Playwright tests once after the migration, and fix such a lookup, ideally by converting it to a Wrapper.
 
 ## What it leaves for you
 
@@ -168,14 +181,22 @@ void savesTheProfile(UnifiedPage page) {
 | `was findRowIndexesWithColumnText(n, ..).get(0): any column matches now; ...` | Name the column: `withCellText("Header", text)` |
 | `was getCell(..).click(); a row's click() clicks the row, not that cell` | Fine when the cell holds nothing clickable; else find the component in the cell, `row.cell("Header").find(..)` |
 | `was first(); the lookup fails when several components match`, `was getByText(..), a substring and first match; ...` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
+| `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
 ## Running on the other Testing Tools
 
-A migrated test that needs nothing Playwright-only can run on Browserless and Selenium too. Add the adapter (`addBrowserless`, `addSelenium`, or the dependency by hand) and run with `-Dvaadin.testing.tool=browserless` or `selenium`. Selenium is a real browser too, so tests that pass on Playwright usually pass there. Browserless runs in the test JVM without a browser ([limitations](spec/09-capabilities.md#limitations)); expect a few failures on the first run:
+A migrated test that needs nothing Playwright-only can run on Browserless and Selenium too. Add the adapter (`addBrowserless`, `addSelenium`, or the dependency by hand; for Browserless in a Spring Boot project, by hand also add `com.vaadin:browserless-test-spring` in test scope) and run with `-Dvaadin.testing.tool=browserless` or `selenium`. Selenium is a real browser too, so tests that pass on Playwright usually pass there. Browserless runs in the test JVM without a browser ([limitations](spec/09-capabilities.md#limitations)); expect a few failures on the first run:
 
-- "Visible" means `setVisible(true)` on the server: a component hidden by CSS counts as visible.
+- "Visible" means `setVisible(true)` on the server: a component hidden by CSS counts as visible. So an action on
+  it passes on Browserless and rightly fails in a browser: `setValue(..)` on a date picker whose input CSS hides
+  (one that opens as a calendar overlay only) fails on Playwright with `Found 1, but hidden`.
+- The page starts at the `""` route, where a browser starts blank, and `navigate(..)` to the view already shown
+  keeps that view: its `beforeEnter` (or `setParameter`) runs again on the same instance, where a browser loads a
+  fresh page with new views. A test whose first step is `navigate(..)` to the view at `""`, or to where `""`
+  forwards, re-enters it. A view that isn't ready for that fails there and not in a browser; that is a bug a user
+  can hit too, by navigating to the view they are on.
 - No CSS, layout or client-side JavaScript: a test that depends on them belongs on a real browser, `@RequiresBrowser`.
 - A substring lookup carried over from Dramafinder 1.x can find a second component the browser didn't show yet; tighten it as its Migration Marker says.
 
@@ -187,6 +208,8 @@ The same `resolve-migration-markers` skill works through the Dramafinder Migrati
 /resolve-migration-markers
 ```
 
-Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
+Only you can start it. The skill is user-invoked (`disable-model-invocation: true`), so it adds nothing to an agent's context in a session that doesn't migrate, but an agent can't start it either: one driving the migration end to end stops at this step. Type the command yourself, or tell the agent to read `.claude/skills/resolve-migration-markers/SKILL.md` and follow its steps.
+
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md` (of `CLAUDE.md` *(unreleased)*, when the project has that and no `AGENTS.md`). It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 How it is evaluated, and what it scores: [Migrating from TestBench](migrating-from-testbench.md#the-agent-skill).

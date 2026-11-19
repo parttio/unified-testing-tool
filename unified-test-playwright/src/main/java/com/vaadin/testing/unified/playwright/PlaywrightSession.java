@@ -244,21 +244,26 @@ final class PlaywrightSession implements AdapterSession {
                         f.value());
             }
         }
-        // all() returns the query locator's matches in order: element i is candidates.nth(i)
         Locator candidates = (Locator) invoke(query, "getLocator", new Class<?>[0]);
+        List<UnifiedElement> result = new ArrayList<>();
+        if (!inPage.isEmpty()) {
+            // the in-page check returns the matching candidates' indices: element i is the query's get(i), with
+            // no count of its own (#402)
+            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, BrowserQueries.remaining(inPage))) {
+                int index = ((Number) i).intValue();
+                VaadinElement e = (VaadinElement) invoke(query, "get", new Class<?>[] { int.class }, index);
+                if (support.include(e.getLocator())) {
+                    result.add(new PlaywrightElement(this, e.getLocator(), e, support, candidates, index));
+                }
+            }
+            return result;
+        }
+        // all() returns the query locator's matches in order: element i is candidates.nth(i)
         @SuppressWarnings("unchecked")
         List<VaadinElement> found = (List<VaadinElement>) invoke(query, "all", new Class<?>[0]);
-        java.util.Set<Integer> matching = null;
-        if (!inPage.isEmpty()) {
-            matching = new java.util.HashSet<>();
-            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, BrowserQueries.remaining(inPage))) {
-                matching.add(((Number) i).intValue());
-            }
-        }
-        List<UnifiedElement> result = new ArrayList<>();
         for (int i = 0; i < found.size(); i++) {
             VaadinElement e = found.get(i);
-            if ((matching == null || matching.contains(i)) && support.include(e.getLocator())) {
+            if (support.include(e.getLocator())) {
                 result.add(new PlaywrightElement(this, e.getLocator(), e, support, candidates, i));
             }
         }
@@ -359,6 +364,11 @@ final class PlaywrightSession implements AdapterSession {
         return RouteNavigation.queryParameter(page, name);
     }
 
+    @Override
+    public String title() {
+        return page.title();
+    }
+
     // ---------------------------------------------------------------- the rest
 
     @Override
@@ -366,16 +376,52 @@ final class PlaywrightSession implements AdapterSession {
         // nothing to flush: the browser runs on its own
     }
 
-    /** Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may start. */
+    /**
+     * Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may
+     * start: both in one call to the page (#402). When the action loaded another page, or Flow stays busy
+     * longer than {@link #SETTLE_IDLE_MS}, Dramafinder's own wait takes over, with its timeout.
+     */
     @Override
     public void settle() {
         try {
-            page.evaluate(BrowserQueries.SETTLE_NAVIGATION, BrowserQueries.SETTLE_NAVIGATION_CAP);
+            if (Boolean.TRUE.equals(page.evaluate(SETTLE_AND_IDLE,
+                    List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS)))) {
+                return;
+            }
         } catch (com.microsoft.playwright.PlaywrightException e) {
             // the action loaded another page: nothing of Flow's left to wait for in this one
         }
         AutoWait.waitForVaadinIdle(page);
     }
+
+    /** How long {@link #SETTLE_AND_IDLE} waits for Flow to be idle before Dramafinder's wait takes over, in ms. */
+    private static final int SETTLE_IDLE_MS = 5000;
+
+    /**
+     * {@link BrowserQueries#SETTLE_NAVIGATION}, then Dramafinder's idle condition (no Flow client active, the dev
+     * server loaded), polled: true once idle, false when still busy after the given time.
+     */
+    private static final String SETTLE_AND_IDLE = """
+            async ([cap, idleMs]) => {
+              const tick = (ms) => new Promise(r => setTimeout(r, ms));
+              await tick(0);
+              for (let t = 0; window.Vaadin?.Flow?.navigation && t < cap; t += 10) {
+                await tick(10);
+              }
+              await tick(0);
+              const idle = () => {
+                const flow = window.Vaadin && window.Vaadin.Flow;
+                if (flow && flow.clients) {
+                  return !Object.values(flow.clients).some(c => c.isActive());
+                }
+                return !(flow && flow.devServerIsNotLoaded);
+              };
+              for (let t = 0; t <= idleMs; t += 10) {
+                if (idle()) return true;
+                await tick(10);
+              }
+              return false;
+            }""";
 
     /** A full-page screenshot. */
     @Override

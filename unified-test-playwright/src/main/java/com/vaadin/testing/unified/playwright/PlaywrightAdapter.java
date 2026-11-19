@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -21,10 +22,11 @@ import java.util.Optional;
  * <ul>
  * <li>{@code vaadin.testing.base-url}: app URL when the test has no Spring context; default
  * {@code http://localhost:8080}</li>
- * <li>{@code vaadin.testing.playwright.browser}: {@code chromium} (default), {@code firefox}, {@code webkit}</li>
+ * <li>{@code vaadin.testing.playwright.browser}: {@code chromium} (default), {@code firefox}, {@code webkit}:
+ * the one browser Playwright downloads, when it isn't installed yet</li>
  * <li>{@code vaadin.testing.playwright.headless}: {@code true} (default)</li>
  * <li>{@code vaadin.testing.playwright.executable}: path to a browser executable, instead of Playwright's
- * own download</li>
+ * Playwright's own browser</li>
  * <li>{@code vaadin.testing.playwright.trace}: {@code off} (default), {@code on} or {@code on-failure}: record
  * Playwright's trace, grouped by User Step, and keep it as {@code trace.zip} in the test's evidence directory
  * (always, or when the test failed)</li>
@@ -75,17 +77,24 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
     record SharedBrowser(Playwright playwright, Browser browser) implements AutoCloseable {
 
         static SharedBrowser launch(AdapterContext context) {
-            Playwright playwright = Playwright.create();
-            BrowserType type = switch (context.configuration(BROWSER).orElse("chromium")) {
-                case "firefox" -> playwright.firefox();
-                case "webkit" -> playwright.webkit();
-                default -> playwright.chromium();
-            };
-            BrowserType.LaunchOptions options = new BrowserType.LaunchOptions()
-                    .setHeadless(!"false".equalsIgnoreCase(context.configuration(HEADLESS).orElse("true")));
-            context.configuration(EXECUTABLE).ifPresent(path -> options.setExecutablePath(Path.of(path))
-                    .setArgs(List.of("--no-sandbox")));
-            return new SharedBrowser(playwright, type.launch(options));
+            Optional<String> executable = context.configuration(EXECUTABLE);
+            BrowserInstall browser = BrowserInstall.of(context.configuration(BROWSER).orElse("chromium"));
+            boolean headless = !"false".equalsIgnoreCase(context.configuration(HEADLESS).orElse("true"));
+            // not every browser Playwright supports: the one the run launches, if not an executable
+            Playwright playwright = Playwright.create(new Playwright.CreateOptions()
+                    .setEnv(Map.of(BrowserInstall.SKIP_DOWNLOAD, "1")));
+            try {
+                if (executable.isEmpty()) {
+                    browser.install(headless);
+                }
+                BrowserType.LaunchOptions options = new BrowserType.LaunchOptions().setHeadless(headless);
+                executable.ifPresent(path -> options.setExecutablePath(Path.of(path))
+                        .setArgs(List.of("--no-sandbox")));
+                return new SharedBrowser(playwright, browser.type(playwright).launch(options));
+            } catch (RuntimeException e) {
+                playwright.close();
+                throw e;
+            }
         }
 
         @Override

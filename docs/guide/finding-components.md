@@ -20,7 +20,7 @@ page.find(UnifiedButton.class).withLabel("Save");     // does not compile: a but
 
 So your IDE's completion after `find(UnifiedX.class).` lists what you can filter by, next to what you can do with the component.
 
-Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedContainer` and the plain HTML Wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a Wrapper](#components-without-a-wrapper).
+Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedMessageInput`, `UnifiedMessageList`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedContainer` and the plain HTML Wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a Wrapper](#components-without-a-wrapper).
 
 ## 2. Filters
 
@@ -146,6 +146,30 @@ There is no `first()`. When several components match, either the filter is not p
 ```
 
 `all()` reads the matches **now**, without waiting: check the count with `hasCount(n)` first, and use `all()` only to loop.
+
+## What is there to find?
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+`describe()` on the page, or on any Scope, returns the **Findable View**: every component a lookup can reach, one line each, with the lookup that singles it out. Print it while writing a test, then paste the lookups:
+
+```java
+page.navigate(ProfileView.class);
+System.out.println(page.describe());
+```
+
+```
+Findable view of “/profile” on browserless: 7 components
+text field “Name”                       page.find(UnifiedTextField.class).withLabel("Name")
+text field “Email”                      page.find(UnifiedTextField.class).withLabel("Email")
+text field (no name; placeholder “Nickname”)  page.find(UnifiedTextField.class).withPlaceholder("Nickname")
+button “Save”                           page.find(UnifiedButton.class).withText("Save")
+button “Delete account”                 page.find(UnifiedButton.class).withAccessibleName("Delete account")
+button “Archive” (disabled)             page.find(UnifiedButton.class).withText("Archive")
+button “Change email”                   page.find(UnifiedButton.class).withText("Change email")
+```
+
+It reads the same on every Testing Tool. Two components with the same name get a lookup through the container that tells them apart (`page.find(UnifiedContainer.class).withTestId("billing").find(..)`), or the line says `not unique`. A `(no name)` line is a field or button that users of a screen reader can't name either. `describe()` is not a User Step, and its format may change: don't assert on it. A failed test writes the page's view next to its evidence ([Reading reports and failures](reports-and-failures.md#the-findable-view)). Spec: [12. Readable tests, Findable View](../spec/12-readable-tests.md#findable-view).
 
 ## Scopes
 

@@ -78,7 +78,7 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
 When a label changed in the application and the tests that used it fail, each failure already says what to write instead. The `ApplyDidYouMean` recipe writes it for you. Run the tests, then, in the same directory:
 
 ```
-mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
     -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
     -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.ApplyDidYouMean
 ```
@@ -121,6 +121,24 @@ A component that is there but can't be used:
   Expected      a visible and enabled button with text “Save”
   Found         1, but disabled
 ```
+
+### The Findable View
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+Next to the screenshot or the component tree, a failed test writes `<test class>.<method>.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Failure evidence` line names it.
+
+```
+Findable view of “/checkout” on playwright (chromium): 6 components
+text field “Street”  page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("Street")
+text field “City”    page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("City")
+text field “Street”  page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("Street")
+text field “City”    page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("City")
+button “Save”        page.find(UnifiedButton.class).withText("Save")
+button “Cancel”      page.find(UnifiedButton.class).withText("Cancel")
+```
+
+When `Did you mean` has nothing to say, look for the component here. The same view is `page.describe()` in a test ([Finding components](finding-components.md#what-is-there-to-find)).
 
 ### In code
 

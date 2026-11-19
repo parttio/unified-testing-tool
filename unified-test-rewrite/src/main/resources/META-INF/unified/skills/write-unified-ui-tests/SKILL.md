@@ -18,7 +18,9 @@ reading the diff, and anyone reading a failure, sees what the user does. The rul
 1. **Read the view.** Open the view class the scenario is about, and the components it builds. Note for each
    component the test touches what the user sees: its label, its text, its header title, or its test id. When the
    view calls `getTranslation("key")`, look the key up in `src/main/resources/vaadin-i18n/translations*.properties`.
-   Done when every lookup you are about to write names something you saw in the view's code.
+   Done when every lookup you are about to write names something you saw in the view's code. To check what is
+   there at run time, print `page.describe()` from a test after navigating: each line is a component with the
+   lookup that finds it, the same on every Testing Tool. Delete the print before you report.
 2. **Write the test** in the shape below. Read the Wrapper's methods before calling one: every Wrapper's filters,
    actions, reads and checks are listed in `META-INF/unified/api-reference.md` inside the `unified-test-api` jar
    (the same page is [on the site](https://parttio.github.io/unified-testing-tool/api-reference.md)); the sources
@@ -105,8 +107,7 @@ mvn test -Dtest=EditPersonTest
 mvn test -Dtest=EditPersonTest -Dvaadin.testing.tool=playwright
 ```
 
-Playwright needs Chromium once: `mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI
--Dexec.classpathScope=test -Dexec.args="install chromium"`.
+The first run on Playwright downloads Chromium, about 280 MB.
 
 Then run the style rules: `mvn test -Dtest=UnifiedStyleTest`. When the project has no such test, add one: the test
 dependency `org.vaadin.addons:unified-test-archunit` (its version comes from `unified-test-bom`) and
@@ -146,7 +147,8 @@ UnifiedAssertionError: Renaming a person in the editor updates the grid
 
 `Nearby` lists the Near Misses, closest first; `Found` is `none`, `2: …` (several matches: add a filter),
 `1, but disabled` (the user can't use it yet: do the step that enables it), or the values an assertion saw while
-waiting. `Evidence` holds a screenshot (browser) or the component tree (Browserless).
+waiting. `Evidence` holds a screenshot (browser) or the component tree (Browserless), and on every Testing Tool
+`<test>.view.txt`: each component the page held at the failure, with the lookup that finds it.
 
 Decide who is wrong before changing anything:
 - **The test is wrong** when the view's code shows what the Near Miss shows (the label is "Email", the test guessed

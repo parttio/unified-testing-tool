@@ -63,7 +63,7 @@ final class BrowserlessSelectionAccess implements SelectionAccess {
 
     @Override
     public void select(String label) {
-        session.act(() -> {
+        session.act(component, () -> {
             switch (tester()) {
                 case ComboBoxTester t -> t.selectItem(label);
                 case MultiSelectComboBoxTester t -> {
@@ -94,7 +94,7 @@ final class BrowserlessSelectionAccess implements SelectionAccess {
     /** The clear button when it is shown, as a user would; otherwise empties the value on the server. */
     @Override
     public void clear() {
-        session.act(() -> {
+        session.act(component, () -> {
             if (component instanceof ComboBoxBase<?, ?, ?> box && box.isClearButtonVisible()) {
                 if (tester() instanceof ComboBoxTester t) {
                     t.clickClearButton();

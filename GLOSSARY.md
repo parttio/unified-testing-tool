@@ -32,6 +32,14 @@ _Avoid_: Implicit wait, waitForVaadin
 A test written only against the Unified API, so it runs on whichever Testing Tool the test run selects.
 _Avoid_: Vaadin test, browser test, integration test
 
+**Direct Test**:
+A UI test written against a Testing Tool's own API (Browserless Test, Dramafinder, TestBench) rather than the Unified API; the counterpart a Unified UI Test is compared with.
+_Avoid_: Plain test, native test, raw test
+
+**Performance Pair**:
+A Unified UI Test and a Direct Test of the same scenario on one Testing Tool, held to the same user actions and checks, so their time and round trips can be compared.
+_Avoid_: Benchmark Pair, twin, golden pair
+
 **Capability**:
 Something a Unified UI Test can require from the Testing Tool running it, such as a real browser; a test whose Capability is missing is skipped.
 _Avoid_: Feature flag, tag
@@ -75,6 +83,10 @@ _Avoid_: Task, step method, keyword, flow, journey, page object
 **Base Run**:
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run
+
+**Findable View**:
+A text view of what a Unified UI Test can find in a page or a container: one line per component, with its kind, name and state and the lookup that singles it out, written on failure on every Testing Tool and returned by `describe()`.
+_Avoid_: Snapshot, ARIA snapshot, component tree, page dump
 
 **Near Miss**:
 A component a failed lookup almost matched (the same kind with a similar name, or another kind with the exact name), listed in the failure so the reader can see what the test should have asked for.

@@ -18,6 +18,7 @@ import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
+import com.vaadin.testing.unified.component.UnifiedMessageInput;
 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
@@ -183,7 +184,8 @@ public class UserStepWordingTest {
         fake.add("vaadin-combo-box", "label", "Role")
                 .add("vaadin-menu-bar", "testId", "menu")
                 .add("vaadin-upload", "testId", "receipt")
-                .add("vaadin-multi-select-combo-box", "label", "Tags");
+                .add("vaadin-multi-select-combo-box", "label", "Tags")
+                .add("vaadin-message-input", "testId", "chat");
 
         assertEquals("choose “Admin” in combo box “Role”",
                 phrase(fake.page.find(UnifiedComboBox.class).withLabel("Role"), "selectItem", "Admin"));
@@ -196,6 +198,8 @@ public class UserStepWordingTest {
         assertEquals("upload “receipt.pdf” to upload (test id “receipt”)",
                 phrase(fake.page.find(UnifiedUpload.class).withTestId("receipt"), "upload", "receipt.pdf",
                         "application/pdf", new byte[1]));
+        assertEquals("send “Hello” in message input (test id “chat”)",
+                phrase(fake.page.find(UnifiedMessageInput.class).withTestId("chat"), "send", "Hello"));
     }
 
     private static String phrase(UnifiedWrapper wrapper, String method, Object... args) throws Exception {
@@ -220,6 +224,7 @@ public class UserStepWordingTest {
         assertThat(fake.page.find(UnifiedButton.class).withText("Delete")).hasCount(2);
         assertThat(fake.page.find(UnifiedCheckbox.class).withLabel("Terms")).isChecked();
         assertThat(fake.page).isAt(com.vaadin.flow.component.html.Div.class);
+        assertThat(fake.page).hasTitle("People");
 
         assertEquals(List.of(
                 "see text field “Name” with value “Alan”",
@@ -227,7 +232,20 @@ public class UserStepWordingTest {
                 "see no button “Archive”",
                 "see 2 buttons “Delete”",
                 "see checkbox “Terms” checked",
-                "see Div"), texts());
+                "see Div",
+                "see title “People”"), texts());
+    }
+
+    @Test
+    void aMissingColumnReadsAsWithout() {
+        fake.add("vaadin-grid", "testId", "archived");
+        StepTarget grid = StepTarget.of(Wrappers.lazyElementOf(
+                fake.page.find(com.vaadin.testing.unified.component.UnifiedGrid.class).withTestId("archived")));
+
+        assertEquals("see grid (test id “archived”) with column “Archived on”",
+                Phrases.forCheck(grid, "to have column", "Archived on").render());
+        assertEquals("see grid (test id “archived”) without column “Archived on”",
+                Phrases.forCheck(grid, "not to have column", "Archived on").render());
     }
 
     @Test

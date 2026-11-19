@@ -1,0 +1,44 @@
+# Committed round-trip counts of the Performance Pairs on playwright (#341): one line per user action (the test's
+# source line) and counter. scripts/bench-unified.sh --tool playwright --counts checks them; a count above the committed
+# one fails, and one below it asks for this file to be lowered with --update-counts (a range, min-max, is a count that
+# depends on timing and is checked against its max only). Raise a count only by editing
+# this file, with the reason in the pull request.
+DramafinderPerfTest.comboBox:72 calls 2
+DramafinderPerfTest.comboBox:74 calls 20
+DramafinderPerfTest.comboBox:76 calls 1
+DramafinderPerfTest.largeGrid:60 calls 2
+DramafinderPerfTest.largeGrid:63 calls 1
+DramafinderPerfTest.largeGrid:64 calls 13
+DramafinderPerfTest.largeGrid:66 calls 1
+DramafinderPerfTest.largeGrid:67 calls 1
+DramafinderPerfTest.longForm:39 calls 2
+DramafinderPerfTest.longForm:42 calls 72
+DramafinderPerfTest.longForm:45 calls 6
+DramafinderPerfTest.longForm:48 calls 4
+DramafinderPerfTest.longForm:51 calls 6
+DramafinderPerfTest.longForm:53 calls 2
+DramafinderPerfTest.longForm:55 calls 1
+DramafinderPerfTest.smallForm:28 calls 2
+DramafinderPerfTest.smallForm:30 calls 3
+DramafinderPerfTest.smallForm:31 calls 3
+DramafinderPerfTest.smallForm:32 calls 2
+DramafinderPerfTest.smallForm:34 calls 1
+UnifiedPerfTest.comboBox:74 calls 2
+UnifiedPerfTest.comboBox:76 calls 49
+UnifiedPerfTest.comboBox:78 calls 2
+UnifiedPerfTest.largeGrid:63 calls 2
+UnifiedPerfTest.largeGrid:65 calls 16
+UnifiedPerfTest.largeGrid:67 calls 2
+UnifiedPerfTest.largeGrid:68 calls 2
+UnifiedPerfTest.longForm:41 calls 2
+UnifiedPerfTest.longForm:44 calls 144
+UnifiedPerfTest.longForm:47 calls 12
+UnifiedPerfTest.longForm:50 calls 10
+UnifiedPerfTest.longForm:53 calls 12
+UnifiedPerfTest.longForm:55 calls 5
+UnifiedPerfTest.longForm:57 calls 2
+UnifiedPerfTest.smallForm:29 calls 2
+UnifiedPerfTest.smallForm:31 calls 6
+UnifiedPerfTest.smallForm:32 calls 6
+UnifiedPerfTest.smallForm:33 calls 5
+UnifiedPerfTest.smallForm:35 calls 2

@@ -14,10 +14,10 @@ VAADIN_OFFLINE_KEY=... mvn test -pl unified-test-demo -Dvaadin.testing.tool=sele
 
 TestBench checks its license when it loads: on CI, the `selenium` job reads the `VAADIN_OFFLINE_KEY` secret. Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath.
 
-The Playwright run uses Playwright's own browser download. To use an installed Chromium instead:
+The Playwright run downloads the one browser it launches, the first time: Chromium's headless shell, about 280 MB. To use an installed Chromium instead, which skips the download:
 
 ```
-PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 mvn test -pl unified-test-demo \
+mvn test -pl unified-test-demo \
     -Dvaadin.testing.tool=playwright \
     -Dvaadin.testing.playwright.executable=/path/to/chrome
 ```
@@ -54,6 +54,16 @@ void savesName(UnifiedPage page) { ... }
 A short example that the demo app can't run, because it shows buttons or views the demo doesn't have, goes in [`GuideExamples`](unified-test-demo/src/test/java/demo/GuideExamples.java) instead: CI compiles it but doesn't run it, so an API change still breaks the build rather than the guide.
 
 Write an example inline only when it can't compile: a signature, a class skeleton, or a mistake to avoid.
+
+### What is unreleased
+
+The site documents `main`, so mark what the latest release doesn't have, where a reader of that release meets it. Mark the item, not its surroundings: a row, a bullet or a sentence gets `*(unreleased)*` next to its name. Only a section whose every line is new gets the banner instead:
+
+```markdown
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+```
+
+A section that keeps released content under a new heading, or a sentence that names a released and an unreleased item, is marked per item, so a reader of the release can tell which half they have.
 
 ## Cutting a release
 
