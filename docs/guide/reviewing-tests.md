@@ -9,7 +9,7 @@ For the reviewer of a pull request that adds or changes Unified UI Tests, writte
     - **Scenarios without a check** *(unreleased)* lists the passing scenarios whose last steps nothing checks ([Scenarios without a check](reports-and-failures.md#scenarios-without-a-check)).
     - **Compared with another Testing Tool** *(unreleased)* lists the scenarios that end differently, or take different steps, in a browser ([Compared with another Testing Tool](reports-and-failures.md#compared-with-another-testing-tool)).
 2. **The User Steps of each new or changed scenario**: in the summary, or in the test's `user-steps.txt` in the CI artifact ([The User Steps of a test](reports-and-failures.md#the-user-steps-of-a-test)). Read them as the person who asked for the scenario would.
-3. **The diff of the test code**, with the checklist below.
+3. **The diff of the test code**, with the checklist below. [Common mistakes](common-mistakes.md) shows the code to look for.
 
 ## Checklist
 
