@@ -331,7 +331,8 @@ public final class UnifiedAssertions {
         /** Exactly these items are selected, in any order. */
         @SuppressWarnings("unchecked")
         public MultiSelectAssert hasSelectedItems(String... expected) {
-            java.util.Set<String> set = java.util.Set.of(expected);
+            // in the test's order: the User Step reads the same in every run, which Set.of doesn't promise
+            java.util.Set<String> set = new java.util.LinkedHashSet<>(List.of(expected));
             return check("to have selected items", set, multi::getSelectedItems,
                     v -> v != null && ((List<String>) v).size() == set.size() && set.containsAll((List<String>) v));
         }

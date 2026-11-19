@@ -53,6 +53,27 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         }
         failed.forEach(s -> scenario(h, s, true, true, false));
         h.append("</section>\n");
+        for (RunComparison c : summary.comparisons()) {
+            h.append("<section class=\"compared\">\n<h2>Compared with ").append(esc(c.otherTool()))
+                    .append("</h2>\n<p class=\"lead\">").append(esc(summary.comparedLead(c))).append("</p>\n");
+            for (RunComparison.Difference d : c.differences()) {
+                h.append("<div class=\"difference\">\n<p><span class=\"name\">").append(esc(d.here().displayName()))
+                        .append("</span> <span class=\"class\">").append(esc(d.here().simpleClassName()))
+                        .append("</span> <span class=\"badge\">").append(esc(summary.differenceLine(d, c.otherTool())))
+                        .append("</span></p>\n");
+                d.parting().ifPresent(p -> h.append("<p class=\"why\">Parts at step ").append(p.position())
+                        .append(": ").append(partingSide(p.here(), summary.tool())).append(", ")
+                        .append(partingSide(p.there(), c.otherTool())).append("</p>\n"));
+                ScenarioResult failedOne = d.here().failed() ? d.here() : d.there().failed() ? d.there() : null;
+                if (d.endsDifferently() && failedOne != null) {
+                    h.append("<p class=\"why\">On ").append(esc(failedOne == d.here() ? summary.tool() : c.otherTool()))
+                            .append(": <code>").append(esc(RunSummary.error(failedOne.failure() == null ? Map.of()
+                                    : failedOne.failure()))).append("</code></p>\n");
+                }
+                h.append("</div>\n");
+            }
+            h.append("</section>\n");
+        }
         List<ScenarioResult> unchecked = summary.unchecked();
         if (!unchecked.isEmpty()) {
             h.append("<section id=\"unchecked\">\n<h2>Scenarios without a check</h2>\n<p class=\"lead\">")
@@ -202,6 +223,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                     .append("trace.playwright.dev, or with Playwright's show-trace\">trace.zip</a>");
         }
         h.append("</p>\n</details>\n");
+    }
+
+    private static String partingSide(String line, String tool) {
+        return (line == null ? "no more steps" : "<code>" + esc(line) + "</code>") + " on " + esc(tool);
     }
 
     private void failure(StringBuilder h, ScenarioResult s) {
@@ -451,6 +476,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             .files{font-size:13px;margin:8px 0 12px}
             .diffstat{color:var(--muted);font-weight:400;font-size:12px}
             .diffstat .add,pre.diff .add{color:var(--pass)}.diffstat .del,pre.diff .del{color:var(--fail)}
+            .difference{margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px}\
+            .difference p{margin:0 0 4px}\
             .why{margin:0 0 8px;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
             pre.diff{margin:0 0 8px;padding:8px 10px;background:var(--code);border-radius:6px;overflow-x:auto;\
             font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}

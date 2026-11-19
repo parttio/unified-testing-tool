@@ -187,6 +187,46 @@ class RunSummaryWriterTest {
     }
 
     @Test
+    void theRunIsComparedWithTheRunOnAnotherTestingToolInTheCompareDir() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+        test("demo.OrderTest", "orders", "passed", "2026-11-16T10:00:06Z");
+        String json = Files.readString(evidence().resolve("EditPersonTest/edits/user-steps.json"));
+        // a downloaded artifact keeps the module's path; this run's own Testing Tool in there is not another run
+        Path other = dir.resolve("other");
+        Path onBrowserless = other.resolve("app/target/surefire-reports/unified-evidence/EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(onBrowserless.getParent());
+        Files.writeString(onBrowserless, json.replace("\"playwright\"", "\"browserless\"").replace("open People", "open Home"));
+        Path onPlaywright = other.resolve("earlier/EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(onPlaywright.getParent());
+        Files.writeString(onPlaywright, json.replace("open People", "open Elsewhere"));
+
+        writer(Map.of(Settings.USER_STEPS_COMPARE_DIR, other.toString()), Map.of()).write(Set.of(), "1");
+
+        assertTrue(summary().contains("#### Compared with Browserless\n\n1 scenario ran on both Testing Tools: 0 end "
+                + "differently, 1 takes different User Steps. 1 ran on Playwright only, 0 on Browserless only.\n\n"
+                + "**edits (EditPersonTest)** · passed on both, different User Steps\n\n"
+                + "- Parts at step 1: `open People` on Playwright, `open Home` on Browserless\n"), summary());
+        assertFalse(summary().contains("Elsewhere"), summary());
+        String data = Files.readString(evidence().resolve("summary.json"), StandardCharsets.UTF_8);
+        assertTrue(data.contains("\"comparedWith\": ["), data);
+        assertTrue(data.contains("\"differsOn\": ["), data);
+        assertTrue(Files.readString(evidence().resolve("report.html")).contains("<h2>Compared with Browserless</h2>"));
+        assertEquals(List.of(), log);
+    }
+
+    @Test
+    void aCompareDirWithoutAnotherTestingToolsRunIsSaidOnce() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+
+        writer(Map.of(Settings.USER_STEPS_COMPARE_DIR, dir.resolve("not-downloaded").toString()), Map.of())
+                .write(Set.of(), "1");
+
+        assertFalse(summary().contains("Compared with"), summary());
+        assertEquals(1, log.size(), log.toString());
+        assertTrue(log.get(0).startsWith("no run on another Testing Tool in "), log.toString());
+    }
+
+    @Test
     void aMissingBaseRunIsSaidOnce() throws Exception {
         test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
 

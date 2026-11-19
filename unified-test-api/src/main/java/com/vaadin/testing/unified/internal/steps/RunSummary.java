@@ -20,9 +20,11 @@ import java.util.Optional;
  * @param changes the files changed against the base ref, or null outside a PR
  * @param base the base branch's last run, to compare a changed scenario's User Steps with; null when none was
  *        asked for ({@code vaadin.testing.user-steps.baseline-dir} unset)
+ * @param comparisons this run against runs of the same tests on other Testing Tools, one per tool; empty when
+ *        none was asked for ({@code vaadin.testing.user-steps.compare-dir} unset) or found
  */
 public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes,
-        BaseRun base) {
+        BaseRun base, List<RunComparison> comparisons) {
 
     public static final String FILE = "summary.md";
 
@@ -36,6 +38,11 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
     /** Without a base run: changed scenarios show their User Steps in full. */
     public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes) {
         this(tool, scenarios, disabled, changes, null);
+    }
+
+    /** Without a run on another Testing Tool to compare with. */
+    public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes, BaseRun base) {
+        this(tool, scenarios, disabled, changes, base, List.of());
     }
 
     public long passed() {
@@ -62,8 +69,64 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
             md.append("\n#### Failed scenarios\n");
             failed.forEach(s -> failed(md, s));
         }
+        comparisons.forEach(c -> compared(md, c));
         unchecked(md);
         return md.toString();
+    }
+
+    /** At most this many scenarios that differ from another Testing Tool's run are listed; the rest are counted. */
+    static final int DIFFERENCES_LISTED = 10;
+
+    private void compared(StringBuilder md, RunComparison c) {
+        md.append("\n#### Compared with ").append(c.otherTool()).append("\n\n").append(comparedLead(c)).append('\n');
+        for (RunComparison.Difference d : c.differences().subList(0, Math.min(DIFFERENCES_LISTED,
+                c.differences().size()))) {
+            md.append("\n**").append(markdown(title(d.here()))).append("** · ")
+                    .append(markdown(differenceLine(d, c.otherTool()))).append("\n\n");
+            d.parting().ifPresent(p -> md.append("- Parts at step ").append(p.position()).append(": ")
+                    .append(partingSide(p.here(), tool)).append(", ").append(partingSide(p.there(), c.otherTool()))
+                    .append('\n'));
+            ScenarioResult failed = d.here().failed() ? d.here() : d.there().failed() ? d.there() : null;
+            if (d.endsDifferently() && failed != null) {
+                md.append("- On ").append(failed == d.here() ? tool : c.otherTool()).append(": ")
+                        .append(code(error(failed.failure() == null ? Map.of() : failed.failure()))).append('\n');
+            }
+        }
+        if (c.differences().size() > DIFFERENCES_LISTED) {
+            md.append("\n… and ").append(c.differences().size() - DIFFERENCES_LISTED).append(" more, in `")
+                    .append(RunReport.FILE).append("`\n");
+        }
+    }
+
+    /** {@code 118 scenarios ran on both Testing Tools: 1 ends differently, …}, then those that ran on one only. */
+    String comparedLead(RunComparison c) {
+        StringBuilder lead = new StringBuilder();
+        lead.append(c.both()).append(c.both() == 1 ? " scenario ran" : " scenarios ran")
+                .append(" on both Testing Tools: ");
+        if (c.differences().isEmpty()) {
+            lead.append("same result and same User Steps on each.");
+        } else {
+            lead.append(c.endDifferently()).append(c.endDifferently() == 1 ? " ends" : " end")
+                    .append(" differently, ").append(c.takeDifferentSteps())
+                    .append(c.takeDifferentSteps() == 1 ? " takes" : " take").append(" different User Steps.");
+        }
+        if (c.onlyHere() > 0 || c.onlyThere() > 0) {
+            lead.append(' ').append(c.onlyHere()).append(" ran on ").append(tool).append(" only, ")
+                    .append(c.onlyThere()).append(" on ").append(c.otherTool()).append(" only.");
+        }
+        return lead.toString();
+    }
+
+    /** {@code passed on Browserless, failed on Playwright}, or {@code passed on both, different User Steps}. */
+    String differenceLine(RunComparison.Difference d, String otherTool) {
+        if (d.endsDifferently()) {
+            return d.here().status() + " on " + tool + ", " + d.there().status() + " on " + otherTool;
+        }
+        return d.here().status() + " on both, different User Steps";
+    }
+
+    private static String partingSide(String line, String tool) {
+        return (line == null ? "no more steps" : code(line)) + " on " + tool;
     }
 
     /** At most this many scenarios without a check are listed; the rest are counted. */

@@ -179,7 +179,8 @@ When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the
 1. a header with the Testing Tool and the counts;
 2. **Changed in this PR**: the scenarios that call code changed against the base branch, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. A new scenario shows its User Steps; a changed one shows how its User Steps differ from the base branch's last run, when the build gives it that run ([below](#how-a-changed-scenarios-steps-changed)). Left out when the run has no base to compare against;
 3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory;
-4. **Scenarios without a check**: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
+4. **Compared with another Testing Tool**: the scenarios that end differently, or take different User Steps, on another Testing Tool, when the build gives it that run ([below](#compared-with-another-testing-tool));
+5. **Scenarios without a check**: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
 
 Passing scenarios count in the header only, unless the pull request changed them or they have no check: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
 
@@ -256,6 +257,36 @@ A scenario marked *changed* calls changed code, but that alone doesn't say what 
 
 The directory is any copy of the base branch's evidence directory, such as its downloaded CI artifact; `user-steps.json` files are found at any depth. [Running in CI](ci-setup.md#github-actions) downloads it in a pull request.
 
+### Compared with another Testing Tool
+
+A Unified UI Test runs on Browserless in milliseconds, and the fast run is the one a developer or an agent repeats. When the same test then fails in a browser, the first question is where the two runs part. Give a run the evidence directory of a run on another Testing Tool, and its summary answers that:
+
+```
+mvn test -Dvaadin.testing.evidence-dir=target/evidence-browserless
+mvn test -Dvaadin.testing.tool=playwright \
+    -Dvaadin.testing.user-steps.compare-dir=target/evidence-browserless
+```
+
+```markdown
+#### Compared with Browserless
+
+118 scenarios ran on both Testing Tools: 1 ends differently, 1 takes different User Steps. 13 ran on Playwright only, 12 on Browserless only.
+
+**Saving a person shows a confirmation (EditPersonTest)** · failed on Playwright, passed on Browserless
+
+- On Playwright: `UnifiedAssertionError: Expected notification to have text “Saved Alan”, found “Saved”`
+
+**The profile is shown after login (ProfileTest)** · passed on both, different User Steps
+
+- Parts at step 3: `click button “Log in”` on Playwright, `see text field “Name”` on Browserless
+```
+
+- **Ends differently:** the scenario passed on one Testing Tool and failed on the other. These come first, with the error of the side that failed.
+- **Different User Steps:** both ended alike, but didn't do the same. *Parts at step* is the first line the two runs don't share, counted over the scenario's steps, User Tasks and gap lines from the top. A test that branches on `page.hasRealBrowser()` shows up here, and so does a Wrapper that words a step differently on one Testing Tool.
+- **Ran on one only:** tests a Capability skipped on the other Testing Tool (`@RequiresBrowser`, `@RequiresTestingTool`). They are counted, not listed.
+
+The two runs have to be of the same code; the Unified API can't check that, so give it a directory you know is. The first run needs an evidence directory of its own (`vaadin.testing.evidence-dir`), or the second run overwrites it. The section reports; it fails no test. It doesn't say whether a difference is one of the documented ones ([Tool-specific code](tool-specific.md)): read the step it names. `report.html` has the same section, and `summary.json` marks each such scenario with `differsOn`.
+
 ### Scenarios without a check
 
 A test that fills a form, clicks *Save* and stops there passes whether or not the save works. The run summary lists the passing scenarios that end this way, so the author, or the reviewer of a test an agent wrote, sees them without reading each test:
@@ -323,6 +354,7 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the 
 - **The verdict:** `status` is `failed` when any scenario failed. The counts are those of the summary's header.
 - **Every scenario** is listed, passed or failed, with the directory of its files. Paths are relative to the evidence directory, so they work in a downloaded CI artifact too.
 - **A failed scenario** carries the text of the failed User Step, the `failure` object of its `user-steps.json` unchanged (expected, found, Near Misses, *Did you mean*, the code path), and its failure evidence.
+- **A scenario that differs on another Testing Tool** says `differsOn`: the tool, its status there, where the User Steps part, and the failure from there.
 - **A passing scenario without a check** says `unchecked` (`all` or `end`) and lists the User Steps nothing checks.
 - **A scenario the pull request changed** says `new` or `changed`, the changed files it calls from, and how many User Steps were added and removed against the Base Run.
 
@@ -379,6 +411,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it |
+| `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step, as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
