@@ -397,11 +397,9 @@ A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `script
 
 ### What an agent reads
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 - **The skill**, above, installed in the project.
-- **The [Findable View](#findable-view)**: `page.describe()` while writing a test, and `<test>.view.txt` after a failure, for lookups that match what is on the page.
-- **The API reference:** `META-INF/unified/api-reference.md` in the `unified-test-api` jar, so it is of the version the project uses and needs no network. Every Wrapper with its filters, actions, reads and checks, and the page's. Generated from the Wrapper interfaces and `UnifiedAssertions`; a test of the build fails when the file is not what the code says. The docs site has the same page.
+- **The [Findable View](#findable-view)** *(unreleased)*: `page.describe()` while writing a test, and `<test>.view.txt` after a failure, for lookups that match what is on the page.
+- **The API reference** *(unreleased)*: `META-INF/unified/api-reference.md` in the `unified-test-api` jar, so it is of the version the project uses and needs no network. Every Wrapper with its filters, actions, reads and checks, and the page's. Generated from the Wrapper interfaces and `UnifiedAssertions`; a test of the build fails when the file is not what the code says. The docs site has the same page.
 - **The docs site** for agents: `llms.txt` at its root (one link per page, to the page as Markdown with its code examples included; the specification and the ADRs under *Optional*), and `llms-full.txt` (the home page, the API reference, the developer guide and the glossary in one file). Written by the site's build from its navigation.
 
 ## Moving to this chapter
