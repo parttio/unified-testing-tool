@@ -24,7 +24,7 @@
         <vaadin.testing.playwright.executable />
         <!-- the Performance Pairs (demo.perf) run only with -Pperformance -->
         <demo.test.groups />
-        <demo.test.excludedGroups>launched-only,performance</demo.test.excludedGroups>
+        <demo.test.excludedGroups>launched-only</demo.test.excludedGroups>
     </properties>
 
     <dependencies>
