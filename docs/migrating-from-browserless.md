@@ -28,10 +28,12 @@ Commit or stash your work first: the recipe changes files in place.
 === "Maven"
 
     ```bash
-    mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+    mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
       -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha3 \
       -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified
     ```
+
+    The plugin version is the one whose OpenRewrite the recipes are built and tested against.
 
     To set options, declare your own recipe in a `rewrite.yml` at the project root and activate it instead:
 
@@ -46,7 +48,7 @@ Commit or stash your work first: the recipe changes files in place.
     ```
 
     ```bash
-    mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+    mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
       -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha3 \
       -Drewrite.activeRecipes=com.example.MigrateBrowserless
     ```
