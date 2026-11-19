@@ -147,3 +147,34 @@ jobs:
           name: unified-evidence-selenium
           path: '**/target/surefire-reports/unified-evidence/'
           if-no-files-found: ignore
+
+  # after the three: where the same scenarios end differently, or take different User Steps, on two Testing Tools
+  compare:
+    name: Compare Testing Tools
+    needs: [browserless, playwright, selenium]
+    # also when a job failed: that is when the comparison says most
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Download the three jobs' Unified evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # a job that got no further than its build uploaded none: the comparison leaves it out
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'unified-evidence-*' --dir "$RUNNER_TEMP/evidence" || true
+      - name: Build the Unified API
+        run: mvn -B -ntp -q compile -pl unified-test-api -am
+      - name: Compare the runs
+        # exit code 2: fewer than two Testing Tools left evidence, which the jobs above already show as failed
+        run: >
+          java -cp unified-test-api/target/classes com.vaadin.testing.unified.report.CompareRuns
+          "$RUNNER_TEMP/evidence/unified-evidence-browserless"
+          "$RUNNER_TEMP/evidence/unified-evidence-playwright"
+          "$RUNNER_TEMP/evidence/unified-evidence-selenium"
+          || [ $? -eq 2 ]
