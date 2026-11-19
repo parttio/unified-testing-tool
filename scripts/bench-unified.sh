@@ -69,9 +69,10 @@ if [ "$mode" = time ]; then
     [ "$tool" = selenium ] && extra=(-Dcom.vaadin.testbench.Parameters.headless=true)
     echo "Timing the Performance Pairs on $tool: $warmup warm-up and $rounds measured rounds"
     status=0
-    mvn -B -ntp -q -pl unified-test-demo test-compile exec:java -Dexec.mainClass=demo.perf.bench.TimeBenchmark \
+    # from the demo module, as Surefire runs its tests: the application's dev mode writes its front-end files there
+    (cd unified-test-demo && mvn -B -ntp -q test-compile exec:java -Dexec.mainClass=demo.perf.bench.TimeBenchmark \
         -Dexec.classpathScope=test -Dexec.args="$bench_args" -Dvaadin.testing.tool="$tool" \
-        "${extra[@]}" "${maven_args[@]}" || status=$?
+        "${extra[@]}" "${maven_args[@]}") || status=$?
     exit $status
 fi
 
