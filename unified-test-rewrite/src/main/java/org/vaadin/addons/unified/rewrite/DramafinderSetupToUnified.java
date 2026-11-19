@@ -87,9 +87,21 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                 if (!Dramafinder.isDramafinderClass(classDecl) || !Dramafinder.migratable(classDecl)) {
                     return super.visitClassDeclaration(classDecl, ctx);
                 }
-                Set<String> helpers = Helpers.using(classDecl, Set.of(), Dramafinder::usesTestBase);
+                Set<String> helpers = new java.util.HashSet<>(Helpers.using(classDecl, Set.of(), Dramafinder::usesTestBase));
+                // a setupTest() that seeds and then calls super.setupTest() becomes a plain @BeforeEach
+                Set<java.util.UUID> onlySuperSetup = new java.util.HashSet<>();
+                for (Statement s : classDecl.getBody().getStatements()) {
+                    if (s instanceof J.MethodDeclaration m && Dramafinder.isSeedingSetup(m)) {
+                        helpers.remove(m.getSimpleName());
+                        if (m.getBody().getStatements().size() == 1) {
+                            onlySuperSetup.add(m.getId());
+                        }
+                    }
+                }
                 getCursor().putMessage(HELPERS, helpers);
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
+                c = c.withBody(c.getBody().withStatements(c.getBody().getStatements().stream()
+                        .filter(s -> !onlySuperSetup.contains(s.getId())).toList()));
                 List<String> beforeEach = beforeEachOf(classDecl, helpers);
                 c = c.withBody(c.getBody().withStatements(startAtView(classDecl, Dramafinder.viewOf(classDecl),
                         Helpers.callBeforeEachFirst(c, beforeEach))));
@@ -184,6 +196,46 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                 return c.withLeadingAnnotations(annotations);
             }
 
+            /**
+             * A {@code setupTest()} override that seeds the test, as a plain {@code @BeforeEach}: without its final
+             * {@code super.setupTest()}, which opened the page and navigated, now each test's first step, and
+             * without {@code @Override}, as nothing is left to override.
+             */
+            private J.MethodDeclaration seedingBeforeEach(J.MethodDeclaration m) {
+                List<Statement> body = m.getBody().getStatements();
+                m = m.withBody(m.getBody().withStatements(body.subList(0, body.size() - 1)));
+                List<J.Annotation> annotations = new ArrayList<>(m.getLeadingAnnotations());
+                for (int i = 0; i < annotations.size(); i++) {
+                    if (TypeUtils.isOfClassType(annotations.get(i).getType(), "java.lang.Override")) {
+                        J.Annotation removed = annotations.remove(i);
+                        if (i == 0 && !annotations.isEmpty()) {
+                            annotations.set(0, annotations.get(0).withPrefix(removed.getPrefix()));
+                        } else if (i == 0) {
+                            m = m.withModifiers(withFirstPrefix(m.getModifiers(), removed.getPrefix()));
+                        }
+                        break;
+                    }
+                }
+                m = m.withLeadingAnnotations(annotations);
+                if (annotations.stream().anyMatch(a -> TypeUtils.isOfClassType(a.getType(), TestBenchSetupToUnified.BEFORE_EACH))) {
+                    return m;
+                }
+                maybeAddImport(TestBenchSetupToUnified.BEFORE_EACH);
+                return JavaTemplate.builder("@BeforeEach")
+                        .imports(TestBenchSetupToUnified.BEFORE_EACH)
+                        .javaParser(Stubs.parser("package org.junit.jupiter.api; public @interface BeforeEach {}"))
+                        .build()
+                        .apply(updateCursor(m), m.getCoordinates().addAnnotation((a, b) -> 0));
+            }
+
+            private List<J.Modifier> withFirstPrefix(List<J.Modifier> modifiers, Space prefix) {
+                List<J.Modifier> result = new ArrayList<>(modifiers);
+                if (!result.isEmpty()) {
+                    result.set(0, result.get(0).withPrefix(prefix));
+                }
+                return result;
+            }
+
             /** Without {@code @EnabledIfSystemProperty(named = "vaadin.testing.tool", ..)}: the test now runs on any tool. */
             private J.ClassDeclaration withoutToolGuard(J.ClassDeclaration c, ExecutionContext ctx) {
                 boolean guarded = c.getLeadingAnnotations().stream().anyMatch(a -> TypeUtils.isOfClassType(a.getType(),
@@ -203,6 +255,9 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
                 Set<String> helpers = getCursor().getNearestMessage(HELPERS);
+                if (helpers != null && Dramafinder.isSeedingSetup(method)) {
+                    return seedingBeforeEach(m);
+                }
                 if (helpers == null || Pages.hasPageParameter(m)
                         || !Helpers.isBrowserTest(m) && !helpers.contains(m.getSimpleName())) {
                     return m;

@@ -585,7 +585,157 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
-    void aTestUsingABaseClassMemberNoRuleConvertsStaysAsItIs() {
+    void aTestUsingABaseClassMemberNoRuleConvertsStaysAndSaysWhy() {
+        // issue #350: a skipped class says what kept it from migrating
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import com.microsoft.playwright.BrowserContext;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class AdminTest extends SpringPlaywrightIT {
+                    @Override
+                    protected void prepareBrowserContext(BrowserContext context) {
+                    }
+
+                    @Test
+                    void opensPeopleAsAdmin() {
+                        loginAs("admin", "ADMIN");
+                        navigate(PeopleView.class);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.BrowserContext;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                // TODO unified: not migrated: overrides prepareBrowserContext(..) of SpringPlaywrightIT, calls loginAs(..) of SpringPlaywrightIT; convert them by hand, then run the migration again
+                class AdminTest extends SpringPlaywrightIT {
+                    @Override
+                    protected void prepareBrowserContext(BrowserContext context) {
+                    }
+
+                    @Test
+                    void opensPeopleAsAdmin() {
+                        loginAs("admin", "ADMIN");
+                        navigate(PeopleView.class);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aSetupTestOverrideThatSeedsBeforeTheBaseClassBecomesAPlainBeforeEach() {
+        // issue #350: seeding data before the base class navigates
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.ButtonElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @BeforeEach
+                    @Override
+                    public void setupTest() throws Exception {
+                        seed();
+                        super.setupTest();
+                    }
+
+                    private void seed() {
+                    }
+
+                    @Override
+                    public String getView() {
+                        return "people";
+                    }
+
+                    @Test
+                    void saves() {
+                        ButtonElement.getByText(page, "Save").click();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @BeforeEach
+                    public void setupTest() throws Exception {
+                        seed();
+                    }
+
+                    private void seed() {
+                    }
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.navigate("people");
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aSetupTestOverrideThatOnlyCallsTheBaseClassGoes() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.ButtonElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Override
+                    public void setupTest() throws Exception {
+                        super.setupTest();
+                    }
+
+                    @Test
+                    void saves() {
+                        navigate(PeopleView.class);
+                        ButtonElement.getByText(page, "Save").click();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aSetupTestOverrideThatWorksAfterTheBaseClassStaysAndSaysWhy() {
         rewriteRun(java(VIEW), java(
                 """
                 package com.example;
@@ -593,11 +743,34 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                 import org.junit.jupiter.api.Test;
                 import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
 
-                class AdminTest extends SpringPlaywrightIT {
-                    @Test
-                    void opensPeopleAsAdmin() {
-                        loginAs("admin", "ADMIN");
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Override
+                    public void setupTest() throws Exception {
+                        super.setupTest();
                         navigate(PeopleView.class);
+                    }
+
+                    @Test
+                    void opens() {
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                // TODO unified: not migrated: overrides setupTest() of AbstractBasePlaywrightIT; convert them by hand, then run the migration again
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Override
+                    public void setupTest() throws Exception {
+                        super.setupTest();
+                        navigate(PeopleView.class);
+                    }
+
+                    @Test
+                    void opens() {
                     }
                 }
                 """));
