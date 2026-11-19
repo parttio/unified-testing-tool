@@ -43,9 +43,12 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
  *
  * <ul>
  * <li>Playwright: {@code calls}, every Java-to-driver call, from Playwright's channel log ({@code DEBUG=pw:channel},
- *     which the script sets);
+ *     which the script sets); calls repeated until something is ready ({@code waitForSelector} and the
+ *     {@code dispose} of its handle, reads of a lazy drop-down's {@code loading} state) are counted apart as
+ *     {@code waitPolls}, because their number depends on timing;
  * <li>Selenium: {@code commands}, every WebDriver command, from {@code RemoteWebDriver}'s command log; TestBench's
- *     {@code waitForVaadin} polls are counted apart as {@code waitPolls}, because their number depends on timing;
+ *     {@code waitForVaadin} polls and reads of a lazy drop-down's {@code loading} state are counted apart as
+ *     {@code waitPolls}, because their number depends on timing;
  * <li>Browserless: {@code lookups}, {@code walks} (component-tree walks from the UI) and {@code roundTrips}
  *     (simulated server round trips), from Browserless Test's lifecycle hook and its round-trip methods.
  * </ul>
@@ -187,9 +190,10 @@ public class RoundTripCounter implements TestExecutionListener {
                 if (!"Executing: {0} {1}".equals(record.getMessage()) || params == null || params.length == 0) {
                     return;
                 }
-                boolean waitPoll = "executeScript".equals(String.valueOf(params[0])) && params.length > 1
-                        // TestBench's WAIT_FOR_VAADIN_SCRIPT
-                        && String.valueOf(params[1]).contains("devServerIsNotLoaded");
+                String command = params.length > 1 ? String.valueOf(params[1]) : "";
+                boolean waitPoll = "executeScript".equals(String.valueOf(params[0]))
+                        // TestBench's WAIT_FOR_VAADIN_SCRIPT, or a read of a lazy drop-down's loading state
+                        && (command.contains("devServerIsNotLoaded") || command.contains(".loading"));
                 count(waitPoll ? "waitPolls" : "commands");
             }
 
@@ -212,6 +216,15 @@ public class RoundTripCounter implements TestExecutionListener {
         }
         PrintStream original = System.err;
         System.setErr(new PrintStream(new LineFilter(original), true, StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Calls repeated until something is ready, so their number depends on timing: waiting for a selector and
+     * disposing of the handle it returns, and reading a lazy drop-down's loading state while it fetches a page.
+     */
+    private static boolean isWait(String line) {
+        return line.contains("\"method\":\"waitForSelector\"") || line.contains("\"method\":\"dispose\"")
+                || line.contains("el.loading") || line.contains("c.loading");
     }
 
     /** Counts Playwright's channel lines on the thread that sends them, and keeps them out of the log. */
@@ -243,7 +256,7 @@ public class RoundTripCounter implements TestExecutionListener {
             line.reset();
             Matcher send = SEND.matcher(text);
             if (send.find()) {
-                count("calls");
+                count(isWait(text) ? "waitPolls" : "calls");
             } else if (!text.contains("◀ RECV ")) {
                 target.print(text);
             }
