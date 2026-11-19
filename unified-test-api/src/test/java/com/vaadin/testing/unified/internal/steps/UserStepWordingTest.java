@@ -231,6 +231,18 @@ public class UserStepWordingTest {
     }
 
     @Test
+    void aMissingColumnReadsAsWithout() {
+        fake.add("vaadin-grid", "testId", "archived");
+        StepTarget grid = StepTarget.of(Wrappers.lazyElementOf(
+                fake.page.find(com.vaadin.testing.unified.component.UnifiedGrid.class).withTestId("archived")));
+
+        assertEquals("see grid (test id “archived”) with column “Archived on”",
+                Phrases.forCheck(grid, "to have column", "Archived on").render());
+        assertEquals("see grid (test id “archived”) without column “Archived on”",
+                Phrases.forCheck(grid, "not to have column", "Archived on").render());
+    }
+
+    @Test
     void pageStepsReadAsTheUserWouldSayThem() {
         fake.page.navigate(PeopleView.class);
         fake.page.navigate("profile?tab=2");

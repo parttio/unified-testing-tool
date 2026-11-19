@@ -449,6 +449,22 @@ public final class UnifiedAssertions {
         public GridAssert isEmpty() {
             return check("to be empty", null, grid::getRowCount, v -> Objects.equals(v, 0));
         }
+
+        /** A column with this header text, among others: for a column the application adds while the test runs. */
+        public GridAssert hasColumn(String header) {
+            return check("to have column", header, grid::getColumnHeaders, v -> ((List<?>) v).contains(header));
+        }
+
+        /** No column with this header text, e.g. after the application removed it. */
+        public GridAssert doesNotHaveColumn(String header) {
+            return check("not to have column", header, grid::getColumnHeaders, v -> !((List<?>) v).contains(header));
+        }
+
+        /** Exactly these column headers, in display order ({@link UnifiedGrid#getColumnHeaders()}). */
+        public GridAssert hasColumnHeaders(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have column headers", list, grid::getColumnHeaders, list::equals);
+        }
     }
 
     public static final class GridRowAssert {

@@ -208,6 +208,9 @@ public final class Phrases {
             }
             return Phrase.of("see", target, values).withValueLabel("with " + what);
         }
+        if (expectation.startsWith("not to have ")) {
+            return Phrase.of("see", target, values).withValueLabel("without " + expectation.substring("not to have ".length()));
+        }
         if (expectation.startsWith("to be ")) {
             return Phrase.of("see", target, values).withTrailing(expectation.substring("to be ".length()));
         }

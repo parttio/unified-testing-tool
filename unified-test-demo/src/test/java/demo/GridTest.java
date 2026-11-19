@@ -4,6 +4,7 @@ import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.List;
@@ -27,6 +28,8 @@ class GridTest {
 
         assertThat(users).hasRowCount(120);
         assertEquals(List.of("Name", "Email", "Role", "Actions"), users.getColumnHeaders());
+        assertThat(users).hasColumnHeaders("Name", "Email", "Role", "Actions").hasColumn("Email")
+                .doesNotHaveColumn("Phone");
         assertThat(users.row(0)).hasCellText("Name", "User 1").hasCellText("Email", "user1@example.com");
     }
 
@@ -43,6 +46,20 @@ class GridTest {
         assertThat(row).hasCellText("Email", "user110@example.com").hasCellText("Role", "Admin");
     }
     // --8<-- [end:findsARowByWhatItShows]
+
+    // --8<-- [start:waitsForAColumn]
+    @Test
+    @DisplayName("Showing the archive date adds an Archived on column, hiding it takes it away")
+    void waitsForAColumnToComeAndGo(UnifiedPage page) {
+        UnifiedGrid archived = grid(page, "archived");
+
+        page.find(UnifiedButton.class).withText("Show archive date").click();
+        assertThat(archived).hasColumn("Archived on").hasColumnHeaders("Name", "Archived on");
+
+        page.find(UnifiedButton.class).withText("Hide archive date").click();
+        assertThat(archived).doesNotHaveColumn("Archived on").hasColumnHeaders("Name");
+    }
+    // --8<-- [end:waitsForAColumn]
 
     @Test
     @DisplayName("A row is found by a cell's text in any column")
