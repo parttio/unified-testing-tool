@@ -70,7 +70,12 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         if (entries.isEmpty()) {
             sb.append(INDENT).append("(no User Steps)\n");
         }
+        logs(sb, steps.logsBeforeFirstEntry(), 1);
         text(sb, entries, 1);
+        if (steps.logLinesLeftOut() > 0) {
+            sb.append(INDENT).append(LOG_MARK).append(" … ").append(steps.logLinesLeftOut())
+                    .append(" more log lines left out\n");
+        }
         if (failure != null && status.equals("failed")) {
             sb.append(INDENT).append(FAILED_MARK).append(' ').append(steps.mask(firstLine(failure))).append('\n');
             List<CallSite> codePath = codePath();
@@ -82,19 +87,36 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         return sb.toString();
     }
 
+    /** Marks a log line under the entry during which it was logged. */
+    static final String LOG_MARK = "⚠";
+
+    /** {@code ⚠ server ERROR PersonService: Could not save (IllegalStateException: no id)}, one line each. */
+    private void logs(StringBuilder sb, List<StepRecorder.LogLine> lines, int depth) {
+        for (StepRecorder.LogLine line : lines) {
+            sb.append(indent(depth)).append(LOG_MARK).append(' ').append(steps.mask(line.text())).append('\n');
+        }
+    }
+
     private void text(StringBuilder sb, List<Entry> entries, int depth) {
         String indent = indent(depth);
         for (Entry entry : entries) {
             switch (entry) {
-                case Step step -> sb.append(indent).append(line(step.index(), step.window(),
-                        steps.mask(step.phrase().render()), step.status() == Status.FAILED)).append('\n');
+                case Step step -> {
+                    sb.append(indent).append(line(step.index(), step.window(),
+                            steps.mask(step.phrase().render()), step.status() == Status.FAILED)).append('\n');
+                    logs(sb, steps.logs(step), depth + 1);
+                }
                 case Group group -> {
                     sb.append(indent).append(line(group.index(), group.window(), steps.mask(group.name()), false))
                             .append('\n');
+                    logs(sb, steps.logs(group), depth + 1);
                     text(sb, group.children(), depth + 1);
                 }
-                case Gap gap -> sb.append(indent)
-                        .append(line(null, gap.window(), gap.text(), gap.status() == Status.FAILED)).append('\n');
+                case Gap gap -> {
+                    sb.append(indent).append(line(null, gap.window(), gap.text(), gap.status() == Status.FAILED))
+                            .append('\n');
+                    logs(sb, steps.logs(gap), depth + 1);
+                }
             }
         }
     }
@@ -186,6 +208,10 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         json.field("stepCount", steps.stepCount());
         if (steps.readsBeforeFirstEntry() > 0) {
             json.field("readsBeforeFirstEntry", steps.readsBeforeFirstEntry());
+        }
+        logs(json, "logsBeforeFirstEntry", steps.logsBeforeFirstEntry());
+        if (steps.logLinesLeftOut() > 0) {
+            json.field("logLinesLeftOut", steps.logLinesLeftOut());
         }
         if (failure != null && status.equals("failed")) {
             json.key("failure").open('{');
@@ -283,6 +309,25 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         if (reads > 0) {
             json.field("readsAfter", reads);
         }
+        logs(json, "logs", steps.logs(entry));
+    }
+
+    private void logs(Json json, String key, List<StepRecorder.LogLine> lines) {
+        if (lines.isEmpty()) {
+            return;
+        }
+        json.key(key).open('[');
+        for (StepRecorder.LogLine line : lines) {
+            json.open('{');
+            json.field("source", line.source());
+            json.field("level", line.level());
+            json.optional("logger", line.logger());
+            json.field("message", steps.mask(line.message() == null ? "" : line.message()));
+            json.optional("error", steps.mask(line.error()));
+            json.field("text", steps.mask(line.text()));
+            json.close('}');
+        }
+        json.close(']');
     }
 
     private void common(Json json, String window, Status status, long durationNanos, CallSite callSite,
