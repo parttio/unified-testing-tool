@@ -183,6 +183,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   default profile without a marker ([#349](https://github.com/parttio/unified-testing-tool/issues/349)). Each
   migrated test now gets the copy's annotations it doesn't have itself, or, when the copy isn't among
   the migrated sources, a Migration Marker naming them.
+- The Migration Recipes kept the explicit version of a project's `browserless-test-spring`, which wins over the
+  Vaadin BOM: a project on the old standalone add-on, 1.1.2, ended up with it beside Browserless 25
+  ([#354](https://github.com/parttio/unified-testing-tool/issues/354)). The Browserless, TestBench and Dramafinder
+  recipes now remove it when the project's Vaadin BOM manages the version.
 
 ## Known limitations
 

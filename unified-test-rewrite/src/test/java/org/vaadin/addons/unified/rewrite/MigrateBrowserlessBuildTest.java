@@ -91,7 +91,20 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
                 pom(false, dependency("com.vaadin", "browserless-test-junit6", "25.3.2")
                         + dependency("com.vaadin", "browserless-test-spring", "25.3.2")
                         + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
-                pom(true, dependency("com.vaadin", "browserless-test-spring", "25.3.2")
+                pom(true, dependency("com.vaadin", "browserless-test-spring", null)
+                        + dependency("org.springframework.boot", "spring-boot-starter-test", null)
+                        + unified("unified-test-browserless")
+                        + unified("unified-test-spring"))));
+    }
+
+    @Test
+    void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
+        // 1.1.2 is the old standalone add-on line: its explicit version would win over the Vaadin BOM's 25.x (#354)
+        rewriteRun(pomXml(
+                pom(false, dependency("com.vaadin", "browserless-test-junit6", "25.3.2")
+                        + dependency("com.vaadin", "browserless-test-spring", "1.1.2")
+                        + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
+                pom(true, dependency("com.vaadin", "browserless-test-spring", null)
                         + dependency("org.springframework.boot", "spring-boot-starter-test", null)
                         + unified("unified-test-browserless")
                         + unified("unified-test-spring"))));
@@ -124,6 +137,66 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
     @Test
     void projectWithoutBrowserlessIsLeftAlone() {
         rewriteRun(pomXml(pom(false, dependency("org.springframework.boot", "spring-boot-starter-test", null))));
+    }
+
+    @Test
+    void withoutAVaadinBomBrowserlessTestSpringKeepsItsVersion() {
+        // nothing manages it then: without its version, the pom would not build (#354, #387)
+        rewriteRun(pomXml(
+                """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-junit6</artifactId>
+                            <version>25.3.2</version>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <version>25.3.2</version>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                </project>
+                """,
+                """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-bom</artifactId>
+                                <version>%s</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <version>25.3.2</version>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-browserless</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                </project>
+                """.formatted(UNIFIED_VERSION)));
     }
 
     @Test
