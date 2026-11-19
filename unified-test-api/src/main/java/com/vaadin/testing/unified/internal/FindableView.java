@@ -90,9 +90,6 @@ public final class FindableView {
     /** Last words of a custom filter's name that make it a name, as in the User Steps: {@code withHeaderTitle}. */
     private static final Set<String> NAMING_WORDS = Set.of("title", "text", "name", "label", "caption");
 
-    /** The id Flow gives the element it renders the UI in: a new one on every page load, so no container. */
-    private static final java.util.regex.Pattern FLOW_ROOT = java.util.regex.Pattern.compile("ROOT-\\d+");
-
     /** At most this many components are listed; the rest are counted. */
     static final int MAX_LINES = 100;
     /** At most this many components of one Wrapper type are read. */
@@ -437,8 +434,7 @@ public final class FindableView {
         }
         String inner = ".find(" + t.type().getSimpleName() + ".class)." + best.code(r.valueOf(best));
         Filter.Kind kind = r.facts().ancestorTestId() != null ? Filter.Kind.TEST_ID
-                : r.facts().ancestorId() != null && !FLOW_ROOT.matcher(r.facts().ancestorId()).matches()
-                ? Filter.Kind.ID : null;
+                : r.facts().ancestorId() != null ? Filter.Kind.ID : null;
         if (kind != null) {
             String value = kind == Filter.Kind.TEST_ID ? r.facts().ancestorTestId() : r.facts().ancestorId();
             Filter filter = new Filter(kind, null, value, true);

@@ -109,6 +109,9 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - On Browserless, a lookup inside a Scope also found the Scope itself: `dialog.find(UnifiedDialog.class)` found
   the dialog, where a browser finds none ([#333](https://github.com/parttio/unified-testing-tool/issues/333)).
   A grid cell, a column header, and Details and TabSheet content still find the components they hold.
+- In a browser, a failure with several matches outside any container named Flow's root as their container,
+  `in container (id “ROOT-2521314”)`, an id that changes on every page load and tells none of them apart
+  ([#334](https://github.com/parttio/unified-testing-tool/issues/334)). It now reads as on Browserless.
 
 ## Known limitations
 

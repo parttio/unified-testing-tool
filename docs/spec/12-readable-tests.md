@@ -326,7 +326,7 @@ UnifiedAssertionError: Editing a person in the dialog updates the grid
 - **Without a scenario** (outside a Unified UI Test), the first line is the summary, `Expected …, found …`. The User Step lists, the `error` of a step in `user-steps.json` and the run summary also show the summary, since the scenario is their heading.
 - **Waited** names where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` for a Wrapper's own.
 - **Items a component lacks** (`selectItem`, `selectTab`) fail the same way, with the component's items as Near Misses (`item “Finland”`) and a suggestion such as `selectItem("France")`.
-- **Several matches** are told apart by their nearest ancestor with a test id or an id: `in container (test id “billing”)`.
+- **Several matches** are told apart by their nearest ancestor with a test id or an id: `in container (test id “billing”)`. Flow's own root, whose id a browser sees as `ROOT-` and a number, is never named: it holds every view and Browserless has no such element.
 - **`UnifiedElement.getAccessibleName()`** reads the accessible name (4. Locating's order), for Near Misses and for tests.
 
 ## Findable View
