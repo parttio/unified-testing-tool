@@ -29,6 +29,10 @@ public final class SelectionSupport {
                 }
                 access.select(label);
             }
+            // the app may replace the field as it takes the value (#377): a field gone has nothing to check
+            if (!stillFound(element)) {
+                return;
+            }
             if (!access.selectedItems().contains(label)) {
                 throw new IllegalStateException("\"" + label + "\" could not be selected in " + element.describe());
             }
@@ -58,6 +62,11 @@ public final class SelectionSupport {
                 throw new IllegalStateException("Selection could not be cleared in " + element.describe());
             }
         });
+    }
+
+    /** Whether the lookup still finds the field, without waiting. */
+    private static boolean stillFound(LazyElement element) {
+        return element.countNow() > Math.max(element.index(), 0);
     }
 
     /** The single selected label, or null. */

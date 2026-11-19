@@ -200,6 +200,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 
 ## Fixed
 
+- On Playwright, `selectItem(..)` in a field the application replaces as it takes the value waited 10 s and
+  failed with Playwright's `TimeoutError`, though the pick went through, as in the order editor of Vaadin's Bakery
+  ([#377](https://github.com/parttio/unified-testing-tool/issues/377)). A field the lookup no longer finds is not
+  checked after the pick; one still there is.
 - A run without the adapter of its Testing Tool named the dependency to add as `com.vaadin:unified-test-<tool>`,
   which the alphas aren't published as. It now names `org.vaadin.addons:unified-test-<tool>`
   ([#435](https://github.com/parttio/unified-testing-tool/issues/435)).
