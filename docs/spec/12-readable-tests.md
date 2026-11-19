@@ -201,6 +201,7 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `expected`, `found` | string, optional | a `UnifiedAssertionError`'s `Expected` and `Found` lines (see [Failures](#failures)) |
 | `nearMisses` | array of strings, optional | its Near Misses, closest first: `text field “E-mail”`, `dialog “Help” (hidden)`; left out when there are none |
 | `suggestion` | string, optional | its `Did you mean`: `find(UnifiedTextField.class).withLabel("E-mail")` |
+| `lookup` | string, optional | with `suggestion`: the failed lookup or call in the same form, as the test asked for it: `find(UnifiedTextField.class).withLabel("Email")`. The two differ in what to change; the `ApplyDidYouMean` recipe reads both |
 
 **Entries** (`type` tells them apart)
 

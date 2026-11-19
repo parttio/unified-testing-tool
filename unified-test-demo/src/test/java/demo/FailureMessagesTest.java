@@ -152,6 +152,8 @@ class FailureMessagesTest {
         assertEquals("none", json.get("found").asString());
         assertEquals("text field “E-mail”", json.get("nearMisses").get(0).asString());
         assertEquals("find(UnifiedTextField.class).withLabel(\"E-mail\")", json.get("suggestion").asString());
+        // the lookup as the test wrote it, in the same form: what ApplyDidYouMean changes into the suggestion
+        assertEquals("find(UnifiedTextField.class).withLabel(\"Email\")", json.get("lookup").asString());
         assertTrue(Files.readString(evidence.resolve("user-steps.txt")).contains(
                 "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Email”, found none\n"));
     }

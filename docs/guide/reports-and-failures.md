@@ -90,6 +90,29 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
   Did you mean  find(UnifiedDialog.class).withHeaderTitle("Export report")
 ```
 
+### Applying it
+
+When a label changed in the application and the tests that used it fail, each failure already says what to write instead. The `ApplyDidYouMean` recipe writes it for you. Run the tests, then, in the same directory:
+
+```
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+    -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
+    -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.ApplyDidYouMean
+```
+
+```diff
+-        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
++        page.find(UnifiedTextField.class).withLabel("E-mail").setValue("alice@example.com");
+```
+
+It reads the failures the run left in the evidence directories (`user-steps.json`, every one under the directory the build runs in) and changes the string in the test's code. No model is involved, and nothing runs when the tests do: the result is a diff to read and commit, or to revert.
+
+- **What it changes:** the one string in which the failed lookup and its `Did you mean` differ, where the code has it as a string literal: a filter's value after `find(..)` of the same Wrapper, or the item of a `selectItem(..)` or `selectTab(..)`. Every such call in the files the failure's code path names, and in the scenario's test class.
+- **What it leaves:** a suggestion of another kind of component, a value kept in a constant or passed as a parameter, and a lookup written in a file the failure doesn't name. Those failures stay for you, or for an agent.
+- **It fixes the test, not the application.** If the label was changed by mistake, the test was right: revert the diff and fix the view. With `-Drewrite.exportDatatables=true` the recipe lists every value it replaced, with the scenario that asked for it, in `target/rewrite/datatables/`, so "Email → E-mail in forty lookups" reads as one decision.
+
+To read another directory, declare the recipe with its `evidenceDir` option in a `rewrite.yml`, as for the [Migration Recipes](../migrating-from-testbench.md).
+
 ### Other failures
 
 Two components match where the test meant one. They are told apart by their nearest container with a test id or an id, and there is no suggestion:
