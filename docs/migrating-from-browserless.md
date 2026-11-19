@@ -23,6 +23,9 @@ The demo's `ProfileBrowserlessTest`, and what the recipe makes of it. CI checks 
 
 ## Run it
 
+!!! warning "Vaadin 25.3 first"
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. The recipe doesn't check: on an older Vaadin it migrates the build all the same, and the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+
 Commit or stash your work first: the recipe changes files in place.
 
 === "Maven"
@@ -144,7 +147,7 @@ With `includePageObjects`, a page object that holds the Browserless test (`Brows
 
 ### TestBench UI Unit tests
 
-Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.
+Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.3.
 
 ### The build
 
