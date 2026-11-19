@@ -5,7 +5,11 @@ import com.microsoft.playwright.options.FilePayload;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
+import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
+import com.vaadin.testing.unified.spi.MessageInputAccess;
+import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.util.List;
@@ -15,12 +19,14 @@ import org.vaadin.addons.dramafinder.element.DetailsElement;
 import org.vaadin.addons.dramafinder.element.MenuBarElement;
 import org.vaadin.addons.dramafinder.element.MenuElement;
 import org.vaadin.addons.dramafinder.element.MenuItemElement;
+import org.vaadin.addons.dramafinder.element.MessageInputElement;
 import org.vaadin.addons.dramafinder.element.TabElement;
 import org.vaadin.addons.dramafinder.element.TabsElement;
 import org.vaadin.addons.dramafinder.element.UploadElement;
 
 /**
- * Access to Tabs, Details, MenuBar, Upload and DateTimePicker on Playwright, through Dramafinder's elements.
+ * Access to Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Playwright, through
+ * Dramafinder's elements.
  * Dramafinder's element actions wait for the server round-trip themselves; only actions on raw locators
  * wait here.
  */
@@ -195,6 +201,23 @@ final class PlaywrightCoreSetAccess {
         public void upload(String fileName, String mimeType, byte[] content) {
             new UploadElement(locator).uploadFiles(new FilePayload(fileName, mimeType, content));
             AutoWait.waitForVaadinIdle(session.page());
+        }
+    }
+
+    /** Types into the input's text area and clicks its send button, through Dramafinder's MessageInputElement. */
+    record MessageInputAccessImpl(PlaywrightSession session, Locator locator) implements MessageInputAccess {
+        @Override
+        public void send(String text) {
+            new MessageInputElement(locator).typeAndSubmit(text);
+            AutoWait.waitForVaadinIdle(session.page());
+        }
+    }
+
+    /** The list's {@code items}, as the server set them. */
+    record MessageListAccessImpl(PlaywrightSession session, Locator locator) implements MessageListAccess {
+        @Override
+        public List<UnifiedMessageList.Message> messages() {
+            return BrowserQueries.messages(locator.evaluate(BrowserQueries.MESSAGES));
         }
     }
 }

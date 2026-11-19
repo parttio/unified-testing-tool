@@ -1,0 +1,44 @@
+# Committed round-trip counts of the Performance Pairs on selenium (#341): one line per user action (the test's
+# source line) and counter. scripts/bench-unified.sh --tool selenium --counts checks them; a count above the committed
+# one fails, and one below it asks for this file to be lowered with --update-counts (a range, min-max, is a count that
+# depends on timing and is checked against its max only). Raise a count only by editing
+# this file, with the reason in the pull request.
+TestBenchPerfTest.comboBox:94 commands 8
+TestBenchPerfTest.comboBox:96 commands 3
+TestBenchPerfTest.largeGrid:69 commands 1
+TestBenchPerfTest.largeGrid:73 commands 18
+TestBenchPerfTest.largeGrid:74 commands 17
+TestBenchPerfTest.largeGrid:76 commands 6
+TestBenchPerfTest.largeGrid:84 commands 2
+TestBenchPerfTest.largeGrid:86 commands 5
+TestBenchPerfTest.largeGrid:87 commands 5
+TestBenchPerfTest.longForm:50 commands 720
+TestBenchPerfTest.longForm:53 commands 16
+TestBenchPerfTest.longForm:56 commands 8
+TestBenchPerfTest.longForm:59 commands 14
+TestBenchPerfTest.longForm:61 commands 4
+TestBenchPerfTest.longForm:63 commands 3
+TestBenchPerfTest.open:31 commands 4
+TestBenchPerfTest.smallForm:38 commands 9
+TestBenchPerfTest.smallForm:39 commands 9
+TestBenchPerfTest.smallForm:40 commands 7
+TestBenchPerfTest.smallForm:42 commands 7
+UnifiedPerfTest.comboBox:74 commands 2
+UnifiedPerfTest.comboBox:76 commands 56
+UnifiedPerfTest.comboBox:78 commands 3
+UnifiedPerfTest.largeGrid:63 commands 2
+UnifiedPerfTest.largeGrid:65 commands 285
+UnifiedPerfTest.largeGrid:67 commands 4
+UnifiedPerfTest.largeGrid:68 commands 4
+UnifiedPerfTest.longForm:41 commands 2
+UnifiedPerfTest.longForm:44 commands 288
+UnifiedPerfTest.longForm:47 commands 24
+UnifiedPerfTest.longForm:50 commands 16
+UnifiedPerfTest.longForm:53 commands 18
+UnifiedPerfTest.longForm:55 commands 10
+UnifiedPerfTest.longForm:57 commands 3
+UnifiedPerfTest.smallForm:29 commands 2
+UnifiedPerfTest.smallForm:31 commands 12
+UnifiedPerfTest.smallForm:32 commands 12
+UnifiedPerfTest.smallForm:33 commands 10
+UnifiedPerfTest.smallForm:35 commands 12

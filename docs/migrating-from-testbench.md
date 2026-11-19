@@ -23,6 +23,9 @@ The demo's `EditPersonTestBenchTest`, and what the recipe makes of it. CI checks
 
 ## Run it
 
+!!! warning "Vaadin 25.3 first"
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the recipe migrates the build all the same and *(unreleased)* leaves a Migration Marker at the top of `pom.xml`; the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+
 Commit or stash your work first: the recipe changes files in place.
 
 === "Maven"
@@ -81,6 +84,8 @@ Commit or stash your work first: the recipe changes files in place.
 | `includePageObjects` | `false` | Also converts page objects (see below) |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
+*(unreleased)* Up to 0.1.0-alpha3 the recipe ignores the options a `rewrite.yml` sets, without a warning, and runs with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). With those versions, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
+
 Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `playwright` or `selenium`) and work through the Migration Markers, by hand or with the agent skill.
 
 ## What it converts
@@ -102,6 +107,7 @@ Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `
 | NumberField `setValue("42")` | `setValue(42.0)` (numeric string literals only) |
 | `dialog.$(X.class)`, `tabs.getContent().$(X.class)` | `dialog.find(UnifiedX.class)`, `tabs.content().find(UnifiedX.class)` |
 | TabSheet `setSelectedTabIndex(t.getTab("Security"))` | `selectTab("Security")` |
+| MessageInput `submit(s)`, MessageList `getMessageElements().size()` | `send(s)`, `getMessageCount()` |
 | Button `withLabel(..)`, `withCaption(..)` | `withText(..)`, with a Migration Marker suggesting `withAccessibleName(..)` for a button without text |
 | JUnit 4: `@Before`, `@Test`, `Assert`, `@Ignore`, `ExpectedException` | JUnit 6 |
 | `setDriver(..)`, `getDriver().quit()`, `ScreenshotOnFailureRule`, `@RunWith(SpringRunner.class)` | removed: the Unified API owns the browser and writes failure evidence |
@@ -114,7 +120,7 @@ With `includePageObjects`, a page object that holds the TestBench test (`HasElem
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the BOM manages its version), and removes direct `vaadin-testbench*` dependencies (the Selenium adapter brings TestBench). It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the project's Vaadin BOM manages its version, and the recipe removes a version the project already gave it), and removes direct `vaadin-testbench*` dependencies (the Selenium adapter brings TestBench). It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine.
 
 ## What it leaves for you
 
@@ -140,6 +146,7 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `TestBench page object: new LoginPage(this)` | Convert the page object by hand, or rerun with `includePageObjects` |
 | `browser setup removed (@RunLocally, ...)` | Configure the Selenium adapter with `vaadin.testing.*` settings |
+| `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
@@ -153,7 +160,9 @@ Add `addAgentSkill: true` to the recipe's options (see **Run it**): the migratio
 /resolve-migration-markers
 ```
 
-Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
+Only you can start it. The skill is user-invoked (`disable-model-invocation: true`), so it adds nothing to an agent's context in a session that doesn't migrate, but an agent can't start it either: one driving the migration end to end stops at this step. Type the command yourself, or tell the agent to read `.claude/skills/resolve-migration-markers/SKILL.md` and follow its steps.
+
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md` (of `CLAUDE.md` *(unreleased)*, when the project has that and no `AGENTS.md`). It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 Review its changes like any other. The skill's source is in [`unified-test-rewrite`](https://github.com/parttio/unified-testing-tool/blob/main/unified-test-rewrite/src/main/resources/META-INF/unified/skills/resolve-migration-markers/SKILL.md).
 

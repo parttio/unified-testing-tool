@@ -19,8 +19,9 @@
         <!-- the migration guides and docs/guide/reports-and-failures.md pin rewrite-maven-plugin 6.46.1 and the
              Gradle plugin org.openrewrite.rewrite 7.39.0, whose OpenRewrite (8.89.0) is the one this BOM brings:
              move them together -->
-        <!-- filtered into the recipes that add browserless-test-spring; keep in step with unified-test-bom, whose
-             import, added first, manages the version, so the migrated pom gets none -->
+        <!-- filtered into the recipes that add browserless-test-spring. The project's Vaadin BOM manages it, so the
+             migrated pom gets no version; this one is written only without a Vaadin BOM. Keep it at the version
+             vaadin-bom ${vaadin.version} manages (vaadin-spring-bom's browserless.test.version) -->
         <browserless-test.version>25.3.2</browserless-test.version>
     </properties>
 
@@ -45,6 +46,15 @@
             </resource>
         </resources>
         <plugins>
+            <plugin>
+                <!-- OpenRewrite matches a recipe's options from rewrite.yml to its constructor's parameters by
+                     name: without -parameters it finds none, and every option is silently null (#353) -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

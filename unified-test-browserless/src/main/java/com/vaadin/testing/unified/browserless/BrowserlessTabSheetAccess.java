@@ -48,7 +48,7 @@ final class BrowserlessTabSheetAccess implements TabSheetAccess {
     /** By position: TabSheetTester.select(label) compares the label, which a tab holding a component lacks. */
     @Override
     public void select(String label) {
-        session.act(() -> {
+        session.act(tabSheet, () -> {
             List<Tab> all = all();
             tester().select(ItemNames.visiblePosition(all, ItemNames.find(all, label, "tab \"" + label + "\""), "Tab"));
             session.window().roundTrip();

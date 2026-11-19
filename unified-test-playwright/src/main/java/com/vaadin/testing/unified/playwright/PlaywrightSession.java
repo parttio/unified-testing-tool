@@ -359,6 +359,11 @@ final class PlaywrightSession implements AdapterSession {
         return RouteNavigation.queryParameter(page, name);
     }
 
+    @Override
+    public String title() {
+        return page.title();
+    }
+
     // ---------------------------------------------------------------- the rest
 
     @Override

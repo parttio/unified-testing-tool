@@ -47,7 +47,7 @@ flowchart TD
 
 | Retrying assertion | On |
 |---|---|
-| `hasRowCount(n)`, `isEmpty()` | grid |
+| `hasRowCount(n)`, `isEmpty()`, `hasColumn(header)`, `doesNotHaveColumn(header)`, `hasColumnHeaders(…)` *(unreleased)* | grid |
 | `exists()`, `doesNotExist()`, `hasCount(n)`, `isSelected()`, `isNotSelected()`, `hasCellText(column, text)`, `hasDetailsOpen()`, `hasDetailsClosed()` | row |
 | `hasCellTexts(…)`, `isSortedAscending()`, `isSortedDescending()` | column |
 

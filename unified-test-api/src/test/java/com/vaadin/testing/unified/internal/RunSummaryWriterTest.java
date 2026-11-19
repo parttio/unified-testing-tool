@@ -71,6 +71,27 @@ class RunSummaryWriterTest {
     }
 
     @Test
+    void writesAReadablePageBesideEachComponentTreeTheReportShows() throws Exception {
+        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z");
+        Path json = evidence().resolve("EditPersonTest/edits/user-steps.json");
+        Files.writeString(json, Files.readString(json).replace("\"verb\": \"open\",",
+                "\"verb\": \"open\", \"snapshot\": \"steps/001.tree.txt\","));
+        Files.createDirectories(json.resolveSibling("steps"));
+        Files.writeString(json.resolveSibling("steps/001.tree.txt"), "Location: /people\n\n└── UI[]\n");
+        Files.writeString(evidence().resolve("demo.EditPersonTest.edits.tree.txt"), "Location: /\n\n└── UI[]\n");
+
+        writer(Map.of(), Map.of()).write(Set.of(), "1");
+
+        String step = Files.readString(json.resolveSibling("steps/001.tree.html"));
+        assertTrue(step.contains("<code>/people</code>"), step);
+        assertTrue(Files.exists(evidence().resolve("demo.EditPersonTest.edits.tree.html")));
+        String html = Files.readString(evidence().resolve("report.html"), StandardCharsets.UTF_8);
+        assertTrue(html.contains("href=\"EditPersonTest/edits/steps/001.tree.html\" data-tree"), html);
+        // the page is no failure evidence of its own
+        assertFalse(html.contains("<a href=\"demo.EditPersonTest.edits.tree.html\">"), html);
+    }
+
+    @Test
     void readsOnlyTheFilesOfThisRun() throws Exception {
         test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
         test("demo.OrderTest", "orders", "passed", "2026-11-16T10:00:06Z");

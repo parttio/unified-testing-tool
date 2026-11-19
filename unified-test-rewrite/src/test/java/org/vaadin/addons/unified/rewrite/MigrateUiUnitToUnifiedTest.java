@@ -99,10 +99,11 @@ class MigrateUiUnitToUnifiedTest implements RewriteTest {
     }
 
     @Test
-    void anIgnoredJUnit4UiUnitTestBecomesDisabled() {
+    void anIgnoredJUnit4TestStaysDisabled() {
+        // #386: JUnit 4's @Ignore means nothing to Jupiter, so a skipped test would start running
         rewriteRun(java(
                 """
-                import com.vaadin.flow.component.button.Button;
+                import com.vaadin.flow.component.html.Div;
                 import com.vaadin.testbench.unit.UIUnit4Test;
                 import org.junit.Ignore;
                 import org.junit.Test;
@@ -110,15 +111,15 @@ class MigrateUiUnitToUnifiedTest implements RewriteTest {
                 public class ProfileTest extends UIUnit4Test {
                     @Ignore("flaky")
                     @Test
-                    public void saves() {
-                        test($(Button.class).withText("Save").single()).click();
+                    public void opens() {
+                        navigate(Div.class);
                     }
                 }
                 """,
                 """
+                import com.vaadin.flow.component.html.Div;
                 import com.vaadin.testing.unified.UnifiedPage;
                 import com.vaadin.testing.unified.UnifiedUITest;
-                import com.vaadin.testing.unified.component.UnifiedButton;
                 import org.junit.jupiter.api.Disabled;
                 import org.junit.jupiter.api.Test;
 
@@ -126,8 +127,8 @@ class MigrateUiUnitToUnifiedTest implements RewriteTest {
                 public class ProfileTest {
                     @Disabled("flaky")
                     @Test
-                    public void saves(UnifiedPage page) {
-                        page.find(UnifiedButton.class).withText("Save").click();
+                    public void opens(UnifiedPage page) {
+                        page.navigate(Div.class);
                     }
                 }
                 """));

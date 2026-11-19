@@ -86,6 +86,7 @@ public class MigrateDramafinderToUnified extends Recipe {
                 .build();
         List<Recipe> list = new ArrayList<>(names.stream().map(recipes::activateRecipes).map(Recipe.class::cast).toList());
         list.add(new DramafinderCopiedBaseRemoved()); // a 1.x project's copy of SpringPlaywrightIT, once unused
+        list.add(new DramafinderSkippedMarked()); // the classes the test code recipes skip
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
         }
