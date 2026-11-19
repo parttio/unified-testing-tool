@@ -60,7 +60,7 @@ public record ChangedFiles(String baseRef, Map<String, Boolean> files, Function<
     }
 
     /** Runs git; empty if it can't start, fails or takes too long. */
-    private static Optional<String> git(Path workDir, String... args) {
+    static Optional<String> git(Path workDir, String... args) {
         String[] command = new String[args.length + 1];
         command[0] = "git";
         System.arraycopy(args, 0, command, 1, args.length);

@@ -106,6 +106,8 @@ class RunComparisonTest {
                 2 scenarios ran on both Testing Tools: 1 ends differently, 1 takes different User Steps. \
                 1 ran on Playwright only, 0 on Browserless only.
 
+                Whether both runs are of the same commit is not known: neither run recorded one.
+
                 **A guest pays by card (CheckoutTest.AsGuest)** · failed on Playwright, passed on Browserless
 
                 - On Playwright: `UnifiedAssertionError: Expected exactly one button with text “Pay now”, found none`
@@ -127,7 +129,8 @@ class RunComparisonTest {
         String md = new RunSummary("Playwright", run, 0, null, null, comparisons).markdown();
 
         assertTrue(md.endsWith("#### Compared with Selenium\n\n1 scenario ran on both Testing Tools: same result and "
-                + "same User Steps on each.\n"), md);
+                + "same User Steps on each.\n\nWhether both runs are of the same commit is not known: neither run "
+                + "recorded one.\n"), md);
     }
 
     @Test
@@ -163,5 +166,33 @@ class RunComparisonTest {
         assertFalse(differsOn.get(0).containsKey("partsAt"), "the same steps");
         assertFalse(scenarios.stream().filter(s -> "editsAPerson".equals(s.get("testMethod"))).findFirst().orElseThrow()
                 .containsKey("differsOn"));
+    }
+
+    @Test
+    void evidenceOfSeveralCommitsForOneTestingToolIsNotTheSameCode() {
+        List<ScenarioResult> run = List.of(here(RunSummaryTest.EDIT_PERSON, "EditPersonTest/editsAPerson"));
+        Revision mine = new Revision("a".repeat(40), null);
+        List<RunComparison> comparisons = RunComparison.of("playwright", run,
+                List.of(on("selenium", RunSummaryTest.EDIT_PERSON, "EditPersonTest/editsAPerson")),
+                List.of(new Revision.OfRun("selenium", mine), new Revision.OfRun("selenium", new Revision("b".repeat(40), null)),
+                        new Revision.OfRun("browserless", new Revision("c".repeat(40), null)),
+                        new Revision.OfRun("selenium", null)));
+
+        assertEquals(Optional.of(false), comparisons.get(0).sameCode(mine));
+        String md = new RunSummary("Playwright", run, 0, null, null, comparisons, mine).markdown();
+        assertTrue(md.contains("**Not the same code.** This run is of commit `aaaaaaa`, the Selenium run of several commits "
+                + "(`aaaaaaa`, `bbbbbbb`)."), md);
+    }
+
+    @Test
+    void aSummaryJsonSaysWhichRunItIsOf() {
+        assertEquals(Optional.of(new Revision.OfRun("playwright", new Revision("a".repeat(40), "123456789abc"))),
+                Revision.read("{\"schemaVersion\": 1, \"tool\": \"playwright\", \"commit\": \"" + "a".repeat(40)
+                        + "\", \"uncommittedChanges\": \"123456789abc\", \"scenarios\": []}"));
+        assertEquals(Optional.of(new Revision.OfRun("playwright", null)),
+                Revision.read("{\"tool\": \"playwright\", \"scenarios\": []}"));
+        assertEquals(Optional.empty(), Revision.read("{\"tool\": \"playwright\"}"), "another tool's summary.json");
+        assertEquals(Optional.empty(), Revision.read("not JSON"));
+        assertEquals(12, Revision.fingerprint("diff --git a/A.java b/A.java").length());
     }
 }

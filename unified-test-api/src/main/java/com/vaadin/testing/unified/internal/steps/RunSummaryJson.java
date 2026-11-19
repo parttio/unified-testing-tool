@@ -39,6 +39,11 @@ public record RunSummaryJson(RunSummary summary, Function<ScenarioResult, List<S
             json.field("startedAt", start.get().toString());
             json.field("durationMs", Duration.between(start.get(), end).toMillis());
         }
+        Revision revision = summary.revision();
+        if (revision != null) {
+            json.field("commit", revision.commit());
+            json.optional("uncommittedChanges", revision.uncommitted());
+        }
         json.field("passed", summary.passed());
         json.field("failed", summary.failed());
         json.field("skipped", summary.skipped());
@@ -56,6 +61,11 @@ public record RunSummaryJson(RunSummary summary, Function<ScenarioResult, List<S
                 json.field("takeDifferentSteps", c.takeDifferentSteps());
                 json.field("onlyHere", c.onlyHere());
                 json.field("onlyThere", c.onlyThere());
+                c.sameCode(revision).ifPresent(same -> json.key("sameCode").any(same));
+                if (c.otherRevisions().size() == 1) {
+                    json.field("commit", c.otherRevisions().get(0).commit());
+                    json.optional("uncommittedChanges", c.otherRevisions().get(0).uncommitted());
+                }
                 json.close('}');
             }
             json.close(']');

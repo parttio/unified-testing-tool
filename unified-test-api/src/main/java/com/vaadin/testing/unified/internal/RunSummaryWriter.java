@@ -4,6 +4,7 @@ import com.vaadin.testing.unified.internal.steps.BaseRun;
 import com.vaadin.testing.unified.internal.steps.ChangedFiles;
 import com.vaadin.testing.unified.internal.steps.RunComparison;
 import com.vaadin.testing.unified.internal.steps.RunReport;
+import com.vaadin.testing.unified.internal.steps.Revision;
 import com.vaadin.testing.unified.internal.steps.RunSummary;
 import com.vaadin.testing.unified.internal.steps.RunSummaryJson;
 import com.vaadin.testing.unified.internal.steps.ScenarioResult;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -46,10 +48,12 @@ import java.util.stream.Stream;
  * @param runStart when the run started; files from earlier runs are ignored
  * @param env the environment ({@code GITHUB_STEP_SUMMARY}, {@code GITHUB_BASE_REF})
  * @param changedFiles the files changed against a base ref, e.g. {@link ChangedFiles#fromGit}
+ * @param revision the code the run tests, e.g. {@link Revision#fromGit}
  * @param log where one-line notes go
  */
 public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart, Map<String, String> env,
-        Function<String, Optional<ChangedFiles>> changedFiles, Consumer<String> log) {
+        Function<String, Optional<ChangedFiles>> changedFiles, Supplier<Optional<Revision>> revision,
+        Consumer<String> log) {
 
     public static final String GITHUB_STEP_SUMMARY = "GITHUB_STEP_SUMMARY";
     static final String SKIPPED_DIR = ".summary";
@@ -58,7 +62,7 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
     public static RunSummaryWriter of(Settings settings, Path workDir, Instant runStart, Map<String, String> env) {
         Consumer<String> log = line -> System.err.println("Unified UI Tests: " + line);
         return new RunSummaryWriter(settings, workDir, runStart, env,
-                ref -> ChangedFiles.fromGit(ref, workDir, log), log);
+                ref -> ChangedFiles.fromGit(ref, workDir, log), () -> Revision.fromGit(workDir), log);
     }
 
     /**
@@ -83,9 +87,10 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         }
         ChangedFiles changes = settings.userStepsChangedSince(env).flatMap(changedFiles).orElse(null);
         BaseRun base = changes == null ? null : settings.userStepsBaselineDir().map(this::baseRun).orElse(null);
-        List<RunComparison> comparisons = settings.userStepsCompareDir()
-                .map(dir -> RunComparison.of(settings.tool().name(), scenarios, otherRuns(dir))).orElse(List.of());
-        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes, base, comparisons);
+        List<RunComparison> comparisons = settings.userStepsCompareDir().map(dir -> RunComparison.of(
+                settings.tool().name(), scenarios, otherRuns(dir), summariesIn(dir))).orElse(List.of());
+        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes, base, comparisons,
+                revision.get().orElse(null));
         String markdown = summary.markdown();
         Path file = evidenceDir.resolve(RunSummary.FILE);
         Files.createDirectories(evidenceDir);
@@ -167,6 +172,26 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
             log.accept("no run on another Testing Tool in " + dir + " to compare with");
         }
         return others;
+    }
+
+    /** The {@code summary.json} files under {@code dir}, at any depth: which run each is of. Unreadable ones are left out. */
+    private List<Revision.OfRun> summariesIn(Path dir) {
+        if (!Files.isDirectory(dir)) {
+            return List.of();
+        }
+        List<Revision.OfRun> runs = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(dir)) {
+            for (Path file : walk.filter(p -> p.getFileName().toString().equals(RunSummaryJson.FILE)).sorted().toList()) {
+                try {
+                    Revision.read(Files.readString(file, StandardCharsets.UTF_8)).ifPresent(runs::add);
+                } catch (IOException | RuntimeException e) {
+                    // an unreadable summary says nothing about the run's commit
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            return List.of();
+        }
+        return runs;
     }
 
     /** The base run's scenarios under {@code dir} on this run's Testing Tool; none when it has no readable one. */

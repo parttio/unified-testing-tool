@@ -22,9 +22,10 @@ import java.util.Optional;
  *        asked for ({@code vaadin.testing.user-steps.baseline-dir} unset)
  * @param comparisons this run against runs of the same tests on other Testing Tools, one per tool; empty when
  *        none was asked for ({@code vaadin.testing.user-steps.compare-dir} unset) or found
+ * @param revision the code this run tested, or null when git doesn't say
  */
 public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes,
-        BaseRun base, List<RunComparison> comparisons) {
+        BaseRun base, List<RunComparison> comparisons, Revision revision) {
 
     public static final String FILE = "summary.md";
 
@@ -38,6 +39,12 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
     /** Without a base run: changed scenarios show their User Steps in full. */
     public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes) {
         this(tool, scenarios, disabled, changes, null);
+    }
+
+    /** Without this run's revision. */
+    public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes, BaseRun base,
+            List<RunComparison> comparisons) {
+        this(tool, scenarios, disabled, changes, base, comparisons, null);
     }
 
     /** Without a run on another Testing Tool to compare with. */
@@ -79,6 +86,8 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
 
     private void compared(StringBuilder md, RunComparison c) {
         md.append("\n#### Compared with ").append(c.otherTool()).append("\n\n").append(comparedLead(c)).append('\n');
+        md.append('\n').append(c.sameCode(revision).orElse(true) ? "" : "**Not the same code.** ")
+                .append(sameCodeLine(c, RunSummary::code)).append('\n');
         for (RunComparison.Difference d : c.differences().subList(0, Math.min(DIFFERENCES_LISTED,
                 c.differences().size()))) {
             md.append("\n**").append(markdown(title(d.here()))).append("** · ")
@@ -115,6 +124,34 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
                     .append(c.onlyThere()).append(" on ").append(c.otherTool()).append(" only.");
         }
         return lead.toString();
+    }
+
+    /**
+     * Whether the two runs tested the same code: {@code Both runs are of commit abc1234.}, or what each is of,
+     * or that it isn't known.
+     *
+     * @param commit how a commit is shown, e.g. as code
+     */
+    String sameCodeLine(RunComparison c, java.util.function.UnaryOperator<String> commit) {
+        List<Revision> others = c.otherRevisions();
+        if (revision == null || others.isEmpty()) {
+            String who = revision == null && others.isEmpty() ? "neither run recorded one"
+                    : revision == null ? "this run recorded none" : "the " + c.otherTool() + " run recorded none";
+            return "Whether both runs are of the same commit is not known: " + who + ".";
+        }
+        if (c.sameCode(revision).orElse(false)) {
+            return "Both runs are of commit " + commit.apply(revision.shortCommit())
+                    + (revision.uncommitted() == null ? "." : ", with the same uncommitted changes.");
+        }
+        String there = others.size() > 1
+                ? "several commits (" + String.join(", ", others.stream().map(r -> commit.apply(r.shortCommit()))
+                        .distinct().toList()) + ")"
+                : "commit " + commit.apply(others.get(0).shortCommit()) + (others.get(0).uncommitted() == null ? ""
+                        : others.get(0).commit().equals(revision.commit()) && revision.uncommitted() != null
+                                ? " with other uncommitted changes" : " with uncommitted changes");
+        return "This run is of commit " + commit.apply(revision.shortCommit())
+                + (revision.uncommitted() == null ? "" : " with uncommitted changes") + ", the " + c.otherTool()
+                + " run of " + there + ". A difference below may come from the code, not from the Testing Tool.";
     }
 
     /** {@code passed on Browserless, failed on Playwright}, or {@code passed on both, different User Steps}. */

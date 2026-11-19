@@ -18,8 +18,28 @@ import java.util.Optional;
  * @param differences the scenarios that differ: those that end differently first, then in this run's order
  * @param onlyHere how many of this run's scenarios did not run on the other Testing Tool
  * @param onlyThere how many of the other run's scenarios did not run here
+ * @param otherRevisions what the other run tested, as its {@code summary.json} files say: one revision when they
+ *        agree, several when the directory mixes runs, none when no file names a commit
  */
-public record RunComparison(String otherTool, int both, List<Difference> differences, int onlyHere, int onlyThere) {
+public record RunComparison(String otherTool, int both, List<Difference> differences, int onlyHere, int onlyThere,
+        List<Revision> otherRevisions) {
+
+    /** Without the other run's revision. */
+    public RunComparison(String otherTool, int both, List<Difference> differences, int onlyHere, int onlyThere) {
+        this(otherTool, both, differences, onlyHere, onlyThere, List.of());
+    }
+
+    /**
+     * Whether the other run tested the code {@code here} did: empty when either side names no commit.
+     *
+     * @param here this run's revision, or null when unknown
+     */
+    public Optional<Boolean> sameCode(Revision here) {
+        if (here == null || otherRevisions.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(otherRevisions.size() == 1 && otherRevisions.get(0).equals(here));
+    }
 
     /**
      * One scenario that differs between the two runs.
@@ -65,6 +85,16 @@ public record RunComparison(String otherTool, int both, List<Difference> differe
      * @param others the scenarios read from the other runs, on any Testing Tool
      */
     public static List<RunComparison> of(String tool, List<ScenarioResult> here, List<ScenarioResult> others) {
+        return of(tool, here, others, List.of());
+    }
+
+    /**
+     * {@link #of(String, List, List)}, with what the other runs tested.
+     *
+     * @param otherRuns the other runs' {@code summary.json} files, as read
+     */
+    public static List<RunComparison> of(String tool, List<ScenarioResult> here, List<ScenarioResult> others,
+            List<Revision.OfRun> otherRuns) {
         Map<String, List<ScenarioResult>> byTool = new java.util.TreeMap<>();
         for (ScenarioResult s : others) {
             if (s.tool() != null && !s.tool().equalsIgnoreCase(tool) && !s.aborted()) {
@@ -73,7 +103,13 @@ public record RunComparison(String otherTool, int both, List<Difference> differe
         }
         List<ScenarioResult> ran = here.stream().filter(s -> !s.aborted()).toList();
         List<RunComparison> comparisons = new ArrayList<>();
-        byTool.forEach((otherTool, scenarios) -> comparisons.add(compare(otherTool, ran, scenarios)));
+        byTool.forEach((otherTool, scenarios) -> {
+            RunComparison c = compare(otherTool, ran, scenarios);
+            List<Revision> revisions = otherRuns.stream().filter(r -> otherTool.equalsIgnoreCase(r.tool()))
+                    .map(Revision.OfRun::revision).filter(java.util.Objects::nonNull).distinct().toList();
+            comparisons.add(new RunComparison(c.otherTool(), c.both(), c.differences(), c.onlyHere(), c.onlyThere(),
+                    revisions));
+        });
         return comparisons;
     }
 
