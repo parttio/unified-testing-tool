@@ -106,6 +106,9 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 
 - `hasSelectedItems(..)` worded its User Step in an order that changed from run to run
   ([#309](https://github.com/parttio/unified-testing-tool/pull/309)).
+- On Browserless, a lookup inside a Scope also found the Scope itself: `dialog.find(UnifiedDialog.class)` found
+  the dialog, where a browser finds none ([#333](https://github.com/parttio/unified-testing-tool/issues/333)).
+  A grid cell, a column header, and Details and TabSheet content still find the components they hold.
 
 ## Known limitations
 
@@ -124,5 +127,4 @@ Those of [0.1.0-alpha3](0.1.0-alpha3.md), and:
   ([#310](https://github.com/parttio/unified-testing-tool/issues/310)).
 - The `write-unified-ui-tests` skill names the API reference and the Findable View but none of the other
   additions, and its evaluation was not rerun after those changes.
-- The Findable View lists components grouped by Wrapper type, not in the order of the page. On Browserless,
-  `find(..)` on a Scope also finds the Scope itself, which a browser doesn't; the view leaves it out.
+- The Findable View lists components grouped by Wrapper type, not in the order of the page.

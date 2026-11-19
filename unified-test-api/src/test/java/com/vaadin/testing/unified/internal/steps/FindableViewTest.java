@@ -83,10 +83,11 @@ public class FindableViewTest {
 
         String view = page.find(UnifiedDialog.class).withHeaderTitle("Edit person").describe();
 
-        // the fake page ignores scopes, as Browserless includes the scope itself: the dialog is left out
+        // the fake page ignores scopes, so the dialog is in its own view here
         assertEquals("""
-                Findable view inside dialog “Edit person” on browserless; lookups are on it: 1 component
-                text field “Name”  find(UnifiedTextField.class).withLabel("Name")
+                Findable view inside dialog “Edit person” on browserless; lookups are on it: 2 components
+                dialog “Edit person”  find(UnifiedDialog.class).withHeaderTitle("Edit person")
+                text field “Name”     find(UnifiedTextField.class).withLabel("Name")
                 """, view);
     }
 

@@ -183,12 +183,6 @@ public final class FindableView {
     private record OfType(Class<?> type, UnifiedComponent annotation, String tag, List<Filter> selector,
             List<Namer> namers, List<Read> reads) {}
 
-    /**
-     * The container a scoped view is of, to leave it out: Browserless's scoped lookups include the container
-     * itself (a grid cell's component is its own scope), a browser's don't.
-     */
-    private record Self(String tag, ElementFacts facts) {}
-
     /** A container listed with a unique lookup, through which an ambiguous component may be singled out. */
     private record Container(String words, String lookup, UnifiedElement element) {}
 
@@ -198,8 +192,6 @@ public final class FindableView {
         return run.steps().unrecorded(() -> {
             List<OfType> all = new ArrayList<>();
             Set<String> listed = new HashSet<>();
-            Self self = scope == null ? null : safely(() -> new Self(scope.getTag(),
-                    LookupFailures.facts(run, List.of(scope)).get(0)), null);
             Set<Class<?>> types = new LinkedHashSet<>(BUILT_IN);
             types.addAll(run.steps().wrapperTypes());
             for (Class<?> type : types) {
@@ -209,7 +201,7 @@ public final class FindableView {
                     continue; // a custom Wrapper of the same components as one listed already
                 }
                 try {
-                    OfType found = ofType(run, type, annotation, scope, self);
+                    OfType found = ofType(run, type, annotation, scope);
                     if (found != null) {
                         all.add(found);
                     }
@@ -242,8 +234,7 @@ public final class FindableView {
         });
     }
 
-    private static OfType ofType(TestRun run, Class<?> type, UnifiedComponent annotation, UnifiedElement scope,
-            Self self) {
+    private static OfType ofType(TestRun run, Class<?> type, UnifiedComponent annotation, UnifiedElement scope) {
         String tag = Wrappers.tagOf(annotation.value(), annotation.tag());
         if (tag == null || tag.equals("*")) {
             return null;
@@ -256,21 +247,6 @@ public final class FindableView {
         }
         found = found.subList(0, Math.min(found.size(), MAX_PER_TYPE));
         List<ElementFacts> facts = LookupFailures.facts(run, found);
-        if (self != null && tag.equals(self.tag())) {
-            List<UnifiedElement> others = new ArrayList<>();
-            List<ElementFacts> othersFacts = new ArrayList<>();
-            for (int i = 0; i < found.size(); i++) {
-                if (!self.facts().equals(facts.get(i))) {
-                    others.add(found.get(i));
-                    othersFacts.add(facts.get(i));
-                }
-            }
-            found = others;
-            facts = othersFacts;
-        }
-        if (found.isEmpty()) {
-            return null;
-        }
         List<Namer> namers = namers(type);
         TestRun quick = run.withTimeout(Duration.ZERO);
         List<Read> reads = new ArrayList<>();
