@@ -114,6 +114,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
   [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown and the guide in
   one file.
+- **Retrying assertions for a grid's columns** ([#359](https://github.com/parttio/unified-testing-tool/issues/359)):
+  `assertThat(grid).hasColumn("Cooked times")`, `doesNotHaveColumn(..)` and `hasColumnHeaders(..)`, for a column
+  the application adds or removes while the test runs. They replace `page.waitUntil(() ->
+  grid.getColumnHeaders().contains(..))`, a gap in the reports, and fail with the headers the grid has. See
+  [Columns](https://parttio.github.io/unified-testing-tool/guide/grid/#columns).
 
 ## New settings
 

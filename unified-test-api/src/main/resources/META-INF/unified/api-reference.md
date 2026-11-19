@@ -147,7 +147,7 @@ Grid, Flow's `Grid`.
 - **Actions:** `deselectAll()`, `selectAll()`
 - **Reads:** `getColumnHeaders() → List<String>`, `getRowCount() → int`
 - **Also:** `column(String) → UnifiedGridColumn`, `column(int) → UnifiedGridColumn`, `columnWithId(String) → UnifiedGridColumn`, `row() → UnifiedGridRow`, `row(int) → UnifiedGridRow`
-- **Checks:** those of every Wrapper, and `hasRowCount(int)`, `isEmpty()`
+- **Checks:** those of every Wrapper, and `doesNotHaveColumn(String)`, `hasColumn(String)`, `hasColumnHeaders(String...)`, `hasRowCount(int)`, `isEmpty()`
 
 #### `UnifiedGrid.UnifiedGridColumn`
 
