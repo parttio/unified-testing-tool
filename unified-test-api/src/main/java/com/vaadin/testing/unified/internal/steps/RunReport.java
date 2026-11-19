@@ -307,13 +307,17 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 window(h, window);
                 h.append(esc(orEmpty(ScenarioResult.string(entry, "name")))).append("</span>");
                 meta(h, entry, null);
-                h.append("</summary>\n<ol>\n");
+                h.append("</summary>\n");
+                logs(h, entry);
+                h.append("<ol>\n");
                 entries(h, ScenarioResult.entries(entry.get("steps")), dir);
                 h.append("</ol></details></li>\n");
             } else if ("gap".equals(type)) {
                 h.append("<li class=\"gap\">");
                 window(h, window);
-                h.append(esc(orEmpty(ScenarioResult.string(entry, "text")))).append("</li>\n");
+                h.append(esc(orEmpty(ScenarioResult.string(entry, "text"))));
+                logs(h, entry);
+                h.append("</li>\n");
             } else {
                 h.append("<li class=\"step").append(failed ? " failed" : "").append("\">");
                 index(h, entry);
@@ -327,8 +331,18 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 if (failed && error != null) {
                     h.append("<div class=\"error\">").append(esc(error)).append("</div>");
                 }
+                logs(h, entry);
                 h.append("</li>\n");
             }
+        }
+    }
+
+    /** The lines logged during or after the entry: the application's warnings and errors, the console's errors. */
+    private static void logs(StringBuilder h, Map<String, Object> entry) {
+        for (Map<String, Object> line : ScenarioResult.entries(entry.get("logs"))) {
+            h.append("<div class=\"log ").append("ERROR".equals(ScenarioResult.string(line, "level")) ? "error-line"
+                    : "warn-line").append("\">⚠ ").append(esc(orEmpty(ScenarioResult.string(line, "text"))))
+                    .append("</div>");
         }
     }
 
@@ -479,6 +493,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             .files{font-size:13px;margin:8px 0 12px}
             .diffstat{color:var(--muted);font-weight:400;font-size:12px}
             .diffstat .add,pre.diff .add{color:var(--pass)}.diffstat .del,pre.diff .del{color:var(--fail)}
+            .log{margin:2px 0 2px 28px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}\
+            .log.error-line{color:var(--fail)}\
             .difference{margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px}\
             .difference p{margin:0 0 4px}\
             .why{margin:0 0 8px;color:var(--muted);font-size:13px;overflow-wrap:anywhere}

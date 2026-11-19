@@ -159,6 +159,17 @@ Each step shows its index, window, text, duration and call site, and its snapsho
 
 **`summary.json`** is written with `summary.md`, from the same files, the same `ChangedFiles` and the same Base Run: the run as data, so an agent or a CI tool reads the verdict without parsing Markdown or walking the evidence directory. Its fields are [below](#summaryjson-schema-version-1).
 
+### Log lines under the User Step
+
+On by default; `vaadin.testing.user-steps.server-log` sets which of the application's lines are kept (`warn`, `error`, `off`).
+
+- **The application's log.** The application runs in the test's JVM on every Testing Tool, so the Unified API hears what it logs: through an appender on Logback's root logger when Logback is the SLF4J backend, else through a handler on `java.util.logging`'s root logger. An application on another backend, such as Log4j 2, that doesn't send its lines to `java.util.logging` is not heard: its tests get no server lines, and nothing else changes. Logback is an optional dependency of `unified-test-api`: a project needs none for this, its own is used. Kept: warnings and errors, with the logged exception's class and the first line of its message. Not kept: lines of the Unified API's and the Testing Tools' own loggers.
+- **The browser's console.** After every User Step the step's window is asked for the errors its console got since the last time (`AdapterSession.consoleErrors()`): `console.error` and uncaught exceptions, without the browser's own request for `/favicon.ico`. Playwright has them; Browserless has no console; Selenium doesn't read it yet.
+- **Which entry.** A line belongs to the User Step that was running when it was logged. Between steps it belongs to the entry before, whose late effect it most likely is, and before the first entry to the test. This is by time, whatever thread logged: a background job's line shows under the step during which it ran.
+- **Where.** Under the entry in `user-steps.txt` (`⚠ server ERROR PersonService: Could not save Alan (IllegalStateException: no id)`), in the entry's `logs` in `user-steps.json`, and under the step in `report.html`. Masked like the rest. The first 100 lines of a test are kept. They are not part of what the Base Run diff and the comparison with another Testing Tool compare.
+- **Tests running in parallel in one JVM.** A line is given to the test whose own thread logged it, and lines of other threads are dropped while more than one test listens: they can't be told apart.
+- **`assertThat(page).hasNoErrors()`** fails when the test has an `ERROR` line so far, from the application or a console, and lists them. It is a User Step, `see no errors`. Nothing fails a test for a logged error by itself.
+
 ### Evidence per User Step
 
 Off by default; both settings below cost time and disk on every step.
@@ -227,12 +238,13 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `durationMs` | step, group | number | |
 | `callSite` | all, optional | call site | the first stack frame outside the Unified API, its adapters, Wrapper interfaces and the JDK; for a group, the line calling `page.step(..)` |
 | `error` | all, optional | string | when `failed`: exception class and first line of the message |
+| `logs` | all, optional | array | the lines logged during the entry or after it, before the next one starts: `{ "source": "server", "level": "ERROR", "logger": "demo.PersonService", "message": "Could not save Alan", "error": "IllegalStateException: no id", "text": "server ERROR PersonService: Could not save Alan (IllegalStateException: no id)" }`. `source` is `server` (the application's log) or `console` (an error in the browser's console, `logger` left out); `level` is `ERROR` or `WARN`; `error` is the logged exception's class and first line; `text` is the line as `user-steps.txt` shows it |
 | `readsAfter` | all, optional | number | how many values the test read after this entry and before the next one, outside any User Step: a Unified Element's getter, a Wrapper's getter, a grid row's cell. For a group: after it started and before its first entry. Left out when none. The reads are listed nowhere; the count tells a scenario that reads a value after its last action from one that checks nothing |
 | `snapshot` | step, optional | string | with `vaadin.testing.user-steps.snapshots` on: the page right after the step, relative to the test's evidence directory: `steps/003.png` (browsers) or `steps/003.tree.txt` (Browserless) |
 
 **Call site:** `{ "file": "EditPersonTest.java", "line": 24, "className": "demo.EditPersonTest", "method": "editPerson" }`. `file` is left out without debug information; `line` is `-1` when unknown; a lambda's method is the method that declares it.
 
-The test itself has `readsBeforeFirstEntry` (number, optional): the values read before its first entry.
+The test itself has `readsBeforeFirstEntry` (number, optional): the values read before its first entry; `logsBeforeFirstEntry` (array, optional): the lines logged before it; and `logLinesLeftOut` (number, optional): how many lines beyond the first 100 of the test were dropped.
 
 Values typed into a password field, and every value passed through `page.secret(..)`, are written as `••••` in every field. Values longer than 80 characters are cut with `…`.
 
@@ -370,6 +382,7 @@ A clean break, since the API is alpha: no deprecation release and no Upgrade Rec
 | `vaadin.testing.user-steps.changed-since` | in a PR, `origin/$GITHUB_BASE_REF`; otherwise unset |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the Base Run's evidence directory |
 | `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ between the two |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged; `error`, or `off` |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
 

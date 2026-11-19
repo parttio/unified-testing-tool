@@ -155,6 +155,21 @@ public final class UnifiedAssertions {
             return this;
         }
 
+        /**
+         * Nothing went wrong behind the user's back so far in this test: the application logged no error, and no
+         * browser console of the test's windows got one. What was logged is in the failure, and under the User
+         * Step during which it was logged in the reports.
+         * <p>
+         * Which lines count follows {@code vaadin.testing.user-steps.server-log}; with {@code off} only the
+         * console is checked. Console errors are known on Testing Tools that can read the console.
+         */
+        public PageAssert hasNoErrors() {
+            check(run, () -> Phrases.page("see no", "see no errors"), () -> "the application", "to have logged no errors",
+                    null, () -> run.steps().errors().stream().map(com.vaadin.testing.unified.internal.steps
+                            .StepRecorder.LogLine::text).toList(), logged -> ((List<?>) logged).isEmpty());
+            return this;
+        }
+
         public PageAssert hasQueryParameter(String name, String value) {
             check(run, () -> Phrase.template("see", "see query parameter “" + name + "” with {value}", null,
                             value == null ? List.of() : List.of(value)), () -> "query parameter “" + name + "”", "to be", value,

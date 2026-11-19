@@ -195,6 +195,26 @@ Next to them, a failed test leaves its failure evidence: a screenshot on Playwri
 
 What the recorder can't see is never left out silently. Escape Hatch calls, `page.waitUntil(..)` and a `where(..)` written in the test show as one gap line, such as `… 1 call outside the Unified API (waitUntil)`.
 
+### What the application logged
+
+A click that makes the server throw often shows the user nothing, or a generic error. The reason is in the application's log, and the Unified API puts it where the click is:
+
+```
+✘ EditPersonTest › Saving a person shows a confirmation   browserless · 0.4 s
+   1  open People
+   2  click row where Name is “Alan Turing” in grid
+   3  click button “Save” in dialog “Edit person”
+      ⚠ server ERROR PersonService: Could not save Alan Turing (IllegalStateException: no id)
+   4  see notification “Saved Alan Turing”   ✘
+```
+
+- **The application's warnings and errors** show under the User Step during which they were logged, with the exception that was logged with them. It works on every Testing Tool, since the application runs in the test's JVM. `-Dvaadin.testing.user-steps.server-log=error` keeps errors only, `off` none. There is nothing to add to your build: the lines are heard through Logback when your application logs with it, as a Spring Boot application does by default, and through `java.util.logging` otherwise. An application that logs through another backend, such as Log4j 2, gets no server lines; everything else works the same.
+- **The browser's console errors** show the same way on Playwright: `⚠ console ERROR: Failed to load resource: the server responded with a status of 404 () (http://localhost:8080/missing.css)`. A missing `/favicon.ico`, which every browser asks for by itself, is left out.
+- **By time, not by cause:** a line a background thread logs shows under the step that was running then. A line logged between two steps shows under the first.
+- **`assertThat(page).hasNoErrors()`** makes a scenario fail when anything was logged as an error so far, and lists what. Put it at the end of a scenario that should leave no error behind. Without it, a logged error is shown and fails nothing.
+
+The lines are also in `user-steps.json` (`logs`) and under each step in the HTML report.
+
 ## The run summary
 
 When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the run's scenarios in the words of the reports, for the reviewer of a pull request. In order:
@@ -438,6 +458,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged ([above](#what-the-application-logged)); `error`, or `off` |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it |
 | `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |

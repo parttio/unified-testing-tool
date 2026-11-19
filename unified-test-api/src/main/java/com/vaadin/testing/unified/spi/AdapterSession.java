@@ -61,6 +61,15 @@ public interface AdapterSession extends AutoCloseable {
     }
 
     /**
+     * The errors the browser's console got since this was last called, oldest first: what the page logged with
+     * {@code console.error} and the exceptions no script caught. The Unified API asks after every User Step and
+     * shows them under it. A Testing Tool without a browser, or that can't read the console, has none.
+     */
+    default List<String> consoleErrors() {
+        return List.of();
+    }
+
+    /**
      * Whether this session records a trace of its own whose actions it can group by User Step
      * ({@link #stepStarted}, {@link #stepEnded}): Playwright with {@code vaadin.testing.playwright.trace} on.
      */

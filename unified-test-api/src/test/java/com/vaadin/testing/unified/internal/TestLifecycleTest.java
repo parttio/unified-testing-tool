@@ -188,7 +188,8 @@ class TestLifecycleTest {
         page.navigate("profile");
 
         assertEquals(List.of(), test.close(null, SAVES));
-        assertEquals(List.of("tracesSteps", "navigate[profile]",
+        // the console is read after each User Step, and once more when the test ends
+        assertEquals(List.of("tracesSteps", "navigate[profile]", "consoleErrors", "consoleErrors",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", false]", "close"), session.calls);
         // a passing test still gets its User Steps report
         assertTrue(Files.exists(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("user-steps.txt")));
@@ -203,7 +204,7 @@ class TestLifecycleTest {
         List<Path> evidence = test.close(failure, SAVES);
 
         assertEquals(List.of(Path.of("evidence", "page.png")), evidence);
-        assertEquals(List.of("writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves]",
+        assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves]",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"), session.calls);
         Throwable[] suppressed = failure.getSuppressed();
         assertEquals(2, suppressed.length);
