@@ -6,7 +6,10 @@ import com.vaadin.browserless.BrowserlessUserContext;
 import com.vaadin.browserless.SecuredBrowserlessApplicationContext;
 import java.util.ArrayList;
 import com.vaadin.flow.component.Component;
+import com.vaadin.browserless.internal.PrettyPrintTree;
 import com.vaadin.browserless.internal.PrettyPrintTreeKt;
+import com.vaadin.browserless.internal.TestingLifecycleHookKt;
+import com.vaadin.testing.unified.internal.steps.TreePage;
 import com.vaadin.flow.component.UI;
 import java.nio.file.Files;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -39,6 +42,8 @@ final class BrowserlessSession implements AdapterSession {
     private final boolean ownsApp;
     private final List<BrowserlessSession> children = new ArrayList<>();
     private boolean routeErrorsToSession;
+    /** The component the current User Step acts on: set by an action, cleared by the next lookup or snapshot. */
+    private Component target;
 
     /** The test's own page: owns the app and the user. */
     BrowserlessSession(BrowserlessApplicationContext app, BrowserlessUserContext user) {
@@ -97,6 +102,12 @@ final class BrowserlessSession implements AdapterSession {
      * Test itself (a component that isn't usable) are always thrown.
      */
     void act(Runnable action) {
+        act(null, action);
+    }
+
+    /** {@link #act(Runnable)} on a component, which the step's snapshot and failure evidence then mark. */
+    void act(Component on, Runnable action) {
+        target = on;
         try {
             action.run();
         } catch (RuntimeException e) {
@@ -129,6 +140,7 @@ final class BrowserlessSession implements AdapterSession {
      */
     @Override
     public List<UnifiedElement> find(QuerySpec spec) {
+        target = null; // a new lookup: a new step, or one that has not acted yet
         BrowserlessElement parent = (BrowserlessElement) spec.parent();
         List<Component> roots = parent == null ? List.of(window().getUI()) : parent.scopeRoots();
         java.util.Set<Component> found = new java.util.LinkedHashSet<>();
@@ -364,17 +376,34 @@ final class BrowserlessSession implements AdapterSession {
     /** The component tree after the step: Browserless has no screenshot, and the tree is cheap. */
     @Override
     public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
-        return writeTree(directory, name);
+        try {
+            return writeTree(directory, name);
+        } finally {
+            target = null;
+        }
     }
 
     private List<Path> writeTree(Path directory, String name) throws java.io.IOException {
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".tree.txt");
         Location location = activeLocation();
-        String tree = maskPasswords(PrettyPrintTreeKt.toPrettyTree(window().getUI()));
+        String tree = maskPasswords(tree(window().getUI(), target).print());
         Files.writeString(file, "Location: /" + (location == null ? "" : location.getPathWithQueryParameters())
                 + "\n\n" + tree);
         return List.of(file);
+    }
+
+    /**
+     * Karibu's pretty tree ({@code PrettyPrintTreeKt.toPrettyTree}), built the same way, with the component the
+     * step acted on marked at the end of its line ({@link TreePage#TARGET_MARK}).
+     */
+    static PrettyPrintTree tree(Component component, Component target) {
+        List<PrettyPrintTree> children = new ArrayList<>();
+        for (Component child : TestingLifecycleHookKt.getTestingLifecycleHook().getAllChildren(component)) {
+            children.add(tree(child, target));
+        }
+        String line = PrettyPrintTreeKt.toPrettyString(component);
+        return new PrettyPrintTree(component == target ? line + TreePage.TARGET_MARK : line, children);
     }
 
     /** A password field's value shows as the reports show it: {@code ••••}. */
