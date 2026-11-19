@@ -43,5 +43,45 @@
             <artifactId>flow-server</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*WithoutSpringSecurityTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <!-- spring-security-core is optional: check that an application without it still starts -->
+                    <execution>
+                        <id>without-spring-security</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*WithoutSpringSecurityTest.java</include>
+                            </includes>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>org.springframework.security:spring-security-core</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
