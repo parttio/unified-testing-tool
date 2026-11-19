@@ -23,6 +23,7 @@ public final class FailureParts {
     private volatile String found;
     private volatile List<String> nearMisses = List.of();
     private volatile String suggestion;
+    private volatile String lookup;
     private volatile Duration waited;
     private volatile String waitedSetting;
     private volatile String tool;
@@ -47,6 +48,15 @@ public final class FailureParts {
 
     public FailureParts suggestion(String newSuggestion) {
         this.suggestion = newSuggestion;
+        return this;
+    }
+
+    /**
+     * The failed lookup or call as the test wrote it, in the form of the suggestion:
+     * {@code find(UnifiedTextField.class).withLabel("E-mail")}. With the suggestion, it says what to change.
+     */
+    public FailureParts lookup(String failedLookup) {
+        this.lookup = failedLookup;
         return this;
     }
 
@@ -115,6 +125,8 @@ public final class FailureParts {
     public String found() { return masked(found); }
     public List<String> nearMisses() { return nearMisses.stream().map(this::masked).toList(); }
     public String suggestion() { return masked(suggestion); }
+    /** The failed lookup as code, when there is a suggestion to compare it with; else null. */
+    public String lookup() { return masked(lookup); }
     public Duration waited() { return waited; }
     public String waitedSetting() { return waitedSetting; }
     public String tool() { return tool; }

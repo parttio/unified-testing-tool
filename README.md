@@ -43,7 +43,7 @@ class ProfileViewTest {
 | `unified-test-archunit` | `UnifiedStyleRules`: the Unified UI Test style as ArchUnit rules, opt-in at test scope ([Checking the style](docs/guide/style-rules.md)) |
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
-| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench, Browserless and Dramafinder to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)) |
+| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench, Browserless and Dramafinder to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)); `ApplyDidYouMean`, which writes a failed lookup's `Did you mean` into the test ([Reading reports and failures](docs/guide/reports-and-failures.md#applying-it)) |
 
 ## Try it
 

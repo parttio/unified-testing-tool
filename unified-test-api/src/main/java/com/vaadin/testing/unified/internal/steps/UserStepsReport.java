@@ -208,6 +208,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     json.close(']');
                 }
                 json.optional("suggestion", steps.mask(unified.getSuggestion().orElse(null)));
+                json.optional("lookup", unified.getSuggestion().isPresent() ? steps.mask(unified.parts().lookup()) : null);
             }
             json.close('}');
         }
