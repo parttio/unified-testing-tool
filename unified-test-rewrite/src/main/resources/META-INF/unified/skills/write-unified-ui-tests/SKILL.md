@@ -107,8 +107,7 @@ mvn test -Dtest=EditPersonTest
 mvn test -Dtest=EditPersonTest -Dvaadin.testing.tool=playwright
 ```
 
-Playwright needs Chromium once: `mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI
--Dexec.classpathScope=test -Dexec.args="install chromium"`.
+The first run on Playwright downloads Chromium, about 280 MB.
 
 Then run the style rules: `mvn test -Dtest=UnifiedStyleTest`. When the project has no such test, add one: the test
 dependency `org.vaadin.addons:unified-test-archunit` (its version comes from `unified-test-bom`) and

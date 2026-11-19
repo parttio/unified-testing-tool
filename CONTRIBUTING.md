@@ -14,7 +14,7 @@ VAADIN_OFFLINE_KEY=... mvn test -pl unified-test-demo -Dvaadin.testing.tool=sele
 
 TestBench checks its license when it loads: on CI, the `selenium` job reads the `VAADIN_OFFLINE_KEY` secret. Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath.
 
-The Playwright run uses Playwright's own browser download. To use an installed Chromium instead, which skips the download:
+The Playwright run downloads the one browser it launches, the first time: Chromium's headless shell, about 280 MB. To use an installed Chromium instead, which skips the download:
 
 ```
 mvn test -pl unified-test-demo \

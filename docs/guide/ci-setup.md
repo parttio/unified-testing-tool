@@ -97,13 +97,13 @@ jobs:
           cache: maven
       - name: Compile
         run: mvn -B -ntp test-compile
-      # the browser and the libraries it needs on the runner
-      - name: Install Chromium for Playwright
+      # the libraries the browser needs on the runner; the run downloads the browser itself
+      - name: Install the libraries Chromium needs
         run: >
           mvn -B -ntp exec:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
-          -Dexec.args="install --with-deps chromium"
+          -Dexec.args="install-deps chromium"
       # a failed test keeps Playwright's trace, grouped by User Step
       - name: Tests on Playwright
         run: >
