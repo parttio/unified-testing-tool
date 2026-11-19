@@ -22,7 +22,11 @@ public final class Phrases {
      * words.
      */
     public static Phrase forWrapperCall(Class<?> wrapperType, LazyElement element, Method method, Object[] args) {
-        StepTarget target = StepTarget.of(element);
+        return forWrapperCall(wrapperType, StepTarget.of(element), method, args);
+    }
+
+    /** {@link #forWrapperCall(Class, LazyElement, Method, Object[])} on a given target, e.g. for the API reference. */
+    public static Phrase forWrapperCall(Class<?> wrapperType, StepTarget target, Method method, Object[] args) {
         String name = method.getName();
         UserStepVerb annotation = verbAnnotation(wrapperType, method);
         if (annotation != null) {
