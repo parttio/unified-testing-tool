@@ -75,7 +75,7 @@ final class PlaywrightSelectionAccess implements SelectionAccess {
             case MULTI_SELECT_COMBO_BOX -> {
                 MultiSelectComboBoxElement multi = new MultiSelectComboBoxElement(locator);
                 multi.selectItem(label);
-                multi.close();
+                closeIfStillThere(multi);
             }
             case RADIO_BUTTON_GROUP -> new RadioButtonGroupElement(locator).selectByLabel(label);
         }
@@ -86,8 +86,16 @@ final class PlaywrightSelectionAccess implements SelectionAccess {
     public void deselect(String label) {
         MultiSelectComboBoxElement multi = new MultiSelectComboBoxElement(locator);
         multi.deselectItem(label);
-        multi.close();
+        closeIfStillThere(multi);
+    }
+
+    /** The app may replace the field as it takes the value (#377): only a field still there has a drop-down to close. */
+    private void closeIfStillThere(MultiSelectComboBoxElement multi) {
         AutoWait.waitForVaadinIdle(session.page());
+        if (locator.count() > 0) {
+            multi.close();
+            AutoWait.waitForVaadinIdle(session.page());
+        }
     }
 
     /** What a user does: the clear button when shown, otherwise empty the input or deselect every item. */

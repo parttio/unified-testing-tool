@@ -47,6 +47,9 @@ public final class SelectionSupport {
                 return;
             }
             access.deselect(label);
+            if (!stillFound(element)) {
+                return;
+            }
             if (access.selectedItems().contains(label)) {
                 throw new IllegalStateException("\"" + label + "\" could not be deselected in " + element.describe());
             }
