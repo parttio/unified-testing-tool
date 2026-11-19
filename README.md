@@ -29,17 +29,18 @@ class ProfileViewTest {
 - **Migrating from Browserless:** [docs/migrating-from-browserless.md](docs/migrating-from-browserless.md), the same for Browserless Test and TestBench UI Unit tests.
 - **Migrating from Dramafinder:** [docs/migrating-from-dramafinder.md](docs/migrating-from-dramafinder.md), the same for Dramafinder (Playwright) tests.
 - **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, structure scenarios and read their reports, with examples from the demo.
-- **API reference:** [every Wrapper](unified-test-api/src/main/resources/META-INF/unified/api-reference.md) with its filters, actions, reads and checks, generated from the code and shipped in the `unified-test-api` jar (`META-INF/unified/api-reference.md`).
+- **API reference *(unreleased)*:** [every Wrapper](unified-test-api/src/main/resources/META-INF/unified/api-reference.md) with its filters, actions, reads and checks, generated from the code and shipped in the `unified-test-api` jar (`META-INF/unified/api-reference.md`).
 - **For agents:** the site has an [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown, and the whole guide in [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt); the `write-unified-ui-tests` skill is installed by the `AddUnifiedTestingSkill` recipe.
 - **Configuration:** [docs/guide/configuration.md](docs/guide/configuration.md): every setting, such as the Testing Tool, the timeout and the reports.
 - **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/parttio/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
+- **Release notes:** [docs/releases](docs/releases/unreleased.md). This page and the site describe `main`: what is newer than the latest release is marked *(unreleased)* and listed under [Unreleased](docs/releases/unreleased.md).
 - **Status:** first version. Spec draft, not yet `spec-v1`.
 
 ## Modules
 
 | Module | Contains |
 |---|---|
-| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, User Step reports (`page.step(..)`, `user-steps.txt`, `summary.md`) and `UnifiedAssertionError`, Capabilities, Escape Hatch, adapter SPI |
+| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, User Step reports (`page.step(..)`, `user-steps.txt`, `summary.md`, `report.html` and, *unreleased*, `summary.json`, the application's log lines and the console's errors under each step, scenarios without a check, the comparison with another Testing Tool's run) and `UnifiedAssertionError`, Capabilities, Escape Hatch, adapter SPI, the API reference (`META-INF/unified/api-reference.md`, *unreleased*) |
 | `unified-test-browserless` | Browserless Test adapter |
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
 | `unified-test-selenium` | Selenium adapter on TestBench 25.3 (needs a TestBench license) |
@@ -47,7 +48,7 @@ class ProfileViewTest {
 | `unified-test-archunit` | `UnifiedStyleRules`: the Unified UI Test style as ArchUnit rules, opt-in at test scope ([Checking the style](docs/guide/style-rules.md)) |
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
-| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench, Browserless and Dramafinder to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)); `ApplyDidYouMean`, which writes a failed lookup's `Did you mean` into the test ([Reading reports and failures](docs/guide/reports-and-failures.md#applying-it)) |
+| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench, Browserless and Dramafinder to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)); `ApplyDidYouMean` *(unreleased)*, which writes a failed lookup's `Did you mean` into the test ([Reading reports and failures](docs/guide/reports-and-failures.md#applying-it)) |
 
 ## Try it
 
@@ -97,6 +98,7 @@ Run the tests on Browserless with `mvn test`, and on another Testing Tool with `
 | Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/parttio/unified-testing-tool/issues/66)) |
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/parttio/unified-testing-tool/issues/61)) |
 | Selenium: a combo box's `getItems()` | the drop-down's first page only (50 items by default; [#127](https://github.com/parttio/unified-testing-tool/issues/127)) |
+| The browser's console errors *(unreleased)* (under each User Step, and in `hasNoErrors()`) | Playwright, and Selenium with Chrome; Firefox on Selenium has no browser log ([#316](https://github.com/parttio/unified-testing-tool/issues/316)) |
 
 ## Contributing
 

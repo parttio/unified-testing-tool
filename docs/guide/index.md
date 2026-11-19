@@ -68,6 +68,25 @@ Then, when you need more:
 - [Checking the style](style-rules.md): scenario sentences, no raw waits and `@RequiresTestingTool`, checked by a test.
 - [Configuration](configuration.md): every setting, from the Testing Tool and the timeout to the reports and each Testing Tool's browser.
 
+## Running it in a browser
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+The same test runs in a real browser when the run says so (`-Dvaadin.testing.tool=playwright` or `selenium`); [Running in CI](ci-setup.md) shows the jobs. Two things are set up for you:
+
+- **The application is served in development mode**, with the frontend bundle that ships with `vaadin-dev`, so a browser run needs no frontend build first.
+- **Vaadin's development tools are off** in a `@UnifiedSpringBootTest`'s application (`vaadin.devmode.devTools.enabled=false`). A test needs neither Copilot nor the tools' overlay, and with them on, Copilot starts file watchers for every browser session and keeps them until the application stops, which runs a long test run out of them. To have the tools in a test, set the property yourself; anything that sets it wins over this default:
+
+```java
+@UnifiedSpringBootTest(properties = "vaadin.devmode.devTools.enabled=true")
+```
+
+## For agents
+
+- **In your project:** the `write-unified-ui-tests` skill, installed by the `AddUnifiedTestingSkill` recipe, and the [API reference](../../unified-test-api/src/main/resources/META-INF/unified/api-reference.md) inside the `unified-test-api` jar (`META-INF/unified/api-reference.md`), which is of the version you use and needs no network *(unreleased)*.
+- **On this site:** [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt) lists every page with a link to it as Markdown, and [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt) holds this guide, the API reference and the glossary in one file.
+- **After a run *(unreleased)*:** `summary.json` says what failed and where each test's files are ([The run as data](reports-and-failures.md#the-run-as-data)).
+
 ## Rules of thumb
 
 - **Find components the way a user does:** by type and label, accessible name or text. Use a test id only when there is nothing the user can read.

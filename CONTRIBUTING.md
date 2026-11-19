@@ -58,7 +58,7 @@ Write an example inline only when it can't compile: a signature, a class skeleto
 ## Cutting a release
 
 1. Make sure the build passes locally and in the Tests workflow on `main`.
-2. Write the release notes as `docs/releases/<version>.md`.
+2. Turn `docs/releases/unreleased.md` into the release's notes (`docs/releases/<version>.md`, and its entry in `mkdocs.yml`), start a new `unreleased.md`, and take out the marks of what the release now has: `grep -rni "unreleased" README.md docs/guide docs/spec scripts`.
 3. From an up-to-date `main` with push rights:
 
    ```

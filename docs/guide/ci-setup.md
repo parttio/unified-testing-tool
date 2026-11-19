@@ -7,7 +7,7 @@ The Unified API needs no CI plugin. When the tests have run, it writes its repor
 | Failed tests' User Steps in the CI log | nothing |
 | `summary.md`: the counts, the scenarios changed in the pull request, the failed scenarios | nothing: written to `target/surefire-reports/unified-evidence/` |
 | `report.html`: the same run in a browser, with every scenario's User Steps and the failure screenshots | nothing: written next to `summary.md`; read it from the artifact |
-| `summary.json`: the same run as data, for a script or an agent | nothing: written next to `summary.md` |
+| `summary.json` *(unreleased)*: the same run as data, for a script or an agent | nothing: written next to `summary.md` |
 | The summary on the GitHub job's page | GitHub Actions: nothing |
 | **Changed in this PR** in the summary | the git history and the base branch in the checkout |
 | How each changed scenario's User Steps differ from the base branch's | the base branch's evidence artifact, downloaded |

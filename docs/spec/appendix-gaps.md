@@ -52,6 +52,7 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | Gap | Issue |
 |---|---|
 | No way to list every item of a lazy combo box (only the loaded page) | [#127](https://github.com/parttio/unified-testing-tool/issues/127) |
+| No API to read the browser's console; the adapter reads Selenium's browser log on Chrome, and nothing on Firefox | [#316](https://github.com/parttio/unified-testing-tool/issues/316) |
 
 ## Browserless Test
 
