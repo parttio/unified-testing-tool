@@ -77,6 +77,8 @@ Commit or stash your work first: the recipe changes files in place.
 | `includePageObjects` | `false` | Also converts page objects (see below) |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
+*(unreleased)* Up to 0.1.0-alpha3 the recipe ignores the options a `rewrite.yml` sets, without a warning, and runs with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). With those versions, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
+
 Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `playwright` or `selenium`) and work through the Migration Markers, by hand or with the agent skill.
 
 ## What it converts
