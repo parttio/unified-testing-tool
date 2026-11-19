@@ -27,11 +27,17 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   can show one changed line for a scenario that uses it, once.
 - **Every run asks git for its commit** ([#312](https://github.com/parttio/unified-testing-tool/pull/312)): two
   calls when the run ends, for `summary.json`. Without git the fields are left out.
-- **Playwright downloads no browsers when `vaadin.testing.playwright.executable` is set**
-  ([#299](https://github.com/parttio/unified-testing-tool/pull/299)). `Playwright.create()` used to download every
-  browser it supports, some 1.3 GB, though the run used none of them; `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` is no
-  longer needed beside the executable. The download is decided at the JVM's first `Playwright.create()`, so code
-  that creates a `Playwright` before the first test still downloads.
+- **Playwright downloads only the browser a run launches**
+  ([#299](https://github.com/parttio/unified-testing-tool/pull/299),
+  [#337](https://github.com/parttio/unified-testing-tool/issues/337)). `Playwright.create()` used to download every
+  browser it supports, some 1.3 GB, though a run opens one. Now the run installs the browser of
+  `vaadin.testing.playwright.browser`, with Playwright's `install` command: for headless Chromium, the default,
+  Chromium's headless shell, about 280 MB. With `vaadin.testing.playwright.executable` set it downloads nothing,
+  and `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` is no longer needed beside the executable. The environment still has
+  the last word: with `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` or `SELENIUM_REMOTE_URL` set, the run installs nothing.
+  Playwright decides its own download at the JVM's first `Playwright.create()`, so code that creates a `Playwright`
+  before the first test still downloads everything. A CI step that ran `install --with-deps chromium` before the
+  tests can run `install-deps chromium` instead, for the system libraries only.
 - **Chrome on Selenium is started with a logging capability**
   ([#315](https://github.com/parttio/unified-testing-tool/pull/315)), and its console is read after every User
   Step.

@@ -80,12 +80,13 @@ jobs:
           cache: maven
       - name: Build without tests
         run: mvn -B -ntp install -DskipTests
-      - name: Install Chromium for Playwright
+      # the adapter downloads the browser itself, on the run's first test
+      - name: Install the libraries Chromium needs
         run: >
           mvn -B -ntp -pl unified-test-demo exec:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
-          -Dexec.args="install --with-deps chromium"
+          -Dexec.args="install-deps chromium"
       - name: Demo tests on Playwright
         # a failed test keeps Playwright's trace, grouped by User Step, in the evidence artifact
         run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"

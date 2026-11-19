@@ -19,7 +19,7 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
 | `vaadin.testing.browserless.view-packages` | in a Spring test, the `@SpringBootApplication`'s packages and the test's package; otherwise the test's package |
 | `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends an exception thrown by a listener to the session's `ErrorHandler`, as in a browser |
-| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
+| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`); the run downloads this browser only, when it isn't installed *(unreleased)* |
 | `vaadin.testing.playwright.headless` | `true` |
 | `vaadin.testing.playwright.executable` | Playwright's own browser; a path to a browser skips the download of Playwright's browsers *(unreleased)* |
 | `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
