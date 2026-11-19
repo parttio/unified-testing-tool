@@ -373,7 +373,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     /** A view that sets ids and test ids, as the application's sources do. */
-    private static final String PLAN_VIEW = """
+    private static final String ID_VIEW = """
             package com.example;
 
             import com.vaadin.flow.component.button.Button;
@@ -401,7 +401,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     @Test
     void rawIdAndTestIdLocatorsBecomeLookupsOfTheWrapperTheViewSetsTheIdOn() {
         // issue #356: locator("#id"), locator("[data-testid=..]") and getByTestId(..) name a component by id
-        rewriteRun(java(VIEW), java(PLAN_VIEW), java(
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
                 """
                 package com.example;
 
@@ -459,7 +459,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
 
     @Test
     void aRawLocatorOnAnIdNoViewSetsBecomesAContainerWithAMarker() {
-        rewriteRun(java(VIEW), java(PLAN_VIEW), java(
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
                 """
                 package com.example;
 
@@ -503,7 +503,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
 
     @Test
     void aRawLocatorWithACallItsWrapperLacksStaysBehindTheEscapeHatch() {
-        rewriteRun(java(VIEW), java(PLAN_VIEW), java(
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
                 """
                 package com.example;
 
