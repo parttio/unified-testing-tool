@@ -36,6 +36,10 @@ _Avoid_: Vaadin test, browser test, integration test
 A UI test written against a Testing Tool's own API (Browserless Test, Dramafinder, TestBench) rather than the Unified API; the counterpart a Unified UI Test is compared with.
 _Avoid_: Plain test, native test, raw test
 
+**Performance Pair**:
+A Unified UI Test and a Direct Test of the same scenario on one Testing Tool, held to the same user actions and checks, so their time and round trips can be compared.
+_Avoid_: Benchmark Pair, twin, golden pair
+
 **Capability**:
 Something a Unified UI Test can require from the Testing Tool running it, such as a real browser; a test whose Capability is missing is skipped.
 _Avoid_: Feature flag, tag
