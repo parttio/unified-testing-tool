@@ -86,7 +86,8 @@ class FindTestClassesToMigrateTest implements RewriteTest {
 
                     @Test
                     void opens() {
-                        page.navigate(getUrl() + "people");
+                        String people = getUrl() + "people";
+                        page.navigate(people);
                     }
                 }
                 """,
@@ -105,7 +106,8 @@ class FindTestClassesToMigrateTest implements RewriteTest {
 
                     @Test
                     void opens() {
-                        page.navigate(getUrl() + "people");
+                        String people = getUrl() + "people";
+                        page.navigate(people);
                     }
                 }
                 """));
