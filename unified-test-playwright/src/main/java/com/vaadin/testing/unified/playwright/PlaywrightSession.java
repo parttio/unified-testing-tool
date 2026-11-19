@@ -82,7 +82,15 @@ final class PlaywrightSession implements AdapterSession {
             }
         });
         page.onPageError(error -> consoleErrors.add(error));
+        page.onRequest(request -> {
+            if (request.isNavigationRequest() && request.frame() == page.mainFrame()) {
+                pageLoaded = true;
+            }
+        });
     }
+
+    /** Whether the page has started loading another document since {@link #settle()} last ran (#397). */
+    private volatile boolean pageLoaded;
 
     /** What the page logged with console.error, and the exceptions no script caught, since they were last read. */
     private final List<String> consoleErrors = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
@@ -387,20 +395,46 @@ final class PlaywrightSession implements AdapterSession {
     /**
      * Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may
      * start: both in one call to the page (#402). When the action loaded another page, or Flow stays busy
-     * longer than {@link #SETTLE_IDLE_MS}, Dramafinder's own wait takes over, with its timeout.
+     * longer than {@link #SETTLE_IDLE_MS}, Dramafinder's own wait takes over, with its timeout; after a page load,
+     * only once Flow has started the new page's UI (#397).
      */
     @Override
     public void settle() {
         try {
             if (Boolean.TRUE.equals(page.evaluate(SETTLE_AND_IDLE,
-                    List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS)))) {
+                    List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS))) && !pageLoaded) {
                 return;
             }
         } catch (com.microsoft.playwright.PlaywrightException e) {
             // the action loaded another page: nothing of Flow's left to wait for in this one
         }
+        if (pageLoaded) {
+            waitForFlowStart();
+        }
         AutoWait.waitForVaadinIdle(page);
     }
+
+    /**
+     * After a page load: waits for {@code load}, then until Flow has started the page's UI. Before that, only Flow's
+     * TypeScript client is registered, or none, and the page reads as idle while it shows nothing yet (#397).
+     */
+    private void waitForFlowStart() {
+        pageLoaded = false;
+        page.waitForLoadState(com.microsoft.playwright.options.LoadState.LOAD);
+        try {
+            page.waitForFunction(FLOW_STARTED, null, new Page.WaitForFunctionOptions().setTimeout(FLOW_START_CAP_MS));
+        } catch (com.microsoft.playwright.TimeoutError e) {
+            // Flow runs in the page but shows no Flow UI (a Hilla view): nothing more to wait for
+        }
+    }
+
+    /** How long {@link #FLOW_STARTED} may take after a page load, in ms: a page with no Flow UI never passes it. */
+    private static final int FLOW_START_CAP_MS = 5000;
+
+    /** True once Flow has registered the UI's client next to its TypeScript one, or when the page doesn't run Flow. */
+    private static final String FLOW_STARTED = """
+            () => { const clients = window.Vaadin?.Flow?.clients;
+                    return !clients || Object.keys(clients).some(id => id !== 'TypeScript'); }""";
 
     /** How long {@link #SETTLE_AND_IDLE} waits for Flow to be idle before Dramafinder's wait takes over, in ms. */
     private static final int SETTLE_IDLE_MS = 5000;
