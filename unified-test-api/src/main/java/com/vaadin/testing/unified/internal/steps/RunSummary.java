@@ -7,8 +7,9 @@ import java.util.Optional;
 
 /**
  * The run's {@code summary.md} (spec chapter 12, "Reports"), built from the {@code user-steps.json} of the run's
- * tests: a header with the counts, "Changed in this PR" when a base ref is known, then the failed scenarios. A
- * changed scenario's User Steps are diffed against the {@link BaseRun} when there is one.
+ * tests: a header with the counts, "Changed in this PR" when a base ref is known, the failed scenarios, then the
+ * passing scenarios without a check. A changed scenario's User Steps are diffed against the {@link BaseRun} when
+ * there is one.
  * Passing scenarios count in the header only: a run's list of them is long to scroll past on the job summary,
  * and each one's User Steps are in its own {@code user-steps.txt}.
  *
@@ -19,9 +20,12 @@ import java.util.Optional;
  * @param changes the files changed against the base ref, or null outside a PR
  * @param base the base branch's last run, to compare a changed scenario's User Steps with; null when none was
  *        asked for ({@code vaadin.testing.user-steps.baseline-dir} unset)
+ * @param comparisons this run against runs of the same tests on other Testing Tools, one per tool; empty when
+ *        none was asked for ({@code vaadin.testing.user-steps.compare-dir} unset) or found
+ * @param revision the code this run tested, or null when git doesn't say
  */
 public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes,
-        BaseRun base) {
+        BaseRun base, List<RunComparison> comparisons, Revision revision) {
 
     public static final String FILE = "summary.md";
 
@@ -35,6 +39,17 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
     /** Without a base run: changed scenarios show their User Steps in full. */
     public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes) {
         this(tool, scenarios, disabled, changes, null);
+    }
+
+    /** Without this run's revision. */
+    public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes, BaseRun base,
+            List<RunComparison> comparisons) {
+        this(tool, scenarios, disabled, changes, base, comparisons, null);
+    }
+
+    /** Without a run on another Testing Tool to compare with. */
+    public RunSummary(String tool, List<ScenarioResult> scenarios, int disabled, ChangedFiles changes, BaseRun base) {
+        this(tool, scenarios, disabled, changes, base, List.of());
     }
 
     public long passed() {
@@ -61,7 +76,131 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
             md.append("\n#### Failed scenarios\n");
             failed.forEach(s -> failed(md, s));
         }
+        comparisons.forEach(c -> compared(md, c));
+        unchecked(md);
         return md.toString();
+    }
+
+    /** At most this many scenarios that differ from another Testing Tool's run are listed; the rest are counted. */
+    static final int DIFFERENCES_LISTED = 10;
+
+    private void compared(StringBuilder md, RunComparison c) {
+        md.append("\n#### Compared with ").append(c.otherTool()).append("\n\n").append(comparedLead(c)).append('\n');
+        md.append('\n').append(c.sameCode(revision).orElse(true) ? "" : "**Not the same code.** ")
+                .append(sameCodeLine(c, RunSummary::code)).append('\n');
+        for (RunComparison.Difference d : c.differences().subList(0, Math.min(DIFFERENCES_LISTED,
+                c.differences().size()))) {
+            md.append("\n**").append(markdown(title(d.here()))).append("** · ")
+                    .append(markdown(differenceLine(d, c.otherTool()))).append("\n\n");
+            d.parting().ifPresent(p -> md.append("- Parts at step ").append(p.position()).append(": ")
+                    .append(partingSide(p.here(), tool)).append(", ").append(partingSide(p.there(), c.otherTool()))
+                    .append('\n'));
+            ScenarioResult failed = d.here().failed() ? d.here() : d.there().failed() ? d.there() : null;
+            if (d.endsDifferently() && failed != null) {
+                md.append("- On ").append(failed == d.here() ? tool : c.otherTool()).append(": ")
+                        .append(code(error(failed.failure() == null ? Map.of() : failed.failure()))).append('\n');
+            }
+        }
+        if (c.differences().size() > DIFFERENCES_LISTED) {
+            md.append("\n… and ").append(c.differences().size() - DIFFERENCES_LISTED).append(" more, in `")
+                    .append(RunReport.FILE).append("`\n");
+        }
+    }
+
+    /** {@code 118 scenarios ran on both Testing Tools: 1 ends differently, …}, then those that ran on one only. */
+    String comparedLead(RunComparison c) {
+        StringBuilder lead = new StringBuilder();
+        lead.append(c.both()).append(c.both() == 1 ? " scenario ran" : " scenarios ran")
+                .append(" on both Testing Tools: ");
+        if (c.differences().isEmpty()) {
+            lead.append("same result and same User Steps on each.");
+        } else {
+            lead.append(c.endDifferently()).append(c.endDifferently() == 1 ? " ends" : " end")
+                    .append(" differently, ").append(c.takeDifferentSteps())
+                    .append(c.takeDifferentSteps() == 1 ? " takes" : " take").append(" different User Steps.");
+        }
+        if (c.onlyHere() > 0 || c.onlyThere() > 0) {
+            lead.append(' ').append(c.onlyHere()).append(" ran on ").append(tool).append(" only, ")
+                    .append(c.onlyThere()).append(" on ").append(c.otherTool()).append(" only.");
+        }
+        return lead.toString();
+    }
+
+    /**
+     * Whether the two runs tested the same code: {@code Both runs are of commit abc1234.}, or what each is of,
+     * or that it isn't known.
+     *
+     * @param commit how a commit is shown, e.g. as code
+     */
+    String sameCodeLine(RunComparison c, java.util.function.UnaryOperator<String> commit) {
+        List<Revision> others = c.otherRevisions();
+        if (revision == null || others.isEmpty()) {
+            String who = revision == null && others.isEmpty() ? "neither run recorded one"
+                    : revision == null ? "this run recorded none" : "the " + c.otherTool() + " run recorded none";
+            return "Whether both runs are of the same commit is not known: " + who + ".";
+        }
+        if (c.sameCode(revision).orElse(false)) {
+            return "Both runs are of commit " + commit.apply(revision.shortCommit())
+                    + (revision.uncommitted() == null ? "." : ", with the same uncommitted changes.");
+        }
+        String there = others.size() > 1
+                ? "several commits (" + String.join(", ", others.stream().map(r -> commit.apply(r.shortCommit()))
+                        .distinct().toList()) + ")"
+                : "commit " + commit.apply(others.get(0).shortCommit()) + (others.get(0).uncommitted() == null ? ""
+                        : others.get(0).commit().equals(revision.commit()) && revision.uncommitted() != null
+                                ? " with other uncommitted changes" : " with uncommitted changes");
+        return "This run is of commit " + commit.apply(revision.shortCommit())
+                + (revision.uncommitted() == null ? "" : " with uncommitted changes") + ", the " + c.otherTool()
+                + " run of " + there + ". A difference below may come from the code, not from the Testing Tool.";
+    }
+
+    /** {@code passed on Browserless, failed on Playwright}, or {@code passed on both, different User Steps}. */
+    String differenceLine(RunComparison.Difference d, String otherTool) {
+        if (d.endsDifferently()) {
+            return d.here().status() + " on " + tool + ", " + d.there().status() + " on " + otherTool;
+        }
+        return d.here().status() + " on both, different User Steps";
+    }
+
+    private static String partingSide(String line, String tool) {
+        return (line == null ? "no more steps" : code(line)) + " on " + tool;
+    }
+
+    /** At most this many scenarios without a check are listed; the rest are counted. */
+    static final int UNCHECKED_LISTED = 10;
+
+    /** The passing scenarios that end without a check ({@link ScenarioResult#unchecked()}). */
+    public List<ScenarioResult> unchecked() {
+        return scenarios.stream().filter(s -> s.unchecked().isPresent()).toList();
+    }
+
+    private void unchecked(StringBuilder md) {
+        List<ScenarioResult> unchecked = unchecked();
+        if (unchecked.isEmpty()) {
+            return;
+        }
+        md.append("\n#### Scenarios without a check\n\n").append(unchecked.size())
+                .append(unchecked.size() == 1 ? " passing scenario ends" : " passing scenarios end")
+                .append(" on User Steps that nothing checks: no `see` step follows them, and the test reads no")
+                .append(" value after them.\n\n");
+        for (ScenarioResult s : unchecked.subList(0, Math.min(UNCHECKED_LISTED, unchecked.size()))) {
+            md.append("- **").append(markdown(title(s))).append("** · ")
+                    .append(uncheckedLine(s.unchecked().orElseThrow(), RunSummary::code)).append('\n');
+        }
+        if (unchecked.size() > UNCHECKED_LISTED) {
+            md.append("- … and ").append(unchecked.size() - UNCHECKED_LISTED).append(" more, in `")
+                    .append(RunReport.FILE).append("`\n");
+        }
+    }
+
+    /** {@code no check}, or {@code no check after: <the last steps>}: at most three steps, then the count. */
+    static String uncheckedLine(ScenarioResult.Unchecked unchecked, java.util.function.UnaryOperator<String> step) {
+        if (unchecked.all()) {
+            return "no check";
+        }
+        List<String> steps = unchecked.steps();
+        String shown = String.join(", ", steps.stream().limit(3).map(step).toList());
+        return "no check after: " + shown + (steps.size() > 3 ? " and " + (steps.size() - 3) + " more" : "");
     }
 
     private void changed(StringBuilder md) {

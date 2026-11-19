@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * One test's User Steps as {@code user-steps.txt} (also the CI log) and {@code user-steps.json}, schema version 1
@@ -69,7 +70,12 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         if (entries.isEmpty()) {
             sb.append(INDENT).append("(no User Steps)\n");
         }
+        logs(sb, steps.logsBeforeFirstEntry(), 1);
         text(sb, entries, 1);
+        if (steps.logLinesLeftOut() > 0) {
+            sb.append(INDENT).append(LOG_MARK).append(" … ").append(steps.logLinesLeftOut())
+                    .append(" more log lines left out\n");
+        }
         if (failure != null && status.equals("failed")) {
             sb.append(INDENT).append(FAILED_MARK).append(' ').append(steps.mask(firstLine(failure))).append('\n');
             List<CallSite> codePath = codePath();
@@ -81,19 +87,36 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         return sb.toString();
     }
 
+    /** Marks a log line under the entry during which it was logged. */
+    static final String LOG_MARK = "⚠";
+
+    /** {@code ⚠ server ERROR PersonService: Could not save (IllegalStateException: no id)}, one line each. */
+    private void logs(StringBuilder sb, List<StepRecorder.LogLine> lines, int depth) {
+        for (StepRecorder.LogLine line : lines) {
+            sb.append(indent(depth)).append(LOG_MARK).append(' ').append(steps.mask(line.text())).append('\n');
+        }
+    }
+
     private void text(StringBuilder sb, List<Entry> entries, int depth) {
         String indent = indent(depth);
         for (Entry entry : entries) {
             switch (entry) {
-                case Step step -> sb.append(indent).append(line(step.index(), step.window(),
-                        steps.mask(step.phrase().render()), step.status() == Status.FAILED)).append('\n');
+                case Step step -> {
+                    sb.append(indent).append(line(step.index(), step.window(),
+                            steps.mask(step.phrase().render()), step.status() == Status.FAILED)).append('\n');
+                    logs(sb, steps.logs(step), depth + 1);
+                }
                 case Group group -> {
                     sb.append(indent).append(line(group.index(), group.window(), steps.mask(group.name()), false))
                             .append('\n');
+                    logs(sb, steps.logs(group), depth + 1);
                     text(sb, group.children(), depth + 1);
                 }
-                case Gap gap -> sb.append(indent)
-                        .append(line(null, gap.window(), gap.text(), gap.status() == Status.FAILED)).append('\n');
+                case Gap gap -> {
+                    sb.append(indent).append(line(null, gap.window(), gap.text(), gap.status() == Status.FAILED))
+                            .append('\n');
+                    logs(sb, steps.logs(gap), depth + 1);
+                }
             }
         }
     }
@@ -183,6 +206,13 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         json.field("startedAt", steps.startedAt().toString());
         json.field("durationMs", steps.durationNanos() / 1_000_000);
         json.field("stepCount", steps.stepCount());
+        if (steps.readsBeforeFirstEntry() > 0) {
+            json.field("readsBeforeFirstEntry", steps.readsBeforeFirstEntry());
+        }
+        logs(json, "logsBeforeFirstEntry", steps.logsBeforeFirstEntry());
+        if (steps.logLinesLeftOut() > 0) {
+            json.field("logLinesLeftOut", steps.logLinesLeftOut());
+        }
         if (failure != null && status.equals("failed")) {
             json.key("failure").open('{');
             json.field("type", failure.getClass().getName());
@@ -204,6 +234,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     json.close(']');
                 }
                 json.optional("suggestion", steps.mask(unified.getSuggestion().orElse(null)));
+                json.optional("lookup", unified.getSuggestion().isPresent() ? steps.mask(unified.parts().lookup()) : null);
             }
             json.close('}');
         }
@@ -246,6 +277,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     }
                     common(json, step.window(), step.status(), step.durationNanos(), step.callSite(), step.error());
                     json.optional("snapshot", step.snapshot());
+                    readsAfter(json, step);
                 }
                 case Group group -> {
                     json.field("type", "group");
@@ -253,6 +285,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     json.field("name", steps.mask(group.name()));
                     common(json, group.window(), group.status(), group.durationNanos(), group.callSite(),
                             group.error());
+                    readsAfter(json, group);
                     json.key("steps");
                     entries(json, group.children());
                 }
@@ -262,8 +295,36 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     json.field("reason", gap.reason());
                     json.field("count", gap.count());
                     common(json, gap.window(), gap.status(), -1, gap.callSite(), gap.error());
+                    readsAfter(json, gap);
                 }
             }
+            json.close('}');
+        }
+        json.close(']');
+    }
+
+    /** Before a group's {@code steps}, so the file reads in the order things happened. */
+    private void readsAfter(Json json, Entry entry) {
+        int reads = steps.readsAfter(entry);
+        if (reads > 0) {
+            json.field("readsAfter", reads);
+        }
+        logs(json, "logs", steps.logs(entry));
+    }
+
+    private void logs(Json json, String key, List<StepRecorder.LogLine> lines) {
+        if (lines.isEmpty()) {
+            return;
+        }
+        json.key(key).open('[');
+        for (StepRecorder.LogLine line : lines) {
+            json.open('{');
+            json.field("source", line.source());
+            json.field("level", line.level());
+            json.optional("logger", line.logger());
+            json.field("message", steps.mask(line.message() == null ? "" : line.message()));
+            json.optional("error", steps.mask(line.error()));
+            json.field("text", steps.mask(line.text()));
             json.close('}');
         }
         json.close(']');
@@ -347,6 +408,27 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                 sb.append("null");
             } else {
                 string(value);
+            }
+        }
+
+        /** A value read back from JSON, written as it was: an object, an array, a string, a number, a boolean or null. */
+        void any(Object value) {
+            if (value instanceof Map<?, ?> map) {
+                open('{');
+                map.forEach((k, v) -> {
+                    key(String.valueOf(k));
+                    any(v);
+                });
+                close('}');
+            } else if (value instanceof List<?> list) {
+                open('[');
+                list.forEach(this::any);
+                close(']');
+            } else if (value instanceof String s) {
+                value(s);
+            } else {
+                beforeValue();
+                sb.append(value);
             }
         }
 

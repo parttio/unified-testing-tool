@@ -19,6 +19,12 @@ import org.springframework.core.annotation.AliasFor;
  * <p>
  * {@code @Transactional} on the test fails on browser Testing Tools: the views run outside the test's
  * transaction there ({@link TransactionalCheck}).
+ * <p>
+ * Vaadin's development tools are off in the test's application ({@code vaadin.devmode.devTools.enabled=false}):
+ * browser Testing Tools serve it in development mode, where Copilot would start file watchers for every browser
+ * session and keep them until the application stops, which runs a long test run out of them. A test that needs
+ * the tools sets the property to {@code true}, in {@link #properties()} or in the application's own configuration
+ * ({@link TestApplicationDefaults}).
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -28,6 +34,7 @@ import org.springframework.core.annotation.AliasFor;
 @UnifiedUITest
 @ExtendWith(TransactionalCheck.class)
 public @interface UnifiedSpringBootTest {
+
 
     @AliasFor(annotation = SpringBootTest.class)
     String[] properties() default {};

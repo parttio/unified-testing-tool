@@ -155,6 +155,30 @@ public final class UnifiedAssertions {
             return this;
         }
 
+        /**
+         * Nothing went wrong behind the user's back so far in this test: the application logged no error, and no
+         * browser console of the test's windows got one. What was logged is in the failure, and under the User
+         * Step during which it was logged in the reports. It doesn't wait: put it after the check that shows the
+         * action is over.
+         * <p>
+         * Which lines count follows {@code vaadin.testing.user-steps.server-log}; with {@code off} only the
+         * console is checked. Console errors are known on Testing Tools that can read the console.
+         */
+        public PageAssert hasNoErrors() {
+            // checked once: an error that was logged doesn't go away by waiting
+            run.steps().check(() -> Phrases.page("see no", "see no errors"), run.window(), () -> {
+                List<String> errors = run.steps().errors().stream()
+                        .map(com.vaadin.testing.unified.internal.steps.StepRecorder.LogLine::text).toList();
+                if (!errors.isEmpty()) {
+                    throw run.failure(com.vaadin.testing.unified.internal.failures.FailureParts.of(
+                            "no error in the application's log or a browser's console",
+                            errors.size() + ": " + String.join("; ", errors)), null);
+                }
+                return null;
+            });
+            return this;
+        }
+
         public PageAssert hasQueryParameter(String name, String value) {
             check(run, () -> Phrase.template("see", "see query parameter “" + name + "” with {value}", null,
                             value == null ? List.of() : List.of(value)), () -> "query parameter “" + name + "”", "to be", value,
@@ -331,7 +355,8 @@ public final class UnifiedAssertions {
         /** Exactly these items are selected, in any order. */
         @SuppressWarnings("unchecked")
         public MultiSelectAssert hasSelectedItems(String... expected) {
-            java.util.Set<String> set = java.util.Set.of(expected);
+            // in the test's order: the User Step reads the same in every run, which Set.of doesn't promise
+            java.util.Set<String> set = new java.util.LinkedHashSet<>(List.of(expected));
             return check("to have selected items", set, multi::getSelectedItems,
                     v -> v != null && ((List<String>) v).size() == set.size() && set.containsAll((List<String>) v));
         }

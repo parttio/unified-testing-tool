@@ -226,6 +226,7 @@ final class LookupFailures {
                 .toList());
         if (result.suggestion() != null) {
             parts.suggestion(suggestion(source, probe, result.suggestion()));
+            parts.lookup(lookup(source, probe, probe.wanted()));
         }
     }
 
@@ -331,6 +332,11 @@ final class LookupFailures {
             return "find(" + type.getSimpleName() + ".class)." + (namingKind(type) == Filter.Kind.TEXT ? "withText"
                     : "withLabel") + "(" + javaString(best.value()) + ")";
         }
+        return lookup(source, probe, best.value());
+    }
+
+    /** The lookup as code, from {@code find(..)} on, with {@code name} as the value of the probed filter. */
+    static String lookup(ElementSource source, Probe probe, String name) {
         StringBuilder sb = new StringBuilder(source.wrapperType() != null
                 ? "find(" + source.wrapperType().getSimpleName() + ".class)"
                 : "findComponent(" + source.componentType().getSimpleName() + ".class)");
@@ -338,14 +344,14 @@ final class LookupFailures {
         for (int i = 0; i < user.size(); i++) {
             Filter f = user.get(i);
             sb.append('.').append(i == probe.filterIndex()
-                    ? new Filter(f.kind(), f.name(), best.value(), f.exact()).toString().replace(
-                            "\"" + best.value() + "\"", javaString(best.value()))
+                    ? new Filter(f.kind(), f.name(), name, f.exact()).toString().replace(
+                            "\"" + name + "\"", javaString(name))
                     : f.toString());
         }
         List<FilterLabel> labels = source.coreFilterNames();
         for (int i = 0; i < labels.size(); i++) {
             sb.append('.').append(i == probe.coreIndex()
-                    ? labels.get(i).method() + "(" + javaString(best.value()) + ")"
+                    ? labels.get(i).method() + "(" + javaString(name) + ")"
                     : labels.get(i).display());
         }
         return sb.toString();

@@ -58,6 +58,8 @@ class UserStepsFilesTest {
                 .selectors(selectClass(testClass))
                 .configurationParameter("vaadin.testing.tool", tool().name().toLowerCase())
                 .configurationParameter("vaadin.testing.evidence-dir", evidenceDir.toString())
+                // these tests pin the User Steps' text; what the machine's application logs meanwhile is not theirs
+                .configurationParameter("vaadin.testing.user-steps.server-log", "off")
                 .configurationParameter("vaadin.testing.timeout", "2s")
                 .build();
         SummaryGeneratingListener listener = new SummaryGeneratingListener();

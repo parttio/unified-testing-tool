@@ -26,9 +26,13 @@ public final class ItemFailures {
         FailureParts parts = FailureParts.of(what + " “" + wanted + "” in " + scope, "none")
                 .nearMisses(result.rendered());
         if (result.suggestion() != null) {
-            parts.suggestion(method + "(\"" + result.suggestion().value().replace("\\", "\\\\").replace("\"", "\\\"")
-                    + "\")");
+            parts.suggestion(method + "(" + javaString(result.suggestion().value()) + ")");
+            parts.lookup(method + "(" + javaString(wanted) + ")");
         }
         return run.failure(parts, null);
+    }
+
+    private static String javaString(String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 }

@@ -41,4 +41,28 @@ class ReportTest {
         dialog.find(UnifiedButton.class).withText("Close").click();
         assertThat(dialog).isClosed();
     }
+
+    /** A tooltip ({@code setTooltipText}) sits in the button's DOM, yet is not its text. */
+    @Test
+    @DisplayName("The Export and Print buttons show their own text, not their tooltips")
+    void aTooltipIsNotPartOfTheText(UnifiedPage page) {
+        page.navigate(ReportView.class);
+
+        UnifiedButton export = page.find(UnifiedButton.class).withText("Export");
+        UnifiedButton print = page.find(UnifiedButton.class).withAccessibleName("Print");
+
+        assertThat(export).hasText("Export");
+        assertThat(print).hasText("");
+    }
+
+    /** Without an aria-label, the accessible name falls back to the text: the tooltip is not part of it. */
+    @Test
+    @DisplayName("The Export button is named by its own text, not its tooltip")
+    void aTooltipIsNotPartOfTheAccessibleName(UnifiedPage page) {
+        page.navigate(ReportView.class);
+
+        UnifiedButton export = page.find(UnifiedButton.class).withAccessibleName("Export");
+
+        assertThat(export).hasText("Export");
+    }
 }

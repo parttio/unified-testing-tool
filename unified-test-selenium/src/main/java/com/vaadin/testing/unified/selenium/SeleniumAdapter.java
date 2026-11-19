@@ -85,6 +85,10 @@ public final class SeleniumAdapter implements TestingToolAdapter {
             options.addArguments("--headless=new");
         }
         options.addArguments("--no-sandbox", "--disable-dev-shm-usage", "--window-size=1280,1024");
+        // the console's errors, which the reports show under the User Step during which they were logged
+        org.openqa.selenium.logging.LoggingPreferences logs = new org.openqa.selenium.logging.LoggingPreferences();
+        logs.enable(org.openqa.selenium.logging.LogType.BROWSER, java.util.logging.Level.SEVERE);
+        options.setCapability("goog:loggingPrefs", logs);
         executable.ifPresent(options::setBinary);
         return new ChromeDriver(options);
     }

@@ -8,6 +8,7 @@ Every Wrapper action and every retrying assertion is recorded as a **User Step**
 | [`user-steps.txt`, `user-steps.json`](#the-user-steps-of-a-test) | the evidence directory, per test | every test | people, agents and tools |
 | [`summary.md`](#the-run-summary) | the evidence directory, per run | every run | the reviewer |
 | [`report.html`](#the-html-report) | the evidence directory, per run | every run | the reviewer, in a browser |
+| [`summary.json`](#the-run-as-data) *(unreleased)* | the evidence directory, per run | every run | agents and CI tooling |
 | [GitHub job summary](#the-github-job-summary) | the job's summary page | every run in GitHub Actions | the reviewer |
 
 The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
@@ -88,6 +89,31 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
   Nearby        dialog “Export report”
   Did you mean  find(UnifiedDialog.class).withHeaderTitle("Export report")
 ```
+
+### Applying it
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+When a label changed in the application and the tests that used it fail, each failure already says what to write instead. The `ApplyDidYouMean` recipe writes it for you. Run the tests, then, in the same directory:
+
+```
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+    -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
+    -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.ApplyDidYouMean
+```
+
+```diff
+-        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
++        page.find(UnifiedTextField.class).withLabel("E-mail").setValue("alice@example.com");
+```
+
+It reads the failures the run left in the evidence directories (`user-steps.json`, every one under the directory the build runs in) and changes the string in the test's code. No model is involved, and nothing runs when the tests do: the result is a diff to read and commit, or to revert.
+
+- **What it changes:** the one string in which the failed lookup and its `Did you mean` differ, where the code has it as a string literal: a filter's value after `find(..)` of the same Wrapper, or the item of a `selectItem(..)` or `selectTab(..)`. Every such call in the files the failure's code path names, and in the scenario's test class.
+- **What it leaves:** a suggestion of another kind of component, a value kept in a constant or passed as a parameter, and a lookup written in a file the failure doesn't name. Those failures stay for you, or for an agent.
+- **It fixes the test, not the application.** If the label was changed by mistake, the test was right: revert the diff and fix the view. With `-Drewrite.exportDatatables=true` the recipe lists every value it replaced, with the scenario that asked for it, in `target/rewrite/datatables/`, so "Email → E-mail in forty lookups" reads as one decision.
+
+To read another directory, declare the recipe with its `evidenceDir` option in a `rewrite.yml`, as for the [Migration Recipes](../migrating-from-testbench.md).
 
 ### Other failures
 
@@ -171,15 +197,39 @@ Next to them, a failed test leaves its failure evidence: a screenshot on Playwri
 
 What the recorder can't see is never left out silently. Escape Hatch calls, `page.waitUntil(..)` and a `where(..)` written in the test show as one gap line, such as `… 1 call outside the Unified API (waitUntil)`.
 
+### What the application logged
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+A click that makes the server throw often shows the user nothing, or a generic error. The reason is in the application's log, and the Unified API puts it where the click is:
+
+```
+✘ EditPersonTest › Saving a person shows a confirmation   browserless · 0.4 s
+   1  open People
+   2  click row where Name is “Alan Turing” in grid
+   3  click button “Save” in dialog “Edit person”
+      ⚠ server ERROR PersonService: Could not save Alan Turing (IllegalStateException: no id)
+   4  see notification “Saved Alan Turing”   ✘
+```
+
+- **The application's warnings and errors** show under the User Step during which they were logged, with the exception that was logged with them. It works on every Testing Tool, since the application runs in the test's JVM. `-Dvaadin.testing.user-steps.server-log=error` keeps errors only, `off` none. There is nothing to add to your build: the lines are heard through Logback when your application logs with it, as a Spring Boot application does by default, and through `java.util.logging` otherwise. An application that logs through another backend, such as Log4j 2, gets no server lines; everything else works the same.
+- **The browser's console errors** show the same way on Playwright, and on Selenium with Chrome: `⚠ console ERROR: Failed to load resource: the server responded with a status of 404 () (http://localhost:8080/missing.css)`. A missing `/favicon.ico`, which every browser asks for by itself, is left out.
+- **By time, not by cause:** a line a background thread logs shows under the step that was running then. A line logged between two steps shows under the first.
+- **`assertThat(page).hasNoErrors()`** makes a scenario fail when anything was logged as an error so far, and lists what. Put it at the end of a scenario that should leave no error behind, after the check that shows the last action is over: it looks once and doesn't wait. Without it, a logged error is shown and fails nothing.
+
+The lines are also in `user-steps.json` (`logs`) and under each step in the HTML report.
+
 ## The run summary
 
 When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the run's scenarios in the words of the reports, for the reviewer of a pull request. In order:
 
 1. a header with the Testing Tool and the counts;
 2. **Changed in this PR**: the scenarios that call code changed against the base branch, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. A new scenario shows its User Steps; a changed one shows how its User Steps differ from the base branch's last run, when the build gives it that run ([below](#how-a-changed-scenarios-steps-changed)). Left out when the run has no base to compare against;
-3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory.
+3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory;
+4. **Compared with another Testing Tool** *(unreleased)*: the scenarios that end differently, or take different User Steps, on another Testing Tool, when the build gives it that run ([below](#compared-with-another-testing-tool));
+5. **Scenarios without a check** *(unreleased)*: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
 
-Passing scenarios count in the header only, unless the pull request changed them: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
+Passing scenarios count in the header only, unless the pull request changed them or they have no check: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
 
 The demo's run, with the base set to the commit before `UserStepsTest` was added (shortened):
 
@@ -254,6 +304,63 @@ A scenario marked *changed* calls changed code, but that alone doesn't say what 
 
 The directory is any copy of the base branch's evidence directory, such as its downloaded CI artifact; `user-steps.json` files are found at any depth. [Running in CI](ci-setup.md#github-actions) downloads it in a pull request.
 
+### Compared with another Testing Tool
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+A Unified UI Test runs on Browserless in milliseconds, and the fast run is the one a developer or an agent repeats. When the same test then fails in a browser, the first question is where the two runs part. Give a run the evidence directory of a run on another Testing Tool, and its summary answers that:
+
+```
+mvn test -Dvaadin.testing.evidence-dir=target/evidence-browserless
+mvn test -Dvaadin.testing.tool=playwright \
+    -Dvaadin.testing.user-steps.compare-dir=target/evidence-browserless
+```
+
+```markdown
+#### Compared with Browserless
+
+118 scenarios ran on both Testing Tools: 1 ends differently, 1 takes different User Steps. 13 ran on Playwright only, 12 on Browserless only.
+
+Both runs are of commit `3e74f89`.
+
+**Saving a person shows a confirmation (EditPersonTest)** · failed on Playwright, passed on Browserless
+
+- On Playwright: `UnifiedAssertionError: Expected notification to have text “Saved Alan”, found “Saved”`
+
+**The profile is shown after login (ProfileTest)** · passed on both, different User Steps
+
+- Parts at step 3: `click button “Log in”` on Playwright, `see text field “Name”` on Browserless
+```
+
+- **Ends differently:** the scenario passed on one Testing Tool and failed on the other. These come first, with the error of the side that failed.
+- **Different User Steps:** both ended alike, but didn't do the same. *Parts at step* is the first line the two runs don't share, counted over the scenario's steps, User Tasks and gap lines from the top. A test that branches on `page.hasRealBrowser()` shows up here, and so does a Wrapper that words a step differently on one Testing Tool.
+- **Ran on one only:** tests a Capability skipped on the other Testing Tool (`@RequiresBrowser`, `@RequiresTestingTool`). They are counted, not listed.
+
+- **The same code?** A difference only says something about the Testing Tools when both runs tested the same code. Each run records its commit, and a fingerprint of the uncommitted changes to tracked files, and the section says whether they match: `Both runs are of commit …`, or **Not the same code** with what each run is of. Change a file between the two runs and the second one tells you. Without git, or with evidence from an earlier version of the Unified API, it says that it can't tell. Untracked files are not seen.
+
+The first run needs an evidence directory of its own (`vaadin.testing.evidence-dir`), or the second run overwrites it. The section reports; it fails no test. It doesn't say whether a difference is one of the documented ones ([Tool-specific code](tool-specific.md)): read the step it names. `report.html` has the same section, and `summary.json` marks each such scenario with `differsOn`.
+
+### Scenarios without a check
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+A test that fills a form, clicks *Save* and stops there passes whether or not the save works. The run summary lists the passing scenarios that end this way, so the author, or the reviewer of a test an agent wrote, sees them without reading each test:
+
+```markdown
+#### Scenarios without a check
+
+2 passing scenarios end on User Steps that nothing checks: no `see` step follows them, and the test reads no value after them.
+
+- **Opening the dashboard shows the charts (DashboardTest)** · no check
+- **Saving a person closes the dialog (EditPersonTest)** · no check after: `click button “Save”`
+```
+
+- **A check** is a retrying assertion, `assertThat(..)` from `UnifiedAssertions`, which shows as a `see` or `see no` User Step. The steps after a scenario's last check are the ones listed.
+- **Reading a value counts too.** `assertEquals("Alan", name.getValue())` records no User Step, but the Unified API counts that the test read a value after its last action, and takes the test to assert on it. Such a scenario is not listed. The retrying form, `assertThat(name).hasValue("Alan")`, is still the better one: it waits for the value on every Testing Tool, and its failure names the User Step ([Assertions and waiting](assertions-and-waiting.md)).
+- **Not listed either:** a scenario that ends on `page.waitUntil(..)` or an Escape Hatch call, since the check may be in there, and a passing scenario with a failed User Step, since the test expected that failure (`assertThrows`).
+
+The section reports; it fails no test. It can't tell whether a check is the right one, only that the last steps have none. In `report.html` these scenarios have a section of their own and a *no check* badge, and `summary.json` marks them with `unchecked`.
+
 ## The HTML report
 
 Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the same run in a browser. Open it after a local run (`target/surefire-reports/unified-evidence/report.html`), or from the evidence artifact a CI run uploaded. It is one file with nothing to load from the network, and its links point to files next to it, so keep the evidence directory together when you download or move it.
@@ -264,6 +371,52 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the s
 - **Passing scenarios:** hidden until you tick *Show passing* or search, so a long run doesn't bury what needs attention.
 
 Each User Step shows its number, its text, how long it took and the line that called it. User Tasks fold, and calls outside the Unified API show as dimmed gap lines. Each scenario links its `user-steps.txt` and `user-steps.json`.
+
+## The run as data
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the same run for a program to read. An agent that has run the tests, or a CI step that posts a comment, reads the verdict from one file instead of parsing Markdown or walking the evidence directory.
+
+```json
+{
+  "schemaVersion": 1,
+  "tool": "browserless",
+  "status": "failed",
+  "startedAt": "2026-11-16T10:00:01Z",
+  "durationMs": 4120,
+  "passed": 2,
+  "failed": 1,
+  "skipped": 0,
+  "changedSince": "origin/main",
+  "scenarios": [
+    {
+      "testClass": "com.vaadin.testing.unified.demo.EditEmailTest",
+      "testMethod": "changesTheEmail",
+      "displayName": "Changing a person's email updates the grid",
+      "status": "failed",
+      "startedAt": "2026-11-16T10:00:01Z",
+      "durationMs": 310,
+      "evidenceDir": "EditEmailTest/changesTheEmail/",
+      "userSteps": "EditEmailTest/changesTheEmail/user-steps.json",
+      "change": "new",
+      "failedStep": "fill text field “E-mail” with “alan@bletchley.uk”",
+      "failure": { "type": "com.vaadin.testing.unified.UnifiedAssertionError", "…": "…" },
+      "evidence": ["com.vaadin.testing.unified.demo.EditEmailTest.changesTheEmail.tree.txt"]
+    }
+  ]
+}
+```
+
+- **The verdict:** `status` is `failed` when any scenario failed. The counts are those of the summary's header.
+- **The code:** `commit` is the commit the run tested, and `uncommittedChanges` a fingerprint of the uncommitted changes to tracked files, when there are any. Both are left out without git.
+- **Every scenario** is listed, passed or failed, with the directory of its files. Paths are relative to the evidence directory, so they work in a downloaded CI artifact too.
+- **A failed scenario** carries the text of the failed User Step, the `failure` object of its `user-steps.json` unchanged (expected, found, Near Misses, *Did you mean*, the code path), and its failure evidence.
+- **A scenario that differs on another Testing Tool** says `differsOn`: the tool, its status there, where the User Steps part, and the failure from there.
+- **A passing scenario without a check** says `unchecked` (`all` or `end`) and lists the User Steps nothing checks.
+- **A scenario the pull request changed** says `new` or `changed`, the changed files it calls from, and how many User Steps were added and removed against the Base Run.
+
+The User Steps themselves stay in each test's `user-steps.json`. The file is versioned (`schemaVersion`); the fields are in the spec, [`summary.json`, schema version 1](../spec/12-readable-tests.md#summaryjson-schema-version-1).
 
 ## What the page looked like at each step
 
@@ -315,7 +468,9 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
+| `vaadin.testing.user-steps.server-log` *(unreleased)* | `warn`: the application's warnings and errors under the User Step during which they were logged ([above](#what-the-application-logged)); `error`, or `off` |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it |
+| `vaadin.testing.user-steps.compare-dir` *(unreleased)* | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step, as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |

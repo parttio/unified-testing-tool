@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the documentation site (MkDocs Material) into target/site.
+# Builds the documentation site (MkDocs Material) into target/site, with llms.txt for agents.
 # Stages README.md, GLOSSARY.md and docs/ into target/docs-src so that
 # the repository's relative links keep working on the site.
 set -euo pipefail
@@ -10,19 +10,25 @@ src=target/docs-src
 
 rm -rf "$src"
 mkdir -p "$src"
-cp -r docs/spec docs/adr docs/guide "$src"/
+cp -r docs/spec docs/adr docs/guide docs/releases "$src"/
 cp docs/comparison.md "$src"/comparison.md
 cp docs/migrating-from-testbench.md "$src"/migrating-from-testbench.md
 cp docs/migrating-from-browserless.md "$src"/migrating-from-browserless.md
 cp docs/migrating-from-dramafinder.md "$src"/migrating-from-dramafinder.md
 cp GLOSSARY.md "$src"/GLOSSARY.md
+# the API reference shipped in the unified-test-api jar, generated from the code (ApiReferenceTest)
+cp unified-test-api/src/main/resources/META-INF/unified/api-reference.md "$src"/api-reference.md
+# on the site the reference is of main; in a jar it is of that jar's version
+sed -i '2a > **Unreleased:** this page is of `main`, and the reference is not in the `0.1.0-alpha3` jar. See [what is unreleased](releases/unreleased.md).\n' "$src"/api-reference.md
 cp README.md "$src"/index.md
 
-# README.md sits at the site root: docs/x -> x
-sed -i -E 's#\]\(docs/#](#g' "$src"/index.md
+# README.md sits at the site root: docs/x -> x; the API reference is a page of the site
+sed -i -E -e 's#\]\(docs/#](#g' \
+  -e 's#\]\(unified-test-api/src/main/resources/META-INF/unified/api-reference\.md#](api-reference.md#g' "$src"/index.md
 # Pages under spec/, adr/ and guide/: ../../README.md -> ../index.md, ../../GLOSSARY.md -> ../GLOSSARY.md,
 # other ../../ links (source code) -> GitHub
 find "$src"/spec "$src"/adr "$src"/guide -name '*.md' -exec sed -i -E \
+  -e 's#\]\(\.\./\.\./unified-test-api/src/main/resources/META-INF/unified/api-reference\.md#](../api-reference.md#g' \
   -e 's#\]\(\.\./\.\./README\.md#](../index.md#g' \
   -e 's#\]\(\.\./\.\./GLOSSARY\.md#](../GLOSSARY.md#g' \
   -e "s#\]\(\.\./\.\./#](${repo_url}/#g" \
@@ -40,3 +46,6 @@ sed -i -E 's#\]\(adr\)#](adr/index.md)#g' "$src"/index.md
 } > "$src"/adr/index.md
 
 mkdocs build --strict "$@"
+
+# llms.txt, llms-full.txt and each page as Markdown, for agents
+python3 scripts/llms_txt.py
