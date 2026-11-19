@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.openrewrite.ExecutionContext;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaType;
@@ -117,7 +118,109 @@ final class DramafinderWrappers {
     private static final Set<String> QUERY_FILTERS = union(COMMON_FILTERS, LABEL_FILTERS, TEXT_FILTERS,
             Set.of("withPlaceholder"));
 
+    /**
+     * The Wrappers a raw Playwright locator on an id or test id becomes (#356), by the class of the component the
+     * application's sources give that id, with the {@code Locator} methods each has (Playwright's name to the
+     * Wrapper's). Their {@code assertions} are empty: a Playwright check is {@code assertThat(locator).x()}, in
+     * {@link #RAW_ASSERTIONS}.
+     */
+    private static final Map<String, Wrapper> RAW_BY_COMPONENT = Map.of(
+            "com.vaadin.flow.component.button.Button", new Wrapper(COMPONENT + "UnifiedButton", COMMON_FILTERS,
+                    same("click", "isVisible", "isEnabled"), Map.of()),
+            "com.vaadin.flow.component.textfield.TextField", new Wrapper(COMPONENT + "UnifiedTextField", COMMON_FILTERS,
+                    with(same("clear", "isVisible", "isEnabled"), Map.of("fill", "setValue", "inputValue", "getValue")), Map.of()),
+            "com.vaadin.flow.component.textfield.TextArea", new Wrapper(COMPONENT + "UnifiedTextArea", COMMON_FILTERS,
+                    with(same("clear", "isVisible", "isEnabled"), Map.of("fill", "setValue", "inputValue", "getValue")), Map.of()),
+            "com.vaadin.flow.component.checkbox.Checkbox", new Wrapper(COMPONENT + "UnifiedCheckbox", COMMON_FILTERS,
+                    same("check", "uncheck", "setChecked", "isChecked", "isVisible", "isEnabled"), Map.of()));
+
+    /** Any component: what a raw locator becomes when no other Wrapper has it. */
+    private static final Wrapper RAW_CONTAINER = new Wrapper(COMPONENT + "UnifiedContainer", COMMON_FILTERS,
+            same("click", "isVisible", "isEnabled"), Map.of());
+
+    /**
+     * The Playwright checks, {@code assertThat(locator).x(..)}, each raw Wrapper has as a retrying assertion of the
+     * same name. Not {@code isHidden()}: Playwright passes it when nothing matches, a Unified check fails.
+     */
+    private static final Map<String, Set<String>> RAW_ASSERTIONS = Map.of(
+            COMPONENT + "UnifiedButton", Set.of("isVisible", "isEnabled", "isDisabled"),
+            COMPONENT + "UnifiedTextField", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
+            COMPONENT + "UnifiedTextArea", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
+            COMPONENT + "UnifiedCheckbox", Set.of("isVisible", "isEnabled", "isDisabled", "isChecked"),
+            COMPONENT + "UnifiedContainer", Set.of("isVisible", "isEnabled", "isDisabled"));
+
+    private static final java.util.regex.Pattern ID_SELECTOR = java.util.regex.Pattern.compile("#([A-Za-z][\\w-]*)");
+    private static final java.util.regex.Pattern TEST_ID_SELECTOR = java.util.regex.Pattern.compile(
+            "\\[data-testid=(?:'([^']*)'|\"([^\"]*)\"|([\\w-]+))]");
+
     private DramafinderWrappers() {
+    }
+
+    /**
+     * The known component class a component of the given class is, for a raw locator's Wrapper: the most specific
+     * of {@link #RAW_BY_COMPONENT}, else the class itself.
+     */
+    static String rawComponentOf(JavaType.FullyQualified type) {
+        return RAW_BY_COMPONENT.keySet().stream().filter(k -> TypeUtils.isAssignableTo(k, type)).findFirst()
+                .orElse(type.getFullyQualifiedName());
+    }
+
+    /** Whether the Wrapper a raw locator became has the Playwright check {@code assertThat(locator).<name>(..)}. */
+    static boolean hasRawAssertion(Wrapper wrapper, String name) {
+        return RAW_ASSERTIONS.getOrDefault(wrapper.fqn(), Set.of()).contains(name);
+    }
+
+    /** {@code PlaywrightAssertions.assertThat(locator)} with one argument. */
+    static boolean isPlaywrightAssertThat(J.MethodInvocation call) {
+        return call.getSimpleName().equals("assertThat") && call.getArguments().size() == 1 && call.getMethodType() != null
+                && TypeUtils.isOfClassType(call.getMethodType().getDeclaringType(),
+                        "com.microsoft.playwright.assertions.PlaywrightAssertions");
+    }
+
+    /**
+     * {@code page.locator("#id")}, {@code page.locator("[data-testid=x]")} or {@code page.getByTestId("x")} on the
+     * test's page (#356): {@code page.find(W.class).withId(..)} or {@code withTestId(..)}, the Wrapper of the
+     * component the application's sources give that id (read by {@link DramafinderIds}), else
+     * {@code UnifiedContainer}, which finds any component, with a Migration Marker.
+     */
+    private static Lookup ofRawLocator(J.MethodInvocation call, ExecutionContext ctx) {
+        if (ctx == null || call.getSelect() == null || !Dramafinder.isPageField(call.getSelect())
+                || call.getArguments().size() != 1 || !(call.getArguments().get(0) instanceof J.Literal l)
+                || !(l.getValue() instanceof String selector)
+                || !TypeUtils.isOfClassType(call.getMethodType().getDeclaringType(), Dramafinder.PAGE)) {
+            return null;
+        }
+        String filter;
+        String value;
+        java.util.regex.Matcher id = ID_SELECTOR.matcher(selector);
+        java.util.regex.Matcher testId = TEST_ID_SELECTOR.matcher(selector);
+        if (call.getSimpleName().equals("getByTestId")) {
+            filter = "withTestId";
+            value = selector;
+        } else if (!call.getSimpleName().equals("locator")) {
+            return null;
+        } else if (id.matches()) {
+            filter = "withId";
+            value = id.group(1);
+        } else if (testId.matches()) {
+            filter = "withTestId";
+            value = testId.group(1) != null ? testId.group(1) : testId.group(2) != null ? testId.group(2) : testId.group(3);
+        } else {
+            return null;
+        }
+        String what = filter.equals("withId") ? "id" : "test id";
+        String component = DramafinderIds.of(ctx, (filter.equals("withId") ? "id:" : "testid:") + value);
+        Wrapper wrapper = component == null || component.equals(DramafinderIds.AMBIGUOUS) ? null
+                : RAW_BY_COMPONENT.getOrDefault(component, RAW_CONTAINER);
+        String marker = null;
+        if (wrapper == null) {
+            wrapper = RAW_CONTAINER;
+            marker = "was " + call.getSimpleName() + "(" + l.getValueSource() + "): "
+                    + (component == null ? "no view in the sources sets this " + what
+                            : "the sources set this " + what + " on components of different classes")
+                    + "; UnifiedContainer finds any component, use the component's own Wrapper if it has one";
+        }
+        return new Lookup(wrapper, List.of(new Filter(filter, List.of(Stubs.literal(value)))), null, marker);
     }
 
     static Wrapper forElement(JavaType type) {
@@ -132,14 +235,19 @@ final class DramafinderWrappers {
 
     /**
      * The lookup the expression is, when the Wrapper can express it on the test's page; else {@code null}.
-     * {@code version2}: the project uses Dramafinder 2.x, whose label and text factories are exact.
+     * {@code version2}: the project uses Dramafinder 2.x, whose label and text factories are exact. {@code ctx}
+     * holds the ids the application's sources set ({@link DramafinderIds}), for raw Playwright locators.
      */
-    static Lookup ofLookup(Expression e, boolean version2) {
+    static Lookup ofLookup(Expression e, boolean version2, ExecutionContext ctx) {
         if (!(e instanceof J.MethodInvocation call) || call.getMethodType() == null) {
             return null;
         }
         Lookup factory = ofFactory(call, version2);
-        return factory != null ? factory : ofQuery(call);
+        if (factory != null) {
+            return factory;
+        }
+        Lookup raw = ofRawLocator(call, ctx);
+        return raw != null ? raw : ofQuery(call);
     }
 
     /** {@code XElement.getByLabel(page, "Name")} and the other static factories. */

@@ -372,6 +372,182 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                 """));
     }
 
+    /** A view that sets ids and test ids, as the application's sources do. */
+    private static final String ID_VIEW = """
+            package com.example;
+
+            import com.vaadin.flow.component.button.Button;
+            import com.vaadin.flow.component.checkbox.Checkbox;
+            import com.vaadin.flow.component.html.Div;
+            import com.vaadin.flow.component.textfield.TextField;
+            import com.vaadin.flow.router.Route;
+
+            @Route("plan")
+            public class PlanView extends Div {
+                public PlanView() {
+                    Button next = new Button("Next week");
+                    next.setId("week-next");
+                    TextField meal = new TextField();
+                    meal.setId("meal-friday");
+                    Checkbox cooked = new Checkbox("Cooked");
+                    cooked.getElement().setAttribute("data-testid", "cooked");
+                    Div card = new Div();
+                    card.setId("recipe-card");
+                    add(next, meal, cooked, card);
+                }
+            }
+            """;
+
+    @Test
+    void rawIdAndTestIdLocatorsBecomeLookupsOfTheWrapperTheViewSetsTheIdOn() {
+        // issue #356: locator("#id"), locator("[data-testid=..]") and getByTestId(..) name a component by id
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import com.microsoft.playwright.Locator;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void plans() {
+                        navigate(PlanView.class);
+                        page.locator("#week-next").click();
+                        Locator meal = page.locator("#meal-friday");
+                        meal.fill("Pancakes");
+                        assertThat(meal).hasValue("Pancakes");
+                        page.getByTestId("cooked").check();
+                        assertThat(page.locator("[data-testid='cooked']")).isChecked();
+                        page.locator("#recipe-card").click();
+                        assertThat(page.locator("#week-next")).isEnabled();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    void plans(UnifiedPage page) {
+                        page.navigate(PlanView.class);
+                        page.find(UnifiedButton.class).withId("week-next").click();
+                        UnifiedTextField meal = page.find(UnifiedTextField.class).withId("meal-friday");
+                        meal.setValue("Pancakes");
+                        assertThat(meal).hasValue("Pancakes");
+                        page.find(UnifiedCheckbox.class).withTestId("cooked").check();
+                        assertThat(page.find(UnifiedCheckbox.class).withTestId("cooked")).isChecked();
+                        page.find(UnifiedContainer.class).withId("recipe-card").click();
+                        assertThat(page.find(UnifiedButton.class).withId("week-next")).isEnabled();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aRawLocatorOnAnIdNoViewSetsBecomesAContainerWithAMarker() {
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void plans() {
+                        navigate(PlanView.class);
+                        page.locator("#mise-undo").click();
+                        assertThat(page.getByTestId("toast")).isVisible();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    void plans(UnifiedPage page) {
+                        page.navigate(PlanView.class);
+                        // TODO unified: was locator("#mise-undo"): no view in the sources sets this id; UnifiedContainer finds any component, use the component's own Wrapper if it has one
+                        page.find(UnifiedContainer.class).withId("mise-undo").click();
+                        // TODO unified: was getByTestId("toast"): no view in the sources sets this test id; UnifiedContainer finds any component, use the component's own Wrapper if it has one
+                        assertThat(page.find(UnifiedContainer.class).withTestId("toast")).isVisible();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aRawLocatorWithACallItsWrapperLacksStaysBehindTheEscapeHatch() {
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void plans() {
+                        navigate(PlanView.class);
+                        page.locator("#meal-friday").press("Enter");
+                        page.locator("#mise-undo").fill("x");
+                        page.locator("#week-next span").click();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void plans(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PlanView.class);
+                        // TODO unified: Dramafinder Escape Hatch: playwright.locator("#meal-friday").press("Enter")
+                        playwright.locator("#meal-friday").press("Enter");
+                        // TODO unified: Dramafinder Escape Hatch: playwright.locator("#mise-undo").fill("x")
+                        playwright.locator("#mise-undo").fill("x");
+                        // TODO unified: Dramafinder Escape Hatch: playwright.locator("#week-next span").click()
+                        playwright.locator("#week-next span").click();
+                    }
+                }
+                """));
+    }
+
     @Test
     void queryApiLookupsLocalsAndElementAssertionsBecomeWrappersAndUnifiedAssertions() {
         rewriteRun(java(VIEW), java(

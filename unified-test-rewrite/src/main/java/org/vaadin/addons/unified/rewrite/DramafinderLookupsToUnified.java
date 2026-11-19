@@ -28,6 +28,9 @@ import org.openrewrite.marker.Markers;
  * actions become the Wrapper's, and element assertions ({@code assertValue}, {@code assertOpen}, ...) become retrying
  * {@code UnifiedAssertions}. A lookup converts only when every call on what it finds does, directly or through a
  * local. Waits Auto-Wait makes unnecessary ({@code AutoWait.waitForVaadinIdle}, {@code waitForLoadState}) go.
+ * A raw Playwright locator on an id or test id ({@code page.locator("#x")}, {@code getByTestId("x")}) becomes a
+ * lookup of the Wrapper of the component the application's sources give that id ({@link DramafinderIds}), and its
+ * {@code assertThat(locator)} checks retrying assertions.
  */
 public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
 
@@ -54,7 +57,16 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getScanner(Set<String> versions) {
-        return DramafinderVersion.scanner(versions);
+        TreeVisitor<?, ExecutionContext> version = DramafinderVersion.scanner(versions);
+        return new TreeVisitor<>() {
+            @Override
+            public Tree visit(Tree tree, ExecutionContext ctx) {
+                if (tree instanceof J.CompilationUnit cu) {
+                    DramafinderIds.collect(cu, ctx); // the ids the views set, for raw locators
+                }
+                return version.visit(tree, ctx);
+            }
+        };
     }
 
     @Override
@@ -89,7 +101,7 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 }
                 DramafinderWrappers.Lookup lookup = locals == null || multiVariable.getVariables().size() != 1
                         || multiVariable.getTypeExpression() == null
-                        ? null : DramafinderWrappers.ofLookup(multiVariable.getVariables().get(0).getInitializer(), version2);
+                        ? null : DramafinderWrappers.ofLookup(multiVariable.getVariables().get(0).getInitializer(), version2, ctx);
                 String name = lookup == null ? null : multiVariable.getVariables().get(0).getSimpleName();
                 if (lookup == null || !(isGridWrapper(lookup.wrapper()) ? DramafinderGrids.gridUsesConvert(method, name)
                         : usedOnlyThrough(method, name, lookup.wrapper()))) {
@@ -99,7 +111,7 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 locals.put(v.getVariables().get(0).getSimpleName(), lookup.wrapper());
                 DramafinderWrappers.Wrapper wrapper = lookup.wrapper();
                 maybeAddImport(wrapper.fqn());
-                maybeRemoveImport(DramafinderWrappers.elementOf(wrapper.fqn()));
+                removeElementImport(wrapper);
                 if (lookup.marker() != null) {
                     MigrationMarkers.add(getCursor(), lookup.marker());
                 }
@@ -111,6 +123,14 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                         new Cursor(getCursor(), initializer), initializer.getCoordinates().replace(), parameters.toArray()), wrapper);
                 return retyped(v.withVariables(List.of(variable.withInitializer(converted.withPrefix(initializer.getPrefix()))
                         .withName(variable.getName().withFieldType(null)))), wrapper);
+            }
+
+            /** Without the import of the Dramafinder element the Wrapper replaces, once nothing uses it. */
+            private void removeElementImport(DramafinderWrappers.Wrapper wrapper) {
+                String element = DramafinderWrappers.elementOf(wrapper.fqn());
+                if (element != null) {
+                    maybeRemoveImport(element);
+                }
             }
 
             /** The declaration with the Wrapper's type. */
@@ -146,6 +166,10 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 if (grid != null) {
                     return grid;
                 }
+                J check = playwrightCheck(method, m, locals, statement, ctx);
+                if (check != null) {
+                    return check;
+                }
                 // a call on a local that now holds a Wrapper
                 if (method.getSelect() instanceof J.Identifier id && locals.containsKey(id.getSimpleName())) {
                     DramafinderWrappers.Wrapper wrapper = locals.get(id.getSimpleName());
@@ -157,13 +181,13 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                     return renamed == null ? m : onWrapper(m.withName(m.getName().withSimpleName(renamed)), wrapper);
                 }
                 // a call on a lookup
-                DramafinderWrappers.Lookup lookup = DramafinderWrappers.ofLookup(method.getSelect(), version2);
+                DramafinderWrappers.Lookup lookup = DramafinderWrappers.ofLookup(method.getSelect(), version2, ctx);
                 if (lookup == null || !supportedCall(lookup.wrapper(), method, statement)) {
                     return m;
                 }
                 DramafinderWrappers.Wrapper wrapper = lookup.wrapper();
                 maybeAddImport(wrapper.fqn());
-                maybeRemoveImport(DramafinderWrappers.elementOf(wrapper.fqn()));
+                removeElementImport(wrapper);
                 if (lookup.marker() != null) {
                     MigrationMarkers.add(getCursor(), lookup.marker());
                 }
@@ -178,6 +202,40 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 return typed(template(code + "." + wrapper.methods().get(method.getSimpleName()) + "("
                                 + String.join(", ", java.util.Collections.nCopies(arguments.size(), "#{any()}")) + ")", wrapper)
                         .<J>apply(getCursor(), m.getCoordinates().replace(), parameters.toArray()).withId(m.getId()), wrapper);
+            }
+
+            /**
+             * A Playwright check on a raw locator that became a Wrapper, {@code assertThat(page.locator("#x")).isVisible()}
+             * or on a local holding one, as the retrying Unified assertion (#356); {@code null} for any other call.
+             */
+            private J playwrightCheck(J.MethodInvocation original, J.MethodInvocation m,
+                    Map<String, DramafinderWrappers.Wrapper> locals, boolean statement, ExecutionContext ctx) {
+                if (!statement || !(original.getSelect() instanceof J.MethodInvocation assertThat)
+                        || !DramafinderWrappers.isPlaywrightAssertThat(assertThat)) {
+                    return null;
+                }
+                Expression target = assertThat.getArguments().get(0);
+                Expression converted = ((J.MethodInvocation) m.getSelect()).getArguments().get(0);
+                if (target instanceof J.Identifier local && locals.containsKey(local.getSimpleName())) {
+                    DramafinderWrappers.Wrapper wrapper = locals.get(local.getSimpleName());
+                    if (!DramafinderWrappers.hasRawAssertion(wrapper, original.getSimpleName())) {
+                        return null;
+                    }
+                    maybeRemoveImport("com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat");
+                    return typed(assertion(m, "#{any()}", original.getSimpleName(), List.of(converted), wrapper), wrapper);
+                }
+                DramafinderWrappers.Lookup lookup = DramafinderWrappers.ofLookup(target, version2, ctx);
+                if (lookup == null || !DramafinderWrappers.hasRawAssertion(lookup.wrapper(), original.getSimpleName())) {
+                    return null;
+                }
+                maybeAddImport(lookup.wrapper().fqn());
+                maybeRemoveImport("com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat");
+                if (lookup.marker() != null) {
+                    MigrationMarkers.add(getCursor(), lookup.marker());
+                }
+                List<Object> parameters = new ArrayList<>();
+                String code = DramafinderWrappers.code(lookup, parameters);
+                return typed(assertion(m, code, original.getSimpleName(), parameters, lookup.wrapper()), lookup.wrapper());
             }
 
             /** The grid and row patterns of {@link DramafinderGrids}, converted; {@code null} for any other call. */
@@ -315,7 +373,10 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 || statement && wrapper.assertions().containsKey(call.getSimpleName());
     }
 
-    /** Whether every use of the local is a call the Wrapper has. */
+    /**
+     * Whether every use of the local is a call the Wrapper has, or, for a raw locator, a Playwright check it has
+     * ({@code assertThat(local).isVisible()} as a statement).
+     */
     private static boolean usedOnlyThrough(J.MethodDeclaration method, String name, DramafinderWrappers.Wrapper wrapper) {
         AtomicBoolean other = new AtomicBoolean();
         new JavaIsoVisitor<AtomicBoolean>() {
@@ -326,13 +387,26 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 if (identifier.getSimpleName().equals(name)
                         && !(parent instanceof J.VariableDeclarations.NamedVariable)
                         && !(parent instanceof J.MethodInvocation call && call.getSelect() == identifier
-                                && supportedCall(wrapper, call, parentCursor.getParentTreeCursor().getValue() instanceof J.Block))) {
+                                && supportedCall(wrapper, call, parentCursor.getParentTreeCursor().getValue() instanceof J.Block))
+                        && !isPlaywrightCheck(parentCursor, identifier, wrapper)) {
                     found.set(true);
                 }
                 return identifier;
             }
         }.visit(method.getBody(), other);
         return !other.get();
+    }
+
+    /** {@code assertThat(identifier).<check>()} as a statement, a Playwright check the Wrapper has. */
+    private static boolean isPlaywrightCheck(Cursor parentCursor, J.Identifier identifier, DramafinderWrappers.Wrapper wrapper) {
+        if (!(parentCursor.getValue() instanceof J.MethodInvocation assertThat) || !DramafinderWrappers.isPlaywrightAssertThat(assertThat)
+                || assertThat.getArguments().get(0) != identifier) {
+            return false;
+        }
+        Cursor checkCursor = parentCursor.getParentTreeCursor();
+        return checkCursor.getValue() instanceof J.MethodInvocation check && check.getSelect() == assertThat
+                && DramafinderWrappers.hasRawAssertion(wrapper, check.getSimpleName())
+                && checkCursor.getParentTreeCursor().getValue() instanceof J.Block;
     }
 
     /** {@code AutoWait.waitForVaadinIdle(page)} or {@code page.waitForLoadState()}: Auto-Wait does it. */
