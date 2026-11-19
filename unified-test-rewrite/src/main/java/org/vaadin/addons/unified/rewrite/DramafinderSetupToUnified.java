@@ -16,6 +16,7 @@ import org.openrewrite.java.AnnotationMatcher;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.RemoveAnnotationVisitor;
+import org.openrewrite.java.tree.Comment;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JContainer;
@@ -23,6 +24,7 @@ import org.openrewrite.java.tree.JRightPadded;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Space;
 import org.openrewrite.java.tree.Statement;
+import org.openrewrite.java.tree.TextComment;
 import org.openrewrite.java.tree.TypeUtils;
 import org.openrewrite.marker.Markers;
 
@@ -34,7 +36,8 @@ import org.openrewrite.marker.Markers;
  * parameter, and converts the base class's navigation calls and checks to the Unified Page. A test starts at the
  * view {@code getView()} named, unless it navigates first itself. A test extending a project's copy of
  * {@code SpringPlaywrightIT} gets the copy's class annotations ({@code @SpringBootTest}'s attributes,
- * {@code @ActiveProfiles}, {@code @Import}, ...), which applied to it through the copy.
+ * {@code @ActiveProfiles}, {@code @Import}, ...), which applied to it through the copy, or a Migration Marker
+ * naming them when the copy isn't among the sources.
  */
 public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J.Annotation>>> {
 
@@ -105,19 +108,41 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                     c = withCopiedAnnotations(c, copies.getOrDefault(parent.getFullyQualifiedName(), List.of()));
                 }
                 c = withoutToolGuard(c, ctx);
-                if (c.getLeadingAnnotations().stream().anyMatch(a -> TEST_ANNOTATIONS.stream()
-                        .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)))) {
-                    return c; // @SpringBootTest becomes @UnifiedSpringBootTest
+                if (c.getLeadingAnnotations().stream().noneMatch(a -> TEST_ANNOTATIONS.stream()
+                        .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)))) { // else @SpringBootTest becomes @UnifiedSpringBootTest
+                    String annotation = spring ? UNIFIED_SPRING_BOOT_TEST : TestBenchSetupToUnified.UNIFIED_UI_TEST;
+                    String simpleName = annotation.substring(annotation.lastIndexOf('.') + 1);
+                    String pkg = annotation.substring(0, annotation.lastIndexOf('.'));
+                    maybeAddImport(annotation);
+                    c = JavaTemplate.builder("@" + simpleName)
+                            .imports(annotation)
+                            .javaParser(Stubs.parser("package " + pkg + "; public @interface " + simpleName + " {}"))
+                            .build()
+                            .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
                 }
-                String annotation = spring ? UNIFIED_SPRING_BOOT_TEST : TestBenchSetupToUnified.UNIFIED_UI_TEST;
-                String simpleName = annotation.substring(annotation.lastIndexOf('.') + 1);
-                String pkg = annotation.substring(0, annotation.lastIndexOf('.'));
-                maybeAddImport(annotation);
-                return JavaTemplate.builder("@" + simpleName)
-                        .imports(annotation)
-                        .javaParser(Stubs.parser("package " + pkg + "; public @interface " + simpleName + " {}"))
-                        .build()
-                        .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
+                return parent != null && Dramafinder.isCopiedSpringBase(parent)
+                        && !copies.containsKey(parent.getFullyQualifiedName()) ? withUnseenCopyMarker(c, parent) : c;
+            }
+
+            /**
+             * The class with a Migration Marker for the copied base class's annotations: the copy is on the classpath
+             * but not among the migrated sources (another module, a jar), so its annotations, and their arguments,
+             * can't be carried over.
+             */
+            private J.ClassDeclaration withUnseenCopyMarker(J.ClassDeclaration c, JavaType.FullyQualified copy) {
+                List<String> names = new ArrayList<>();
+                names.add("@SpringBootTest attributes");
+                for (JavaType.FullyQualified a : copy.getAnnotations()) {
+                    if (!a.getFullyQualifiedName().equals(SPRING_BOOT_TEST)) {
+                        names.add("@" + a.getClassName());
+                    }
+                }
+                List<Comment> comments = new ArrayList<>(c.getPrefix().getComments());
+                comments.add(new TextComment(false, " TODO unified: extended " + copy.getFullyQualifiedName()
+                        + ", whose source the recipe didn't see: copy its class annotations here ("
+                        + String.join(", ", names) + "), with their arguments", "\n" + c.getPrefix().getIndent(),
+                        Markers.EMPTY));
+                return c.withPrefix(Space.build(c.getPrefix().getWhitespace(), comments));
             }
 
             /**

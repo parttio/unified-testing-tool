@@ -208,6 +208,45 @@ class MigrateDramafinder1Test implements RewriteTest {
     }
 
     @Test
+    void aCopiedBaseOutsideTheSourcesLeavesAMarker() {
+        rewriteRun(
+                // the copy is on the classpath only; the whole test classpath and a source stub together break javac
+                spec -> spec.parser(JavaParser.fromJavaVersion().classpath("dramafinder", "playwright",
+                        "junit-jupiter-api", "spring-boot-test", "spring-test", "spring-context").dependsOn("""
+                        package com.example;
+
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.springframework.test.context.ActiveProfiles;
+                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                        @SpringBootTest
+                        @ActiveProfiles("it")
+                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                        }
+                        """)),
+                pomXml(pom("2.0.2"), pom(null)),
+                java(TEST, """
+                        package com.example;
+
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                        import org.junit.jupiter.api.Test;
+
+                        // TODO unified: extended com.example.SpringPlaywrightIT, whose source the recipe didn't see: copy its class annotations here (@SpringBootTest attributes, @ActiveProfiles), with their arguments
+                        @UnifiedSpringBootTest
+                        class PeopleTest {
+                            @Test
+                            void saves(UnifiedPage page) {
+                                page.navigate("");
+                                page.find(UnifiedButton.class).withText("Save").click();
+                            }
+                        }
+                        """),
+                InstalledSkill.files());
+    }
+
+    @Test
     void aCopiedBaseATestStillExtendsStays() {
         rewriteRun(
                 pomXml(pom("1.2.4"), pom(null)),
