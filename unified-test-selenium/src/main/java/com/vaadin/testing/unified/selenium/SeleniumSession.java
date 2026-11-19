@@ -134,6 +134,11 @@ final class SeleniumSession implements AdapterSession {
         return stale(() -> ((JavascriptExecutor) driver()).executeScript(script, args));
     }
 
+    /** An asynchronous script: its last argument is the callback that ends it. */
+    Object jsAsync(String script, Object... args) {
+        return stale(() -> ((JavascriptExecutor) driver()).executeAsyncScript(script, args));
+    }
+
     /** Runs a WebDriver call; an element that went stale meanwhile becomes the core's retryable exception. */
     static <T> T stale(java.util.function.Supplier<T> call) {
         try {
