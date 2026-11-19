@@ -160,6 +160,22 @@ public final class BrowserQueries {
      * slot (a tooltip); when it shows no text, its {@code aria-label}, or that of the component it holds (a
      * menu-bar button holds the app's item). Browserless reads the same from the server-side elements.
      */
+    /**
+     * A message list's messages as {@code [userName, text]} pairs, from its {@code items}: the text the server gave
+     * each one, as Browserless reads it, rather than the rendered Markdown.
+     */
+    public static final String MESSAGES = """
+            e => (e.items || []).map(i => [i.userName == null ? null : String(i.userName),
+                i.text == null ? '' : String(i.text)])""";
+
+    /** {@link #MESSAGES}, read as a list of messages. */
+    public static java.util.List<com.vaadin.testing.unified.component.UnifiedMessageList.Message> messages(Object read) {
+        return ((java.util.List<?>) read).stream().map(m -> (java.util.List<?>) m)
+                .map(m -> new com.vaadin.testing.unified.component.UnifiedMessageList.Message(
+                        (String) m.get(0), (String) m.get(1)))
+                .toList();
+    }
+
     public static final String ITEM_NAME = """
             e => {
               // text and elements only: comments (Lit's markers) have a textContent too

@@ -229,7 +229,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void setProperty(String name, Object value) {
-        session.act(() -> {
+        session.act(component, () -> {
             if (value instanceof Boolean b) {
                 element().setProperty(name, b);
             } else if (value instanceof Number n) {
@@ -243,7 +243,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void click() {
-        session.act(() -> {
+        session.act(component, () -> {
             if (tester().getClass() != ComponentTester.class && hasTesterMethod("click", 0)) {
                 invokeTester("click"); // a component's own tester (Button, ...): its usability checks
             } else {
@@ -256,7 +256,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void setValueAsUser(Object value) {
-        session.act(() -> {
+        session.act(component, () -> {
             if (support.setValue(component, value, session.window())) {
                 session.window().roundTrip();
                 return;
@@ -284,7 +284,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void focus() {
-        session.act(() -> {
+        session.act(component, () -> {
             if (component instanceof Focusable<?> focusable) {
                 focusable.focus();
             }
@@ -294,7 +294,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void blur() {
-        session.act(() -> {
+        session.act(component, () -> {
             if (component instanceof Focusable<?> focusable) {
                 focusable.blur();
             }
@@ -304,7 +304,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void pressKey(String key) {
-        session.act(() -> {
+        session.act(component, () -> {
             pressKey(session, component, key);
         });
     }
@@ -319,7 +319,7 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public void dispatchEvent(String eventName) {
-        session.act(() -> {
+        session.act(component, () -> {
             BrowserlessKeys.dispatch(component, eventName);
             session.window().roundTrip();
         });

@@ -348,6 +348,106 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
+        // 1.1.2 is the old standalone add-on line: its explicit version would win over the Vaadin BOM's 25.x (#354)
+        rewriteRun(pomXml(
+                """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-bom</artifactId>
+                                <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>4.1.1</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>vaadin-testbench-core-junit6</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <version>1.1.2</version>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                </project>
+                """,
+                """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-bom</artifactId>
+                                <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>4.1.1</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-bom</artifactId>
+                                <version>%s</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-browserless</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-selenium</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                </project>
+                """.formatted(UNIFIED_VERSION)));
+    }
+
+    @Test
     void addPlaywrightAlsoAddsThePlaywrightAdapter() {
         rewriteRun(
                 spec -> spec.recipe(new MigrateTestBenchToUnified(true)),
@@ -823,6 +923,48 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     void confirmsTheSave(UnifiedPage page) {
                         // TODO unified: was waitForFirst(); the lookup fails when several components match
                         assertThat(page.find(UnifiedNotification.class)).hasText("Saved");
+                    }
+                }
+                """));
+    }
+
+
+    /** A chat: MessageInputElement and MessageListElement (#357). */
+    @Test
+    void chatLookupsFindTheUnifiedMessageInputAndList() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.messages.testbench.MessageInputElement;
+                import com.vaadin.flow.component.messages.testbench.MessageListElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ChatTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void asks() {
+                        $(MessageInputElement.class).first().submit("Pancakes");
+                        Assertions.assertEquals(3, $(MessageListElement.class).single().getMessageElements().size());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ChatTest {
+
+                    @Test
+                    void asks(UnifiedPage page) {
+                        // TODO unified: was first(); the lookup fails when several components match
+                        page.find(UnifiedMessageInput.class).send("Pancakes");
+                        Assertions.assertEquals(3, page.find(UnifiedMessageList.class).getMessageCount());
                     }
                 }
                 """));
@@ -1745,6 +1887,42 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         setUp(page);
                         page.find(UnifiedButton.class).withText("Save").click();
                         assertThat(page.find(UnifiedButton.class).withText("Save")).hasText("Save");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void anIgnoredJUnit4TestBenchTestStaysDisabled() {
+        // #386: JUnit 4's @Ignore means nothing to Jupiter, so a skipped test would start running
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.TestBenchTestCase;
+                import org.junit.Ignore;
+                import org.junit.Test;
+
+                public class ProfileIT extends TestBenchTestCase {
+                    @Ignore
+                    @Test
+                    public void saves() {
+                        $(ButtonElement.class).withText("Save").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Disabled;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                public class ProfileIT {
+                    @Disabled
+                    @Test
+                    public void saves(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));

@@ -27,6 +27,15 @@ public interface AdapterSession extends AutoCloseable {
     String currentPath();
     Optional<String> queryParameter(String name);
 
+    /**
+     * The page's title as it is now: what the browser shows on the tab ({@code document.title}), or on Browserless
+     * the title the UI last set ({@code @PageTitle}, {@code HasDynamicTitle}, {@code Page.setTitle(..)}). The
+     * default can't read it and throws, so that an adapter outside this repository keeps compiling.
+     */
+    default String title() {
+        throw new UnsupportedOperationException(getClass().getSimpleName() + " can't read the page's title");
+    }
+
     /** Called between retries: lets pending server work run (Browserless: UI.access tasks and signals). */
     void sync();
 

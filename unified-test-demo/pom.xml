@@ -22,6 +22,9 @@
         <gpg.skip>true</gpg.skip>
         <!-- Playwright adapter setting; empty = Playwright's own browser download -->
         <vaadin.testing.playwright.executable />
+        <!-- the Performance Pairs (demo.perf) run only with -Pperformance -->
+        <demo.test.groups />
+        <demo.test.excludedGroups>launched-only,performance</demo.test.excludedGroups>
     </properties>
 
     <dependencies>
@@ -117,7 +120,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <!-- failing on purpose; run by other tests through the JUnit launcher -->
-                    <excludedGroups>launched-only</excludedGroups>
+                    <groups>${demo.test.groups}</groups>
+                    <excludedGroups>${demo.test.excludedGroups}</excludedGroups>
                     <!-- Not a junit-platform.properties file: it would shadow TestBench's, and JUnit reads only one -->
                     <properties>
                         <configurationParameters>
@@ -135,4 +139,15 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- the Performance Pairs only: mvn verify -Pperformance -Dvaadin.testing.tool=... -->
+        <profile>
+            <id>performance</id>
+            <properties>
+                <demo.test.groups>performance</demo.test.groups>
+                <demo.test.excludedGroups>launched-only</demo.test.excludedGroups>
+            </properties>
+        </profile>
+    </profiles>
 </project>

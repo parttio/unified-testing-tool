@@ -1,0 +1,97 @@
+name: Round trips
+
+# The round-trip check of the Performance Pairs (#341, part of the performance plan #294): each user action's
+# round trips, on each Testing Tool, against the committed counts in unified-test-demo/perf/round-trips/.
+# A count above the committed one fails; see scripts/bench-unified.sh.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'unified-test-api/**'
+      - 'unified-test-browserless/**'
+      - 'unified-test-playwright/**'
+      - 'unified-test-selenium/**'
+      - 'unified-test-spring/**'
+      - 'unified-test-demo/src/main/java/demo/perf/**'
+      - 'unified-test-demo/src/test/java/demo/perf/**'
+      - 'unified-test-demo/perf/**'
+      - 'unified-test-demo/pom.xml'
+      - 'pom.xml'
+      - 'scripts/bench-unified.sh'
+      - 'scripts/round_trip_counts.py'
+      - '.github/workflows/round-trips.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'unified-test-api/**'
+      - 'unified-test-browserless/**'
+      - 'unified-test-playwright/**'
+      - 'unified-test-selenium/**'
+      - 'unified-test-spring/**'
+      - 'unified-test-demo/src/main/java/demo/perf/**'
+      - 'unified-test-demo/src/test/java/demo/perf/**'
+      - 'unified-test-demo/perf/**'
+      - 'unified-test-demo/pom.xml'
+      - 'pom.xml'
+      - 'scripts/bench-unified.sh'
+      - 'scripts/round_trip_counts.py'
+      - '.github/workflows/round-trips.yml'
+
+concurrency:
+  group: round-trips-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  round-trips:
+    name: Round trips (${{ matrix.tool }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        tool: [browserless, playwright, selenium]
+    env:
+      # TestBench checks its license when it loads (Vaadin Commercial License); not given to pull requests from forks
+      VAADIN_OFFLINE_KEY: ${{ matrix.tool == 'selenium' && secrets.VAADIN_OFFLINE_KEY || '' }}
+    steps:
+      - name: Skip Selenium without the TestBench licence
+        id: licence
+        if: matrix.tool == 'selenium' && env.VAADIN_OFFLINE_KEY == ''
+        run: |
+          echo "Round trips on Selenium not checked: no TestBench licence in this run (a pull request from a fork)." \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        if: steps.licence.outputs.skip != 'true'
+      - uses: actions/setup-java@v6
+        if: steps.licence.outputs.skip != 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build without tests
+        if: steps.licence.outputs.skip != 'true'
+        run: mvn -B -ntp install -DskipTests
+      # the adapter and Dramafinder download the browser themselves
+      - name: Install the libraries Chromium needs
+        if: matrix.tool == 'playwright'
+        run: >
+          mvn -B -ntp -pl unified-test-demo exec:java
+          -Dexec.mainClass=com.microsoft.playwright.CLI
+          -Dexec.classpathScope=test
+          -Dexec.args="install-deps chromium"
+      - name: Count the round trips and compare them with the committed counts
+        if: steps.licence.outputs.skip != 'true'
+        run: scripts/bench-unified.sh --tool "${{ matrix.tool }}" --counts --skip-build
+      - name: Upload the measured counts and the test log
+        if: always() && steps.licence.outputs.skip != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: round-trips-${{ matrix.tool }}
+          path: |
+            unified-test-demo/target/round-trip-counts/
+            unified-test-demo/target/round-trip-counts.log
+          if-no-files-found: ignore

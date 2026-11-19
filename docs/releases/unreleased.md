@@ -38,6 +38,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Playwright decides its own download at the JVM's first `Playwright.create()`, so code that creates a `Playwright`
   before the first test still downloads everything. A CI step that ran `install --with-deps chromium` before the
   tests can run `install-deps chromium` instead, for the system libraries only.
+- **`AddUnifiedTestingSkill` writes its pointer to `CLAUDE.md` when a project has no `AGENTS.md`**
+  ([#365](https://github.com/parttio/unified-testing-tool/issues/365)). Claude Code reads `CLAUDE.md`, not
+  `AGENTS.md`, so the marked section goes at the end of the existing `CLAUDE.md`, and no `AGENTS.md` is created.
+  The rest of `CLAUDE.md` is left as it is. A project with both files, or with neither, gets the section in
+  `AGENTS.md`, as before.
 - **Chrome on Selenium is started with a logging capability**
   ([#315](https://github.com/parttio/unified-testing-tool/pull/315)), and its console is read after every User
   Step.
@@ -46,8 +51,28 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   the screenshot can't be.
 - **`Scope` has a new method, `describe()`.** The Unified API implements it for the page and for every Wrapper
   that is a Scope, custom ones included. Only a class of your own that implements `Scope` must add it.
-- **Adapters:** `AdapterSession` has a new method with a default, `consoleErrors()`. An adapter outside this
-  repository keeps compiling.
+- **`unified-test-bom` no longer sets Browserless Test's version**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)): `browserless-test-junit6` and
+  `browserless-test-spring` come at the version the project's Vaadin BOM manages, as TestBench always did. With
+  `unified-test-bom` imported before the Vaadin BOM, a project ran on 25.3.2; it now runs on its Vaadin's
+  Browserless Test, also 25.3.2 on Vaadin 25.3.5. The BOM still sets Dramafinder's version.
+- **A test on a Vaadin older than 25.3 fails at once**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), with a message that names the version it
+  found, before its Spring context starts. It used to fail later, with an error from Browserless Test or Flow that
+  didn't say why. A test without Flow on its classpath is not checked.
+- **The Migration Recipes leave a Migration Marker at the top of `pom.xml`** on a project older than Vaadin 25.3
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), and migrate it all the same.
+- **The Dramafinder recipe marks the test classes it skips** ([#350](https://github.com/parttio/unified-testing-tool/issues/350)):
+  a class that uses a base class member no rule converts gets a Migration Marker above it, naming those members
+  (`not migrated: calls loginAs(..) of SpringPlaywrightIT, uses chatModel of SpringPlaywrightIT; ...`). Such a
+  class used to stay unchanged, with nothing saying why. A `setupTest()` override that seeds data and then calls
+  `super.setupTest()` no longer keeps a class from migrating: it becomes a plain `@BeforeEach`, without the
+  `super.setupTest()`, since each test now navigates itself. Nor do the members of a project's copy of
+  `SpringPlaywrightIT`: each migrated test gets the copy's fields and helpers it uses, and its `@BeforeEach`,
+  `@AfterEach` and `@RegisterExtension` members, as its own. A member that uses the test base where no rule
+  converts it (an extension reading `page`, an override of `setupTest()`) still keeps the test from migrating.
+- **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
+  outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
 
 ## New
 
@@ -100,11 +125,41 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   button “Archive” (disabled)          page.find(UnifiedButton.class).withText("Archive")
   button “Delete account”              page.find(UnifiedButton.class).withAccessibleName("Delete account")
   ```
+- **`assertThat(page).hasTitle(..)`** ([#360](https://github.com/parttio/unified-testing-tool/issues/360)): the
+  page's title, from the view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)`, on every Testing Tool.
+  Browserless reads the title the UI last set; a "page has its title" test no longer needs the Escape Hatch.
+  ```java
+  assertThat(page).isAt(ProfileView.class).hasTitle("Profile");
+  ```
+- **Wrappers for a chat** ([#357](https://github.com/parttio/unified-testing-tool/issues/357)):
+  `UnifiedMessageInput` and `UnifiedMessageList`, for apps built on Vaadin's AI components. `send(text)` types and
+  submits a message; the list's `getMessages()` reads each message's user name and text, the text the application
+  gave it (the Markdown source), the same on every Testing Tool. Its checks wait for a reply:
+  ```java
+  page.find(UnifiedMessageInput.class).send("Pancakes");
+  assertThat(page.find(UnifiedMessageList.class)).hasMessageCount(3).hasMessageContaining("Pancakes");
+  ```
+  See [Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat). The Migration Recipes convert
+  the message elements and testers too: Dramafinder's `typeAndSubmit`, `assertMessageCount` and `assertEmpty`,
+  TestBench's `submit` and `getMessageElements().size()`, Browserless's `send` and `size()`.
 - **For agents** ([#319](https://github.com/parttio/unified-testing-tool/pull/319)): the `unified-test-api` jar
   ships [`META-INF/unified/api-reference.md`](https://parttio.github.io/unified-testing-tool/api-reference/), every
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
   [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown and the guide in
   one file.
+- **`click()` on `UnifiedDiv`, `UnifiedSpan`, `UnifiedContainer` and the other plain HTML Wrappers**
+  ([#358](https://github.com/parttio/unified-testing-tool/issues/358)): a `Div` or `Span` with a click listener,
+  such as a navigation tab, or a layout such as a card, is clicked like a button, where a test used to write
+  `element().click()`.
+  ```java
+  page.find(UnifiedDiv.class).withText("Shop").click();
+  page.find(UnifiedContainer.class).withTestId("recipe-card").click();
+  ```
+- **Retrying assertions for a grid's columns** ([#359](https://github.com/parttio/unified-testing-tool/issues/359)):
+  `assertThat(grid).hasColumn("Cooked times")`, `doesNotHaveColumn(..)` and `hasColumnHeaders(..)`, for a column
+  the application adds or removes while the test runs. They replace `page.waitUntil(() ->
+  grid.getColumnHeaders().contains(..))`, a gap in the reports, and fail with the headers the grid has. See
+  [Columns](https://parttio.github.io/unified-testing-tool/guide/grid/#columns).
 
 ## New settings
 
@@ -127,6 +182,27 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   org/springframework/security/core/Authentication`
   ([#348](https://github.com/parttio/unified-testing-tool/issues/348)). It now starts without the test login
   endpoint, and `spring-security-core` is no longer needed as a workaround.
+- The Migration Recipes ignored the options a project's `rewrite.yml` set: `addAgentSkill`, the adapters,
+  `includePageObjects` ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). OpenRewrite matches
+  options to a recipe's constructor parameters by name, and `unified-test-rewrite` was compiled without the names,
+  so the recipe ran with its defaults and said nothing. It is now compiled with `-parameters`.
+- A JUnit 4 test that `@Ignore` skipped ran again after the TestBench or Browserless (UI Unit) Migration Recipe
+  ([#386](https://github.com/parttio/unified-testing-tool/issues/386)): `@Test` became JUnit 6's, but `@Ignore`
+  stayed JUnit 4's, which JUnit 6 doesn't read. The recipes named OpenRewrite's `IgnoreToDisabled`, a declarative
+  recipe in another jar that they never loaded, and the plugin logged a validation error. `@Ignore` now becomes
+  `@Disabled`.
+- The Dramafinder recipe dropped the class annotations of a project's copy of `SpringPlaywrightIT`: a test that
+  extended it lost `@ActiveProfiles`, `@Import` and `@SpringBootTest(properties = ..)`, and ran against the
+  default profile without a marker ([#349](https://github.com/parttio/unified-testing-tool/issues/349)). Each
+  migrated test now gets the copy's annotations it doesn't have itself, or, when the copy isn't among
+  the migrated sources, a Migration Marker naming them.
+- The Migration Recipes kept the explicit version of a project's `browserless-test-spring`, which wins over the
+  Vaadin BOM: a project on the old standalone add-on, 1.1.2, ended up with it beside Browserless 25
+  ([#354](https://github.com/parttio/unified-testing-tool/issues/354)). The Browserless, TestBench and Dramafinder
+  recipes now remove it when the project's Vaadin BOM manages the version.
+- The documented migration commands ran whichever OpenRewrite plugin was newest. They now name the versions the
+  recipes are tested against, 6.46.1 for Maven and 7.39.0 for Gradle
+  ([#355](https://github.com/parttio/unified-testing-tool/issues/355)).
 
 ## Known limitations
 

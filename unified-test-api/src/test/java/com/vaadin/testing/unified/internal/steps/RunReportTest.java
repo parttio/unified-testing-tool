@@ -182,11 +182,24 @@ class RunReportTest {
 
         assertTrue(html.contains("<a class=\"snap\" href=\"EditPersonTest/editsAPerson/steps/001.png\" data-image>"
                 + "screenshot</a>"), html);
-        assertTrue(html.contains("<a class=\"snap\" href=\"EditPersonTest/editsAPerson/steps/002.tree.txt\">tree</a>"),
-                html);
+        // a component tree links its readable page, which the script opens under the step
+        assertTrue(html.contains("<a class=\"snap\" href=\"EditPersonTest/editsAPerson/steps/002.tree.html\" "
+                + "data-tree>tree</a>"), html);
+        assertTrue(html.contains("a.snap[data-image],a.snap[data-tree]"), html);
         // a passing scenario links its trace too, and the trace is not shown as failure evidence
         assertTrue(html.contains(" · <a href=\"EditPersonTest/editsAPerson/trace.zip\""), html);
         assertFalse(html.contains("class=\"evidence\""), html);
+    }
+
+    @Test
+    void showsAFailuresComponentTreeInThePageWithItsTextLinked() {
+        String html = new RunReport(new RunSummary("Browserless", run(), 0, null),
+                s -> s.testMethod().equals("paysByCard") ? List.of("demo.CheckoutTest$AsGuest.paysByCard.tree.txt")
+                        : List.of()).html();
+
+        assertTrue(html.contains("<iframe class=\"tree-frame\" src=\"demo.CheckoutTest$AsGuest.paysByCard.tree.html\""),
+                html);
+        assertTrue(html.contains("<a href=\"demo.CheckoutTest$AsGuest.paysByCard.tree.txt\">"), html);
     }
 
     @Test

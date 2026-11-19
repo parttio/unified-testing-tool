@@ -36,6 +36,7 @@ final class FakePage {
                     case "find" -> find((QuerySpec) args[0]);
                     case "isAt" -> true;
                     case "currentPath" -> "people";
+                    case "title" -> "People";
                     case "unwrap", "queryParameter" -> Optional.empty();
                     case "navigate" -> {
                         actions.add("navigate " + args[0]);

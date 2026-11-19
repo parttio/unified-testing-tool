@@ -11,6 +11,7 @@ How each Unified API call maps onto the three Testing Tools: Browserless Test 25
 | `page.navigate(View.class)` | `navigate(View.class)` | `RouteNavigation` / `navigate(View.class)` | `getDriver().get(baseUrl + path)` |
 | `page.reload()` | page reload simulation | `page.reload()` | `navigate().refresh()` |
 | `assertThat(page).isAt(View.class)` | `getCurrentView()` | `assertAt(View.class)` | URL vs resolved path (adapter) |
+| `assertThat(page).hasTitle(s)` *(unreleased)* | `UI.getInternals().getTitle()` (adapter) | `page.title()` | `getDriver().getTitle()` |
 
 ## Locating
 
@@ -74,6 +75,9 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `row.getCell(col).click()` | `row.click()` + Migration Marker (the row, not that cell) |
 | `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |
 | `waitForGridToStopLoading()`, `scrollToRow(i)` | dropped (Auto-Wait) |
+| `MessageInputElement.get(page)`, `MessageListElement.get(page)` | `page.find(UnifiedMessageInput.class)`, `page.find(UnifiedMessageList.class)` (no marker: a second one fails loudly) |
+| message input `typeAndSubmit(s)` | `send(s)` |
+| message list `assertMessageCount(n)` / `assertEmpty()` | `assertThat(list).hasMessageCount(n)` / `isEmpty()` |
 
 ## Escape Hatch
 

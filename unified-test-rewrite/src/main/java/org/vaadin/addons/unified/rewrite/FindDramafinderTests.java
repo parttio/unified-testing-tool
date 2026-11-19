@@ -30,7 +30,7 @@ public class FindDramafinderTests extends Recipe {
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
-                return Dramafinder.isDramafinderClass(classDecl) && Dramafinder.migratable(classDecl)
+                return Dramafinder.isDramafinderClass(classDecl) && Dramafinder.migratable(classDecl, DramafinderCopies.of(ctx))
                         ? SearchResult.found(c) : c;
             }
         };

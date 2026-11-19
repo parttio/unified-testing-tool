@@ -78,7 +78,7 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
 When a label changed in the application and the tests that used it fail, each failure already says what to write instead. The `ApplyDidYouMean` recipe writes it for you. Run the tests, then, in the same directory:
 
 ```
-mvn -U org.openrewrite.maven:rewrite-maven-plugin:run \
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
     -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
     -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.ApplyDidYouMean
 ```

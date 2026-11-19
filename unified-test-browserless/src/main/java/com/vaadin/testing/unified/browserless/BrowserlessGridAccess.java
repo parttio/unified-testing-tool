@@ -73,7 +73,7 @@ final class BrowserlessGridAccess implements GridAccess {
 
     // ---------------------------------------------------------------- selection, clicks
 
-    @Override public void select(int row) { session.act(() -> { tester.select(row); roundTrip(); }); }
+    @Override public void select(int row) { session.act(grid, () -> { tester.select(row); roundTrip(); }); }
     @Override public void deselect(int row) { tester.deselect(row); roundTrip(); }
     @Override public void selectAll() { tester.selectAll(); roundTrip(); }
     @Override public void deselectAll() { tester.deselectAll(); roundTrip(); }
@@ -90,7 +90,7 @@ final class BrowserlessGridAccess implements GridAccess {
     @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public void clickRow(int row) {
-        session.act(() -> {
+        session.act(grid, () -> {
             tester.clickRow(row);
             if (grid.isDetailsVisibleOnClick()) {
                 Object item = tester.getRow(row);
@@ -99,7 +99,7 @@ final class BrowserlessGridAccess implements GridAccess {
             roundTrip();
         });
     }
-    @Override public void doubleClickRow(int row) { session.act(() -> { tester.doubleClickRow(row); roundTrip(); }); }
+    @Override public void doubleClickRow(int row) { session.act(grid, () -> { tester.doubleClickRow(row); roundTrip(); }); }
 
     // ---------------------------------------------------------------- sorting
 

@@ -5,12 +5,14 @@ displayName: Swap Dramafinder for the Unified API in the Maven build
 description: >-
   Imports unified-test-bom, adds the Playwright adapter (and the Spring integration in Spring Boot projects) as
   test dependencies, and removes the direct Dramafinder dependency, which the Playwright adapter brings in.
+  Leaves a Migration Marker at the top of the pom when the project's Vaadin is older than 25.3.
 preconditions:
   - org.openrewrite.maven.search.DependencyInsight:
       groupIdPattern: org.vaadin.addons
       artifactIdPattern: dramafinder
       onlyDirect: true
 recipeList:
+  - org.vaadin.addons.unified.rewrite.CheckVaadinVersion
   - org.openrewrite.maven.AddManagedDependency:
       groupId: org.vaadin.addons
       artifactId: unified-test-bom
@@ -26,6 +28,11 @@ recipeList:
   - org.openrewrite.maven.RemoveDependency:
       groupId: org.vaadin.addons
       artifactId: dramafinder
+  # an explicit version wins over the Vaadin BOM; removed only where that BOM manages one: the old standalone add-on line (1.x) would sit beside Browserless 25 (#354)
+  - org.openrewrite.maven.RemoveRedundantDependencyVersions:
+      groupPattern: com.vaadin
+      artifactPattern: browserless-test-spring
+      onlyIfManagedVersionIs: ANY
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.vaadin.addons.unified.rewrite.AddBrowserlessAdapter

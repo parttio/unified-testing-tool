@@ -12,7 +12,7 @@ import org.openrewrite.test.RewriteTest;
 import org.openrewrite.test.SourceSpecs;
 import org.openrewrite.text.PlainText;
 
-/** {@link AddUnifiedTestingSkill}: installs the write-unified-ui-tests skill and its AGENTS.md pointer. */
+/** {@link AddUnifiedTestingSkill}: installs the write-unified-ui-tests skill and its AGENTS.md (or CLAUDE.md) pointer. */
 class AddUnifiedTestingSkillTest implements RewriteTest {
 
     private static final String SKILL = AddUnifiedTestingSkill.skill();
@@ -169,6 +169,61 @@ class AddUnifiedTestingSkillTest implements RewriteTest {
                 text(SKILL, source -> source.path(SKILL_PATH)),
                 text("# Agents\n\n" + AddUnifiedTestingSkill.SECTION + "\n## Releases\n",
                         source -> source.path("AGENTS.md"))));
+    }
+
+    @Test
+    void aProjectWithClaudeMdAndNoAgentsMdGetsTheSectionInClaudeMd() {
+        // Claude Code reads CLAUDE.md, not AGENTS.md (#365): no AGENTS.md is created
+        rewriteRun(with(
+                text(null, SKILL, source -> source.path(SKILL_PATH)),
+                text("""
+                        # Mise
+
+                        Run `mvn verify` before committing.
+                        """, """
+                        # Mise
+
+                        Run `mvn verify` before committing.
+
+                        <!-- unified-test: write-unified-ui-tests -->
+                        ## Unified UI Tests
+
+                        For Unified UI Tests, follow `.claude/skills/write-unified-ui-tests/SKILL.md`.
+                        <!-- /unified-test -->
+                        """, source -> source.path("CLAUDE.md"))));
+    }
+
+    @Test
+    void updatesTheSectionInClaudeMdInPlace() {
+        rewriteRun(with(
+                text(SKILL, source -> source.path(SKILL_PATH)),
+                text("""
+                        # Mise
+
+                        <!-- unified-test: write-unified-ui-tests -->
+                        Old pointer.
+                        <!-- /unified-test -->
+
+                        ## Releases
+                        """, """
+                        # Mise
+
+                        <!-- unified-test: write-unified-ui-tests -->
+                        ## Unified UI Tests
+
+                        For Unified UI Tests, follow `.claude/skills/write-unified-ui-tests/SKILL.md`.
+                        <!-- /unified-test -->
+
+                        ## Releases
+                        """, source -> source.path("CLAUDE.md"))));
+    }
+
+    @Test
+    void withBothFilesOnlyAgentsMdGetsTheSection() {
+        rewriteRun(with(
+                text(SKILL, source -> source.path(SKILL_PATH)),
+                text("# Mise\n", source -> source.path("CLAUDE.md")),
+                text("# Agents\n", "# Agents\n\n" + AddUnifiedTestingSkill.SECTION, source -> source.path("AGENTS.md"))));
     }
 
     @Test

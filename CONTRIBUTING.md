@@ -55,6 +55,16 @@ A short example that the demo app can't run, because it shows buttons or views t
 
 Write an example inline only when it can't compile: a signature, a class skeleton, or a mistake to avoid.
 
+### What is unreleased
+
+The site documents `main`, so mark what the latest release doesn't have, where a reader of that release meets it. Mark the item, not its surroundings: a row, a bullet or a sentence gets `*(unreleased)*` next to its name. Only a section whose every line is new gets the banner instead:
+
+```markdown
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+```
+
+A section that keeps released content under a new heading, or a sentence that names a released and an unreleased item, is marked per item, so a reader of the release can tell which half they have.
+
 ## Cutting a release
 
 1. Make sure the build passes locally and in the Tests workflow on `main`.

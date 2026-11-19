@@ -2,7 +2,13 @@ package org.vaadin.addons.unified.rewrite;
 
 import static org.openrewrite.java.Assertions.java;
 
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
+import org.openrewrite.Recipe;
+import org.openrewrite.config.YamlResourceLoader;
 import org.openrewrite.config.Environment;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.test.RecipeSpec;
@@ -27,6 +33,32 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
         spec.recipe(Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite").build()
                         .activateRecipes("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified"))
                 .parser(JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath()));
+    }
+
+    /** A recipe declared in a project's {@code rewrite.yml}, found with this jar's recipes as the plugins find it. */
+    private static Recipe projectRecipe(String yaml, String name) {
+        return Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite")
+                .load(new YamlResourceLoader(new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)),
+                        URI.create("rewrite.yml"), new Properties()))
+                .build().activateRecipes(name);
+    }
+
+    @Test
+    void addAgentSkillSetInAProjectsCompositeRecipeWritesTheMigrationMarkersSkill() {
+        // issue #353: OpenRewrite builds a recipe from its options by constructor parameter name
+        rewriteRun(
+                spec -> spec.recipe(projectRecipe("""
+                        type: specs.openrewrite.org/v1beta/recipe
+                        name: com.example.MigrateToUnified
+                        displayName: Migrate to Unified
+                        description: The options as a project sets them.
+                        recipeList:
+                          - org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified:
+                              addAgentSkill: true
+                        """, "com.example.MigrateToUnified")),
+                java(VIEW),
+                org.openrewrite.test.SourceSpecs.text(null, AddMigrationMarkersSkill.skill(),
+                        source -> source.path(AddMigrationMarkersSkill.PATH)));
     }
 
     @Test
@@ -61,6 +93,59 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     void opensPeople(UnifiedPage page) {
                         page.navigate(PeopleView.class);
                         assertThat(page).isAt(PeopleView.class);
+                    }
+                }
+                """));
+    }
+
+
+    /** A chat: MessageInputElement and MessageListElement (#357). */
+    @Test
+    void chatElementsBecomeTheUnifiedMessageInputAndList() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import static org.vaadin.addons.dramafinder.element.query.ElementQueries.find;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.MessageInputElement;
+                import org.vaadin.addons.dramafinder.element.MessageListElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class ChatTest extends SpringPlaywrightIT {
+                    @Test
+                    void asks() {
+                        navigate(PeopleView.class);
+                        MessageListElement messages = MessageListElement.get(page);
+                        messages.assertEmpty();
+                        MessageInputElement.get(page).typeAndSubmit("Pancakes");
+                        messages.assertMessageCount(2);
+                        find(page, MessageInputElement.class).withTestId("chat").single().assertEnabled();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+                        assertThat(messages).isEmpty();
+                        page.find(UnifiedMessageInput.class).send("Pancakes");
+                        assertThat(messages).hasMessageCount(2);
+                        assertThat(page.find(UnifiedMessageInput.class).withTestId("chat")).isEnabled();
                     }
                 }
                 """));
@@ -500,7 +585,157 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
-    void aTestUsingABaseClassMemberNoRuleConvertsStaysAsItIs() {
+    void aTestUsingABaseClassMemberNoRuleConvertsStaysAndSaysWhy() {
+        // issue #350: a skipped class says what kept it from migrating
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import com.microsoft.playwright.BrowserContext;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class AdminTest extends SpringPlaywrightIT {
+                    @Override
+                    protected void prepareBrowserContext(BrowserContext context) {
+                    }
+
+                    @Test
+                    void opensPeopleAsAdmin() {
+                        loginAs("admin", "ADMIN");
+                        navigate(PeopleView.class);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.BrowserContext;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                // TODO unified: not migrated: overrides prepareBrowserContext(..) of SpringPlaywrightIT, calls loginAs(..) of SpringPlaywrightIT; convert them by hand, then run the migration again
+                class AdminTest extends SpringPlaywrightIT {
+                    @Override
+                    protected void prepareBrowserContext(BrowserContext context) {
+                    }
+
+                    @Test
+                    void opensPeopleAsAdmin() {
+                        loginAs("admin", "ADMIN");
+                        navigate(PeopleView.class);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aSetupTestOverrideThatSeedsBeforeTheBaseClassBecomesAPlainBeforeEach() {
+        // issue #350: seeding data before the base class navigates
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.ButtonElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @BeforeEach
+                    @Override
+                    public void setupTest() throws Exception {
+                        seed();
+                        super.setupTest();
+                    }
+
+                    private void seed() {
+                    }
+
+                    @Override
+                    public String getView() {
+                        return "people";
+                    }
+
+                    @Test
+                    void saves() {
+                        ButtonElement.getByText(page, "Save").click();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @BeforeEach
+                    public void setupTest() throws Exception {
+                        seed();
+                    }
+
+                    private void seed() {
+                    }
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.navigate("people");
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aSetupTestOverrideThatOnlyCallsTheBaseClassGoes() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.ButtonElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Override
+                    public void setupTest() throws Exception {
+                        super.setupTest();
+                    }
+
+                    @Test
+                    void saves() {
+                        navigate(PeopleView.class);
+                        ButtonElement.getByText(page, "Save").click();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aSetupTestOverrideThatWorksAfterTheBaseClassStaysAndSaysWhy() {
         rewriteRun(java(VIEW), java(
                 """
                 package com.example;
@@ -508,11 +743,34 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                 import org.junit.jupiter.api.Test;
                 import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
 
-                class AdminTest extends SpringPlaywrightIT {
-                    @Test
-                    void opensPeopleAsAdmin() {
-                        loginAs("admin", "ADMIN");
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Override
+                    public void setupTest() throws Exception {
+                        super.setupTest();
                         navigate(PeopleView.class);
+                    }
+
+                    @Test
+                    void opens() {
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                // TODO unified: not migrated: overrides setupTest() of AbstractBasePlaywrightIT; convert them by hand, then run the migration again
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Override
+                    public void setupTest() throws Exception {
+                        super.setupTest();
+                        navigate(PeopleView.class);
+                    }
+
+                    @Test
+                    void opens() {
                     }
                 }
                 """));
