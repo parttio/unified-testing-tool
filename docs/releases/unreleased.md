@@ -123,6 +123,9 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - In a browser, a failure with several matches outside any container named Flow's root as their container,
   `in container (id “ROOT-2521314”)`, an id that changes on every page load and tells none of them apart
   ([#334](https://github.com/parttio/unified-testing-tool/issues/334)). It now reads as on Browserless.
+- Run with the rewrite-maven-plugin, the TestBench and UI Unit migrations logged `recipe
+  'org.openrewrite.java.testing.junit5.IgnoreToDisabled' does not exist` and left JUnit 4's `@Ignore` in place
+  ([#355](https://github.com/parttio/unified-testing-tool/issues/355)). `@Ignore` now becomes `@Disabled`.
 
 ## Known limitations
 

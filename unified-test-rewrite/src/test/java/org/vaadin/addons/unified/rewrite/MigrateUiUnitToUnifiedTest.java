@@ -99,6 +99,41 @@ class MigrateUiUnitToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void anIgnoredJUnit4UiUnitTestBecomesDisabled() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.Button;
+                import com.vaadin.testbench.unit.UIUnit4Test;
+                import org.junit.Ignore;
+                import org.junit.Test;
+
+                public class ProfileTest extends UIUnit4Test {
+                    @Ignore("flaky")
+                    @Test
+                    public void saves() {
+                        test($(Button.class).withText("Save").single()).click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Disabled;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                public class ProfileTest {
+                    @Disabled("flaky")
+                    @Test
+                    public void saves(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void anHtmlTesterMovesOutOfTheTestBenchPackage() {
         rewriteRun(java(
                 """

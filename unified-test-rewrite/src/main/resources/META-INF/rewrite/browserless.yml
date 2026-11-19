@@ -96,7 +96,11 @@ recipeList:
   - org.openrewrite.java.testing.junit5.UpdateBeforeAfterAnnotations
   - org.openrewrite.java.testing.junit5.UpdateTestAnnotation
   - org.openrewrite.java.testing.junit5.AssertToAssertions
-  - org.openrewrite.java.testing.junit5.IgnoreToDisabled
+  # what org.openrewrite.java.testing.junit5.IgnoreToDisabled does: that one is declarative, and the
+  # rewrite-maven-plugin reads only the declarative recipes of this jar, not those of its dependencies (#355)
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: org.junit.Ignore
+      newFullyQualifiedTypeName: org.junit.jupiter.api.Disabled
   - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
   - org.openrewrite.java.ChangeType:
       oldFullyQualifiedTypeName: com.vaadin.testbench.unit.UIUnitTest
