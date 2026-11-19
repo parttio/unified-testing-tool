@@ -28,6 +28,7 @@ class ProfileViewTest {
 - **Migrating from TestBench:** [docs/migrating-from-testbench.md](docs/migrating-from-testbench.md), OpenRewrite Migration Recipes.
 - **Migrating from Browserless:** [docs/migrating-from-browserless.md](docs/migrating-from-browserless.md), the same for Browserless Test and TestBench UI Unit tests.
 - **Migrating from Dramafinder:** [docs/migrating-from-dramafinder.md](docs/migrating-from-dramafinder.md), the same for Dramafinder (Playwright) tests.
+- **Getting started:** [docs/guide/getting-started.md](docs/guide/getting-started.md): from the dependencies to a first test that passes on Browserless and in a browser.
 - **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, structure scenarios and read their reports, with examples from the demo.
 - **API reference *(unreleased)*:** [every Wrapper](unified-test-api/src/main/resources/META-INF/unified/api-reference.md) with its filters, actions, reads and checks, generated from the code and shipped in the `unified-test-api` jar (`META-INF/unified/api-reference.md`).
 - **For agents:** the site has an [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown, and the whole guide in [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt); the `write-unified-ui-tests` skill is installed by the `AddUnifiedTestingSkill` recipe.
@@ -52,7 +53,7 @@ class ProfileViewTest {
 
 ## Try it
 
-Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha3`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies:
+Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha3`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies (here for a Spring Boot application; [Getting started](docs/guide/getting-started.md) has the other cases and a first test):
 
 ```xml
 <dependencyManagement>
@@ -71,6 +72,11 @@ Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha
     <dependency>
         <groupId>org.vaadin.addons</groupId>
         <artifactId>unified-test-spring</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>com.vaadin</groupId>
+        <artifactId>browserless-test-spring</artifactId>
         <scope>test</scope>
     </dependency>
     <dependency>

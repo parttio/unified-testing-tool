@@ -6,40 +6,11 @@ The examples are included from [`unified-test-demo`](https://github.com/parttio/
 
 ## Your first test
 
-Add the dependencies as in [Try it](../index.md#try-it). Then:
+[Getting started](getting-started.md) goes from the dependencies to a test that passes on Browserless and in a browser:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ProfileViewTest.java:savesName"
 ```
-
-in a class like this:
-
-```java
-import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
-
-import com.vaadin.testing.unified.UnifiedPage;
-import com.vaadin.testing.unified.component.UnifiedButton;
-import com.vaadin.testing.unified.component.UnifiedNotification;
-import com.vaadin.testing.unified.component.UnifiedTextField;
-import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-@UnifiedSpringBootTest          // @UnifiedUITest for an app without Spring Boot
-class ProfileViewTest {
-    // tests take a UnifiedPage parameter
-}
-```
-
-Run it:
-
-```
-mvn test                                         # Browserless, the default
-mvn test -Dvaadin.testing.tool=playwright        # the same test in a real browser
-```
-
-!!! tip "Import `assertThat` from `UnifiedAssertions`"
-    `UnifiedAssertions.assertThat(wrapper)` retries until the timeout; AssertJ's or JUnit's assertions don't. Import it statically next to your other assertion libraries: it only accepts Unified API types.
 
 ## Four steps in every test
 

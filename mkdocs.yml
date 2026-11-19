@@ -53,6 +53,7 @@ nav:
   - API reference: api-reference.md
   - Developer guide:
       - Overview: guide/index.md
+      - Getting started: guide/getting-started.md
       - Finding components: guide/finding-components.md
       - Working with components: guide/components.md
       - Grid: guide/grid.md
