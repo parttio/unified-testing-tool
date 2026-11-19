@@ -6,12 +6,14 @@ description: >-
   Imports unified-test-bom, adds the Spring integration, `browserless-test-spring` (which Browserless runs of Spring
   tests need) and the Browserless and Selenium adapters as test dependencies, and removes direct TestBench
   dependencies, which the Selenium adapter brings in.
+  Leaves a Migration Marker at the top of the pom when the project's Vaadin is older than 25.3.
 preconditions:
   - org.openrewrite.maven.search.DependencyInsight:
       groupIdPattern: com.vaadin
       artifactIdPattern: vaadin-testbench*
       onlyDirect: true
 recipeList:
+  - org.vaadin.addons.unified.rewrite.CheckVaadinVersion
   - org.openrewrite.maven.AddManagedDependency:
       groupId: org.vaadin.addons
       artifactId: unified-test-bom

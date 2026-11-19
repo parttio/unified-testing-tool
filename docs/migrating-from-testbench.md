@@ -24,7 +24,7 @@ The demo's `EditPersonTestBenchTest`, and what the recipe makes of it. CI checks
 ## Run it
 
 !!! warning "Vaadin 25.3 first"
-    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. The recipe doesn't check: on an older Vaadin it migrates the build all the same, and the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the recipe migrates the build all the same and *(unreleased)* leaves a Migration Marker at the top of `pom.xml`; the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
 
 Commit or stash your work first: the recipe changes files in place.
 
@@ -115,7 +115,7 @@ With `includePageObjects`, a page object that holds the TestBench test (`HasElem
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the BOM manages its version), and removes direct `vaadin-testbench*` dependencies (the Selenium adapter brings TestBench). It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the project's Vaadin BOM manages its version), and removes direct `vaadin-testbench*` dependencies (the Selenium adapter brings TestBench). It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine.
 
 ## What it leaves for you
 
@@ -141,6 +141,7 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `TestBench page object: new LoginPage(this)` | Convert the page object by hand, or rerun with `includePageObjects` |
 | `browser setup removed (@RunLocally, ...)` | Configure the Selenium adapter with `vaadin.testing.*` settings |
+| `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 

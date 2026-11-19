@@ -24,7 +24,7 @@ The demo's `ProfileBrowserlessTest`, and what the recipe makes of it. CI checks 
 ## Run it
 
 !!! warning "Vaadin 25.3 first"
-    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. The recipe doesn't check: on an older Vaadin it migrates the build all the same, and the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the recipe migrates the build all the same and *(unreleased)* leaves a Migration Marker at the top of `pom.xml`; the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
 
 Commit or stash your work first: the recipe changes files in place.
 
@@ -183,6 +183,7 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |
 | `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |
 | `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: run with `includePageObjects`, or make the page object take a `UnifiedPage` by hand, then run the migration again |
+| `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 

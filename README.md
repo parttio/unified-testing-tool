@@ -54,7 +54,7 @@ class ProfileViewTest {
 
 Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha3`. The API can still change between alphas.
 
-It needs Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. Nothing checks the Vaadin version: on Vaadin 25.2 or older the build passes, and the tests fail when they run, because the Browserless adapter is built on Browserless Test 25.3, which needs Flow 25.3. Move the application to Vaadin 25.3 first.
+It needs Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the build passes and the tests fail when they run: *(unreleased)* each Unified UI Test fails at once, with a message that names the Vaadin version it found. Move the application to Vaadin 25.3 first.
 
 Import the BOM and add the adapters you run on as test dependencies:
 
@@ -90,7 +90,7 @@ Import the BOM and add the adapters you run on as test dependencies:
 </dependencies>
 ```
 
-The BOM also sets the versions of the Testing Tools the adapters run on: Browserless Test (`com.vaadin:browserless-test-junit6` and `browserless-test-spring`, 25.3.2) and Dramafinder (`org.vaadin.addons:dramafinder`, 2.2.0).
+The BOM also sets the version of Dramafinder (`org.vaadin.addons:dramafinder`, 2.2.0), which the Playwright adapter runs on. Browserless Test and TestBench come at the versions your Vaadin BOM manages *(unreleased: the `0.1.0-alpha3` BOM also sets Browserless Test, 25.3.2)*.
 
 The Playwright adapter brings Dramafinder 2.2.0, so a project on Dramafinder 1.x moves to 2.x. Remove a direct `dramafinder` dependency: a version you declare wins over the BOM's, and the adapter needs 2.x. The class and method names are the same, so Dramafinder 1.x code left in the project still compiles, but its lookups now follow 2.x rules: `getByLabel` and `getByText` match the whole value and fail when several components match ([Dramafinder 1.x](docs/migrating-from-dramafinder.md#dramafinder-1x)).
 

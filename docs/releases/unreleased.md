@@ -46,6 +46,17 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   the screenshot can't be.
 - **`Scope` has a new method, `describe()`.** The Unified API implements it for the page and for every Wrapper
   that is a Scope, custom ones included. Only a class of your own that implements `Scope` must add it.
+- **`unified-test-bom` no longer sets Browserless Test's version**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)): `browserless-test-junit6` and
+  `browserless-test-spring` come at the version the project's Vaadin BOM manages, as TestBench always did. With
+  `unified-test-bom` imported before the Vaadin BOM, a project ran on 25.3.2; it now runs on its Vaadin's
+  Browserless Test, also 25.3.2 on Vaadin 25.3.5. The BOM still sets Dramafinder's version.
+- **A test on a Vaadin older than 25.3 fails at once**
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), with a message that names the version it
+  found, before its Spring context starts. It used to fail later, with an error from Browserless Test or Flow that
+  didn't say why. A test without Flow on its classpath is not checked.
+- **The Migration Recipes leave a Migration Marker at the top of `pom.xml`** on a project older than Vaadin 25.3
+  ([#387](https://github.com/parttio/unified-testing-tool/issues/387)), and migrate it all the same.
 - **Adapters:** `AdapterSession` has a new method with a default, `consoleErrors()`. An adapter outside this
   repository keeps compiling.
 
