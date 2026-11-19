@@ -99,7 +99,9 @@ mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
   -Drewrite.exportDatatables=true
 ```
 
-On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`. `target/rewrite/rewrite.patch` marks every TestBench, Browserless and Dramafinder test class `/*~~(migrates)~~>*/`, and with `exportDatatables` a CSV in `target/rewrite/datatables/` lists them. A project with Browserless or Dramafinder tests too sees which of those their migrations would skip.
+`target/rewrite/rewrite.patch` (one per module) marks every TestBench, Browserless and Dramafinder test class `/*~~(migrates)~~>*/`, and with `exportDatatables` the file `FindTestClassesToMigrate$TestClasses.csv`, in `target/rewrite/datatables/<date-time>/` under the directory you ran Maven in, lists them one row per class. A project with Browserless or Dramafinder tests too sees which of those their migrations would skip.
+
+On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch is `build/reports/rewrite/rewrite.patch`.
 
 ## What it converts
 
