@@ -69,6 +69,12 @@ Find a column by its header text; `columnWithId("owner")` (`Column.setId`) or `c
 
 A column's key (`Column.setKey`) stays on the server, so no browser can find a column by it.
 
+When the application adds or removes columns while the test runs, check the headers with a retrying assertion *(unreleased)*: `hasColumn("Archived on")`, `doesNotHaveColumn(..)`, or `hasColumnHeaders(..)` for all of them in display order. `getColumnHeaders()` reads them now.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/GridTest.java:waitsForAColumn"
+```
+
 ## Selection, clicks and details
 
 ```java

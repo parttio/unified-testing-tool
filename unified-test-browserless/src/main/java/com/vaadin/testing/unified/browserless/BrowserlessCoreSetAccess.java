@@ -7,6 +7,9 @@ import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.menubar.MenuBar;
+import com.vaadin.flow.component.messages.MessageInput;
+import com.vaadin.flow.component.messages.MessageInputTester;
+import com.vaadin.flow.component.messages.MessageList;
 import com.vaadin.flow.component.menubar.MenuBarTester;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
@@ -16,9 +19,12 @@ import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.UploadTester;
 import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
+import com.vaadin.testing.unified.spi.MessageInputAccess;
+import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.time.LocalDate;
@@ -27,7 +33,10 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
-/** Access to Tabs, Details, MenuBar, Upload and DateTimePicker on Browserless, through their testers. */
+/**
+ * Access to Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Browserless, through
+ * their testers.
+ */
 final class BrowserlessCoreSetAccess {
     private BrowserlessCoreSetAccess() {}
 
@@ -242,6 +251,24 @@ final class BrowserlessCoreSetAccess {
                 ((UploadTester<?>) session.window().test(upload)).upload(fileName, mimeType, content);
                 session.window().roundTrip();
             });
+        }
+    }
+
+    record MessageInputAccessImpl(BrowserlessSession session, MessageInput input) implements MessageInputAccess {
+        @Override
+        public void send(String text) {
+            session.act(() -> {
+                ((MessageInputTester<?>) session.window().test(input)).send(text);
+                session.window().roundTrip();
+            });
+        }
+    }
+
+    record MessageListAccessImpl(MessageList list) implements MessageListAccess {
+        @Override
+        public List<UnifiedMessageList.Message> messages() {
+            return list.getItems().stream()
+                    .map(item -> new UnifiedMessageList.Message(item.getUserName(), item.getText())).toList();
         }
     }
 }

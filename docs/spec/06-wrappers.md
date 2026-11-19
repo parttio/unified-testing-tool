@@ -17,6 +17,7 @@ One component per interaction pattern. Every other component follows the same pa
 | Overlays | `UnifiedDialog`, `UnifiedNotification` | implemented |
 | Disclosure | `UnifiedDetails` | implemented: `open()`, `close()`, `content()` Scope |
 | Files | `UnifiedUpload` | implemented: `upload(name, type, bytes)` waits until the server has the file |
+| Chat | `UnifiedMessageInput`, `UnifiedMessageList` | implemented: `send(text)` types and submits as a user does; a message's text is the one the application gave it (the Markdown source, not the rendered text), so every Testing Tool reads the same; `hasMessageCount(n)` and `hasMessageContaining(..)` wait for a reply ([#357](https://github.com/parttio/unified-testing-tool/issues/357)) |
 | Data | `UnifiedGrid` | in the sketch: [07-grid.md](07-grid.md) |
 | Navigation | `UnifiedTabSheet`, `UnifiedTabs` | implemented: `selectTab(name)`, `getSelectedTab()`; a tab's name is its Item Name (the text of a tab holding a `RouterLink`); a TabSheet's `content()` Scope follows the selected tab |
 | (layouts, for scoping) | `UnifiedContainer` | implemented: any component, found by test id or id |

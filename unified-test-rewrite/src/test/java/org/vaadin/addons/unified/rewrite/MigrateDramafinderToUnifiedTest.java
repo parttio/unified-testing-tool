@@ -2,7 +2,13 @@ package org.vaadin.addons.unified.rewrite;
 
 import static org.openrewrite.java.Assertions.java;
 
+import java.io.ByteArrayInputStream;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
+import org.openrewrite.Recipe;
+import org.openrewrite.config.YamlResourceLoader;
 import org.openrewrite.config.Environment;
 import org.openrewrite.java.JavaParser;
 import org.openrewrite.test.RecipeSpec;
@@ -27,6 +33,32 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
         spec.recipe(Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite").build()
                         .activateRecipes("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified"))
                 .parser(JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath()));
+    }
+
+    /** A recipe declared in a project's {@code rewrite.yml}, found with this jar's recipes as the plugins find it. */
+    private static Recipe projectRecipe(String yaml, String name) {
+        return Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite")
+                .load(new YamlResourceLoader(new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)),
+                        URI.create("rewrite.yml"), new Properties()))
+                .build().activateRecipes(name);
+    }
+
+    @Test
+    void addAgentSkillSetInAProjectsCompositeRecipeWritesTheMigrationMarkersSkill() {
+        // issue #353: OpenRewrite builds a recipe from its options by constructor parameter name
+        rewriteRun(
+                spec -> spec.recipe(projectRecipe("""
+                        type: specs.openrewrite.org/v1beta/recipe
+                        name: com.example.MigrateToUnified
+                        displayName: Migrate to Unified
+                        description: The options as a project sets them.
+                        recipeList:
+                          - org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified:
+                              addAgentSkill: true
+                        """, "com.example.MigrateToUnified")),
+                java(VIEW),
+                org.openrewrite.test.SourceSpecs.text(null, AddMigrationMarkersSkill.skill(),
+                        source -> source.path(AddMigrationMarkersSkill.PATH)));
     }
 
     @Test

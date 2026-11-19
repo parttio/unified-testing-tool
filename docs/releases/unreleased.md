@@ -106,11 +106,25 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   ```java
   assertThat(page).isAt(ProfileView.class).hasTitle("Profile");
   ```
+- **Wrappers for a chat** ([#357](https://github.com/parttio/unified-testing-tool/issues/357)):
+  `UnifiedMessageInput` and `UnifiedMessageList`, for apps built on Vaadin's AI components. `send(text)` types and
+  submits a message; the list's `getMessages()` reads each message's user name and text, the text the application
+  gave it (the Markdown source), the same on every Testing Tool. Its checks wait for a reply:
+  ```java
+  page.find(UnifiedMessageInput.class).send("Pancakes");
+  assertThat(page.find(UnifiedMessageList.class)).hasMessageCount(3).hasMessageContaining("Pancakes");
+  ```
+  See [Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat).
 - **For agents** ([#319](https://github.com/parttio/unified-testing-tool/pull/319)): the `unified-test-api` jar
   ships [`META-INF/unified/api-reference.md`](https://parttio.github.io/unified-testing-tool/api-reference/), every
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
   [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown and the guide in
   one file.
+- **Retrying assertions for a grid's columns** ([#359](https://github.com/parttio/unified-testing-tool/issues/359)):
+  `assertThat(grid).hasColumn("Cooked times")`, `doesNotHaveColumn(..)` and `hasColumnHeaders(..)`, for a column
+  the application adds or removes while the test runs. They replace `page.waitUntil(() ->
+  grid.getColumnHeaders().contains(..))`, a gap in the reports, and fail with the headers the grid has. See
+  [Columns](https://parttio.github.io/unified-testing-tool/guide/grid/#columns).
 
 ## New settings
 
@@ -129,6 +143,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - In a browser, a failure with several matches outside any container named Flow's root as their container,
   `in container (id “ROOT-2521314”)`, an id that changes on every page load and tells none of them apart
   ([#334](https://github.com/parttio/unified-testing-tool/issues/334)). It now reads as on Browserless.
+- The Migration Recipes ignored the options a project's `rewrite.yml` set: `addAgentSkill`, the adapters,
+  `includePageObjects` ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). OpenRewrite matches
+  options to a recipe's constructor parameters by name, and `unified-test-rewrite` was compiled without the names,
+  so the recipe ran with its defaults and said nothing. It is now compiled with `-parameters`.
 
 ## Known limitations
 
