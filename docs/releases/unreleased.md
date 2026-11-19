@@ -30,6 +30,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - **Chrome on Selenium is started with a logging capability**
   ([#315](https://github.com/parttio/unified-testing-tool/pull/315)), and its console is read after every User
   Step.
+- **A failed test writes one more evidence file**, `<test>.view.txt`, the Findable View below, and the failure's
+  `Failure evidence` line names it. Writing it makes about 20 lookups, on failure only. It is written even when
+  the screenshot can't be.
+- **`Scope` has a new method, `describe()`.** The Unified API implements it for the page and for every Wrapper
+  that is a Scope, custom ones included. Only a class of your own that implements `Scope` must add it.
 - **Adapters:** `AdapterSession` has a new method with a default, `consoleErrors()`. An adapter outside this
   repository keeps compiling.
 
@@ -75,6 +80,15 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `unified-test-rewrite`: after a failed run, it writes each failure's `Did you mean` into the test.
   `withLabel("Email")` becomes `withLabel("E-mail")`. No model, nothing at test time: a diff to review. See
   [Applying it](https://parttio.github.io/unified-testing-tool/guide/reports-and-failures/#applying-it).
+- **The Findable View** ([#204](https://github.com/parttio/unified-testing-tool/issues/204)): `page.describe()`,
+  or `describe()` on a dialog or any other Scope, lists what a test can find there, one line each, with the lookup
+  that singles it out. It reads the same on every Testing Tool, and a failed test writes the page's view next to
+  its evidence. See [What is there to find?](https://parttio.github.io/unified-testing-tool/guide/finding-components/#what-is-there-to-find)
+  ```text
+  text field “Name” = “Alan Turing”    page.find(UnifiedTextField.class).withLabel("Name")
+  button “Archive” (disabled)          page.find(UnifiedButton.class).withText("Archive")
+  button “Delete account”              page.find(UnifiedButton.class).withAccessibleName("Delete account")
+  ```
 - **For agents** ([#319](https://github.com/parttio/unified-testing-tool/pull/319)): the `unified-test-api` jar
   ships [`META-INF/unified/api-reference.md`](https://parttio.github.io/unified-testing-tool/api-reference/), every
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
@@ -108,5 +122,7 @@ Those of [0.1.0-alpha3](0.1.0-alpha3.md), and:
   assertion follows.
 - The comparison with another Testing Tool doesn't say whether a difference is a documented Limitation
   ([#310](https://github.com/parttio/unified-testing-tool/issues/310)).
-- The `write-unified-ui-tests` skill names the API reference but none of the other additions, and its evaluation
-  was not rerun after that change.
+- The `write-unified-ui-tests` skill names the API reference and the Findable View but none of the other
+  additions, and its evaluation was not rerun after those changes.
+- The Findable View lists components grouped by Wrapper type, not in the order of the page. On Browserless,
+  `find(..)` on a Scope also finds the Scope itself, which a browser doesn't; the view leaves it out.

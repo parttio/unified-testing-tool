@@ -122,6 +122,24 @@ A component that is there but can't be used:
   Found         1, but disabled
 ```
 
+### The Findable View
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+Next to the screenshot or the component tree, a failed test writes `<test class>.<method>.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Failure evidence` line names it.
+
+```
+Findable view of “/checkout” on playwright (chromium): 6 components
+text field “Street”  page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("Street")
+text field “City”    page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("City")
+text field “Street”  page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("Street")
+text field “City”    page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("City")
+button “Save”        page.find(UnifiedButton.class).withText("Save")
+button “Cancel”      page.find(UnifiedButton.class).withText("Cancel")
+```
+
+When `Did you mean` has nothing to say, look for the component here. The same view is `page.describe()` in a test ([Finding components](finding-components.md#what-is-there-to-find)).
+
 ### In code
 
 The parts are getters on `UnifiedAssertionError`, for a test that checks a failure with `assertThrows`: `getSummary()`, `getScenario()`, `getFailedStep()`, `getStepChain()`, `getExpected()`, `getFound()`, `getNearMisses()`, `getSuggestion()`, `getWaited()`, `getTool()`, `getCodePath()`, `getEvidenceDir()`.
