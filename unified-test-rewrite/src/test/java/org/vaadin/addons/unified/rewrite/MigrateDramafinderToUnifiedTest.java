@@ -98,6 +98,59 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                 """));
     }
 
+
+    /** A chat: MessageInputElement and MessageListElement (#357). */
+    @Test
+    void chatElementsBecomeTheUnifiedMessageInputAndList() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import static org.vaadin.addons.dramafinder.element.query.ElementQueries.find;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.MessageInputElement;
+                import org.vaadin.addons.dramafinder.element.MessageListElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class ChatTest extends SpringPlaywrightIT {
+                    @Test
+                    void asks() {
+                        navigate(PeopleView.class);
+                        MessageListElement messages = MessageListElement.get(page);
+                        messages.assertEmpty();
+                        MessageInputElement.get(page).typeAndSubmit("Pancakes");
+                        messages.assertMessageCount(2);
+                        find(page, MessageInputElement.class).withTestId("chat").single().assertEnabled();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+                        assertThat(messages).isEmpty();
+                        page.find(UnifiedMessageInput.class).send("Pancakes");
+                        assertThat(messages).hasMessageCount(2);
+                        assertThat(page.find(UnifiedMessageInput.class).withTestId("chat")).isEnabled();
+                    }
+                }
+                """));
+    }
+
     @Test
     void springBootTestAndTheToolGuardGo() {
         rewriteRun(java(VIEW), java(
