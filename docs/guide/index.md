@@ -54,15 +54,11 @@ The same test runs in a real browser when the run says so (`-Dvaadin.testing.too
 
 ## For agents
 
-- **In your project:** the `write-unified-ui-tests` skill, installed by the `AddUnifiedTestingSkill` recipe.
+- **In your project:** the `write-unified-ui-tests` skill, installed by the `AddUnifiedTestingSkill` recipe. It writes, fixes and *(unreleased)* reviews Unified UI Tests: ask the agent to review a test, and it applies the checklist of [Reviewing a test](reviewing-tests.md).
 - **In the `unified-test-api` jar *(unreleased)*:** the [API reference](../../unified-test-api/src/main/resources/META-INF/unified/api-reference.md) (`META-INF/unified/api-reference.md`), which is of the version you use and needs no network.
 - **On this site:** [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt) lists every page with a link to it as Markdown, and [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt) holds this guide, the API reference and the glossary in one file.
 - **After a run *(unreleased)*:** `summary.json` says what failed and where each test's files are ([The run as data](reports-and-failures.md#the-run-as-data)).
 
 ## Rules of thumb
 
-- **Find components the way a user does:** by type and label, accessible name or text. Use a test id only when there is nothing the user can read.
-- **Check state with `assertThat`**, not with getters and `assertEquals`: getters don't retry, and in a browser the update may arrive a moment later.
-- **Keep Wrappers, not values.** A Wrapper finds its component again on every call, so it never goes stale: declare a field's Wrapper once, use it for the whole test.
-- **Name the scenario and the user's work:** `@DisplayName` with a sentence, `page.step(..)` around a piece of user work ([Structuring a scenario](structuring-a-scenario.md)).
-- **Never name a Testing Tool in a test**, unless it needs one ([When a test needs one Testing Tool](tool-specific.md)).
+--8<-- "docs/snippets/rules-of-thumb.md"

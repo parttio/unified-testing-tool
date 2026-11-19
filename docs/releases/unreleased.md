@@ -157,6 +157,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
   [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown and the guide in
   one file.
+- **The agent skill reviews tests** ([#410](https://github.com/parttio/unified-testing-tool/issues/410)):
+  `write-unified-ui-tests` has a "Review a test" section. Asked to review a test or a pull request's tests, an agent
+  compares the scenario with the test's User Steps, the code with the canonical forms, runs it twice on two Testing
+  Tools, checks what a change made to pass took away, and reports without changing the code. For people, the same
+  checklist is the guide's [Reviewing a test](../guide/reviewing-tests.md).
 - **`click()` on `UnifiedDiv`, `UnifiedSpan`, `UnifiedContainer` and the other plain HTML Wrappers**
   ([#358](https://github.com/parttio/unified-testing-tool/issues/358)): a `Div` or `Span` with a click listener,
   such as a navigation tab, or a layout such as a card, is clicked like a button, where a test used to write

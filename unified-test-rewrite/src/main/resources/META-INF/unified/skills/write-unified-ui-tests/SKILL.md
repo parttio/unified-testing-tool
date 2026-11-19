@@ -1,6 +1,6 @@
 ---
 name: write-unified-ui-tests
-description: Write, change or fix Unified UI Tests (Vaadin tests that take a UnifiedPage and use Unified* Wrappers), including reading a UnifiedAssertionError when one fails.
+description: Write, change, fix or review Unified UI Tests (Vaadin tests that take a UnifiedPage and use Unified* Wrappers), including reading a UnifiedAssertionError when one fails.
 ---
 <!-- unified-test-skill: write-unified-ui-tests ${project.version} -->
 
@@ -156,6 +156,35 @@ Decide who is wrong before changing anything:
 - **The application is wrong** when the scenario you were given says the user should see something else (the
   notification, a saved value, a row): stop and report the failure's `Expected` and `Found` to the person who asked,
   with the view code involved. Change the expectation only when they confirm the new behaviour is intended.
+
+## Review a test
+
+When asked to review a Unified UI Test that you didn't write, or the tests of a pull request, report what you find;
+change nothing unless asked. A test you wrote yourself gets the same review before you report it.
+
+1. **The scenario.** Read what the test was written for: the request, the ticket, or else its `@DisplayName`. Then
+   read its `user-steps.txt`; when there is none, run the test on Browserless first. Compare them as in "Prove it":
+   every action, in order, on the component named, and every outcome a `see` line after the action that causes it.
+   Flag a `@DisplayName` that says something the steps don't do, and a test that ends on an action with no check.
+2. **The code**, against the canonical forms. Flag:
+   - a lookup by test id, id, class name or CSS where the user reads a label, a text or a name;
+   - `all().get(..)`, or any pick by position;
+   - a getter with `assertEquals`, `assertTrue` or AssertJ where `assertThat(wrapper)` has the check;
+   - `Thread.sleep(..)`, a Testing Tool's own wait, or a `withTimeout(..)` or run timeout raised without a comment
+     that says what is slow;
+   - an Escape Hatch without `@RequiresTestingTool` and a comment saying why, including one in a `…Tasks` class or
+     a page object, which the style rules don't follow;
+   - the same user work copied into several tests instead of one User Task.
+3. **The runs.** Run it on Browserless and on Playwright, and the style rules, as in "Prove it". Run it a second
+   time before trusting a test that passed once.
+4. **A test changed to make it pass.** Read what it checked before: `git diff`, or the run summary's User Steps
+   diff against the base run. Flag a removed `see` line, a weaker check (`hasText` to `hasTextContaining`, a value
+   check dropped), an added sleep or longer timeout, and a change to the view or service that makes the application
+   fit the test. A changed lookup is right only when the view changed on purpose in the same change.
+
+Report each finding with its file and line, what is wrong, and the canonical form to use instead; then the
+scenario's actions and outcomes that have no User Step. The same checklist, for people, is in the
+[guide](https://parttio.github.io/unified-testing-tool/guide/reviewing-tests/).
 
 ## The Escape Hatch
 

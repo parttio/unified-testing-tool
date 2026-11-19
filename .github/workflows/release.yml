@@ -21,7 +21,8 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+          # no Maven cache: what goes to Maven Central is built from plugins and dependencies fetched for this
+          # run, not from a cache other workflow runs wrote
           server-id: central
           server-username: CENTRAL_U
           server-password: CENTRAL_T

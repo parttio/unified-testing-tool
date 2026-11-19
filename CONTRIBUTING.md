@@ -53,6 +53,8 @@ void savesName(UnifiedPage page) { ... }
 
 A short example that the demo app can't run, because it shows buttons or views the demo doesn't have, goes in [`GuideExamples`](unified-test-demo/src/test/java/demo/GuideExamples.java) instead: CI compiles it but doesn't run it, so an API change still breaks the build rather than the guide.
 
+The guide's rules of thumb are in `docs/snippets/rules-of-thumb.md`, included by the guide overview and written at the top of `llms.txt` by `scripts/llms_txt.py`. Change them there, and keep the `write-unified-ui-tests` skill in line with them.
+
 Write an example inline only when it can't compile: a signature, a class skeleton, or a mistake to avoid.
 
 ### What is unreleased

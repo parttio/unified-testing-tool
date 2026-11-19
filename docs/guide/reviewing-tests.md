@@ -76,6 +76,8 @@ An agent following the `write-unified-ui-tests` skill reports the test's `@Displ
 4. **Read the diff with the checklist above.** Look for changes outside the tests: an agent asked to make a test pass may have changed the application instead.
 5. **For a test the agent fixed**, read [When a test was changed to pass](#when-a-test-was-changed-to-pass). A fix that adds a sleep, raises a timeout or drops a check is not a fix.
 
+An agent can do the same review *(unreleased)*: ask one that has the `write-unified-ui-tests` skill to review a test or a pull request's tests. It follows this checklist and reports its findings without changing the code.
+
 ## What the tools check, and what they don't
 
 | Checked for you | By |
