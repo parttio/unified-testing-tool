@@ -123,6 +123,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - In a browser, a failure with several matches outside any container named Flow's root as their container,
   `in container (id “ROOT-2521314”)`, an id that changes on every page load and tells none of them apart
   ([#334](https://github.com/parttio/unified-testing-tool/issues/334)). It now reads as on Browserless.
+- The Migration Recipes ignored the options a project's `rewrite.yml` set: `addAgentSkill`, the adapters,
+  `includePageObjects` ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). OpenRewrite matches
+  options to a recipe's constructor parameters by name, and `unified-test-rewrite` was compiled without the names,
+  so the recipe ran with its defaults and said nothing. It is now compiled with `-parameters`.
 
 ## Known limitations
 
