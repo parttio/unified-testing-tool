@@ -52,8 +52,13 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
     }
 
     private static String pom(boolean unifiedBom, String dependencies) {
+        return pom("", unifiedBom, dependencies);
+    }
+
+    /** {@code head}: what the recipe adds at the top of the project, such as a Migration Marker. */
+    private static String pom(String head, boolean unifiedBom, String dependencies) {
         return """
-                <project>
+                <project>%s
                     <modelVersion>4.0.0</modelVersion>
                     <groupId>com.example</groupId>
                     <artifactId>app</artifactId>
@@ -61,7 +66,7 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
                 %s    <dependencies>
                 %s    </dependencies>
                 </project>
-                """.formatted(MANAGED.formatted(unifiedBom ? "\n" + UNIFIED_BOM.formatted(UNIFIED_VERSION).stripTrailing() : ""),
+                """.formatted(head, MANAGED.formatted(unifiedBom ? "\n" + UNIFIED_BOM.formatted(UNIFIED_VERSION).stripTrailing() : ""),
                 dependencies);
     }
 
@@ -119,5 +124,14 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
     @Test
     void projectWithoutBrowserlessIsLeftAlone() {
         rewriteRun(pomXml(pom(false, dependency("org.springframework.boot", "spring-boot-starter-test", null))));
+    }
+
+    @Test
+    void olderVaadinIsMigratedWithAMarkerAtTheTop() {
+        String before = pom(false, dependency("com.vaadin", "browserless-test-junit6", "1.1.0")).replace("25.3.5", "25.2.0");
+        String after = pom("\n    <!-- TODO unified: the Unified API needs Vaadin 25.3 or newer, and this project has Vaadin 25.2"
+                + " (Flow 25.2.0). Move it to Vaadin 25.3 or newer: until then the migrated tests fail when they run. -->",
+                true, unified("unified-test-browserless")).replace("25.3.5", "25.2.0");
+        rewriteRun(spec -> spec.expectedCyclesThatMakeChanges(1), pomXml(before, after));
     }
 }

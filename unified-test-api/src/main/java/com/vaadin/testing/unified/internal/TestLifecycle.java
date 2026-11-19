@@ -74,8 +74,11 @@ public final class TestLifecycle {
     /**
      * Whether the test runs on this run's Testing Tool, from its Capabilities ({@link RequiresTestingTool},
      * {@link RequiresBrowser}) on {@code element} (a test method or class) or else on {@code testClass}.
+     * Throws {@link IllegalStateException} when the test's Vaadin is older than the Unified API needs: this runs
+     * before anything else of the test, a Spring context included, so that failure comes first.
      */
     public Decision decide(AnnotatedElement element, Class<?> testClass) {
+        VaadinVersionCheck.check();
         TestingTool tool = settings.tool();
         Optional<RequiresTestingTool> requiredTool = find(element, testClass, RequiresTestingTool.class);
         if (requiredTool.isPresent() && Arrays.stream(requiredTool.get().value()).noneMatch(t -> t == tool)) {
