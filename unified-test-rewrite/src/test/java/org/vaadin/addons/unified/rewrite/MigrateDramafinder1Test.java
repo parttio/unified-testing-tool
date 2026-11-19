@@ -247,41 +247,100 @@ class MigrateDramafinder1Test implements RewriteTest {
     }
 
     @Test
-    void aTestUsingAFieldOfTheCopiedBaseStaysAndSaysWhy() {
+    void theCopiedBasesFieldsLifecycleAndHelpersMoveIntoEachTestAndTheCopyGoes() {
         rewriteRun(
                 pomXml(pom("2.0.2"), pom(null)),
                 java("""
-                        package com.example;
+                        package com.example.ai;
 
-                        import org.springframework.boot.test.context.SpringBootTest;
-                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+                        public class TestChatModel {
+                            public void reset() {
+                            }
 
-                        @SpringBootTest
-                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
-                            protected String chatModel;
+                            public void reply(String text) {
+                            }
                         }
                         """),
                 java("""
                         package com.example;
 
+                        import com.example.ai.TestChatModel;
+                        import org.junit.jupiter.api.BeforeEach;
+                        import org.springframework.beans.factory.annotation.Autowired;
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.springframework.boot.test.web.server.LocalServerPort;
+                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+                        import org.vaadin.addons.dramafinder.element.ButtonElement;
+
+                        @SpringBootTest
+                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                            @LocalServerPort
+                            private int port;
+
+                            @Autowired
+                            protected TestChatModel chatModel;
+
+                            @Override
+                            public String getUrl() {
+                                return "http://localhost:" + port + "/";
+                            }
+
+                            @BeforeEach
+                            void resetChatModel() {
+                                chatModel.reset();
+                            }
+
+                            protected void clickSave() {
+                                ButtonElement.getByText(page, "Save").click();
+                            }
+
+                            protected void unused() {
+                            }
+                        }
+                        """, (String) null),
+                java("""
+                        package com.example;
+
                         import org.junit.jupiter.api.Test;
 
                         class ChatTest extends SpringPlaywrightIT {
                             @Test
                             void answers() {
-                                chatModel = "stub";
+                                chatModel.reply("Pancakes");
+                                clickSave();
                             }
                         }
                         """, """
                         package com.example;
 
+                        import com.example.ai.TestChatModel;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                        import org.junit.jupiter.api.BeforeEach;
                         import org.junit.jupiter.api.Test;
+                        import org.springframework.beans.factory.annotation.Autowired;
 
-                        // TODO unified: not migrated: uses chatModel of SpringPlaywrightIT; convert them by hand, then run the migration again
-                        class ChatTest extends SpringPlaywrightIT {
+                        @UnifiedSpringBootTest
+                        class ChatTest {
+
+                            @Autowired
+                            protected TestChatModel chatModel;
+
+                            @BeforeEach
+                            void resetChatModel() {
+                                chatModel.reset();
+                            }
+
+                            protected void clickSave(UnifiedPage page) {
+                                page.find(UnifiedButton.class).withText("Save").click();
+                            }
+
                             @Test
-                            void answers() {
-                                chatModel = "stub";
+                            void answers(UnifiedPage page) {
+                                page.navigate("");
+                                chatModel.reply("Pancakes");
+                                clickSave(page);
                             }
                         }
                         """),
@@ -292,7 +351,19 @@ class MigrateDramafinder1Test implements RewriteTest {
     void aCopiedBaseATestStillExtendsStays() {
         rewriteRun(
                 pomXml(pom("1.2.4"), pom(null)),
-                java(COPIED_BASE),
+                java("""
+                        package com.example;
+
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                        @SpringBootTest
+                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                            protected void loginAsAdmin() {
+                                getBrowser();
+                            }
+                        }
+                        """),
                 java("""
                         package com.example;
 
@@ -309,11 +380,52 @@ class MigrateDramafinder1Test implements RewriteTest {
 
                         import org.junit.jupiter.api.Test;
 
-                        // TODO unified: not migrated: calls loginAsAdmin() of SpringPlaywrightIT; convert them by hand, then run the migration again
+                        // TODO unified: not migrated: calls getBrowser() of AbstractBasePlaywrightIT in loginAsAdmin() of SpringPlaywrightIT; convert them by hand, then run the migration again
                         class AdminTest extends SpringPlaywrightIT {
                             @Test
                             void opensAsAdmin() {
                                 loginAsAdmin();
+                            }
+                        }
+                        """),
+                InstalledSkill.files());
+    }
+
+    @Test
+    void anExtensionOfTheCopyReadingThePageKeepsItsTestsAndSaysWhy() {
+        rewriteRun(
+                pomXml(pom("2.0.2"), pom(null)),
+                java("""
+                        package com.example;
+
+                        import org.junit.jupiter.api.extension.ExtensionContext;
+                        import org.junit.jupiter.api.extension.RegisterExtension;
+                        import org.junit.jupiter.api.extension.TestWatcher;
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                        @SpringBootTest
+                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                            @RegisterExtension
+                            TestWatcher screenshots = new TestWatcher() {
+                                @Override
+                                public void testFailed(ExtensionContext context, Throwable cause) {
+                                    page.screenshot();
+                                }
+                            };
+                        }
+                        """),
+                java(TEST, """
+                        package com.example;
+
+                        import org.junit.jupiter.api.Test;
+                        import org.vaadin.addons.dramafinder.element.ButtonElement;
+
+                        // TODO unified: not migrated: uses screenshots of SpringPlaywrightIT, which uses the test base; convert them by hand, then run the migration again
+                        class PeopleTest extends SpringPlaywrightIT {
+                            @Test
+                            void saves() {
+                                ButtonElement.getByText(page, "Save").click();
                             }
                         }
                         """),

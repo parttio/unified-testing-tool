@@ -1,6 +1,8 @@
 package org.vaadin.addons.unified.rewrite;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.ScanningRecipe;
@@ -16,7 +18,7 @@ import org.openrewrite.java.tree.TypeUtils;
  * template) once the migration leaves nothing extending it: every test that extended it was migrated (ADR 0006).
  * A copy one test still extends, because it uses a member no rule converts, stays.
  */
-public class DramafinderCopiedBaseRemoved extends ScanningRecipe<Map<String, Boolean>> {
+public class DramafinderCopiedBaseRemoved extends ScanningRecipe<Map<String, List<J.ClassDeclaration>>> {
 
     @Override
     public String getDisplayName() {
@@ -28,22 +30,22 @@ public class DramafinderCopiedBaseRemoved extends ScanningRecipe<Map<String, Boo
         return "Deletes a project's copy of Dramafinder's `SpringPlaywrightIT` when every test extending it was migrated.";
     }
 
-    /** For each copy's name: whether every test extending it migrates. */
+    /** For each copy's name: the tests extending it. */
     @Override
-    public Map<String, Boolean> getInitialValue(ExecutionContext ctx) {
+    public Map<String, List<J.ClassDeclaration>> getInitialValue(ExecutionContext ctx) {
         return new HashMap<>();
     }
 
     @Override
-    public TreeVisitor<?, ExecutionContext> getScanner(Map<String, Boolean> copies) {
+    public TreeVisitor<?, ExecutionContext> getScanner(Map<String, List<J.ClassDeclaration>> extending) {
         return new JavaIsoVisitor<>() {
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
                 JavaType.FullyQualified parent = classDecl.getExtends() == null ? null
                         : TypeUtils.asFullyQualified(classDecl.getExtends().getType());
+                DramafinderCopies.collect(classDecl, ctx);
                 if (parent != null && Dramafinder.isCopiedSpringBase(parent)) {
-                    boolean migrates = Dramafinder.isDramafinderClass(classDecl) && Dramafinder.migratable(classDecl);
-                    copies.merge(parent.getFullyQualifiedName(), migrates, Boolean::logicalAnd);
+                    extending.computeIfAbsent(parent.getFullyQualifiedName(), k -> new ArrayList<>()).add(classDecl);
                 }
                 return super.visitClassDeclaration(classDecl, ctx);
             }
@@ -51,13 +53,16 @@ public class DramafinderCopiedBaseRemoved extends ScanningRecipe<Map<String, Boo
     }
 
     @Override
-    public TreeVisitor<?, ExecutionContext> getVisitor(Map<String, Boolean> copies) {
+    public TreeVisitor<?, ExecutionContext> getVisitor(Map<String, List<J.ClassDeclaration>> extending) {
         return new JavaIsoVisitor<>() {
             @Override
             public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext ctx) {
                 if (cu.getClasses().size() == 1 && cu.getClasses().get(0).getType() != null) {
                     JavaType.FullyQualified type = cu.getClasses().get(0).getType();
-                    if (Dramafinder.isCopiedSpringBase(type) && Boolean.TRUE.equals(copies.get(type.getFullyQualifiedName()))) {
+                    // whether every test extending it migrates: decided once the scanners have seen every copy
+                    List<J.ClassDeclaration> tests = extending.get(type.getFullyQualifiedName());
+                    if (Dramafinder.isCopiedSpringBase(type) && tests != null && tests.stream().allMatch(t ->
+                            Dramafinder.isDramafinderClass(t) && Dramafinder.migratable(t, DramafinderCopies.of(ctx)))) {
                         //noinspection DataFlowIssue: a null source file is deleted
                         return null;
                     }
