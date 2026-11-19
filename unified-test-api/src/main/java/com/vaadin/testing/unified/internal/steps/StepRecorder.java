@@ -183,6 +183,8 @@ public final class StepRecorder {
     private final Group root = new Group(null, "", null, null);
     private final Deque<Group> open = new ArrayDeque<>();
     private final Set<String> secrets = new LinkedHashSet<>();
+    /** The Wrapper types the test has looked up, in order: the custom ones show in its Findable View. */
+    private final Set<Class<?>> wrapperTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private final Instant startedAt = Instant.now();
     private final long start = System.nanoTime();
     private int steps;
@@ -642,6 +644,38 @@ public final class StepRecorder {
     /** Whether a Unified API call is running on this thread. */
     public boolean inFrame() {
         return frame.get() != null;
+    }
+
+    // ---------------------------------------------------------------- Wrapper types
+
+    /**
+     * Runs reads that are not the test's own, such as the Findable View's: no User Step, and not counted as the
+     * test's reads, even when they call a Wrapper's getters.
+     */
+    public <T> T unrecorded(Supplier<T> reads) {
+        if (frame.get() != null) {
+            return reads.get();
+        }
+        Frame f = new Frame();
+        f.step = true;
+        frame.set(f);
+        try {
+            return reads.get();
+        } finally {
+            frame.remove();
+        }
+    }
+
+    /** A lookup of this Wrapper type started, in any window of the test. */
+    public void wrapperUsed(Class<?> wrapperType) {
+        wrapperTypes.add(wrapperType);
+    }
+
+    /** The Wrapper types the test has looked up so far, in the order of their first lookup. */
+    public List<Class<?>> wrapperTypes() {
+        synchronized (wrapperTypes) {
+            return List.copyOf(wrapperTypes);
+        }
     }
 
     // ---------------------------------------------------------------- secrets and windows

@@ -59,4 +59,14 @@ class CheckoutTest {
                 .find(UnifiedButton.class)).doesNotExist();
     }
     // --8<-- [end:containersNest]
+
+    @Test
+    @DisplayName("A search inside a section finds what is in it, not the section itself")
+    void aSearchInsideAContainerLeavesTheContainerOut(UnifiedPage page) {
+        page.navigate(CheckoutView.class);
+        UnifiedContainer billing = page.find(UnifiedContainer.class).withTestId("billing");
+
+        assertThat(billing.find(UnifiedContainer.class).withTestId("billing")).doesNotExist();
+        assertThat(billing.find(UnifiedTextField.class).withLabel("City")).exists();
+    }
 }

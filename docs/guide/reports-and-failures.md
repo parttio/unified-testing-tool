@@ -14,26 +14,7 @@ Every Wrapper action and every retrying assertion is recorded as a **User Step**
 The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
 
 ```java
-@Test
-@DisplayName("Changing a person's email updates the grid")
-void changesTheEmail(UnifiedPage page) {
-    // given
-    page.navigate(PeopleView.class);
-
-    // when
-    changeEmail(page, "Alan Turing", "alan@bletchley.uk");
-
-    // then
-    assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan Turing");
-}
-
-private static void changeEmail(UnifiedPage page, String name, String email) {
-    page.step("Change the email of " + name, () -> {
-        page.find(UnifiedGrid.class).row().withCellText("Name", name).click();
-        page.find(UnifiedTextField.class).withLabel("E-mail").setValue(email);
-        page.find(UnifiedButton.class).withText("Save").click();
-    });
-}
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:changesTheEmail"
 ```
 
 ## The failure message
@@ -140,6 +121,24 @@ A component that is there but can't be used:
   Expected      a visible and enabled button with text “Save”
   Found         1, but disabled
 ```
+
+### The Findable View
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+Next to the screenshot or the component tree, a failed test writes `<test class>.<method>.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Failure evidence` line names it.
+
+```
+Findable view of “/checkout” on playwright (chromium): 6 components
+text field “Street”  page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("Street")
+text field “City”    page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("City")
+text field “Street”  page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("Street")
+text field “City”    page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("City")
+button “Save”        page.find(UnifiedButton.class).withText("Save")
+button “Cancel”      page.find(UnifiedButton.class).withText("Cancel")
+```
+
+When `Did you mean` has nothing to say, look for the component here. The same view is `page.describe()` in a test ([Finding components](finding-components.md#what-is-there-to-find)).
 
 ### In code
 
@@ -337,6 +336,8 @@ Both runs are of commit `3e74f89`.
 - **Ran on one only:** tests a Capability skipped on the other Testing Tool (`@RequiresBrowser`, `@RequiresTestingTool`). They are counted, not listed.
 
 - **The same code?** A difference only says something about the Testing Tools when both runs tested the same code. Each run records its commit, and a fingerprint of the uncommitted changes to tracked files, and the section says whether they match: `Both runs are of commit …`, or **Not the same code** with what each run is of. Change a file between the two runs and the second one tells you. Without git, or with evidence from an earlier version of the Unified API, it says that it can't tell. Untracked files are not seen.
+
+In CI, where each Testing Tool has its own job, a job after them does the same from their uploaded evidence ([Running in CI](ci-setup.md#comparing-the-testing-tools-runs)).
 
 The first run needs an evidence directory of its own (`vaadin.testing.evidence-dir`), or the second run overwrites it. The section reports; it fails no test. It doesn't say whether a difference is one of the documented ones ([Tool-specific code](tool-specific.md)): read the step it names. `report.html` has the same section, and `summary.json` marks each such scenario with `differsOn`.
 

@@ -1,8 +1,10 @@
 # Unified API for Vaadin UI tests: specification
 
-**Status:** draft, built from the decisions on the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2). Not yet handed off (hand-off is tag `spec-v1`).
+**Status:** draft, built from the decisions on the map [Unified testing API for Vaadin](https://github.com/parttio/unified-testing-tool/issues/2). Not yet handed off (hand-off is tag `spec-v1`).
 
-**Implementation:** a first version is in this repository (see the [repository README](../../README.md)): API, Browserless and Playwright (Dramafinder 2.0) adapters, `@UnifiedSpringBootTest`, Button, TextField and Notification. The demo tests pass unchanged on both Testing Tools.
+**Implementation:** a first version is in this repository (see the [repository README](../../README.md)): API, adapters for all three Testing Tools (Browserless, Playwright on Dramafinder 2.0, Selenium on TestBench), `@UnifiedSpringBootTest`, and Wrappers for the Core Set and more (see the [API reference](../../unified-test-api/src/main/resources/META-INF/unified/api-reference.md)). The demo tests pass unchanged on all three Testing Tools.
+
+**Audience:** this specification says what the Unified API guarantees and why, for those who implement or review it. To write tests, read the [Developer guide](../guide/index.md).
 
 ## Summary
 
@@ -30,7 +32,7 @@ class ProfileViewTest {
 
 ```
 mvn test                                   # Browserless (default)
-mvn verify -Dvaadin.testing.tool=playwright
+mvn test -Dvaadin.testing.tool=playwright
 ```
 
 The Unified API is a **facade with Escape Hatches**: one API for what the three tools share, and a typed way out to each tool for the rest.

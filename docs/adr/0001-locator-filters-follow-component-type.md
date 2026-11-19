@@ -16,4 +16,4 @@ A Unified API query offers only the filters that make sense for its wrapper type
 - Migrating TestBench tests needs `$(ButtonElement.class).withLabel(..)` and `withCaption(..)` calls rewritten to `withText` or `withAccessibleName`.
 - Each wrapper type declares its filter set, so a custom wrapper for an add-on component must declare which filters it supports.
 
-Decided in "How does a test locate a component?" (jcgueriaud1/unified-testing-tool#7).
+Decided in "How does a test locate a component?" ([#7](https://github.com/parttio/unified-testing-tool/issues/7)).

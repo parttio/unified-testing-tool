@@ -19,4 +19,20 @@ public interface Scope {
      * {@link UnifiedGenericComponent} with the shared filters.
      */
     <C extends Component> UnifiedGenericComponent findComponent(Class<C> componentType);
+
+    /**
+     * The Findable View: the components a test can find in here as they are now, one line each, with the lookup
+     * that singles each out. For a person or an agent writing the next lookup; print it, don't assert on it.
+     *
+     * <pre>{@code
+     * System.out.println(page.describe());
+     * // text field “Name” = “Alan Turing”     page.find(UnifiedTextField.class).withLabel("Name")
+     * // button “Save” (disabled)              page.find(UnifiedButton.class).withText("Save")
+     * }</pre>
+     *
+     * Lists the Wrappers of the Unified API and the custom Wrappers the test has looked up; not a User Step.
+     * Values marked {@link UnifiedPage#secret} show as {@code ••••}. On a container, waits as any use of it does,
+     * and its lookups are on the container.
+     */
+    String describe();
 }

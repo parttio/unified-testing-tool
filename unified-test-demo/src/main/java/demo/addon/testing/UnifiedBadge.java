@@ -11,6 +11,7 @@ import demo.addon.Badge;
  * Reads the count from the text the browser shows. Browserless runs no client-side JavaScript, so the badge
  * has no text there: {@link UnifiedBadgeBrowserless} reads the Java API instead.
  */
+// --8<-- [start:badge]
 @UnifiedComponent(value = Badge.class,
         overrides = @ToolImplementation(tool = TestingTool.BROWSERLESS, value = UnifiedBadgeBrowserless.class))
 public interface UnifiedBadge extends UnifiedWrapper, CommonFilters<UnifiedBadge> {
@@ -21,3 +22,4 @@ public interface UnifiedBadge extends UnifiedWrapper, CommonFilters<UnifiedBadge
         return text.isEmpty() ? 0 : Integer.parseInt(text.split(" ")[0]);
     }
 }
+// --8<-- [end:badge]

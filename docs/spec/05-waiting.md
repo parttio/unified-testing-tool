@@ -1,6 +1,6 @@
 # 5. Waiting
 
-Decided in [#8](https://github.com/jcgueriaud1/unified-testing-tool/issues/8); lookups and checks as in [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). Term: **Auto-Wait**.
+Decided in [#8](https://github.com/parttio/unified-testing-tool/issues/8); lookups and checks as in [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). Term: **Auto-Wait**.
 
 ## Auto-Wait
 

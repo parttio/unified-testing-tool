@@ -11,6 +11,7 @@ The Unified API needs no CI plugin. When the tests have run, it writes its repor
 | The summary on the GitHub job's page | GitHub Actions: nothing |
 | **Changed in this PR** in the summary | the git history and the base branch in the checkout |
 | How each changed scenario's User Steps differ from the base branch's | the base branch's evidence artifact, downloaded |
+| Where the Testing Tools' runs differ *(unreleased)* | a job after the others, with `CompareRuns` ([below](#comparing-the-testing-tools-runs)) |
 | Every test's User Steps and failure screenshots after the build | an artifact upload of the evidence directory |
 
 ## GitHub Actions
@@ -126,6 +127,37 @@ What each part does:
 - **The base branch's User Steps.** In a pull request, the job downloads the evidence artifact its Testing Tool's job uploaded in the base branch's last finished push run (skipping runs without one, such as cancelled runs), and `vaadin.testing.user-steps.baseline-dir` points the run summary at it. Each changed scenario then shows how its User Steps differ, as a diff. The download needs `actions: read`; when it finds nothing, for example after the artifact expired, the summary says so in one line and shows the steps in full. On a push the directory isn't there and isn't read: the diff is only in **Changed in this PR**.
 - **The evidence artifact.** `target/surefire-reports/unified-evidence/` holds `summary.md`, `report.html` and `summary.json`, and for every test, passed or failed, its `user-steps.txt` and `user-steps.json`, plus a screenshot (browsers) or the component tree (Browserless) when it failed. `if: always()` keeps it when the build passes too. A reviewer downloads it from the run's page, unzips it and opens `report.html`; an agent reads `summary.json`, then the `user-steps.json` of the scenarios it names.
 
+### Comparing the Testing Tools' runs
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+With a job per Testing Tool, the jobs run side by side and none has another's evidence, so `vaadin.testing.user-steps.compare-dir` has nothing to read. A job after them compares what they uploaded, with the `CompareRuns` command of `unified-test-api`:
+
+```yaml
+  compare:
+    name: Compare Testing Tools
+    needs: [browserless, playwright]
+    if: ${{ !cancelled() }}        # also when a job failed: that is when the comparison says most
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Download the jobs' Unified evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'unified-evidence-*' --dir evidence || true
+      - name: Compare the runs
+        run: |
+          mvn -B -ntp -q dependency:copy -Dartifact=org.vaadin.addons:unified-test-api:<version> -DoutputDirectory=tools
+          java -cp "tools/*" com.vaadin.testing.unified.report.CompareRuns evidence/* || [ $? -eq 2 ]
+```
+
+It needs `actions: read`, and the evidence artifacts named as above (`unified-evidence-<tool>`). The job's summary page then says, for each Testing Tool against Browserless, which scenarios pass on one and fail on the other, which take different User Steps and where they part, and whether both runs tested the same commit ([what it says](reports-and-failures.md#compared-with-another-testing-tool)). It reports and fails nothing: exit code 2 means fewer than two Testing Tools left evidence, which the jobs before it already show.
+
+On another CI server the command is the same: give it the evidence directories the jobs kept.
+
 ### Selenium (TestBench)
 
 TestBench is under the Vaadin Commercial License and checks it when it loads. Give the job your key as a secret, and use the Chrome that GitHub's Ubuntu runners have installed (Selenium Manager finds its driver):
@@ -189,4 +221,4 @@ In a multibranch pipeline building a pull request, Jenkins sets `CHANGE_TARGET` 
 | `vaadin.testing.playwright.trace` | `off`; `on-failure` keeps the trace of failed tests as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 
-All settings: [Reading reports and failures](reports-and-failures.md#settings) and [2. Test setup](../spec/02-test-setup.md).
+All settings: [Configuration](configuration.md), [Reading reports and failures](reports-and-failures.md#settings) and [2. Test setup](../spec/02-test-setup.md).

@@ -61,19 +61,7 @@ Every Wrapper action and retrying assertion is a User Step whether or not it is 
 2. **In a `…Tasks` class of static methods**, once a second test class needs the same work. Move it, don't copy it:
 
     ```java
-    final class PeopleTasks {
-
-        private PeopleTasks() {
-        }
-
-        static void editPerson(UnifiedPage page, String name, String newName) {
-            page.step("Edit " + name, () -> {
-                page.find(UnifiedGrid.class).row().withCellText("Name", name).click();
-                page.find(UnifiedTextField.class).withLabel("Name").setValue(newName);
-                page.find(UnifiedButton.class).withText("Save").click();
-            });
-        }
-    }
+    --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:peopleTasks"
     ```
 
     A test calls `PeopleTasks.editPerson(page, "Alan Turing", "Alan M. Turing")`, or imports it statically. The run summary marks every scenario that uses a changed `…Tasks` class as changed ([Changed in this PR](reports-and-failures.md#the-run-summary)).
@@ -85,21 +73,7 @@ Keep assertions out of User Tasks, in the test's `// then`: a task is what the u
 Wrappers are lazy: declaring one searches nothing, and every use finds the component again. So declare the Wrappers the test needs at the top, use them inside a step, and check them after it:
 
 ```java
-// given
-page.navigate(PeopleView.class);
-UnifiedGrid people = page.find(UnifiedGrid.class);
-UnifiedNotification notification = page.find(UnifiedNotification.class);
-
-// when
-page.step("Edit Alan Turing", () -> {
-    people.row().withCellText("Name", "Alan Turing").click();
-    page.find(UnifiedTextField.class).withLabel("Name").setValue("Alan M. Turing");
-    page.find(UnifiedButton.class).withText("Save").click();
-});
-
-// then
-assertThat(notification).hasText("Saved Alan M. Turing");
-assertThat(people.row().withCellText("Name", "Alan M. Turing")).exists();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:wrappersBeforeAStep"
 ```
 
 `page.step(..)` takes a `Runnable` and returns nothing: a step does work, it doesn't hand back values.
@@ -109,7 +83,7 @@ assertThat(people.row().withCellText("Name", "Alan M. Turing")).exists();
 Values typed into a password field are shown as `••••` in every report. Mark any other value as secret with `page.secret(..)`, which returns it unchanged:
 
 ```java
-page.find(UnifiedTextField.class).withLabel("API key").setValue(page.secret(apiKey));
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:secret"
 ```
 
 From then on the value is masked wherever it appears in the test's reports, in every window: `fill text field “Email” with “••••”` in the scenario above, and again in the assertion that expects it.
@@ -119,26 +93,7 @@ From then on the value is masked wherever it appears in the test's reports, in e
 Wrappers already find components the way a user names them, so most tests need no page object. When a view's lookups are long, scoped or repeated, a **lean page object** holds them in one place: a class of methods returning Wrappers, with no actions and no assertions.
 
 ```java
-final class PeopleViewLookups {
-
-    private final UnifiedPage page;
-
-    PeopleViewLookups(UnifiedPage page) {
-        this.page = page;
-    }
-
-    UnifiedGrid people() {
-        return page.find(UnifiedGrid.class);
-    }
-
-    UnifiedTextField name() {
-        return page.find(UnifiedTextField.class).withLabel("Name");
-    }
-
-    UnifiedButton save() {
-        return page.find(UnifiedButton.class).withText("Save");
-    }
-}
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:peopleViewLookups"
 ```
 
 The user's work stays in User Tasks, which use the page object's lookups. Structure (where things are) and intent (what the user gets done) stay in two layers.

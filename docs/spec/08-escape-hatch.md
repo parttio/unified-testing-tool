@@ -1,6 +1,6 @@
 # 8. Escape Hatch
 
-Decided in [#10](https://github.com/jcgueriaud1/unified-testing-tool/issues/10).
+Decided in [#10](https://github.com/parttio/unified-testing-tool/issues/10).
 
 ```java
 Locator locator = name.unwrap(Locator.class);                 // fails on other Testing Tools

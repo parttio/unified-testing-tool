@@ -3,9 +3,7 @@
 `find(..)` returns the **Wrapper** for a kind of component, and its filters narrow it down:
 
 ```java
-page.find(UnifiedTextField.class)   // which kind of component: the Wrapper
-    .withLabel("Name")              // filters: zero or more, all must match
-    .setValue("Alan M. Turing");    // use it: an action, a read or assertThat(..)
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:anatomy"
 ```
 
 There is nothing to end the lookup with: the Wrapper is the lookup. Each time you use it, it finds its component again and waits until exactly one matches. Spec: [4. Locating components](../spec/04-locating.md).
@@ -62,10 +60,7 @@ A field named with `setAriaLabel(..)` and no visible label is found the same way
 Text filters match the **whole text**, with whitespace normalised. Each has a `…Containing` variant that matches a part, ignoring case:
 
 ```java
-page.find(UnifiedButton.class).withText("Save");                      // "Save", not "Save draft"
-page.find(UnifiedButton.class).withTextContaining("save");            // "Save", "Save draft", "Autosave"
-page.find(UnifiedTextField.class).withLabelContaining("phone");       // "Phone", "Mobile phone"
-page.find(UnifiedButton.class).withAccessibleNameContaining("Edit");  // "Edit User 3", "Edit User 4", …
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:containing"
 ```
 
 Prefer the exact form: a lookup that matches more than you meant fails with "found 2" the day someone adds a "Save draft" button.
@@ -101,9 +96,7 @@ When a component has nothing a user can read, give it a test id in the view (`co
 Filters add up: a component must match all of them. Each filter returns a new Wrapper and leaves the one it was called on as it was, so one Wrapper can be narrowed in several ways:
 
 ```java
-UnifiedButton delete = page.find(UnifiedButton.class).withText("Delete");
-delete.withTheme("error").click();              // the red one
-assertThat(delete).hasCount(2);                 // `delete` itself is unchanged
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:narrowing"
 ```
 
 ### Only visible components
@@ -125,9 +118,7 @@ Every action (`setValue`, `click`), read (`getValue()`) and assertion finds the 
 - keep a Wrapper in a variable and reuse it for the whole test.
 
 ```java
-UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");  // no search yet
-name.setValue("Alice");                  // searches, waits until it is there and enabled, types
-assertThat(name).hasValue("Alice");      // searches again
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:lazy"
 ```
 
 When no component or several match, the call fails with a `UnifiedAssertionError` that says what it expected, what it found, and the components that nearly matched, with a suggestion when one is clearly what you meant ([Reading reports and failures](reports-and-failures.md#the-failure-message)).
@@ -155,6 +146,30 @@ There is no `first()`. When several components match, either the filter is not p
 ```
 
 `all()` reads the matches **now**, without waiting: check the count with `hasCount(n)` first, and use `all()` only to loop.
+
+## What is there to find?
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+`describe()` on the page, or on any Scope, returns the **Findable View**: every component a lookup can reach, one line each, with the lookup that singles it out. Print it while writing a test, then paste the lookups:
+
+```java
+page.navigate(ProfileView.class);
+System.out.println(page.describe());
+```
+
+```
+Findable view of “/profile” on browserless: 7 components
+text field “Name”                       page.find(UnifiedTextField.class).withLabel("Name")
+text field “Email”                      page.find(UnifiedTextField.class).withLabel("Email")
+text field (no name; placeholder “Nickname”)  page.find(UnifiedTextField.class).withPlaceholder("Nickname")
+button “Save”                           page.find(UnifiedButton.class).withText("Save")
+button “Delete account”                 page.find(UnifiedButton.class).withAccessibleName("Delete account")
+button “Archive” (disabled)             page.find(UnifiedButton.class).withText("Archive")
+button “Change email”                   page.find(UnifiedButton.class).withText("Change email")
+```
+
+It reads the same on every Testing Tool. Two components with the same name get a lookup through the container that tells them apart (`page.find(UnifiedContainer.class).withTestId("billing").find(..)`), or the line says `not unique`. A `(no name)` line is a field or button that users of a screen reader can't name either. `describe()` is not a User Step, and its format may change: don't assert on it. A failed test writes the page's view next to its evidence ([Reading reports and failures](reports-and-failures.md#the-findable-view)). Spec: [12. Readable tests, Findable View](../spec/12-readable-tests.md#findable-view).
 
 ## Scopes
 
@@ -224,8 +239,7 @@ A TabSheet's `content()` follows the selected tab: the same Scope searches the n
 It is handy for reading text from a `Span`, `H2` or `Paragraph`:
 
 ```java
-assertThat(page.findComponent(Span.class).withId("status")).hasText("Approved");
-assertThat(page.findComponent(H2.class).withText("Admin area of alice")).isVisible();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:flowComponents"
 ```
 
 A component without a tag (a `Composite`, `Component.class`) can't be found by a browser, so `findComponent` refuses it at once on every Testing Tool. Find its root component instead, or write a [Wrapper](custom-wrappers.md) with `tag = "…"`.

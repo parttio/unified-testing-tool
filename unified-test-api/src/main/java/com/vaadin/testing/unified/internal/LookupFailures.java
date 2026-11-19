@@ -261,7 +261,14 @@ final class LookupFailures {
         return values;
     }
 
-    /** The adapter's facts for the elements, one each; read one by one when the adapter gives none. */
+    /** The id Flow gives the element it renders the UI in: a new one on every page load, and above every view. */
+    private static final java.util.regex.Pattern FLOW_ROOT = java.util.regex.Pattern.compile("ROOT-\\d+");
+
+    /**
+     * The adapter's facts for the elements, one each; read one by one when the adapter gives none. An ancestor
+     * that is Flow's root ({@code id="ROOT-2521314"}, in a browser) counts as none: it holds every component, so
+     * it tells none apart, and Browserless has no such element.
+     */
     static List<ElementFacts> facts(TestRun run, List<UnifiedElement> elements) {
         List<ElementFacts> facts = null;
         try {
@@ -270,7 +277,7 @@ final class LookupFailures {
             // read one by one below
         }
         if (facts != null && facts.size() == elements.size()) {
-            return facts;
+            return facts.stream().map(LookupFailures::withoutFlowRoot).toList();
         }
         List<ElementFacts> each = new ArrayList<>();
         for (UnifiedElement e : elements) {
@@ -283,6 +290,14 @@ final class LookupFailures {
             each.add(f);
         }
         return each;
+    }
+
+    private static ElementFacts withoutFlowRoot(ElementFacts f) {
+        if (f == null || f.ancestorId() == null || !FLOW_ROOT.matcher(f.ancestorId()).matches()) {
+            return f;
+        }
+        return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
+                f.ancestorTestId(), null);
     }
 
     private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent) {

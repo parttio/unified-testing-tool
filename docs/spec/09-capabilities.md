@@ -1,6 +1,6 @@
 # 9. Capabilities and limitations
 
-Decided in [#11](https://github.com/jcgueriaud1/unified-testing-tool/issues/11) and [#9](https://github.com/jcgueriaud1/unified-testing-tool/issues/9).
+Decided in [#11](https://github.com/parttio/unified-testing-tool/issues/11) and [#9](https://github.com/parttio/unified-testing-tool/issues/9).
 
 ## Capabilities
 
@@ -89,6 +89,7 @@ Differences in meaning are documented, not banned. Tests that depend on the brow
 |---|---|
 | Playwright, Selenium | full-page screenshot: `<test class>.<method>.png` |
 | Browserless | location and component tree as text: `<test class>.<method>.tree.txt` |
+| every Testing Tool | the [Findable View](12-readable-tests.md#findable-view) of the page: `<test class>.<method>.view.txt` |
 
 Written to `vaadin.testing.evidence-dir` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes. The failure names the files (a suppressed exception), so they show in the test report. Next to them, every test writes its User Steps (`<test class>/<test method>/user-steps.txt` and `user-steps.json`), and the run writes `summary.md`; the failure's `Evidence` line names that directory ([12. Readable tests, Reports](12-readable-tests.md#reports)).
 

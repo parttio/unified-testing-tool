@@ -129,18 +129,18 @@ final class BrowserlessSession implements AdapterSession {
      */
     @Override
     public List<UnifiedElement> find(QuerySpec spec) {
-        List<Component> roots = spec.parent() == null ? List.of(window().getUI())
-                : ((BrowserlessElement) spec.parent()).scopeRoots();
+        BrowserlessElement parent = (BrowserlessElement) spec.parent();
+        List<Component> roots = parent == null ? List.of(window().getUI()) : parent.scopeRoots();
         java.util.Set<Component> found = new java.util.LinkedHashSet<>();
         for (Component root : roots) {
-            found.addAll(findIn(root, spec, spec.parent() != null));
+            found.addAll(findIn(root, spec, parent != null && parent.rootsIncluded()));
         }
         // a Grid's cell components are not in the component tree: add those the grid rendered for the client,
         // as a browser has them in the page
         for (Component cell : renderedGridCells(roots)) {
             found.addAll(findIn(cell, spec, true));
         }
-        return found.stream().map(c -> (UnifiedElement) new BrowserlessElement(this, c)).toList();
+        return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
     }
 
     /** In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id. */

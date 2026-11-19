@@ -1,6 +1,6 @@
 # 4. Locating components
 
-Decided in [#7](https://github.com/jcgueriaud1/unified-testing-tool/issues/7), [#12](https://github.com/jcgueriaud1/unified-testing-tool/issues/12) and "What shape does a lookup take?" (#199); see [ADR 0001](../adr/0001-locator-filters-follow-component-type.md), [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). The style the lookups are written in: [12. Readable tests](12-readable-tests.md#lookups).
+Decided in [#7](https://github.com/parttio/unified-testing-tool/issues/7), [#12](https://github.com/parttio/unified-testing-tool/issues/12) and "What shape does a lookup take?" (#199); see [ADR 0001](../adr/0001-locator-filters-follow-component-type.md), [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). The style the lookups are written in: [12. Readable tests](12-readable-tests.md#lookups).
 
 ## Lookup shape
 
@@ -99,6 +99,8 @@ address.find(UnifiedTextField.class).withLabel("City").setValue("Turku");
 ```
 
 A lookup inside a scope finds the scope again first, on every use: a missing scope fails with Near Misses for the scope.
+
+It searches what the scope holds, not the scope itself: `dialog.find(UnifiedDialog.class)` finds a dialog inside the dialog, never the dialog. A part whose component is its content (a grid cell, a column header, `UnifiedDetails.content()`, `UnifiedTabSheet.content()`) finds that component, as a browser finds it in the cell or panel that holds it.
 
 Components created by renderers (e.g. Grid cells) and the content of closed overlays are reached through their **owning Wrapper** on every Testing Tool ([7. Grid](07-grid.md)).
 

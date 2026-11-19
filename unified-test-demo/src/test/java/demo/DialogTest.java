@@ -65,4 +65,12 @@ class DialogTest {
 
         assertThat(dialog).isClosed();
     }
+
+    @Test
+    @DisplayName("A search inside the dialog finds what is in it, not the dialog itself")
+    void aSearchInsideTheDialogLeavesTheDialogOut(UnifiedPage page) {
+        UnifiedDialog dialog = openDialog(page);
+
+        assertThat(dialog.find(UnifiedDialog.class)).doesNotExist();
+    }
 }
