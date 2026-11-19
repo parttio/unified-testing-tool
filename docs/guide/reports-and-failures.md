@@ -272,6 +272,8 @@ mvn test -Dvaadin.testing.tool=playwright \
 
 118 scenarios ran on both Testing Tools: 1 ends differently, 1 takes different User Steps. 13 ran on Playwright only, 12 on Browserless only.
 
+Both runs are of commit `3e74f89`.
+
 **Saving a person shows a confirmation (EditPersonTest)** · failed on Playwright, passed on Browserless
 
 - On Playwright: `UnifiedAssertionError: Expected notification to have text “Saved Alan”, found “Saved”`
@@ -285,7 +287,9 @@ mvn test -Dvaadin.testing.tool=playwright \
 - **Different User Steps:** both ended alike, but didn't do the same. *Parts at step* is the first line the two runs don't share, counted over the scenario's steps, User Tasks and gap lines from the top. A test that branches on `page.hasRealBrowser()` shows up here, and so does a Wrapper that words a step differently on one Testing Tool.
 - **Ran on one only:** tests a Capability skipped on the other Testing Tool (`@RequiresBrowser`, `@RequiresTestingTool`). They are counted, not listed.
 
-The two runs have to be of the same code; the Unified API can't check that, so give it a directory you know is. The first run needs an evidence directory of its own (`vaadin.testing.evidence-dir`), or the second run overwrites it. The section reports; it fails no test. It doesn't say whether a difference is one of the documented ones ([Tool-specific code](tool-specific.md)): read the step it names. `report.html` has the same section, and `summary.json` marks each such scenario with `differsOn`.
+- **The same code?** A difference only says something about the Testing Tools when both runs tested the same code. Each run records its commit, and a fingerprint of the uncommitted changes to tracked files, and the section says whether they match: `Both runs are of commit …`, or **Not the same code** with what each run is of. Change a file between the two runs and the second one tells you. Without git, or with evidence from an earlier version of the Unified API, it says that it can't tell. Untracked files are not seen.
+
+The first run needs an evidence directory of its own (`vaadin.testing.evidence-dir`), or the second run overwrites it. The section reports; it fails no test. It doesn't say whether a difference is one of the documented ones ([Tool-specific code](tool-specific.md)): read the step it names. `report.html` has the same section, and `summary.json` marks each such scenario with `differsOn`.
 
 ### Scenarios without a check
 
@@ -352,6 +356,7 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the 
 ```
 
 - **The verdict:** `status` is `failed` when any scenario failed. The counts are those of the summary's header.
+- **The code:** `commit` is the commit the run tested, and `uncommittedChanges` a fingerprint of the uncommitted changes to tracked files, when there are any. Both are left out without git.
 - **Every scenario** is listed, passed or failed, with the directory of its files. Paths are relative to the evidence directory, so they work in a downloaded CI artifact too.
 - **A failed scenario** carries the text of the failed User Step, the `failure` object of its `user-steps.json` unchanged (expected, found, Near Misses, *Did you mean*, the code path), and its failure evidence.
 - **A scenario that differs on another Testing Tool** says `differsOn`: the tool, its status there, where the User Steps part, and the failure from there.

@@ -55,7 +55,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         h.append("</section>\n");
         for (RunComparison c : summary.comparisons()) {
             h.append("<section class=\"compared\">\n<h2>Compared with ").append(esc(c.otherTool()))
-                    .append("</h2>\n<p class=\"lead\">").append(esc(summary.comparedLead(c))).append("</p>\n");
+                    .append("</h2>\n<p class=\"lead\">").append(esc(summary.comparedLead(c))).append("</p>\n")
+                    .append("<p class=\"lead\">").append(c.sameCode(summary.revision()).orElse(true) ? ""
+                            : "<strong>Not the same code.</strong> ")
+                    .append(summary.sameCodeLine(c, commit -> "<code>" + esc(commit) + "</code>")).append("</p>\n");
             for (RunComparison.Difference d : c.differences()) {
                 h.append("<div class=\"difference\">\n<p><span class=\"name\">").append(esc(d.here().displayName()))
                         .append("</span> <span class=\"class\">").append(esc(d.here().simpleClassName()))
