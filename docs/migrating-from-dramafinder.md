@@ -87,16 +87,32 @@ Commit or stash your work first: the recipe changes files in place.
 
 Without another adapter the migrated suite keeps running on Playwright only, as before; adding one is the step that makes it run elsewhere (see **Running on the other Testing Tools**).
 
+### Which classes it skips
+
+The recipe leaves a test class it can't convert entirely as it is (see **What it leaves for you**). To see every such class and why in one pass, before migrating, run the search recipe `FindTestClassesToMigrate` *(unreleased)* as a dry run; it changes no file:
+
+```bash
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
+  -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
+  -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.FindTestClassesToMigrate \
+  -Drewrite.exportDatatables=true
+```
+
+`target/rewrite/rewrite.patch` (one per module) marks every Dramafinder, Browserless and TestBench test class: `/*~~(migrates)~~>*/`, or `/*~~(skipped: overrides setupTest() of AbstractBasePlaywrightIT, calls getUrl() of SpringPlaywrightIT)~~>*/` naming the base class members that keep it from migrating, and with `exportDatatables` the file `FindTestClassesToMigrate$TestClasses.csv`, in `target/rewrite/datatables/<date-time>/` under the directory you ran Maven in, lists them one row per class with their reasons. Fix what blocks the skipped ones, run it again until none is left, then run the migration.
+
+On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch is `build/reports/rewrite/rewrite.patch`.
+
 ## What it converts
 
 | Dramafinder | Unified API |
 |---|---|
 | `extends SpringPlaywrightIT` (with or without `@SpringBootTest`) | `@UnifiedSpringBootTest` |
 | `extends AbstractBasePlaywrightIT` | `@UnifiedUITest`; `getUrl()` goes: the base URL is the `vaadin.testing.base-url` setting ([test setup](spec/02-test-setup.md)) |
-| `getView()` returning `"people"` | each test that doesn't navigate first starts with `page.navigate("people")` |
+| `getView()` returning `"people"` | each test that doesn't navigate first starts with `page.navigate(PeopleView.class)`, when exactly one `@Route("people")` is among the migrated sources *(unreleased)*; else, with no such view, several, or one under a layout with a `@RoutePrefix`, `page.navigate("people")` |
 | `@EnabledIfSystemProperty(named = "vaadin.testing.tool", ..)` | removed: the run's Testing Tool decides |
 | test methods, `@BeforeEach` and helper methods that use the base class | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test |
 | `navigate(View.class)`, `assertAt(View.class)`, `assertPath(..)`, `assertQueryParameter(..)` | `page.navigate(View.class)`, `assertThat(page).isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)` |
+| `page.navigate(getUrl() + "/plan?week=" + monday)` *(unreleased)* | `page.navigate("plan?week=" + monday)`: the path after the base URL |
 | `TextFieldElement.getByLabel(page, "Name")`, `getByText`, `getById`, `getByTestId`, `…Containing` | `page.find(UnifiedTextField.class).withLabel("Name")`, `withText`, `withId`, `withTestId`, `…Containing` |
 | `find(page, TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | query `first()` / `get(i)` | the same lookup, with a `was first()` Migration Marker / `all().get(i)` |
@@ -115,7 +131,7 @@ Without another adapter the migrated suite keeps running on Playwright only, as 
 
 A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
 
-A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left as it is, with a Migration Marker above the class naming those members (`// TODO unified: not migrated: calls loginAs(..) of SpringPlaywrightIT; ...`): convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again. A `setupTest()` override that seeds data and then calls `super.setupTest()` is not one of them: it becomes a plain `@BeforeEach` without the `super.setupTest()`, since each test now navigates itself.
+A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left as it is, with a Migration Marker above the class naming those members (`// TODO unified: not migrated: calls loginAs(..) of SpringPlaywrightIT; ...`): convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again. `getUrl()` is one of them only where the test does something else with it than `page.navigate(getUrl() + ..)` *(unreleased)*, such as keep it in a variable. A `setupTest()` override that seeds data and then calls `super.setupTest()` is not one of them: it becomes a plain `@BeforeEach` without the `super.setupTest()`, since each test now navigates itself.
 
 *(unreleased)* A raw Playwright locator on an id or a test id, `locator("#x")`, `locator("[data-testid=x]")` or `getByTestId("x")`, becomes a lookup `withId("x")` or `withTestId("x")`. The recipe reads its Wrapper from the application's sources, where a view calls `setId("x")` or `getElement().setAttribute("data-testid", "x")` with a literal on a component: a `Button` becomes `UnifiedButton` (`click()`), a `TextField` or `TextArea` `UnifiedTextField` or `UnifiedTextArea` (`fill(s)` is `setValue(s)`, `inputValue()` `getValue()`), a `Checkbox` `UnifiedCheckbox` (`check()`, `uncheck()`), and any other component `UnifiedContainer` (`click()`). `PlaywrightAssertions.assertThat(locator)`'s `isVisible()`, `isEnabled()`, `isDisabled()`, `hasValue(..)` and `isChecked()` become the retrying assertions of the same name. When no source sets the id, or several set it on components of different classes, the lookup is `UnifiedContainer`, which finds any component, with a Migration Marker to name the component's own Wrapper. The recipe doesn't guess a Wrapper from the call (`fill` on a text field): a wrong guess fails the test. Other selectors, other calls (`press(..)`, `isHidden()`) and a locator the test hands on stay behind the Escape Hatch.
 

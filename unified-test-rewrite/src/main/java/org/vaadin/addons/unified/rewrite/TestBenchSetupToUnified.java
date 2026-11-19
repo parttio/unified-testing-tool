@@ -97,7 +97,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     }
 
     /** The explicit path of a {@code @Route("path")} or {@code @Route(value = "path")}, else {@code null}. */
-    private static String routePath(J.Annotation a) {
+    static String routePath(J.Annotation a) {
         if (!TypeUtils.isOfClassType(a.getType(), ROUTE) || a.getArguments() == null) {
             return null;
         }

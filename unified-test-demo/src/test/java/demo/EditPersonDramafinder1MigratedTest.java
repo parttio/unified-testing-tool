@@ -16,7 +16,7 @@ class EditPersonDramafinder1MigratedTest {
 
     @Test
     void editsAPersonFromTheGrid(UnifiedPage page) {
-        page.navigate("people");
+        page.navigate(PeopleView.class);
         UnifiedGrid people = page.find(UnifiedGrid.class);
 
         // TODO unified: was findRowIndexesWithColumnText(0, ..).get(0): any column matches now; the row lookup fails when several rows match

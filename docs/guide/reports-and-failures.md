@@ -1,6 +1,6 @@
 # Reading reports and failures
 
-Every Wrapper action and every retrying assertion is recorded as a **User Step**, worded the way a user would say it: `fill text field “Name” with “Alan M. Turing”`. `page.step(..)` groups User Steps under a **User Task** ([Structuring a scenario](structuring-a-scenario.md)). Recording is always on, on every Testing Tool, and the same steps reach every output below. Spec: [12. Readable tests, Reports](../spec/12-readable-tests.md#reports) and [Failures](../spec/12-readable-tests.md#failures).
+Every Wrapper action and every retrying assertion is recorded as a **User Step**, worded the way a user would say it: `fill text field “Name” with “Alan M. Turing”`. `page.step(..)` groups User Steps under a **User Task** ([Structuring a scenario](structuring-a-scenario.md)). Recording is always on, on every Testing Tool, and the same steps reach every output below. To review a test with these outputs, see [Reviewing a test](reviewing-tests.md). Spec: [12. Readable tests, Reports](../spec/12-readable-tests.md#reports) and [Failures](../spec/12-readable-tests.md#failures).
 
 | Output | Where | When | For |
 |---|---|---|---|

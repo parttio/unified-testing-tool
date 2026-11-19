@@ -31,7 +31,7 @@ pip install 'mkdocs-material==9.*'
 scripts/build-docs.sh        # builds target/site
 ```
 
-The build fails on a broken link, a missing snippet, or pages that name different release versions ([Cutting a release](#cutting-a-release)).
+The `Links` workflow checks the links to other sites, on pull requests that change the documentation and weekly. The build fails on a broken link between pages, a missing snippet, or pages that name different release versions ([Cutting a release](#cutting-a-release)).
 
 ### Code examples
 

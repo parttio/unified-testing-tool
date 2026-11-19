@@ -239,7 +239,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
 
                     @Test
                     void startsAtPeople(UnifiedPage page) {
-                        page.navigate("people");
+                        page.navigate(PeopleView.class);
                         assertThat(page).hasPath("people");
                     }
 
@@ -761,6 +761,114 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void navigatingToTheBaseUrlPlusAPathNavigatesToThePath() {
+        // issue #351: getUrl() + "/path" is how Dramafinder tests open a view with query parameters
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void opensTheWeek() {
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        page.navigate(getUrl() + "/plan?week=" + monday);
+                        assertPath("plan");
+                    }
+
+                    @Test
+                    void opensPeople() {
+                        page.navigate(getUrl() + "people");
+                        openPlan();
+                    }
+
+                    @Test
+                    void opensTheStart() {
+                        this.page.navigate(getUrl());
+                    }
+
+                    private void openPlan() {
+                        getPage().navigate(getUrl() + "/" + "plan");
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import java.time.LocalDate;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    void opensTheWeek(UnifiedPage page) {
+                        page.navigate("");
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        page.navigate("plan?week=" + monday);
+                        assertThat(page).hasPath("plan");
+                    }
+
+                    @Test
+                    void opensPeople(UnifiedPage page) {
+                        page.navigate("people");
+                        openPlan(page);
+                    }
+
+                    @Test
+                    void opensTheStart(UnifiedPage page) {
+                        page.navigate("");
+                    }
+
+                    private void openPlan(UnifiedPage page) {
+                        page.navigate("plan");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void theBaseUrlUsedOtherThanToNavigateStillKeepsTheClass() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LinkTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        String url = getUrl() + "people";
+                        page.navigate(url);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                // TODO unified: not migrated: calls getUrl() of SpringPlaywrightIT; convert them by hand, then run the migration again
+                class LinkTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        String url = getUrl() + "people";
+                        page.navigate(url);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aTestUsingABaseClassMemberNoRuleConvertsStaysAndSaysWhy() {
         // issue #350: a skipped class says what kept it from migrating
         rewriteRun(java(VIEW), java(
@@ -860,7 +968,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
 
                     @Test
                     void saves(UnifiedPage page) {
-                        page.navigate("people");
+                        page.navigate(PeopleView.class);
                         page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
@@ -950,5 +1058,127 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     }
                 }
                 """));
+    }
+
+    private static final String PLAN_VIEW = """
+            package com.example.views;
+
+            import com.vaadin.flow.component.Component;
+            import com.vaadin.flow.router.Route;
+
+            @Route("plan")
+            public class PlanView extends Component {}
+            """;
+
+    /** A test that starts at {@code view}, as {@code getView()} returns it. */
+    private static String startingAt(String view) {
+        return """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+
+                    @Override
+                    public String getView() {
+                        return "%s";
+                    }
+
+                    @Test
+                    void opens() {
+                        assertPath("plan");
+                    }
+                }
+                """.formatted(view);
+    }
+
+    @Test
+    void aViewPathOneRouteHasBecomesTheRouteClass() {
+        // issue #370: the class form survives renaming the route, and its User Step reads "open Plan"
+        rewriteRun(java(PLAN_VIEW), java(startingAt("/plan"),
+                """
+                package com.example;
+
+                import com.example.views.PlanView;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+
+                    @Test
+                    void opens(UnifiedPage page) {
+                        page.navigate(PlanView.class);
+                        assertThat(page).hasPath("plan");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aViewPathTwoRoutesHaveStaysAPath() {
+        rewriteRun(java(PLAN_VIEW), java("""
+                package com.example;
+
+                import com.vaadin.flow.component.Component;
+                import com.vaadin.flow.router.Route;
+
+                @Route(value = "plan")
+                public class OtherPlanView extends Component {}
+                """), java(startingAt("plan"), keptAsPath("plan")));
+    }
+
+    @Test
+    void aViewPathNoRouteHasStaysAPath() {
+        rewriteRun(java(PLAN_VIEW), java(startingAt("plan?week=2026-11-02"), keptAsPath("plan?week=2026-11-02")));
+    }
+
+    @Test
+    void aViewPathUnderALayoutWithAPrefixStaysAPath() {
+        // the route's full path is "app/plan": the recipe doesn't follow layouts, so it doesn't guess
+        rewriteRun(java("""
+                package com.example.views;
+
+                import com.vaadin.flow.component.Component;
+                import com.vaadin.flow.router.RoutePrefix;
+                import com.vaadin.flow.router.RouterLayout;
+
+                @RoutePrefix("app")
+                public class AppLayout extends Component implements RouterLayout {}
+                """), java("""
+                package com.example.views;
+
+                import com.vaadin.flow.component.Component;
+                import com.vaadin.flow.router.Route;
+
+                @Route(value = "plan", layout = AppLayout.class)
+                public class PlanView extends Component {}
+                """), java(startingAt("plan"), keptAsPath("plan")));
+    }
+
+    private static String keptAsPath(String view) {
+        return """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+
+                    @Test
+                    void opens(UnifiedPage page) {
+                        page.navigate("%s");
+                        assertThat(page).hasPath("plan");
+                    }
+                }
+                """.formatted(view);
     }
 }
