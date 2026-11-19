@@ -27,15 +27,20 @@ class ProfileViewTest {
 - **Documentation site:** https://parttio.github.io/unified-testing-tool/
 - **Migrating from TestBench:** [docs/migrating-from-testbench.md](docs/migrating-from-testbench.md), OpenRewrite Migration Recipes.
 - **Migrating from Browserless:** [docs/migrating-from-browserless.md](docs/migrating-from-browserless.md), the same for Browserless Test and TestBench UI Unit tests.
+- **Migrating from Dramafinder:** [docs/migrating-from-dramafinder.md](docs/migrating-from-dramafinder.md), the same for Dramafinder (Playwright) tests.
 - **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, structure scenarios and read their reports, with examples from the demo.
-- **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/jcgueriaud1/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
+- **API reference *(unreleased)*:** [every Wrapper](unified-test-api/src/main/resources/META-INF/unified/api-reference.md) with its filters, actions, reads and checks, generated from the code and shipped in the `unified-test-api` jar (`META-INF/unified/api-reference.md`).
+- **For agents:** the site has an [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown, and the whole guide in [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt); the `write-unified-ui-tests` skill is installed by the `AddUnifiedTestingSkill` recipe.
+- **Configuration:** [docs/guide/configuration.md](docs/guide/configuration.md): every setting, such as the Testing Tool, the timeout and the reports.
+- **Specification:** [docs/spec](docs/spec/README.md). Decisions: the map [Unified testing API for Vaadin](https://github.com/parttio/unified-testing-tool/issues/2), ADRs in [docs/adr](docs/adr), terms in [GLOSSARY.md](GLOSSARY.md).
+- **Release notes:** [docs/releases](docs/releases/unreleased.md). This page and the site describe `main`: what is newer than the latest release is marked *(unreleased)* and listed under [Unreleased](docs/releases/unreleased.md).
 - **Status:** first version. Spec draft, not yet `spec-v1`.
 
 ## Modules
 
 | Module | Contains |
 |---|---|
-| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, User Step reports (`page.step(..)`, `user-steps.txt`, `summary.md`) and `UnifiedAssertionError`, Capabilities, Escape Hatch, adapter SPI |
+| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, User Step reports (`page.step(..)`, `user-steps.txt`, `summary.md`, `report.html` and, *unreleased*, `summary.json`, the application's log lines and the console's errors under each step, scenarios without a check, the comparison with another Testing Tool's run) and `UnifiedAssertionError`, Capabilities, Escape Hatch, adapter SPI, the API reference (`META-INF/unified/api-reference.md`, *unreleased*) |
 | `unified-test-browserless` | Browserless Test adapter |
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
 | `unified-test-selenium` | Selenium adapter on TestBench 25.3 (needs a TestBench license) |
@@ -43,7 +48,7 @@ class ProfileViewTest {
 | `unified-test-archunit` | `UnifiedStyleRules`: the Unified UI Test style as ArchUnit rules, opt-in at test scope ([Checking the style](docs/guide/style-rules.md)) |
 | `unified-test-bom` | versions of the above and of the Testing Tools |
 | `unified-test-demo` | Spring Boot + Vaadin demo app and its Unified UI Tests |
-| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench, Browserless and Dramafinder to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)) |
+| `unified-test-rewrite` | OpenRewrite Migration Recipes from TestBench, Browserless and Dramafinder to Unified UI Tests ([ADR 0004](docs/adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md), [ADR 0005](docs/adr/0005-browserless-migration-recipes.md)); `ApplyDidYouMean` *(unreleased)*, which writes a failed lookup's `Did you mean` into the test ([Reading reports and failures](docs/guide/reports-and-failures.md#applying-it)) |
 
 ## Try it
 
@@ -81,79 +86,20 @@ Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha
 </dependencies>
 ```
 
+Run the tests on Browserless with `mvn test`, and on another Testing Tool with `-Dvaadin.testing.tool=playwright` or `selenium`. The Selenium adapter runs TestBench, which needs a TestBench license; Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath. Every setting: [Configuration](docs/guide/configuration.md).
+
 `unified-test-demo` shows a complete setup. To run the tests in CI, with the run summary on GitHub's job page, see [Running in CI](docs/guide/ci-setup.md).
-
-## Build and run
-
-Java 21, Maven.
-
-```
-mvn install                                              # everything; demo tests on Browserless
-mvn test -pl unified-test-demo -Dvaadin.testing.tool=playwright
-VAADIN_OFFLINE_KEY=... mvn test -pl unified-test-demo -Dvaadin.testing.tool=selenium   # installed Chrome
-```
-
-TestBench checks its license when it loads: on CI, the `selenium` job reads the `VAADIN_OFFLINE_KEY` secret. Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath.
-
-The Playwright run uses Playwright's own browser download. To use an installed Chromium instead, which skips the download:
-
-```
-mvn test -pl unified-test-demo \
-    -Dvaadin.testing.tool=playwright \
-    -Dvaadin.testing.playwright.executable=/path/to/chrome
-```
-
-## Documentation site
-
-The `Docs` workflow publishes `docs/`, `README.md` and `GLOSSARY.md` to GitHub Pages on every push to `main`. To preview it locally:
-
-```
-pip install 'mkdocs-material==9.*'
-scripts/build-docs.sh        # builds target/site
-```
-
-## Settings
-
-JUnit configuration parameters (`junit-platform.properties`) or system properties:
-
-> With TestBench on the test classpath, your own `junit-platform.properties` replaces TestBench's (JUnit reads only one and warns about the other), which turns off TestBench's parallel execution. To keep TestBench's file, pass the settings as Surefire `configurationParameters` instead, as `unified-test-demo/pom.xml` does.
-
-| Setting | Default |
-|---|---|
-| `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
-| `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
-| `vaadin.testing.timeout` | `10s` |
-| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
-| `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`): whose User Steps go to the CI log |
-| `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary |
-| `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; the base for "Changed in this PR" ([Reading reports and failures](docs/guide/reports-and-failures.md)) |
-| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
-| `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
-| `vaadin.testing.browserless.view-packages` | in a Spring test, the `@SpringBootApplication`'s packages and the test's package; otherwise the test's package |
-| `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends an exception thrown by a listener to the session's `ErrorHandler`, as in a browser |
-| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
-| `vaadin.testing.playwright.headless` | `true` |
-| `vaadin.testing.playwright.executable` | Playwright's own browser |
-| `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
-| `vaadin.testing.selenium.headless` | `true` |
-| `vaadin.testing.selenium.executable` | the installed browser |
-| `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
 ## Not in this first version
 
 | Area | State |
 |---|---|
 | Browserless: searching inside Grid row details (`row.details()`) | throws; toggling and checking details works |
-| Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66)) |
-| Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61)) |
+| Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/parttio/unified-testing-tool/issues/66)) |
+| Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/parttio/unified-testing-tool/issues/61)) |
 | Selenium: a combo box's `getItems()` | the drop-down's first page only (50 items by default; [#127](https://github.com/parttio/unified-testing-tool/issues/127)) |
+| The browser's console errors *(unreleased)* (under each User Step, and in `hasNoErrors()`) | Playwright, and Selenium with Chrome; Firefox on Selenium has no browser log ([#316](https://github.com/parttio/unified-testing-tool/issues/316)) |
 
-## Cutting a release
+## Contributing
 
-Make sure the build passes locally and in the Tests workflow on `main`. Then, from an up-to-date `main` with push rights:
-
-```
-mvn release:prepare release:clean -DreleaseVersion=0.1.0-alpha3 -DdevelopmentVersion=0.1.0-SNAPSHOT
-```
-
-This runs the tests, sets the version in every module, commits, tags `unified-test-0.1.0-alpha3`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
+Building this repository, previewing the documentation site and cutting a release: [CONTRIBUTING.md](CONTRIBUTING.md).

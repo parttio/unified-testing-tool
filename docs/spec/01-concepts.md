@@ -30,9 +30,9 @@ flowchart LR
 
 | Principle | Effect | Decided in |
 |---|---|---|
-| Facade with Escape Hatches | Shared features in the API; the rest via `unwrap` | map, [#10](https://github.com/jcgueriaud1/unified-testing-tool/issues/10) |
-| Test what the user sees | Locate by label, accessible name, text | [#7](https://github.com/jcgueriaud1/unified-testing-tool/issues/7) |
-| No waits in tests | Auto-Wait and retrying assertions | [#8](https://github.com/jcgueriaud1/unified-testing-tool/issues/8) |
+| Facade with Escape Hatches | Shared features in the API; the rest via `unwrap` | map, [#10](https://github.com/parttio/unified-testing-tool/issues/10) |
+| Test what the user sees | Locate by label, accessible name, text | [#7](https://github.com/parttio/unified-testing-tool/issues/7) |
+| No waits in tests | Auto-Wait and retrying assertions | [#8](https://github.com/parttio/unified-testing-tool/issues/8) |
 | Wrong code does not compile | Filters per component type | [ADR 0001](../adr/0001-locator-filters-follow-component-type.md) |
-| Same behaviour on every tool | Adapters fill each tool's gaps | [#8](https://github.com/jcgueriaud1/unified-testing-tool/issues/8), [#11](https://github.com/jcgueriaud1/unified-testing-tool/issues/11) |
+| Same behaviour on every tool | Adapters fill each tool's gaps | [#8](https://github.com/parttio/unified-testing-tool/issues/8), [#11](https://github.com/parttio/unified-testing-tool/issues/11) |
 | Add-ons are first-class | Core Set built with the public wrapper mechanism | [ADR 0003](../adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md) |

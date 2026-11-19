@@ -7,9 +7,7 @@ In a browser, the page updates a moment after the server answers. A test that re
 ```java
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
-assertThat(name).hasValue("Alice").isValid();                         // retries until it holds
-assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alice");
-assertThat(page).isAt(ProfileView.class);
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:assertions"
 ```
 
 Each assertion retries until it holds or the timeout (10 s by default) passes, then fails with a `UnifiedAssertionError` that names what it expected and the values it saw while waiting ([Reading reports and failures](reports-and-failures.md#the-failure-message)). Chained assertions each retry. Each assertion is reported as a User Step: `see notification “Saved Alice”`.
@@ -28,15 +26,14 @@ Each assertion retries until it holds or the timeout (10 s by default) passes, t
 | `UnifiedGrid` | `hasRowCount(..)`, `isEmpty()` |
 | grid row | `exists()`, `doesNotExist()`, `hasCount(n)`, `hasCellText(column, text)`, `isSelected()`, `isNotSelected()`, `hasDetailsOpen()`, `hasDetailsClosed()` |
 | grid column | `hasCellTexts(..)`, `isSortedAscending()`, `isSortedDescending()` |
-| `UnifiedPage` | `isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)` |
+| `UnifiedPage` | `isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)`, `hasNoErrors()` *(unreleased)* ([what the application logged](reports-and-failures.md#what-the-application-logged)) |
 
 ## Getters don't retry
 
 `getValue()`, `getText()`, `getItems()` and `all()` read the state **now**. Use them to get a value you need, not to check one:
 
 ```java
-assertThat(name).hasValue("Alice");                // good: retries
-assertEquals("Alice", name.getValue());            // flaky in a browser after an async update
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:assertThatNotGetters"
 ```
 
 ## Waiting for anything else
@@ -59,9 +56,7 @@ On Browserless, retrying assertions and `waitUntil` also run pending `UI.access`
 `withTimeout` returns a `UnifiedWrapper`; cast it back to use the Wrapper's own methods:
 
 ```java
-UnifiedButton slow = (UnifiedButton) page.find(UnifiedButton.class).withText("Export")
-        .withTimeout(Duration.ofSeconds(30));
-slow.click();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:ownTimeout"
 ```
 
 ## Checking that something is there, or gone
@@ -69,17 +64,13 @@ slow.click();
 Whether a component is there, and how many are, are assertions too: they retry like the others. There is no boolean `exists()`.
 
 ```java
-assertThat(page.find(UnifiedButton.class).withText("Approve")).exists();                // at least one
-assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist(); // none shown
-assertThat(page.find(UnifiedMetricCard.class)).hasCount(2);                               // exactly two
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:counting"
 ```
 
 A lookup includes hidden components. To check that a component is no longer shown:
 
 ```java
-assertThat(approve).isHidden();                                          // still in the page, hidden
-assertThat(dialog).isClosed();                                           // dialogs and notifications
-assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:gone"
 ```
 
 `doesNotExist()` reads as `see no button “Approve” (visible)` in the reports.

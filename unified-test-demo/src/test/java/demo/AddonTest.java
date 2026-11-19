@@ -1,7 +1,6 @@
 package demo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 
 import com.vaadin.testing.unified.UnifiedPage;
@@ -83,8 +82,7 @@ class AddonTest {
 
         UnifiedGenericComponent service = page.findComponent(Rating.class).withLabel("Service");
 
-        assertEquals(4, service.element().getPropertyInteger("value"));
-        assertTrue(service.isVisible());
+        assertThat(service).isVisible().hasProperty("value", 4);
     }
     // --8<-- [end:anyComponentWithoutAWrapper]
 

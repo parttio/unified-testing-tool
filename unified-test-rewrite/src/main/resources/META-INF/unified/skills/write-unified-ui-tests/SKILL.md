@@ -19,8 +19,10 @@ reading the diff, and anyone reading a failure, sees what the user does. The rul
    component the test touches what the user sees: its label, its text, its header title, or its test id. When the
    view calls `getTranslation("key")`, look the key up in `src/main/resources/vaadin-i18n/translations*.properties`.
    Done when every lookup you are about to write names something you saw in the view's code.
-2. **Write the test** in the shape below. Read the Wrapper's methods in the `unified-test-api` sources (or its
-   Javadoc) before calling one. Done when it compiles: `mvn test-compile`.
+2. **Write the test** in the shape below. Read the Wrapper's methods before calling one: every Wrapper's filters,
+   actions, reads and checks are listed in `META-INF/unified/api-reference.md` inside the `unified-test-api` jar
+   (the same page is [on the site](https://parttio.github.io/unified-testing-tool/api-reference.md)); the sources
+   and Javadoc have the details. Done when it compiles: `mvn test-compile`.
 3. **Prove it** (see below). Done when it passes on Browserless and Playwright, the style rules pass, and
    `user-steps.txt` tells the scenario you were asked for.
 4. **Report** the test's `@DisplayName`, the two runs, and its `user-steps.txt`.

@@ -29,6 +29,8 @@ class RunSummaryWriterTest {
 
     private final List<String> log = new ArrayList<>();
     private final List<String> refsAsked = new ArrayList<>();
+    /** What git says this run tests; null without git. */
+    private com.vaadin.testing.unified.internal.steps.Revision revision;
 
     private Path evidence() {
         return dir.resolve("evidence");
@@ -42,7 +44,7 @@ class RunSummaryWriterTest {
         return new RunSummaryWriter(Settings.from(ConfigurationSource.of(all)), dir, RUN_START, env, ref -> {
             refsAsked.add(ref);
             return git.apply(ref);
-        }, log::add);
+        }, () -> Optional.ofNullable(revision), log::add);
     }
 
     private RunSummaryWriter writer(Map<String, String> settings, Map<String, String> env) {
@@ -106,6 +108,25 @@ class RunSummaryWriterTest {
     }
 
     @Test
+    void writesTheRunAsJsonNextToTheSummaryWithPathsRelativeToTheEvidenceDirectory() throws Exception {
+        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z");
+        test("demo.OldTest", "fromAnEarlierRun", "failed", "2019-12-31T23:59:59Z");
+        Files.writeString(evidence().resolve("demo.EditPersonTest.edits.png"), "png");
+
+        writer(Map.of(), Map.of()).write(Set.of("demo.SkippedTest#skips#[id]"), "1");
+
+        String json = Files.readString(evidence().resolve("summary.json"), StandardCharsets.UTF_8);
+        assertTrue(json.startsWith("{\n  \"schemaVersion\": 1,\n  \"tool\": \"playwright\",\n  \"status\": \"failed\","),
+                json);
+        assertTrue(json.contains("\"passed\": 0,\n  \"failed\": 1,\n  \"skipped\": 1,"), json);
+        assertTrue(json.contains("\"evidenceDir\": \"EditPersonTest/edits/\""), json);
+        assertTrue(json.contains("\"userSteps\": \"EditPersonTest/edits/user-steps.json\""), json);
+        assertTrue(json.contains("\"demo.EditPersonTest.edits.png\""), json);
+        assertFalse(json.contains("fromAnEarlierRun"), json);
+        assertFalse(json.contains(dir.toString()), "no absolute path: the directory is read from a CI artifact too");
+    }
+
+    @Test
     void skippedTestsOfOtherProcessesOfTheRunCount() throws Exception {
         test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
         writer(Map.of(), Map.of()).write(Set.of("demo.A#a#[1]", "demo.B#b#[2]"), "1");
@@ -165,6 +186,131 @@ class RunSummaryWriterTest {
                 + "Called from changed files: `EditPersonTest.java` (edits)\n\n```diff\n- open Home\n"
                 + "+ open People\n```\n"), summary());
         assertEquals(List.of(), log);
+    }
+
+    @Test
+    void theRunIsComparedWithTheRunOnAnotherTestingToolInTheCompareDir() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+        test("demo.OrderTest", "orders", "passed", "2026-11-16T10:00:06Z");
+        String json = Files.readString(evidence().resolve("EditPersonTest/edits/user-steps.json"));
+        // a downloaded artifact keeps the module's path; this run's own Testing Tool in there is not another run
+        Path other = dir.resolve("other");
+        Path onBrowserless = other.resolve("app/target/surefire-reports/unified-evidence/EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(onBrowserless.getParent());
+        Files.writeString(onBrowserless, json.replace("\"playwright\"", "\"browserless\"").replace("open People", "open Home"));
+        Path onPlaywright = other.resolve("earlier/EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(onPlaywright.getParent());
+        Files.writeString(onPlaywright, json.replace("open People", "open Elsewhere"));
+
+        writer(Map.of(Settings.USER_STEPS_COMPARE_DIR, other.toString()), Map.of()).write(Set.of(), "1");
+
+        assertTrue(summary().contains("#### Compared with Browserless\n\n1 scenario ran on both Testing Tools: 0 end "
+                + "differently, 1 takes different User Steps. 1 ran on Playwright only, 0 on Browserless only.\n\n"
+                + "Whether both runs are of the same commit is not known: neither run recorded one.\n\n"
+                + "**edits (EditPersonTest)** · passed on both, different User Steps\n\n"
+                + "- Parts at step 1: `open People` on Playwright, `open Home` on Browserless\n"), summary());
+        assertFalse(summary().contains("Elsewhere"), summary());
+        String data = Files.readString(evidence().resolve("summary.json"), StandardCharsets.UTF_8);
+        assertTrue(data.contains("\"comparedWith\": ["), data);
+        assertTrue(data.contains("\"differsOn\": ["), data);
+        assertTrue(Files.readString(evidence().resolve("report.html")).contains("<h2>Compared with Browserless</h2>"));
+        assertEquals(List.of(), log);
+    }
+
+    private static final String COMMIT = "1f5fbf0000000000000000000000000000000abc";
+
+    /** The other run's summary.json, as its job left it next to its evidence. */
+    private Path otherRun(String tool, String commit, String uncommitted) throws Exception {
+        String json = Files.readString(evidence().resolve("EditPersonTest/edits/user-steps.json"));
+        Path other = dir.resolve("other-" + tool + "-" + commit.substring(0, 4) + uncommitted);
+        Path steps = other.resolve("unified-evidence/EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(steps.getParent());
+        Files.writeString(steps, json.replace("\"playwright\"", "\"" + tool + "\""));
+        Files.writeString(other.resolve("unified-evidence/summary.json"), "{\"schemaVersion\": 1, \"tool\": \"" + tool
+                + "\", \"status\": \"passed\", \"commit\": \"" + commit + "\"" + (uncommitted == null ? ""
+                        : ", \"uncommittedChanges\": \"" + uncommitted + "\"") + ", \"scenarios\": []}");
+        return other;
+    }
+
+    private String compareWith(Path other) throws Exception {
+        writer(Map.of(Settings.USER_STEPS_COMPARE_DIR, other.toString()), Map.of()).write(Set.of(), "1");
+        String md = summary();
+        int from = md.indexOf("#### Compared with Browserless");
+        int next = md.indexOf("\n#### ", from);
+        return md.substring(from, next < 0 ? md.length() : next);
+    }
+
+    @Test
+    void theRunsCommitIsWrittenAndComparedWithTheOtherRuns() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+        revision = new com.vaadin.testing.unified.internal.steps.Revision(COMMIT, null);
+
+        String same = compareWith(otherRun("browserless", COMMIT, null));
+
+        assertEquals("""
+                #### Compared with Browserless
+
+                1 scenario ran on both Testing Tools: same result and same User Steps on each.
+
+                Both runs are of commit `1f5fbf0`.
+                """, same);
+        String data = Files.readString(evidence().resolve("summary.json"), StandardCharsets.UTF_8);
+        assertTrue(data.contains("\"commit\": \"" + COMMIT + "\",\n  \"passed\""), data);
+        assertFalse(data.contains("uncommittedChanges"), data);
+        assertTrue(data.contains("\"sameCode\": true"), data);
+
+        String otherCommit = compareWith(otherRun("browserless", "9".repeat(40), null));
+
+        assertTrue(otherCommit.contains("\n**Not the same code.** This run is of commit `1f5fbf0`, the Browserless run of "
+                + "commit `9999999`. A difference below may come from the code, not from the Testing Tool.\n"), otherCommit);
+        assertTrue(Files.readString(evidence().resolve("summary.json")).contains("\"sameCode\": false"));
+        assertTrue(Files.readString(evidence().resolve("report.html")).contains("<strong>Not the same code.</strong> "
+                + "This run is of commit <code>1f5fbf0</code>"));
+    }
+
+    @Test
+    void uncommittedChangesCountAsOtherCodeUnlessBothRunsHaveTheSame() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+        revision = new com.vaadin.testing.unified.internal.steps.Revision(COMMIT, "aaaaaaaaaaaa");
+
+        assertTrue(compareWith(otherRun("browserless", COMMIT, "aaaaaaaaaaaa"))
+                .contains("\nBoth runs are of commit `1f5fbf0`, with the same uncommitted changes.\n"));
+        assertTrue(Files.readString(evidence().resolve("summary.json")).contains("\"uncommittedChanges\": \"aaaaaaaaaaaa\""));
+        assertTrue(compareWith(otherRun("browserless", COMMIT, "bbbbbbbbbbbb")).contains("**Not the same code.** This run "
+                + "is of commit `1f5fbf0` with uncommitted changes, the Browserless run of commit `1f5fbf0` with other "
+                + "uncommitted changes."));
+        assertTrue(compareWith(otherRun("browserless", COMMIT, null)).contains("**Not the same code.** This run is of "
+                + "commit `1f5fbf0` with uncommitted changes, the Browserless run of commit `1f5fbf0`."));
+    }
+
+    @Test
+    void aRunThatRecordedNoCommitIsNotCalledOtherCode() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+        Path other = otherRun("browserless", COMMIT, null);
+
+        // this run without git
+        assertTrue(compareWith(other).contains("\nWhether both runs are of the same commit is not known: this run "
+                + "recorded none.\n"));
+        assertFalse(Files.readString(evidence().resolve("summary.json")).contains("sameCode"));
+
+        // the other run without a summary.json, as an older version left it
+        revision = new com.vaadin.testing.unified.internal.steps.Revision(COMMIT, null);
+        Files.delete(other.resolve("unified-evidence/summary.json"));
+        String md = compareWith(other);
+        assertTrue(md.contains("is not known: the Browserless run recorded none.\n"), md);
+        assertFalse(md.contains("Not the same code"), md);
+    }
+
+    @Test
+    void aCompareDirWithoutAnotherTestingToolsRunIsSaidOnce() throws Exception {
+        test("demo.EditPersonTest", "edits", "passed", "2026-11-16T10:00:05Z");
+
+        writer(Map.of(Settings.USER_STEPS_COMPARE_DIR, dir.resolve("not-downloaded").toString()), Map.of())
+                .write(Set.of(), "1");
+
+        assertFalse(summary().contains("Compared with"), summary());
+        assertEquals(1, log.size(), log.toString());
+        assertTrue(log.get(0).startsWith("no run on another Testing Tool in "), log.toString());
     }
 
     @Test

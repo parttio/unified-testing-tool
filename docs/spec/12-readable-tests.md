@@ -120,6 +120,7 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 | `user-steps.json` | evidence directory, per test | every test | the later outputs and tools. Versioned: `"schemaVersion": 1` |
 | `summary.md` | evidence directory, per run | every run | the reviewer |
 | `report.html` | evidence directory, per run | every run | the reviewer, in a browser |
+| `summary.json` *(unreleased)* | evidence directory, per run | every run | agents and CI tooling. Versioned: `"schemaVersion": 1` |
 | GitHub job summary | `summary.md` appended when `GITHUB_STEP_SUMMARY` is set | every run in GitHub Actions | the reviewer |
 
 **`summary.md`**, in order:
@@ -127,8 +128,10 @@ Recording is always on (in memory). One Testing Tool per run, named in every hea
 1. **Header:** Testing Tool and counts.
 2. **Changed in this PR:** scenarios with any User Step or User Task called from a file changed against the base branch (`GITHUB_BASE_REF`, or `vaadin.testing.user-steps.changed-since`), marked new or changed. A change in a shared `…Tasks` class marks every scenario using it. A new scenario's steps are unfolded. A changed one says why it is listed (`Called from changed files: <file> (<methods>)`, each changed file it calls from with the methods calling from it, in call order), then its steps diffed against the Base Run when there is one, else unfolded. Left out outside a PR.
 3. **Failed scenarios:** `@DisplayName`, the failed User Step, Near Misses, evidence path.
+4. **Compared with `<Testing Tool>`** *(unreleased)*: with `vaadin.testing.user-steps.compare-dir` set, this run against a run of the same tests on another Testing Tool: how many scenarios ran on both, then each scenario that differs. One that passes on one Testing Tool and fails on the other comes first, with the failed side's error; then those that end alike and take different User Steps. Each says where its steps part. At most ten are listed, then a count. One section per other Testing Tool found.
+5. **Scenarios without a check** *(unreleased)*: the passing scenarios that end on User Steps nothing checks, one line each: `no check`, or `no check after:` and the steps after the last check (three, then a count). At most ten are listed, then a count. Left out when there is none.
 
-Passing scenarios count in the header only, unless they are under "Changed in this PR": a list of every passing scenario is long to scroll past on the job summary, and each one's User Steps are in its `user-steps.txt`. Skipped scenarios count in the header only too: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
+Passing scenarios count in the header only, unless they are under "Changed in this PR" or "Scenarios without a check": a list of every passing scenario is long to scroll past on the job summary, and each one's User Steps are in its `user-steps.txt`. Skipped scenarios count in the header only too: tests that ended `aborted`, and Unified UI Tests the run skipped without running (disabled, or lacking a Capability).
 
 How `summary.md` is made:
 
@@ -138,6 +141,9 @@ How `summary.md` is made:
 - **Matching.** A call site matches a changed file whose path ends with `<package as directories>/<callSite.file>` (the outermost class's name plus `.java` when `file` is missing). A change anywhere in a file marks every scenario calling from it.
 - **New or changed.** New when the test class's file was added (renamed files count as added), or when that file at the merge base has no `<test method>(`. Otherwise changed.
 - **Diff against the Base Run.** With `vaadin.testing.user-steps.baseline-dir` set, every `user-steps.json` under that directory, at any depth, whose `tool` is this run's. A changed scenario matches the Base Run's scenario with the same test class and evidence directory (`<class>/<method>[n]`), else the only one of the test class with the same display name. Its steps are compared as lines without indices (an added step renumbers the ones after it): each User Step and gap as its window and text, each step group as its name, indented by depth. A longest-common-subsequence diff, removed lines before the added ones, shown in full as a `diff` block headed `User Steps +<added> −<removed> against the base run`. Same steps: `same User Steps as the base run`, without the block. Not matched: `not in the base run`, steps unfolded. No `user-steps.json` for the tool, or no directory: one line, `No base run found to compare their User Steps with.`, and steps unfolded. Steps' status, durations and call sites are not compared. In this project's CI the Base Run is the evidence artifact of the base branch's last finished push run of the workflow (`scripts/download-base-user-steps.sh`).
+- **Compared with another Testing Tool** *(unreleased)***.** Every `user-steps.json` under `vaadin.testing.user-steps.compare-dir`, at any depth, whose `tool` is not this run's; several tools give one section each, in alphabetical order. A scenario matches as for the Base Run (test class and evidence directory, else the only one of the class with the same display name). Aborted scenarios count as not run. Two matched scenarios differ when one failed and the other didn't, or when their steps, compared as lines without indices as for the Base Run, are not the same; the steps part at the first line that differs, counted from 1, or where one side ends. Durations, call sites and reads are not compared. **Same code:** each run writes into its `summary.json` the commit it tested (`git rev-parse HEAD`) and, when tracked files have uncommitted changes, a fingerprint of them (the first 12 hex digits of the SHA-256 of `git diff HEAD`). The other run's are read from every `summary.json` under the directory whose `tool` is that Testing Tool's. The section says `Both runs are of commit <7 digits>` when commit and fingerprint are equal; `Not the same code`, with what each run is of, when they differ or when that tool's files name several; and that it is not known when either side names no commit (no git, or evidence written by an earlier version). The comparison is made all the same. Untracked files are not in the fingerprint. No run of another Testing Tool in the directory: one line is logged and the section is left out. Reported only: it fails no test.
+- **Compared after the runs** *(unreleased)***.** `com.vaadin.testing.unified.report.CompareRuns <evidence dir>…` makes the same comparison from evidence directories, for runs that have ended (CI jobs side by side). It reads every `user-steps.json` and `summary.json` under them, sorts the scenarios by Testing Tool, and compares each Testing Tool with the reference: Browserless when it ran, else the first by name. It prints `### Unified UI Tests · Testing Tools compared` and a `#### <Testing Tool> compared with <reference>` section each, and appends them to `GITHUB_STEP_SUMMARY` when set. Exit code 0 whatever the runs say; 2 when fewer than two Testing Tools are found.
+- **Without a check** *(unreleased)***.** Read from a passed scenario's entries in order, step groups opened. A check is a User Step whose verb is `see` or `see no`. These count as one too, since a check may be behind them: a failed step (a passing test that has one expected the failure), a gap whose reason is `waitUntil` or `Escape Hatch`, and a value the test read (`readsAfter` on the entry before it, or `readsBeforeFirstEntry`), which a plain assertion in the test is taken to check. A `where(..) condition` gap doesn't. The steps after the last check are unchecked; a scenario with no check at all is unchecked as a whole, also when it has no User Step. Failed and aborted scenarios are not judged. Reported only: it fails no test.
 - **GitHub job summary.** Put in a marked block, one per evidence directory and run: a later fork replaces the block an earlier one wrote.
 
 **`report.html`** is written with `summary.md`, from the same files and the same `ChangedFiles`. One file with its CSS and script inline, so it opens from a downloaded CI artifact; its links are relative to the evidence directory. In order:
@@ -146,9 +152,26 @@ How `summary.md` is made:
 2. **Controls:** show passing (off), changed only (with a base ref), diff against base run (on; with a Base Run that has this run's Testing Tool), and a search over scenario names, classes and step texts.
 3. **Changed in this PR:** as in `summary.md`, marked new or changed, with the diff's counts or `same User Steps as the base run` / `not in the base run` next to the badge, and the why line; failed scenarios unfolded, passing ones folded. A scenario whose steps differ shows the diff instead of its step tree; unticking *diff against base run* shows the tree instead. The failed and passing sections show the tree only.
 4. **Failed scenarios:** Failed at, Expected and Found (or the error line), Nearby, Did you mean, the code path, the failure evidence (`<test class>.<test method>.*` at the evidence directory's root: a screenshot shown inline, other files linked), then the User Steps tree with the failed step marked.
-5. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
+5. **Compared with `<Testing Tool>`:** as in `summary.md`, every scenario that differs.
+6. **Scenarios without a check:** as in `summary.md`, every one of them, folded; left out when there is none. Such a scenario carries a `no check` badge wherever it is listed.
+7. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
 
 Each step shows its index, window, text, duration and call site, and its snapshot when it has one: a screenshot opens under the step, a tree is a link. Step groups nest and fold; gaps are dimmed. Every value is HTML-escaped. Aborted scenarios count in the header only. Each scenario links its `user-steps.txt`, `user-steps.json`, and the Playwright trace this run kept for it (`trace.zip`).
+
+**`summary.json`** is written with `summary.md`, from the same files, the same `ChangedFiles` and the same Base Run: the run as data, so an agent or a CI tool reads the verdict without parsing Markdown or walking the evidence directory. Its fields are [below](#summaryjson-schema-version-1).
+
+### Log lines under the User Step
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+On by default; `vaadin.testing.user-steps.server-log` sets which of the application's lines are kept (`warn`, `error`, `off`).
+
+- **The application's log.** The application runs in the test's JVM on every Testing Tool, so the Unified API hears what it logs: through an appender on Logback's root logger when Logback is the SLF4J backend, else through a handler on `java.util.logging`'s root logger. An application on another backend, such as Log4j 2, that doesn't send its lines to `java.util.logging` is not heard: its tests get no server lines, and nothing else changes. Logback is an optional dependency of `unified-test-api`: a project needs none for this, its own is used. Kept: warnings and errors, with the logged exception's class and the first line of its message. Not kept: lines of the Unified API's and the Testing Tools' own loggers.
+- **The browser's console.** After every User Step the step's window is asked for the errors its console got since the last time (`AdapterSession.consoleErrors()`): `console.error` and uncaught exceptions, without the browser's own request for `/favicon.ico`. Playwright has them, and Selenium on Chrome (Selenium's browser log, at `SEVERE`); Firefox on Selenium has no browser log, and Browserless no console.
+- **Which entry.** A line belongs to the User Step that was running when it was logged. Between steps it belongs to the entry before, whose late effect it most likely is, and before the first entry to the test. This is by time, whatever thread logged: a background job's line shows under the step during which it ran.
+- **Where.** Under the entry in `user-steps.txt` (`⚠ server ERROR PersonService: Could not save Alan (IllegalStateException: no id)`), in the entry's `logs` in `user-steps.json`, and under the step in `report.html`. Masked like the rest. The first 100 lines of a test are kept. They are not part of what the Base Run diff and the comparison with another Testing Tool compare.
+- **Tests running in parallel in one JVM.** A line is given to the test whose own thread logged it, and lines of other threads are dropped while more than one test listens: they can't be told apart.
+- **`assertThat(page).hasNoErrors()`** fails when the test has an `ERROR` line so far, from the application or a console, and lists them. It is a User Step, `see no errors`, checked once without waiting: a logged error doesn't go away. Nothing fails a test for a logged error by itself.
 
 ### Evidence per User Step
 
@@ -192,6 +215,7 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `expected`, `found` | string, optional | a `UnifiedAssertionError`'s `Expected` and `Found` lines (see [Failures](#failures)) |
 | `nearMisses` | array of strings, optional | its Near Misses, closest first: `text field “E-mail”`, `dialog “Help” (hidden)`; left out when there are none |
 | `suggestion` | string, optional | its `Did you mean`: `find(UnifiedTextField.class).withLabel("E-mail")` |
+| `lookup` *(unreleased)* | string, optional | with `suggestion`: the failed lookup or call in the same form, as the test asked for it: `find(UnifiedTextField.class).withLabel("Email")`. The two differ in what to change; the `ApplyDidYouMean` recipe reads both |
 
 **Entries** (`type` tells them apart)
 
@@ -217,11 +241,56 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `durationMs` | step, group | number | |
 | `callSite` | all, optional | call site | the first stack frame outside the Unified API, its adapters, Wrapper interfaces and the JDK; for a group, the line calling `page.step(..)` |
 | `error` | all, optional | string | when `failed`: exception class and first line of the message |
+| `logs` *(unreleased)* | all, optional | array | the lines logged during the entry or after it, before the next one starts: `{ "source": "server", "level": "ERROR", "logger": "demo.PersonService", "message": "Could not save Alan", "error": "IllegalStateException: no id", "text": "server ERROR PersonService: Could not save Alan (IllegalStateException: no id)" }`. `source` is `server` (the application's log) or `console` (an error in the browser's console, `logger` left out); `level` is `ERROR` or `WARN`; `error` is the logged exception's class and first line; `text` is the line as `user-steps.txt` shows it |
+| `readsAfter` *(unreleased)* | all, optional | number | how many values the test read after this entry and before the next one, outside any User Step: a Unified Element's getter, a Wrapper's getter, a grid row's cell. For a group: after it started and before its first entry. Left out when none. The reads are listed nowhere; the count tells a scenario that reads a value after its last action from one that checks nothing |
 | `snapshot` | step, optional | string | with `vaadin.testing.user-steps.snapshots` on: the page right after the step, relative to the test's evidence directory: `steps/003.png` (browsers) or `steps/003.tree.txt` (Browserless) |
 
 **Call site:** `{ "file": "EditPersonTest.java", "line": 24, "className": "demo.EditPersonTest", "method": "editPerson" }`. `file` is left out without debug information; `line` is `-1` when unknown; a lambda's method is the method that declares it.
 
+The test itself has `readsBeforeFirstEntry` (number, optional): the values read before its first entry; `logsBeforeFirstEntry` (array, optional): the lines logged before it; and `logLinesLeftOut` (number, optional): how many lines beyond the first 100 of the test were dropped.
+
 Values typed into a password field, and every value passed through `page.secret(..)`, are written as `••••` in every field. Values longer than 80 characters are cut with `…`.
+
+### `summary.json`, schema version 1
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+One file per run, at `<vaadin.testing.evidence-dir>/summary.json`, next to `summary.md` and made as it is (which files, changed files, the Base Run). UTF-8. Every path in it is relative to the evidence directory, so the file reads the same in a downloaded CI artifact.
+
+**The run**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schemaVersion` | number | `1` |
+| `tool` | string | the Testing Tool, lower case, as in `user-steps.json` |
+| `status` | string | `failed` when any scenario failed, else `passed` |
+| `startedAt` | string, optional | when the first scenario started (UTC, ISO-8601); left out for a run whose tests were all skipped without running |
+| `durationMs` | number, optional | from `startedAt` to the end of the scenario that ended last |
+| `commit` | string, optional | the commit the run tested, 40 hex digits (`git rev-parse HEAD`); left out without git |
+| `uncommittedChanges` | string, optional | with `commit`, when tracked files differ from it: a fingerprint of `git diff HEAD`, 12 hex digits. Two runs of the same commit with the same fingerprint tested the same tracked files |
+| `passed`, `failed`, `skipped` | number | the counts of `summary.md`'s header. `skipped` is the aborted scenarios plus the Unified UI Tests skipped without running, which have no entry in `scenarios` |
+| `changedSince` | string, optional | the base ref of "Changed in this PR"; left out outside a PR |
+| `comparedWith` | array, optional | with a run on another Testing Tool to compare with, one object per tool: `tool`, `both` (scenarios that ran on both), `endDifferently`, `takeDifferentSteps`, `onlyHere`, `onlyThere`, `sameCode` (boolean; left out when either run names no commit), and the other run's `commit` and `uncommittedChanges` when its files agree on one |
+| `scenarios` | array | every scenario of the run, passed, failed or aborted, by test class, then start |
+
+**A scenario**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `testClass`, `testMethod`, `displayName`, `status`, `startedAt`, `durationMs` | | as in its `user-steps.json` |
+| `evidenceDir` | string | the test's evidence directory, `EditPersonTest/editsAPerson/` |
+| `userSteps` | string | its `user-steps.json`, `EditPersonTest/editsAPerson/user-steps.json`; `user-steps.txt` is next to it |
+| `change` | string, optional | under "Changed in this PR": `new` or `changed` |
+| `calledFromChangedFiles` | array, optional | for a changed scenario: `{ "file": "PeopleTasks.java", "methods": ["editPerson"] }` for each changed file it calls from |
+| `stepsDiff` | object, optional | for a changed scenario found in the Base Run: `{ "added": 1, "removed": 2 }`, the counts of the diff's lines; both `0` for the same User Steps |
+| `differsOn` | array, optional | for a scenario that differs on another Testing Tool, one object per tool: `tool`, `status` there, `partsAt` when the User Steps differ (`step`, counted from 1, and the line `here` and `there`; a side whose steps end before is left out), and the `failure` object from there when it failed there |
+| `unchecked` | string, optional | for a passing scenario without a check: `all` when it has no check, `end` when User Steps follow its last check |
+| `uncheckedSteps` | array of strings, optional | with `unchecked`: the texts of the User Steps nothing checks, in order |
+| `failedStep` | string, optional | for a failure in a User Step: the step's text |
+| `failure` | object, optional | for a failed scenario: the `failure` object of its `user-steps.json`, unchanged |
+| `evidence` | array of strings, optional | for a failed scenario: its failure evidence at the evidence directory's root, and the Playwright trace this run kept for it |
+
+The steps themselves are not repeated: they are in each scenario's `user-steps.json`. A reader ignores fields it doesn't know.
 
 ## Failures
 
@@ -301,6 +370,14 @@ How the recipe decides:
 
 A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `scripts/eval-writing-skill.sh`) scores it: prose scenarios in, tests out, judged on compiling, passing on two Testing Tools, the style rules, intent share and no Escape Hatch. `resolve-migration-markers` defers to it for style.
 
+### What an agent reads
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+- **The skill**, above, installed in the project.
+- **The API reference:** `META-INF/unified/api-reference.md` in the `unified-test-api` jar, so it is of the version the project uses and needs no network. Every Wrapper with its filters, actions, reads and checks, and the page's. Generated from the Wrapper interfaces and `UnifiedAssertions`; a test of the build fails when the file is not what the code says. The docs site has the same page.
+- **The docs site** for agents: `llms.txt` at its root (one link per page, to the page as Markdown with its code examples included; the specification and the ADRs under *Optional*), and `llms-full.txt` (the home page, the API reference, the developer guide and the glossary in one file). Written by the site's build from its navigation.
+
 ## Moving to this chapter
 
 A clean break, since the API is alpha: no deprecation release and no Upgrade Recipe. The release that implements ADR 0007 also moves the Migration Recipes and their golden pairs, the demo tests, the custom Wrappers, `resolve-migration-markers`, the guide and chapters 4–9. The Migration Recipes' `first()` rule is amended in [ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md).
@@ -316,6 +393,9 @@ A clean break, since the API is alpha: no deprecation release and no Upgrade Rec
 | `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`) |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a PR, `origin/$GITHUB_BASE_REF`; otherwise unset |
+| `vaadin.testing.user-steps.baseline-dir` | unset; the Base Run's evidence directory |
+| `vaadin.testing.user-steps.compare-dir` *(unreleased)* | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ between the two |
+| `vaadin.testing.user-steps.server-log` *(unreleased)* | `warn`: the application's warnings and errors under the User Step during which they were logged; `error`, or `off` |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
 

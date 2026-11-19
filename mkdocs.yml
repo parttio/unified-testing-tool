@@ -50,6 +50,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - API reference: api-reference.md
   - Developer guide:
       - Overview: guide/index.md
       - Finding components: guide/finding-components.md
@@ -59,6 +60,7 @@ nav:
       - Structuring a scenario: guide/structuring-a-scenario.md
       - Reading reports and failures: guide/reports-and-failures.md
       - Running in CI: guide/ci-setup.md
+      - Configuration: guide/configuration.md
       - Navigation, users and windows: guide/navigation-and-users.md
       - When a test needs one Testing Tool: guide/tool-specific.md
       - Wrappers for your own components: guide/custom-wrappers.md
@@ -94,4 +96,8 @@ nav:
       - adr/0006-dramafinder-migration-recipes.md
       - adr/0007-wrappers-carry-their-filters.md
       - adr/0008-adapter-spi-is-test-runner-neutral.md
+  - Release notes:
+      - Unreleased: releases/unreleased.md
+      - 0.1.0-alpha3: releases/0.1.0-alpha3.md
+      - 0.1.0-alpha2: releases/0.1.0-alpha2.md
   - Glossary: GLOSSARY.md

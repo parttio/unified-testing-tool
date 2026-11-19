@@ -5,11 +5,7 @@ Spec: [3. Navigation](../spec/03-navigation.md), [11. Users](../spec/11-users.md
 ## Opening a view
 
 ```java
-page.navigate(ProfileView.class);                                // by route class (recommended)
-page.navigate(OrderView.class, 42L);                             // HasUrlParameter
-page.navigate(OrderView.class, new RouteParameters("id", "42")); // route template parameters
-page.navigate("profile?tab=2");                                  // by path, relative to the base URL
-page.reload();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:navigate"
 ```
 
 `navigate` returns once the view is shown and the server is idle. The route class form survives renaming a route; use the path form for query parameters and routes registered at runtime.
@@ -23,8 +19,7 @@ page.reload();
 `isAt(..)` also follows navigation the app does itself: a button that navigates, a `RouterLink`, a redirect to the login view:
 
 ```java
-page.navigate(AdminView.class);
-assertThat(page).isAt(LoginView.class);     // anonymous user sent to login
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:redirected"
 ```
 
 ## Running as a user
@@ -47,9 +42,7 @@ With Spring Security, put Spring's own `@WithMockUser` or `@WithUserDetails` on 
 ```
 
 ```java
-UnifiedPage bob = alice.openAsUser("bob", "USER");   // starts on no view: navigate first
-bob.navigate(WhoAmIView.class);
-assertThat(bob.findComponent(Span.class).withText("Signed in as bob")).isVisible();
+--8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:anotherUser"
 ```
 
 Each page is used on its own; there is no switching. All windows close at the end of the test.

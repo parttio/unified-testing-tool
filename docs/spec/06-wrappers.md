@@ -1,6 +1,6 @@
 # 6. Wrappers
 
-Decided in [#6](https://github.com/jcgueriaud1/unified-testing-tool/issues/6) (Core Set), [#12](https://github.com/jcgueriaud1/unified-testing-tool/issues/12) (wrapper shape) and [#18](https://github.com/jcgueriaud1/unified-testing-tool/issues/18) (custom and add-on wrappers) and #199 (filters on the Wrapper); see [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md), [ADR 0003](../adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md).
+Decided in [#6](https://github.com/parttio/unified-testing-tool/issues/6) (Core Set), [#12](https://github.com/parttio/unified-testing-tool/issues/12) (wrapper shape) and [#18](https://github.com/parttio/unified-testing-tool/issues/18) (custom and add-on wrappers) and #199 (filters on the Wrapper); see [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md), [ADR 0003](../adr/0003-wrappers-are-interfaces-shipped-in-the-addon-jar.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md).
 
 ## Core Set
 

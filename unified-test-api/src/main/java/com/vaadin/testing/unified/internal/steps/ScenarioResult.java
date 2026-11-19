@@ -18,10 +18,12 @@ import java.util.Optional;
  * @param durationMs how long it ran, 0 when unknown
  * @param failure the {@code failure} object, or null
  * @param steps the entries, as read
+ * @param readsBeforeFirstEntry how many values the test read before its first entry
  * @param evidencePath the test's evidence directory, as the summary shows it
  */
 public record ScenarioResult(String testClass, String testMethod, String displayName, String tool, String status,
-        Instant startedAt, long durationMs, Map<String, Object> failure, List<Map<String, Object>> steps, String evidencePath) {
+        Instant startedAt, long durationMs, Map<String, Object> failure, List<Map<String, Object>> steps, int readsBeforeFirstEntry,
+        String evidencePath) {
 
     /**
      * Reads a {@code user-steps.json}.
@@ -43,7 +45,8 @@ public record ScenarioResult(String testClass, String testMethod, String display
         Map<String, Object> failure = test.get("failure") instanceof Map<?, ?> f ? cast(f) : null;
         long durationMs = test.get("durationMs") instanceof Number n ? n.longValue() : 0;
         return new ScenarioResult(testClass, testMethod, displayName, string(test, "tool"), string(test, "status"),
-                startedAt, durationMs, failure, entries(test.get("steps")), evidencePath);
+                startedAt, durationMs, failure, entries(test.get("steps")),
+                test.get("readsBeforeFirstEntry") instanceof Number n ? n.intValue() : 0, evidencePath);
     }
 
     public boolean passed() {
@@ -56,6 +59,67 @@ public record ScenarioResult(String testClass, String testMethod, String display
 
     public boolean aborted() {
         return "aborted".equals(status);
+    }
+
+    /**
+     * The User Steps of a passed scenario that no check follows.
+     *
+     * @param all true when the scenario has no check at all
+     * @param steps the steps' texts, in order: every one when {@code all}, else those after the last check
+     */
+    public record Unchecked(boolean all, List<String> steps) {
+    }
+
+    /**
+     * What a passed scenario leaves unchecked, as far as its User Steps tell: the steps after its last check, or
+     * all of them when it has none. Empty when it ends on a check, and for a failed or aborted scenario.
+     * <p>
+     * A check is a retrying assertion ({@code see}, {@code see no}). A failed step counts as one, since a passing
+     * test that has it expected the failure, and so does a gap that may hold one ({@code waitUntil}, the Escape
+     * Hatch). So does a value the test read ({@code readsAfter}): a plain assertion on it is no User Step, but
+     * the read says the test looked at the result of the steps before it.
+     */
+    public Optional<Unchecked> unchecked() {
+        if (!passed()) {
+            return Optional.empty();
+        }
+        List<String> pending = new ArrayList<>();
+        boolean[] checked = { readsBeforeFirstEntry > 0 };
+        unchecked(steps, pending, checked);
+        return pending.isEmpty() && checked[0] ? Optional.empty()
+                : Optional.of(new Unchecked(!checked[0], List.copyOf(pending)));
+    }
+
+    private static void unchecked(List<Map<String, Object>> entries, List<String> pending, boolean[] checked) {
+        for (Map<String, Object> entry : entries) {
+            String type = string(entry, "type");
+            boolean group = "group".equals(type);
+            if (!group && isCheck(entry, type)) {
+                checked[0] = true;
+                pending.clear();
+            } else if (!group && !"gap".equals(type)) {
+                pending.add(orEmpty(string(entry, "text")));
+            }
+            if (entry.get("readsAfter") instanceof Number reads && reads.intValue() > 0) {
+                checked[0] = true;
+                pending.clear();
+            }
+            if (group) {
+                unchecked(entries(entry.get("steps")), pending, checked);
+            }
+        }
+    }
+
+    private static boolean isCheck(Map<String, Object> entry, String type) {
+        if ("failed".equals(string(entry, "status"))) {
+            return true;
+        }
+        if ("gap".equals(type)) {
+            String reason = string(entry, "reason");
+            return "waitUntil".equals(reason) || "Escape Hatch".equals(reason);
+        }
+        String verb = string(entry, "verb");
+        return "see".equals(verb) || "see no".equals(verb);
     }
 
     /** The test class without its package, nested classes with a dot: {@code UsersTest.AsAlice}. */

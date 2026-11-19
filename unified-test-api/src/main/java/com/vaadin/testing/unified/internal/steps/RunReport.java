@@ -53,6 +53,40 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         }
         failed.forEach(s -> scenario(h, s, true, true, false));
         h.append("</section>\n");
+        for (RunComparison c : summary.comparisons()) {
+            h.append("<section class=\"compared\">\n<h2>Compared with ").append(esc(c.otherTool()))
+                    .append("</h2>\n<p class=\"lead\">").append(esc(summary.comparedLead(c))).append("</p>\n")
+                    .append("<p class=\"lead\">").append(c.sameCode(summary.revision()).orElse(true) ? ""
+                            : "<strong>Not the same code.</strong> ")
+                    .append(summary.sameCodeLine(c, commit -> "<code>" + esc(commit) + "</code>")).append("</p>\n");
+            for (RunComparison.Difference d : c.differences()) {
+                h.append("<div class=\"difference\">\n<p><span class=\"name\">").append(esc(d.here().displayName()))
+                        .append("</span> <span class=\"class\">").append(esc(d.here().simpleClassName()))
+                        .append("</span> <span class=\"badge\">").append(esc(summary.differenceLine(d, c.otherTool())))
+                        .append("</span></p>\n");
+                d.parting().ifPresent(p -> h.append("<p class=\"why\">Parts at step ").append(p.position())
+                        .append(": ").append(partingSide(p.here(), summary.tool())).append(", ")
+                        .append(partingSide(p.there(), c.otherTool())).append("</p>\n"));
+                ScenarioResult failedOne = d.here().failed() ? d.here() : d.there().failed() ? d.there() : null;
+                if (d.endsDifferently() && failedOne != null) {
+                    h.append("<p class=\"why\">On ").append(esc(failedOne == d.here() ? summary.tool() : c.otherTool()))
+                            .append(": <code>").append(esc(RunSummary.error(failedOne.failure() == null ? Map.of()
+                                    : failedOne.failure()))).append("</code></p>\n");
+                }
+                h.append("</div>\n");
+            }
+            h.append("</section>\n");
+        }
+        List<ScenarioResult> unchecked = summary.unchecked();
+        if (!unchecked.isEmpty()) {
+            h.append("<section id=\"unchecked\">\n<h2>Scenarios without a check</h2>\n<p class=\"lead\">")
+                    .append(unchecked.size()).append(unchecked.size() == 1 ? " passing scenario ends"
+                            : " passing scenarios end")
+                    .append(" on User Steps that nothing checks: no <code>see</code> step follows them, and the")
+                    .append(" test reads no value after them.</p>\n");
+            unchecked.forEach(s -> scenario(h, s, false, false, false));
+            h.append("</section>\n");
+        }
         h.append("<section id=\"passing\" hidden>\n<h2>Passing scenarios</h2>\n");
         passed.forEach(s -> scenario(h, s, false, false, false));
         h.append("</section>\n<p id=\"no-match\" class=\"none\" hidden>No scenario matches.</p>\n");
@@ -141,10 +175,18 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         } else if (changedSection && !isNew && summary.base() != null && !summary.base().isEmpty()) {
             h.append(" <span class=\"diffstat\">not in the base run</span>");
         }
+        Optional<ScenarioResult.Unchecked> unchecked = s.unchecked();
+        if (unchecked.isPresent()) {
+            h.append(" <span class=\"badge unchecked\">no check</span>");
+        }
         if (s.durationMs() > 0) {
             h.append(" <span class=\"dur\">").append(duration(s.durationMs())).append("</span>");
         }
         h.append("</summary>\n");
+        if (unchecked.isPresent() && !unchecked.get().all()) {
+            h.append("<p class=\"why\">").append(esc(RunSummary.uncheckedLine(unchecked.get(), t -> "“" + t + "”")))
+                    .append("</p>\n");
+        }
         if (changedSection && changed && !isNew) {
             h.append("<p class=\"why\">Called from changed files: ").append(String.join(", ", summary.why(s).stream()
                     .map(w -> "<code>" + esc(w.file()) + "</code>" + (w.methods().isEmpty() ? ""
@@ -184,6 +226,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                     .append("trace.playwright.dev, or with Playwright's show-trace\">trace.zip</a>");
         }
         h.append("</p>\n</details>\n");
+    }
+
+    private static String partingSide(String line, String tool) {
+        return (line == null ? "no more steps" : "<code>" + esc(line) + "</code>") + " on " + esc(tool);
     }
 
     private void failure(StringBuilder h, ScenarioResult s) {
@@ -261,13 +307,17 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 window(h, window);
                 h.append(esc(orEmpty(ScenarioResult.string(entry, "name")))).append("</span>");
                 meta(h, entry, null);
-                h.append("</summary>\n<ol>\n");
+                h.append("</summary>\n");
+                logs(h, entry);
+                h.append("<ol>\n");
                 entries(h, ScenarioResult.entries(entry.get("steps")), dir);
                 h.append("</ol></details></li>\n");
             } else if ("gap".equals(type)) {
                 h.append("<li class=\"gap\">");
                 window(h, window);
-                h.append(esc(orEmpty(ScenarioResult.string(entry, "text")))).append("</li>\n");
+                h.append(esc(orEmpty(ScenarioResult.string(entry, "text"))));
+                logs(h, entry);
+                h.append("</li>\n");
             } else {
                 h.append("<li class=\"step").append(failed ? " failed" : "").append("\">");
                 index(h, entry);
@@ -281,8 +331,18 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 if (failed && error != null) {
                     h.append("<div class=\"error\">").append(esc(error)).append("</div>");
                 }
+                logs(h, entry);
                 h.append("</li>\n");
             }
+        }
+    }
+
+    /** The lines logged during or after the entry: the application's warnings and errors, the console's errors. */
+    private static void logs(StringBuilder h, Map<String, Object> entry) {
+        for (Map<String, Object> line : ScenarioResult.entries(entry.get("logs"))) {
+            h.append("<div class=\"log ").append("ERROR".equals(ScenarioResult.string(line, "level")) ? "error-line"
+                    : "warn-line").append("\">⚠ ").append(esc(orEmpty(ScenarioResult.string(line, "text"))))
+                    .append("</div>");
         }
     }
 
@@ -433,6 +493,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             .files{font-size:13px;margin:8px 0 12px}
             .diffstat{color:var(--muted);font-weight:400;font-size:12px}
             .diffstat .add,pre.diff .add{color:var(--pass)}.diffstat .del,pre.diff .del{color:var(--fail)}
+            .log{margin:2px 0 2px 28px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}\
+            .log.error-line{color:var(--fail)}\
+            .difference{margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px}\
+            .difference p{margin:0 0 4px}\
             .why{margin:0 0 8px;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
             pre.diff{margin:0 0 8px;padding:8px 10px;background:var(--code);border-radius:6px;overflow-x:auto;\
             font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}

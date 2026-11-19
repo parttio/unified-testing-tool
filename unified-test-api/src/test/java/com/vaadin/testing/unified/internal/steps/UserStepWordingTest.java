@@ -351,4 +351,19 @@ public class UserStepWordingTest {
         assertEquals(2, fake.steps.groupsThatThrew(error).size());
         assertTrue(fake.lines().contains("1.1.1  click button “Missing”   ✘"), fake.lines());
     }
+
+    /** The expected items in the test's order, so two runs of a scenario word the step alike. */
+    @Test
+    void selectedItemsAreNamedInTheTestsOrder() {
+        FakePage fake = new FakePage().add("vaadin-multi-select-combo-box", "label", "Toppings");
+        var toppings = fake.page.find(com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox.class)
+                .withLabel("Toppings");
+
+        // the fake page has no selection to read, so the check fails; its step is recorded all the same
+        org.junit.jupiter.api.Assertions.assertThrows(Throwable.class, () -> com.vaadin.testing.unified.assertion
+                .UnifiedAssertions.assertThat(toppings).hasSelectedItems("Olives", "Ham", "Cheese", "Basil", "Corn", "Egg"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(fake.lines().contains("see multi-select combo box “Toppings” with "
+                + "selected items “Olives”, “Ham”, “Cheese”, “Basil”, “Corn”, “Egg”"), fake.lines());
+    }
 }

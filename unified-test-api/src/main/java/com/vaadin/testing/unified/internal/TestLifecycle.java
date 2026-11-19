@@ -5,6 +5,7 @@ import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.internal.logs.ServerLogs;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
 import com.vaadin.testing.unified.spi.AdapterContext;
@@ -155,7 +156,10 @@ public final class TestLifecycle {
             deleteSnapshots(snapshots);
             steps.snapshotsInto(snapshots);
         }
-        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)));
+        ServerLogs.Listening logs = settings.userStepsServerLog().map(level -> ServerLogs.start(steps, level))
+                .orElse(null);
+        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)),
+                logs);
     }
 
     /** One open test. Close it exactly once, when the test ends. */
@@ -163,11 +167,13 @@ public final class TestLifecycle {
         private final AdapterSession session;
         private final StepRecorder steps;
         private final UnifiedPage page;
+        private final ServerLogs.Listening logs;
 
-        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page) {
+        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page, ServerLogs.Listening logs) {
             this.session = session;
             this.steps = steps;
             this.page = page;
+            this.logs = logs;
         }
 
         public UnifiedPage page() {
@@ -185,6 +191,11 @@ public final class TestLifecycle {
          */
         public List<Path> close(Throwable failure, TestId test) {
             try {
+                // the last console errors, then no more log lines: the reports are written from here on
+                steps.errors();
+                if (logs != null) {
+                    logs.close();
+                }
                 reportUserSteps(steps, failure, test);
                 List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, test.evidenceName());
                 keepRecording(failure, test);

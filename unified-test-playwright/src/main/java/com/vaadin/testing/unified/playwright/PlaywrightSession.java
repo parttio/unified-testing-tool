@@ -69,6 +69,30 @@ final class PlaywrightSession implements AdapterSession {
         this.timeoutMillis = timeoutMillis;
         this.ownsContext = ownsContext;
         this.trace = trace;
+        page.onConsoleMessage(message -> {
+            if ("error".equals(message.type())) {
+                // "Failed to load resource: … 404" doesn't say which one: the location does
+                String location = message.location() == null ? "" : message.location().replaceFirst("(:\\d+){1,2}$", "");
+                // every browser asks for /favicon.ico by itself; an application without one did nothing wrong
+                if (!location.endsWith("/favicon.ico")) {
+                    consoleErrors.add(message.text() + (location.isBlank() || message.text().contains(location) ? ""
+                            : " (" + location + ")"));
+                }
+            }
+        });
+        page.onPageError(error -> consoleErrors.add(error));
+    }
+
+    /** What the page logged with console.error, and the exceptions no script caught, since they were last read. */
+    private final List<String> consoleErrors = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
+    @Override
+    public List<String> consoleErrors() {
+        synchronized (consoleErrors) {
+            List<String> errors = List.copyOf(consoleErrors);
+            consoleErrors.clear();
+            return errors;
+        }
     }
 
     /** A new page in the same browser context: same cookies, so the same HTTP and Vaadin session. */

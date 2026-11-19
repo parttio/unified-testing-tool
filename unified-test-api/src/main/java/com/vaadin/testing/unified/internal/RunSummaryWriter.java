@@ -2,8 +2,11 @@ package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.internal.steps.BaseRun;
 import com.vaadin.testing.unified.internal.steps.ChangedFiles;
+import com.vaadin.testing.unified.internal.steps.RunComparison;
 import com.vaadin.testing.unified.internal.steps.RunReport;
+import com.vaadin.testing.unified.internal.steps.Revision;
 import com.vaadin.testing.unified.internal.steps.RunSummary;
+import com.vaadin.testing.unified.internal.steps.RunSummaryJson;
 import com.vaadin.testing.unified.internal.steps.ScenarioResult;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
 import java.io.IOException;
@@ -24,11 +27,12 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
- * Writes the run's {@code summary.md} and {@code report.html} to the evidence directory's root and, in GitHub
- * Actions, puts the summary in the job summary. Test Runner-neutral: the JUnit integration calls it at the end of the run.
+ * Writes the run's {@code summary.md}, {@code report.html} and {@code summary.json} to the evidence directory's root
+ * and, in GitHub Actions, puts the summary in the job summary. Test Runner-neutral: the JUnit integration calls it at the end of the run.
  * <p>
  * <b>Which files belong to the run.</b> The {@code user-steps.json} under the evidence directory whose
  * {@code startedAt} is not before {@code runStart}. With Surefire's forks every fork rewrites the summary when it
@@ -44,10 +48,12 @@ import java.util.stream.Stream;
  * @param runStart when the run started; files from earlier runs are ignored
  * @param env the environment ({@code GITHUB_STEP_SUMMARY}, {@code GITHUB_BASE_REF})
  * @param changedFiles the files changed against a base ref, e.g. {@link ChangedFiles#fromGit}
+ * @param revision the code the run tests, e.g. {@link Revision#fromGit}
  * @param log where one-line notes go
  */
 public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart, Map<String, String> env,
-        Function<String, Optional<ChangedFiles>> changedFiles, Consumer<String> log) {
+        Function<String, Optional<ChangedFiles>> changedFiles, Supplier<Optional<Revision>> revision,
+        Consumer<String> log) {
 
     public static final String GITHUB_STEP_SUMMARY = "GITHUB_STEP_SUMMARY";
     static final String SKIPPED_DIR = ".summary";
@@ -56,12 +62,12 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
     public static RunSummaryWriter of(Settings settings, Path workDir, Instant runStart, Map<String, String> env) {
         Consumer<String> log = line -> System.err.println("Unified UI Tests: " + line);
         return new RunSummaryWriter(settings, workDir, runStart, env,
-                ref -> ChangedFiles.fromGit(ref, workDir, log), log);
+                ref -> ChangedFiles.fromGit(ref, workDir, log), () -> Revision.fromGit(workDir), log);
     }
 
     /**
-     * Writes {@code summary.md} and {@code report.html}, if the run has any Unified UI Test, and appends the summary
-     * to the GitHub job summary.
+     * Writes {@code summary.md}, {@code report.html} and {@code summary.json}, if the run has any Unified UI Test,
+     * and appends the summary to the GitHub job summary.
      *
      * @param skippedHere the Unified UI Tests this process skipped without running ({@code class#method})
      * @param processId names this process's list of skipped tests
@@ -81,14 +87,20 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         }
         ChangedFiles changes = settings.userStepsChangedSince(env).flatMap(changedFiles).orElse(null);
         BaseRun base = changes == null ? null : settings.userStepsBaselineDir().map(this::baseRun).orElse(null);
-        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes, base);
+        List<RunComparison> comparisons = settings.userStepsCompareDir().map(dir -> RunComparison.of(
+                settings.tool().name(), scenarios, otherRuns(dir), summariesIn(dir))).orElse(List.of());
+        RunSummary summary = new RunSummary(toolName(), scenarios, skipped, changes, base, comparisons,
+                revision.get().orElse(null));
         String markdown = summary.markdown();
         Path file = evidenceDir.resolve(RunSummary.FILE);
         Files.createDirectories(evidenceDir);
         Files.writeString(file, markdown, StandardCharsets.UTF_8);
         List<String> rootFiles = rootFiles(evidenceDir);
-        String report = new RunReport(summary, s -> evidence(evidenceDir, rootFiles, s)).html();
-        Files.writeString(evidenceDir.resolve(RunReport.FILE), report, StandardCharsets.UTF_8);
+        Function<ScenarioResult, List<String>> evidence = s -> evidence(evidenceDir, rootFiles, s);
+        Files.writeString(evidenceDir.resolve(RunReport.FILE), new RunReport(summary, evidence).html(),
+                StandardCharsets.UTF_8);
+        Files.writeString(evidenceDir.resolve(RunSummaryJson.FILE), new RunSummaryJson(summary, evidence).json(),
+                StandardCharsets.UTF_8);
         String stepSummary = env.get(GITHUB_STEP_SUMMARY);
         if (stepSummary != null && !stepSummary.isBlank() && settings.userStepsGithubSummary()) {
             putInJobSummary(Path.of(stepSummary), key(evidenceDir), markdown);
@@ -128,8 +140,8 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         return scenarios;
     }
 
-    /** The base run's scenarios under {@code dir} on this run's Testing Tool; none when it has no readable one. */
-    private BaseRun baseRun(Path dir) {
+    /** Every readable {@code user-steps.json} under {@code dir}, at any depth; {@code what} names the run in the log. */
+    private List<ScenarioResult> runIn(Path dir, String what) {
         List<ScenarioResult> scenarios = new ArrayList<>();
         if (Files.isDirectory(dir)) {
             List<Path> files;
@@ -138,17 +150,53 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
                         .toList();
             } catch (IOException | RuntimeException e) {
                 files = List.of();
-                log.accept("the base run could not be read: " + dir + " (" + e.getMessage() + ")");
+                log.accept(what + " could not be read: " + dir + " (" + e.getMessage() + ")");
             }
             for (Path json : files) {
                 String evidencePath = (json.getParent().toString() + "/").replace('\\', '/');
                 try {
                     scenarios.add(ScenarioResult.parse(Files.readString(json, StandardCharsets.UTF_8), evidencePath));
                 } catch (IOException | RuntimeException e) {
-                    log.accept("left out of the base run, unreadable: " + json + " (" + e.getMessage() + ")");
+                    log.accept("left out of " + what + ", unreadable: " + json + " (" + e.getMessage() + ")");
                 }
             }
         }
+        return scenarios;
+    }
+
+    /** The scenarios under {@code dir} that ran on another Testing Tool than this run's; says so when there is none. */
+    private List<ScenarioResult> otherRuns(Path dir) {
+        List<ScenarioResult> others = runIn(dir, "the run to compare with").stream()
+                .filter(s -> s.tool() != null && !s.tool().equalsIgnoreCase(settings.tool().name())).toList();
+        if (others.isEmpty()) {
+            log.accept("no run on another Testing Tool in " + dir + " to compare with");
+        }
+        return others;
+    }
+
+    /** The {@code summary.json} files under {@code dir}, at any depth: which run each is of. Unreadable ones are left out. */
+    private List<Revision.OfRun> summariesIn(Path dir) {
+        if (!Files.isDirectory(dir)) {
+            return List.of();
+        }
+        List<Revision.OfRun> runs = new ArrayList<>();
+        try (Stream<Path> walk = Files.walk(dir)) {
+            for (Path file : walk.filter(p -> p.getFileName().toString().equals(RunSummaryJson.FILE)).sorted().toList()) {
+                try {
+                    Revision.read(Files.readString(file, StandardCharsets.UTF_8)).ifPresent(runs::add);
+                } catch (IOException | RuntimeException e) {
+                    // an unreadable summary says nothing about the run's commit
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            return List.of();
+        }
+        return runs;
+    }
+
+    /** The base run's scenarios under {@code dir} on this run's Testing Tool; none when it has no readable one. */
+    private BaseRun baseRun(Path dir) {
+        List<ScenarioResult> scenarios = runIn(dir, "the base run");
         BaseRun base = BaseRun.of(scenarios, settings.tool().name());
         if (base.isEmpty()) {
             log.accept("no base run in " + dir + " to compare User Steps with");

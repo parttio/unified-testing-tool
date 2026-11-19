@@ -1,6 +1,6 @@
 # 9. Capabilities and limitations
 
-Decided in [#11](https://github.com/jcgueriaud1/unified-testing-tool/issues/11) and [#9](https://github.com/jcgueriaud1/unified-testing-tool/issues/9).
+Decided in [#11](https://github.com/parttio/unified-testing-tool/issues/11) and [#9](https://github.com/parttio/unified-testing-tool/issues/9).
 
 ## Capabilities
 
@@ -77,6 +77,7 @@ Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 | Property values | browser | browser | server-side; equal only for synchronised properties |
 | Server-side Java state | ✗ | ✗ | ✓ (Escape Hatch) |
 | Network interception, tracing | ✓ (Escape Hatch) | ✗ | ✗ |
+| The console's errors *(unreleased)* ([chapter 12](12-readable-tests.md#log-lines-under-the-user-step)) | ✓ | Chrome only | ✗ (no console) |
 | External URLs | ✓ | ✓ | ✗ |
 | Back / forward history | Escape Hatch | Escape Hatch | ✗ |
 

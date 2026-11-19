@@ -1,6 +1,6 @@
 # 4. Locating components
 
-Decided in [#7](https://github.com/jcgueriaud1/unified-testing-tool/issues/7), [#12](https://github.com/jcgueriaud1/unified-testing-tool/issues/12) and "What shape does a lookup take?" (#199); see [ADR 0001](../adr/0001-locator-filters-follow-component-type.md), [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). The style the lookups are written in: [12. Readable tests](12-readable-tests.md#lookups).
+Decided in [#7](https://github.com/parttio/unified-testing-tool/issues/7), [#12](https://github.com/parttio/unified-testing-tool/issues/12) and "What shape does a lookup take?" (#199); see [ADR 0001](../adr/0001-locator-filters-follow-component-type.md), [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). The style the lookups are written in: [12. Readable tests](12-readable-tests.md#lookups).
 
 ## Lookup shape
 

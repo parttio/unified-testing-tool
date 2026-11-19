@@ -23,6 +23,10 @@ final class FakePage {
 
     final List<Map<String, String>> components = new CopyOnWriteArrayList<>();
     final List<String> actions = new CopyOnWriteArrayList<>();
+    /** What the application does when a component is clicked, e.g. log an error. */
+    Runnable onClick = () -> { };
+    /** The errors the fake browser's console holds until they are read. */
+    final List<String> console = new CopyOnWriteArrayList<>();
     final StepRecorder steps = new StepRecorder();
     final UnifiedPageImpl page;
 
@@ -38,9 +42,15 @@ final class FakePage {
                         yield null;
                     }
                     case "openWindow", "openAsUser" -> proxy;
+                    case "consoleErrors" -> {
+                        List<String> errors = List.copyOf(console);
+                        console.clear();
+                        yield errors;
+                    }
                     case "hashCode" -> 1;
                     default -> null;
                 });
+        steps.session(null, session);
         page = new UnifiedPageImpl(new TestRun(TestingTool.BROWSERLESS, session, Duration.ofMillis(200), steps,
                 null));
     }
@@ -95,6 +105,9 @@ final class FakePage {
                     }
                     case "click", "focus", "pressKey" -> {
                         actions.add(method.getName() + " " + component.get("tag"));
+                        if (method.getName().equals("click")) {
+                            onClick.run();
+                        }
                         yield null;
                     }
                     case "hashCode" -> System.identityHashCode(proxy);

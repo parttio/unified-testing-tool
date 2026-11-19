@@ -29,6 +29,34 @@ public final class StepRecorder {
 
     public enum Status { PASSED, FAILED }
 
+    /**
+     * A line logged while the test ran: by the application ({@link #SERVER}), or an error in the browser's console
+     * ({@link #CONSOLE}).
+     *
+     * @param source {@link #SERVER} or {@link #CONSOLE}
+     * @param level {@code ERROR} or {@code WARN}
+     * @param logger the logger's name; null for the console
+     * @param message the message, as logged
+     * @param error the logged exception, {@code IllegalStateException: no id}; null without one
+     */
+    public record LogLine(String source, String level, String logger, String message, String error) {
+        public static final String SERVER = "server";
+        public static final String CONSOLE = "console";
+
+        public boolean isError() {
+            return "ERROR".equals(level);
+        }
+
+        /** {@code server ERROR PersonService: Could not save (IllegalStateException: no id)}. */
+        public String text() {
+            String simple = logger == null ? null : logger.substring(logger.lastIndexOf('.') + 1);
+            String what = message == null ? "" : message.strip().replaceAll("\\s*\\R\\s*", " ");
+            what = what.length() > 300 ? what.substring(0, 299) + "…" : what;
+            return source + " " + level + (simple == null ? "" : " " + simple) + ": " + what
+                    + (error == null ? "" : " (" + error + ")");
+        }
+    }
+
     /** A recorded entry: a User Step, a step group or a gap. */
     public sealed interface Entry permits Step, Group, Gap {}
 
@@ -146,6 +174,9 @@ public final class StepRecorder {
         final CallSite callSite = CallSite.here();
         final long start = System.nanoTime();
         boolean acted;
+        boolean read;
+        /** A User Step or a gap already: what is read inside belongs to it. */
+        boolean step;
     }
 
     private final ThreadLocal<Frame> frame = new ThreadLocal<>();
@@ -155,6 +186,20 @@ public final class StepRecorder {
     private final Instant startedAt = Instant.now();
     private final long start = System.nanoTime();
     private int steps;
+    /** The entry recorded last, where the reads that follow it are counted; null before the first one. */
+    private Entry last;
+    private final Map<Entry, Integer> readsAfter = new java.util.IdentityHashMap<>();
+    private int readsBeforeFirstEntry;
+    /** The lines logged during or after each entry, until the next one starts. */
+    private final Map<Entry, List<LogLine>> logsOf = new java.util.IdentityHashMap<>();
+    private final List<LogLine> logsBeforeFirstEntry = new ArrayList<>();
+    /** The lines logged while a frame runs: its entry's, once it is known. */
+    private final List<LogLine> logsOfRunning = new ArrayList<>();
+    private Frame running;
+    private int logLines;
+
+    /** The most log lines one test keeps: an application that logs in a loop doesn't fill the reports. */
+    public static final int MAX_LOG_LINES = 100;
     private int windows = 1;
     private volatile String scenario;
     private volatile String evidenceDir;
@@ -174,7 +219,7 @@ public final class StepRecorder {
     /**
      * A Wrapper default method called through its proxy. It becomes a User Step when it is the outermost call
      * and acted through Auto-Wait ({@link #action}) or is a void non-getter; a call that only read becomes a
-     * "read" step when it fails, and is forgotten otherwise.
+     * "read" step when it fails, and is counted as a read otherwise ({@link #read()}).
      */
     public Object wrapperCall(Supplier<Phrase> action, Supplier<Phrase> read, boolean voidAction, String window,
             Body<Object> body) throws Throwable {
@@ -183,21 +228,148 @@ public final class StepRecorder {
         }
         Frame f = new Frame();
         frame.set(f);
+        started(f);
         // a void Wrapper method is a User Step whatever it does; a getter is known to be one only at the end
         AdapterSession traced = voidAction ? traceStart(window, () -> action.get().render()) : null;
         try {
             Object result = body.run();
             if (f.acted || voidAction) {
                 add(f, action.get(), window, null);
+            } else if (f.read) {
+                countRead();
             }
             return result;
         } catch (Throwable t) {
             add(f, f.acted || voidAction ? action.get() : read.get(), window, t);
             throw t;
         } finally {
+            ended(f);
             frame.remove();
             traceEnd(traced);
         }
+    }
+
+    // ---------------------------------------------------------------- log lines
+
+    /**
+     * A line was logged. It belongs to the User Step that is running; between steps, to the entry before, whose
+     * late effect it most likely is. Lines are attributed by time: a background thread's line shows under the step
+     * during which it was logged, whatever caused it.
+     */
+    public synchronized void logged(LogLine line) {
+        if (++logLines > MAX_LOG_LINES) {
+            return;
+        }
+        if (running != null) {
+            logsOfRunning.add(line);
+        } else {
+            attach(line);
+        }
+    }
+
+    private void attach(LogLine line) {
+        if (last == null) {
+            logsBeforeFirstEntry.add(line);
+        } else {
+            logsOf.computeIfAbsent(last, e -> new ArrayList<>()).add(line);
+        }
+    }
+
+    private synchronized void started(Frame f) {
+        running = f;
+    }
+
+    /** The frame's lines go to the entry it recorded, which is the last one; a frame that only read, to the one before. */
+    private synchronized void ended(Frame f) {
+        if (running == f) {
+            running = null;
+            logsOfRunning.forEach(this::attach);
+            logsOfRunning.clear();
+        }
+    }
+
+    /** The lines logged during or after an entry, before the next one. */
+    public synchronized List<LogLine> logs(Entry entry) {
+        return List.copyOf(logsOf.getOrDefault(entry, List.of()));
+    }
+
+    /** The lines logged before the test's first entry. */
+    public synchronized List<LogLine> logsBeforeFirstEntry() {
+        return List.copyOf(logsBeforeFirstEntry);
+    }
+
+    /** How many lines were logged beyond {@link #MAX_LOG_LINES} and left out. */
+    public synchronized int logLinesLeftOut() {
+        return Math.max(0, logLines - MAX_LOG_LINES);
+    }
+
+    /**
+     * Every error logged so far, in order: the application's ERROR lines and the browsers' console errors. The
+     * windows' consoles are read first.
+     */
+    public List<LogLine> errors() {
+        sessions.forEach((window, session) -> console(session));
+        synchronized (this) {
+            List<LogLine> errors = new ArrayList<>();
+            logsBeforeFirstEntry.stream().filter(LogLine::isError).forEach(errors::add);
+            collectErrors(root.children, errors);
+            logsOfRunning.stream().filter(LogLine::isError).forEach(errors::add);
+            return errors;
+        }
+    }
+
+    private void collectErrors(List<Entry> entries, List<LogLine> errors) {
+        for (Entry entry : entries) {
+            logsOf.getOrDefault(entry, List.of()).stream().filter(LogLine::isError).forEach(errors::add);
+            if (entry instanceof Group group) {
+                collectErrors(group.children, errors);
+            }
+        }
+    }
+
+    /** The errors the session's browser console got since they were last read. */
+    private void console(AdapterSession session) {
+        try {
+            for (String error : session.consoleErrors()) {
+                logged(new LogLine(LogLine.CONSOLE, "ERROR", null, error, null));
+            }
+        } catch (RuntimeException | LinkageError e) {
+            // the console is a help, never a reason to fail the test
+        }
+    }
+
+    /**
+     * The test read a value from a component: a Unified Element's getter, or a Wrapper getter built on a Testing
+     * Tool's access. A read is no User Step and is listed nowhere; the recorder only counts the reads that
+     * follow each entry ({@link #readsAfter}), so the reports can tell a scenario that reads a value after its
+     * last action, to assert on it in plain Java, from one that checks nothing. Reads inside a User Step, such
+     * as the getters an assertion polls, are part of that step and not counted.
+     */
+    public void read() {
+        Frame current = frame.get();
+        if (current == null) {
+            countRead();
+        } else if (!current.step) {
+            current.read = true;
+        }
+    }
+
+    private synchronized void countRead() {
+        if (last == null) {
+            readsBeforeFirstEntry++;
+        } else {
+            readsAfter.merge(last, 1, Integer::sum);
+        }
+    }
+
+    /** How many values the test read after this entry and before the next one, outside any User Step. */
+    public synchronized int readsAfter(Entry entry) {
+        return readsAfter.getOrDefault(entry, 0);
+    }
+
+    /** How many values the test read before its first entry. */
+    public synchronized int readsBeforeFirstEntry() {
+        return readsBeforeFirstEntry;
     }
 
     /**
@@ -230,7 +402,9 @@ public final class StepRecorder {
 
     private <T> T step(Supplier<Phrase> phrase, String window, Body<T> body) {
         Frame f = new Frame();
+        f.step = true;
         frame.set(f);
+        started(f);
         AdapterSession traced = traceStart(window, () -> phrase.get().render());
         try {
             T result = sneaky(body);
@@ -240,6 +414,7 @@ public final class StepRecorder {
             add(f, phrase.get(), window, t);
             throw t;
         } finally {
+            ended(f);
             frame.remove();
             traceEnd(traced);
         }
@@ -252,7 +427,9 @@ public final class StepRecorder {
             return;
         }
         Frame f = new Frame();
+        f.step = true;
         frame.set(f);
+        started(f);
         Throwable failure = null;
         try {
             body.run();
@@ -265,6 +442,7 @@ public final class StepRecorder {
             if (failure != null) {
                 gap.error = failure;
             }
+            ended(f);
         }
     }
 
@@ -284,11 +462,13 @@ public final class StepRecorder {
                 && container.children.get(container.children.size() - 1) instanceof Gap last
                 && last.reason.equals(reason) && last.error == null && java.util.Objects.equals(last.window, window)) {
             last.count++;
+            this.last = last;
             return last;
         }
         Gap gap = new Gap(reason, window, callSite);
         gap.count = 1;
         container.children.add(gap);
+        this.last = gap;
         return gap;
     }
 
@@ -301,6 +481,7 @@ public final class StepRecorder {
             group = new Group(container.nextIndex(), name, window, callSite);
             container.children.add(group);
             open.push(group);
+            last = group;
         }
         long t0 = System.nanoTime();
         AdapterSession traced = traceStart(window, () -> name);
@@ -322,6 +503,7 @@ public final class StepRecorder {
     private synchronized void add(Frame f, Phrase phrase, String window, Throwable error) {
         Group container = current();
         Step step = new Step(container.nextIndex(), ++steps, phrase, window, f.callSite);
+        last = step;
         step.durationNanos = System.nanoTime() - f.start;
         if (error != null) {
             step.status = Status.FAILED;
@@ -350,6 +532,10 @@ public final class StepRecorder {
         }
         container.children.add(step);
         snapshot(step);
+        AdapterSession session = sessions.get(step.window == null ? "" : step.window);
+        if (session != null) {
+            console(session);
+        }
     }
 
     // ---------------------------------------------------------------- snapshots and trace groups
