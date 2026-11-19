@@ -326,8 +326,33 @@ UnifiedAssertionError: Editing a person in the dialog updates the grid
 - **Without a scenario** (outside a Unified UI Test), the first line is the summary, `Expected …, found …`. The User Step lists, the `error` of a step in `user-steps.json` and the run summary also show the summary, since the scenario is their heading.
 - **Waited** names where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` for a Wrapper's own.
 - **Items a component lacks** (`selectItem`, `selectTab`) fail the same way, with the component's items as Near Misses (`item “Finland”`) and a suggestion such as `selectItem("France")`.
-- **Several matches** are told apart by their nearest ancestor with a test id or an id: `in container (test id “billing”)`.
+- **Several matches** are told apart by their nearest ancestor with a test id or an id: `in container (test id “billing”)`. Flow's own root, whose id a browser sees as `ROOT-` and a number, is never named: it holds every view and Browserless has no such element.
 - **`UnifiedElement.getAccessibleName()`** reads the accessible name (4. Locating's order), for Near Misses and for tests.
+
+## Findable View
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+
+What a Unified UI Test can find in a page or a container, one line per component: its kind, name and state in User Step words, and the lookup that singles it out ([ADR 0009](../adr/0009-findable-view-in-lookups-not-aria-yaml.md)).
+
+```
+Findable view of “/profile” on playwright (chromium): 11 components
+dialog “Change email”                   page.find(UnifiedDialog.class).withHeaderTitle("Change email")
+text field “Name”                       page.find(UnifiedTextField.class).withLabel("Name")
+text field (no name; placeholder “Nickname”)  page.find(UnifiedTextField.class).withPlaceholder("Nickname")
+button “Delete account”                 page.find(UnifiedButton.class).withAccessibleName("Delete account")
+button “Archive” (disabled)             page.find(UnifiedButton.class).withText("Archive")
+button “Save”                           not unique: 2 alike; one in dialog “Change email”: page.find(UnifiedDialog.class).withHeaderTitle("Change email").find(UnifiedButton.class).withText("Save")
+…
+```
+
+- **Where.** `describe()` on the page or on any Scope (a dialog, a container) returns it; a container's lookups are on the container. On failure it is written next to the evidence, as `<test class>.<method>.view.txt`, on every Testing Tool ([09. Capabilities](09-capabilities.md#failure-evidence)).
+- **What is listed.** The components `find(Type.class)` finds in the scope, hidden ones included, for the Wrappers of the Unified API that name a component (fields, buttons, checkbox, radio button group, grid, tabs, tab sheet, menu bar, details, dialog, notification, upload), then the custom Wrappers the test has looked up. A custom Wrapper of the same tag and selector as one listed already is left out. Plain HTML Wrappers and `UnifiedContainer` are not listed. Lines come grouped by Wrapper type, at most 100 of them.
+- **The name** is the first value the component has among the Wrapper's own naming filters (`withHeaderTitle`, as for the User Steps), its label, text and accessible name. An accessible name that is only the component's text doesn't count. A field, button or checkbox without one says `(no name; placeholder …)` or `(no name; test id …)`: an accessibility finding.
+- **The state.** The value of a text, number, date or date-time field (`= “Alan Turing”`), `(checked)`, `(disabled)` and `(hidden)`. A grid shows its row count and column headers.
+- **The lookup** uses the first filter whose value only this component has, among its naming filters, placeholder and test id, compared as the exact filters compare. It is the bare `find(Type.class)` when the component is the only one of its type and has no such value. Otherwise the line says how many are alike and gives a lookup through a container: its nearest ancestor with a test id or an id (`UnifiedContainer`), or a dialog or other Scope listed with a lookup of its own. That lookup is run first and printed only when it finds exactly one. Flow's generated root id (`ROOT-…`) is never used.
+- **Not a User Step.** Its reads are not recorded or counted as the test's reads. It is for people and agents, not for assertions, and its format may change between releases.
+- **Cost.** One query per Wrapper type and one read of each match. In a browser it runs only on failure or when asked.
 
 ## Style rules
 
@@ -375,6 +400,7 @@ A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `script
 > **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
 
 - **The skill**, above, installed in the project.
+- **The [Findable View](#findable-view)**: `page.describe()` while writing a test, and `<test>.view.txt` after a failure, for lookups that match what is on the page.
 - **The API reference:** `META-INF/unified/api-reference.md` in the `unified-test-api` jar, so it is of the version the project uses and needs no network. Every Wrapper with its filters, actions, reads and checks, and the page's. Generated from the Wrapper interfaces and `UnifiedAssertions`; a test of the build fails when the file is not what the code says. The docs site has the same page.
 - **The docs site** for agents: `llms.txt` at its root (one link per page, to the page as Markdown with its code examples included; the specification and the ADRs under *Optional*), and `llms-full.txt` (the home page, the API reference, the developer guide and the glossary in one file). Written by the site's build from its navigation.
 

@@ -62,6 +62,13 @@ class FailureMessagesTest {
         }
 
         @Test
+        @DisplayName("A lookup without a filter matches every field of the view")
+        void noFilter(UnifiedPage page) {
+            page.navigate(ProfileView.class);
+            page.find(UnifiedTextField.class).setValue("Alan");
+        }
+
+        @Test
         @DisplayName("A text that changes but never matches times out")
         void changingText(UnifiedPage page) {
             page.navigate(ContactView.class);
@@ -111,7 +118,7 @@ class FailureMessagesTest {
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
         TestExecutionSummary summary = listener.getSummary();
-        assertEquals(6, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+        assertEquals(7, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
         failures = summary.getFailures().stream().collect(Collectors.toMap(
                 f -> f.getTestIdentifier().getDisplayName(),
                 f -> assertInstanceOf(UnifiedAssertionError.class, f.getException(), f.getException()::toString)));
@@ -167,6 +174,14 @@ class FailureMessagesTest {
                 + " (id “shipping”)", failure.getFound(), failure.getMessage());
         assertEquals(List.of(), failure.getNearMisses());
         assertEquals(Optional.empty(), failure.getSuggestion());
+    }
+
+    @Test
+    void severalMatchesOutsideAnyContainerNameNoContainer() {
+        UnifiedAssertionError failure = failures.get("A lookup without a filter matches every field of the view");
+
+        // in a browser, the nearest ancestor with an id is Flow's own root, ROOT-<number>: no container to name
+        assertEquals("3: text field “Name”, text field “Email”, text field", failure.getFound(), failure.getMessage());
     }
 
     @Test

@@ -96,6 +96,7 @@ nav:
       - adr/0006-dramafinder-migration-recipes.md
       - adr/0007-wrappers-carry-their-filters.md
       - adr/0008-adapter-spi-is-test-runner-neutral.md
+      - adr/0009-findable-view-in-lookups-not-aria-yaml.md
   - Release notes:
       - Unreleased: releases/unreleased.md
       - 0.1.0-alpha3: releases/0.1.0-alpha3.md

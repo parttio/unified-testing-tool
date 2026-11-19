@@ -203,14 +203,21 @@ class TestLifecycleTest {
 
         List<Path> evidence = test.close(failure, SAVES);
 
-        assertEquals(List.of(Path.of("evidence", "page.png")), evidence);
+        Path view = evidenceDir.resolve("demo.ProfileTest.saves.view.txt");
+        assertEquals(List.of(Path.of("evidence", "page.png"), view), evidence);
+        // the Findable View, on every Testing Tool; this fake page has nothing to find
+        assertEquals("Findable view of “/” on playwright: no component a Unified UI Test can find\n",
+                Files.readString(view));
         assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves]",
-                "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"), session.calls);
+                "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"),
+                session.calls.stream().filter(call -> !call.startsWith("find[") && !call.equals("currentPath")
+                        && !call.equals("browserName")).toList()); // the Findable View's reads
         Throwable[] suppressed = failure.getSuppressed();
         assertEquals(2, suppressed.length);
         assertTrue(suppressed[0].getMessage().startsWith("User Steps ("
                 + evidenceDir.resolve("ProfileTest").resolve("saves").toAbsolutePath() + "):\n"), suppressed[0].getMessage());
-        assertEquals("Failure evidence: " + Path.of("evidence", "page.png").toAbsolutePath(), suppressed[1].getMessage());
+        assertEquals("Failure evidence: " + Path.of("evidence", "page.png").toAbsolutePath() + ", "
+                + view.toAbsolutePath(), suppressed[1].getMessage());
         assertEquals(0, suppressed[1].getStackTrace().length);
     }
 
@@ -220,7 +227,8 @@ class TestLifecycleTest {
         TestLifecycle.OpenTest test = lifecycle("selenium").open(new PlainContext(Plain.class, null), new StepRecorder());
         AssertionError failure = new AssertionError("expected 'Saved'");
 
-        assertEquals(List.of(), test.close(failure, SAVES));
+        // the Findable View is written all the same
+        assertEquals(List.of(evidenceDir.resolve("demo.ProfileTest.saves.view.txt")), test.close(failure, SAVES));
 
         assertEquals("expected 'Saved'", failure.getMessage());
         assertEquals("Failure evidence could not be written: java.io.IOException: disk full",

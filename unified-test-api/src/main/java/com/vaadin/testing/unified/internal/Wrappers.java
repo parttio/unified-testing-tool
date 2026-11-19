@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.internal;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.ToolImplementation;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedElement;
@@ -58,6 +59,7 @@ public final class Wrappers {
             }
         }
         String tag = requireTag(annotation.value(), annotation.tag(), wrapperType.getSimpleName());
+        run.steps().wrapperUsed(wrapperType);
         List<Filter> filters = annotation.selector().isBlank() ? List.of()
                 : WrapperSelector.filters(annotation.selector(), wrapperType.getName());
         ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), wrapperType, annotation.value(),
@@ -163,6 +165,11 @@ public final class Wrappers {
                         @SuppressWarnings("unchecked")
                         Class<? extends Component> componentType = (Class<? extends Component>) type;
                         return newComponent(element.run(), componentType, element);
+                    }
+                    break;
+                case "describe":
+                    if (args == null && method.getDeclaringClass() == Scope.class) {
+                        return FindableView.ofScope(element);
                     }
                     break;
                 case "toString":

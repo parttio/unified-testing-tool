@@ -76,6 +76,10 @@ _Avoid_: Task, step method, keyword, flow, journey, page object
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run
 
+**Findable View**:
+A text view of what a Unified UI Test can find in a page or a container: one line per component, with its kind, name and state and the lookup that singles it out, written on failure on every Testing Tool and returned by `describe()`.
+_Avoid_: Snapshot, ARIA snapshot, component tree, page dump
+
 **Near Miss**:
 A component a failed lookup almost matched (the same kind with a similar name, or another kind with the exact name), listed in the failure so the reader can see what the test should have asked for.
 _Avoid_: Candidate, suggestion, fuzzy match
