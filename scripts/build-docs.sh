@@ -10,7 +10,7 @@ src=target/docs-src
 
 rm -rf "$src"
 mkdir -p "$src"
-cp -r docs/spec docs/adr docs/guide "$src"/
+cp -r docs/spec docs/adr docs/guide docs/releases "$src"/
 cp docs/comparison.md "$src"/comparison.md
 cp docs/migrating-from-testbench.md "$src"/migrating-from-testbench.md
 cp docs/migrating-from-browserless.md "$src"/migrating-from-browserless.md

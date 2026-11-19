@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SNIPPET = re.compile(r'^(\s*)--8<-- "([^":]+)(?::([\w-]+))?"\s*$')
 MARKER = re.compile(r'--8<-- \[(start|end):([\w-]+)\]')
 # the nav groups an agent can skip when it is short of context: llms.txt's "Optional" section
-OPTIONAL = {"Specification", "Decisions (ADRs)"}
+OPTIONAL = {"Specification", "Decisions (ADRs)", "Release notes"}
 # what llms-full.txt holds: enough to write and read a Unified UI Test
 FULL = {"Home", "API reference", "Developer guide", "Glossary"}
 
