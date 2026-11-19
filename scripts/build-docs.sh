@@ -10,7 +10,7 @@ src=target/docs-src
 
 rm -rf "$src"
 mkdir -p "$src"
-cp -r docs/spec docs/adr docs/guide "$src"/
+cp -r docs/spec docs/adr docs/guide docs/releases "$src"/
 cp docs/comparison.md "$src"/comparison.md
 cp docs/migrating-from-testbench.md "$src"/migrating-from-testbench.md
 cp docs/migrating-from-browserless.md "$src"/migrating-from-browserless.md
@@ -18,6 +18,8 @@ cp docs/migrating-from-dramafinder.md "$src"/migrating-from-dramafinder.md
 cp GLOSSARY.md "$src"/GLOSSARY.md
 # the API reference shipped in the unified-test-api jar, generated from the code (ApiReferenceTest)
 cp unified-test-api/src/main/resources/META-INF/unified/api-reference.md "$src"/api-reference.md
+# on the site the reference is of main; in a jar it is of that jar's version
+sed -i '2a > **Unreleased:** this page is of `main`, and the reference is not in the `0.1.0-alpha3` jar. See [what is unreleased](releases/unreleased.md).\n' "$src"/api-reference.md
 cp README.md "$src"/index.md
 
 # README.md sits at the site root: docs/x -> x; the API reference is a page of the site
