@@ -14,8 +14,11 @@ import com.vaadin.testing.unified.query.CommonFilters;
  * UnifiedContainer billing = page.find(UnifiedContainer.class).withTestId("billing");
  * billing.find(UnifiedTextField.class).withLabel("City").setValue("Turku");
  * }</pre>
+ * A layout with a click listener, such as a card, is clicked with {@link #click()}.
  */
 @UnifiedComponent(value = Component.class, tag = "*")
 public interface UnifiedContainer extends UnifiedWrapper, Scope, CommonFilters<UnifiedContainer> {
 
+    /** Clicks it as a user does, for a click listener ({@code addClickListener}); Auto-Wait. */
+    default void click() { element().click(); }
 }
