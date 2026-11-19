@@ -5,7 +5,11 @@ import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
 import com.vaadin.flow.component.radiobutton.testbench.RadioButtonGroupElement;
 import com.vaadin.testbench.HasClearButton;
 import com.vaadin.testing.unified.spi.SelectionAccess;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import org.openqa.selenium.WebElement;
 
 /**
@@ -47,14 +51,20 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         };
     }
 
-    /** The index of the first item a lazy combo box hasn't loaded yet (a placeholder), or -1. */
-    private static final String FIRST_PLACEHOLDER = "const items = arguments[0].filteredItems || [];"
-            + " return items.findIndex(i => i === undefined || i === null"
-            + " || (typeof i === 'object' && Object.keys(i).length === 0));";
+    /**
+     * The drop-down's item count and its loaded items as {@code [index, label]} pairs; a label is null for
+     * an item without one. A lazy data provider's items not loaded yet are placeholders: empty objects.
+     */
+    private static final String LOADED_ITEMS = "const c = arguments[0]; const items = c.filteredItems || [];"
+            + " const out = []; items.forEach((i, n) => {"
+            + " if (i === undefined || i === null || (typeof i === 'object' && Object.keys(i).length === 0)) return;"
+            + " const l = typeof i === 'object' ? i[c.itemLabelPath] : i;"
+            + " out.push([n, l === undefined || l === null ? null : String(l)]); });"
+            + " return [items.length, out];";
 
     /**
-     * Combo boxes: opens the drop-down, scrolls it until a lazy data provider has loaded every page (as
-     * Dramafinder does), reads the items, closes it.
+     * Combo boxes: opens the drop-down, reads its items page by page as a lazy data provider loads them (as
+     * Dramafinder does), closes it.
      */
     @Override
     public List<String> items() {
@@ -69,9 +79,7 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         }
         try {
             waitUntil("const c = arguments[0]; return c.opened && !c.loading;");
-            loadEveryPage();
-            return strings("const c = arguments[0]; return (c.filteredItems || [])"
-                    + ".filter(i => i && i[c.itemLabelPath] !== undefined).map(i => String(i[c.itemLabelPath]));");
+            return readEveryPage();
         } finally {
             if (!wasOpen) {
                 session.js("arguments[0].opened = false;", element);
@@ -79,15 +87,37 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         }
     }
 
-    /** A lazy combo box loads items a page at a time as its drop-down scrolls: scroll to each missing page. */
-    private void loadEveryPage() {
+    /**
+     * A lazy combo box loads a page at a time as its drop-down scrolls, and drops pages far from the view:
+     * scroll to the first item not read yet, collect what is loaded, until every item has been read.
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> readEveryPage() {
+        Map<Integer, String> labels = new TreeMap<>();
+        Set<Integer> read = new HashSet<>();
         long deadline = System.nanoTime() + session.timeout().toNanos();
-        for (Object index = session.js(FIRST_PLACEHOLDER, element); ((Number) index).intValue() >= 0;
-                index = session.js(FIRST_PLACEHOLDER, element)) {
+        int next = 0;
+        while (true) {
+            List<Object> state = (List<Object>) session.js(LOADED_ITEMS, element);
+            int size = ((Number) state.get(0)).intValue();
+            for (Object entry : (List<Object>) state.get(1)) {
+                List<Object> pair = (List<Object>) entry;
+                int index = ((Number) pair.get(0)).intValue();
+                read.add(index);
+                if (pair.get(1) != null) {
+                    labels.put(index, (String) pair.get(1));
+                }
+            }
+            while (next < size && read.contains(next)) {
+                next++;
+            }
+            if (next >= size) {
+                return List.copyOf(labels.values());
+            }
             if (System.nanoTime() > deadline) {
                 throw new IllegalStateException("Timed out waiting for the drop-down's items");
             }
-            session.js("arguments[0]._scroller.scrollIntoView(arguments[1]);", element, index);
+            session.js("arguments[0]._scroller.scrollIntoView(arguments[1]);", element, next);
             session.waitForVaadin();
             waitUntil("return !arguments[0].loading;");
         }
