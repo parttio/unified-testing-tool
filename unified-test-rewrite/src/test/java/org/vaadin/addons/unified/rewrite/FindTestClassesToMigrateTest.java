@@ -86,7 +86,7 @@ class FindTestClassesToMigrateTest implements RewriteTest {
 
                     @Test
                     void opens() {
-                        page.navigate(getUrl() + "people");
+                        String base = getUrl();          // not a navigation: still left for a person
                     }
                 }
                 """,
@@ -105,7 +105,7 @@ class FindTestClassesToMigrateTest implements RewriteTest {
 
                     @Test
                     void opens() {
-                        page.navigate(getUrl() + "people");
+                        String base = getUrl();          // not a navigation: still left for a person
                     }
                 }
                 """));
