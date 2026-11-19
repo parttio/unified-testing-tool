@@ -20,6 +20,7 @@ import org.openrewrite.java.tree.Comment;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JContainer;
+import org.openrewrite.java.tree.JLeftPadded;
 import org.openrewrite.java.tree.JRightPadded;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Space;
@@ -74,6 +75,7 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                     copies.put(classDecl.getType().getFullyQualifiedName(), classDecl.getLeadingAnnotations());
                 }
                 DramafinderCopies.collect(classDecl, ctx);
+                Routes.collect(classDecl, ctx);
                 return super.visitClassDeclaration(classDecl, ctx);
             }
         };
@@ -112,7 +114,13 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                 c = c.withBody(c.getBody().withStatements(c.getBody().getStatements().stream()
                         .filter(s -> !onlySuperSetup.contains(s.getId())).toList()));
                 List<String> beforeEach = beforeEachOf(classDecl, helpers);
-                c = c.withBody(c.getBody().withStatements(startAtView(classDecl, Dramafinder.viewOf(classDecl),
+                String view = Dramafinder.viewOf(classDecl);
+                String viewClass = Routes.viewAt(view, ctx);
+                if (viewClass != null) {
+                    maybeAddImport(viewClass);
+                }
+                c = c.withBody(c.getBody().withStatements(startAtView(classDecl,
+                        () -> viewClass != null ? classLiteral(viewClass) : Stubs.literal(view),
                         Helpers.callBeforeEachFirst(c, beforeEach))));
                 // getUrl() and getView(): the base URL is configuration, the view is now each test's first step
                 c = c.withBody(c.getBody().withStatements(c.getBody().getStatements().stream()
@@ -376,9 +384,11 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
 
     /**
      * The class's statements with every test that doesn't navigate first starting at the view, as the base class's
-     * per-test setup opened it.
+     * per-test setup opened it: {@code view} is the route class, when exactly one {@code @Route} has the path, else
+     * the path.
      */
-    private static List<Statement> startAtView(J.ClassDeclaration original, String view, List<Statement> statements) {
+    private static List<Statement> startAtView(J.ClassDeclaration original, java.util.function.Supplier<Expression> view,
+            List<Statement> statements) {
         List<Statement> originals = original.getBody().getStatements();
         List<Statement> result = new ArrayList<>();
         for (Statement s : statements) {
@@ -386,7 +396,7 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                     && !m.getBody().getStatements().isEmpty() && !navigatesFirst(originals, m)) {
                 Space prefix = m.getBody().getStatements().get(0).getPrefix().withComments(emptyList());
                 List<Statement> body = new ArrayList<>();
-                body.add(navigate(view, prefix));
+                body.add(navigate(view.get(), prefix));
                 body.addAll(m.getBody().getStatements());
                 s = m.withBody(m.getBody().withStatements(body));
             }
@@ -403,14 +413,25 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                 && call.getSimpleName().equals("navigate"));
     }
 
-    private static J.MethodInvocation navigate(String view, Space prefix) {
+    private static J.MethodInvocation navigate(Expression view, Space prefix) {
         JavaType.Method type = new JavaType.Method(null, 1L, JavaType.ShallowClass.build(TestBenchSetupToUnified.UNIFIED_PAGE),
-                "navigate", JavaType.Primitive.Void, List.of("path"), List.of(JavaType.Primitive.String), null, null,
-                null, null);
+                "navigate", JavaType.Primitive.Void, List.of(view instanceof J.Literal ? "path" : "view"),
+                List.of(view.getType()), null, null, null, null);
         return new J.MethodInvocation(Tree.randomId(), prefix, Markers.EMPTY, JRightPadded.build(Stubs.page()), null,
                 new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), "navigate", type, null),
-                JContainer.build(Space.EMPTY, List.of(JRightPadded.<Expression>build(Stubs.literal(view))), Markers.EMPTY),
+                JContainer.build(Space.EMPTY, List.of(JRightPadded.<Expression>build(view)), Markers.EMPTY),
                 type);
+    }
+
+    /** {@code PlanView.class}, typed, for a view the class imports. */
+    private static J.FieldAccess classLiteral(String fqn) {
+        JavaType.FullyQualified view = JavaType.ShallowClass.build(fqn);
+        JavaType classType = new JavaType.Parameterized(null, JavaType.ShallowClass.build("java.lang.Class"), List.of(view));
+        String simpleName = fqn.substring(fqn.lastIndexOf('.') + 1);
+        return new J.FieldAccess(Tree.randomId(), Space.EMPTY, Markers.EMPTY,
+                new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), simpleName, view, null),
+                JLeftPadded.build(new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), "class",
+                        classType, null)), classType);
     }
 
     private static List<String> beforeEachOf(J.ClassDeclaration c, Set<String> helpers) {

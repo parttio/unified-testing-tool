@@ -2,6 +2,7 @@ package com.vaadin.testing.unified;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.HasUrlParameter;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteParameters;
 import java.nio.file.Path;
 import java.util.function.BooleanSupplier;
@@ -16,6 +17,9 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
     void navigate(Class<? extends Component> view);
     <T, C extends Component & HasUrlParameter<T>> void navigate(Class<C> view, T parameter);
     void navigate(Class<? extends Component> view, RouteParameters parameters);
+    /** With a query string: {@code navigate(PlanView.class, QueryParameters.of("week", "2026-11-02"))}. */
+    void navigate(Class<? extends Component> view, QueryParameters query);
+    void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query);
     /** Path relative to the base URL, may include a query string: {@code "profile?tab=2"}. */
     void navigate(String path);
     void reload();

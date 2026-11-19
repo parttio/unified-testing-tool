@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.internal;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.ParentLayout;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.router.RoutePrefix;
@@ -50,6 +51,13 @@ public final class RoutePaths {
             parameters.get(name).ifPresent(segments::add);
         }
         return join(segments);
+    }
+
+    /** {@link #pathOf(Class, RouteParameters)} with the query string, if any: {@code "plan?week=2026-11-02"}. */
+    public static String pathOf(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        String path = pathOf(view, parameters);
+        String queryString = query.getQueryString();
+        return queryString.isEmpty() ? path : path + "?" + queryString;
     }
 
     private static List<String> prefixes(Class<?> layout) {

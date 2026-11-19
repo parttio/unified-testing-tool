@@ -93,7 +93,7 @@ Without another adapter the migrated suite keeps running on Playwright only, as 
 |---|---|
 | `extends SpringPlaywrightIT` (with or without `@SpringBootTest`) | `@UnifiedSpringBootTest` |
 | `extends AbstractBasePlaywrightIT` | `@UnifiedUITest`; `getUrl()` goes: the base URL is the `vaadin.testing.base-url` setting ([test setup](spec/02-test-setup.md)) |
-| `getView()` returning `"people"` | each test that doesn't navigate first starts with `page.navigate("people")` |
+| `getView()` returning `"people"` | each test that doesn't navigate first starts with `page.navigate(PeopleView.class)`, when exactly one `@Route("people")` is among the migrated sources *(unreleased)*; else, with no such view, several, or one under a layout with a `@RoutePrefix`, `page.navigate("people")` |
 | `@EnabledIfSystemProperty(named = "vaadin.testing.tool", ..)` | removed: the run's Testing Tool decides |
 | test methods, `@BeforeEach` and helper methods that use the base class | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test |
 | `navigate(View.class)`, `assertAt(View.class)`, `assertPath(..)`, `assertQueryParameter(..)` | `page.navigate(View.class)`, `assertThat(page).isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)` |

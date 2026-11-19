@@ -7,7 +7,10 @@ import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
+import com.vaadin.testing.unified.component.UnifiedParagraph;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import com.vaadin.flow.router.QueryParameters;
+import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.router.RouterLink;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,26 @@ class NavigationTest {
         assertThat(page).isAt(ProfileView.class).hasPath("profile").hasQueryParameter("tab", "2");
     }
     // --8<-- [end:navigatesByPathWithQuery]
+
+    // --8<-- [start:navigatesByClassWithQuery]
+    @Test
+    @DisplayName("Opening the week view for a given week shows that week")
+    void navigatesByClassWithQuery(UnifiedPage page) {
+        page.navigate(WeekView.class, QueryParameters.of("week", "2026-11-02"));
+
+        assertThat(page).hasPath("week").hasQueryParameter("week", "2026-11-02");
+        assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("Plan of everyone for 2026-11-02");
+    }
+    // --8<-- [end:navigatesByClassWithQuery]
+
+    @Test
+    @DisplayName("Opening Ada's week view for a given week shows Ada's plan for that week")
+    void navigatesByClassWithRouteAndQueryParameters(UnifiedPage page) {
+        page.navigate(WeekView.class, new RouteParameters("owner", "ada"), QueryParameters.of("week", "2026-11-02"));
+
+        assertThat(page).hasPath("week/ada").hasQueryParameter("week", "2026-11-02");
+        assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("Plan of ada for 2026-11-02");
+    }
 
     /** The title comes from the view's @PageTitle; the page's title is read on every Testing Tool. */
     @Test

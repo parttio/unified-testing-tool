@@ -5,6 +5,7 @@ import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
@@ -308,6 +309,13 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters));
+    }
+
+    @Override
+    public void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        String queryString = query.getQueryString();
+        RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters)
+                + (queryString.isEmpty() ? "" : "?" + queryString));
     }
 
     @Override
