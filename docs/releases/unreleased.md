@@ -123,6 +123,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - In a browser, a failure with several matches outside any container named Flow's root as their container,
   `in container (id “ROOT-2521314”)`, an id that changes on every page load and tells none of them apart
   ([#334](https://github.com/parttio/unified-testing-tool/issues/334)). It now reads as on Browserless.
+- A `@UnifiedSpringBootTest` application without Spring Security failed to start, with `NoClassDefFoundError:
+  org/springframework/security/core/Authentication`
+  ([#348](https://github.com/parttio/unified-testing-tool/issues/348)). It now starts without the test login
+  endpoint, and `spring-security-core` is no longer needed as a workaround.
 
 ## Known limitations
 

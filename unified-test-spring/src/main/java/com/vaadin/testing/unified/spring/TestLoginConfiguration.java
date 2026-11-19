@@ -6,6 +6,7 @@ import org.springframework.context.annotation.ConditionContext;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.util.ClassUtils;
 
 /** Imported by {@link UnifiedSpringBootTest}: the test login endpoint, when Spring Security is present. */
 @Configuration(proxyBeanMethods = false)
@@ -17,11 +18,16 @@ class TestLoginConfiguration {
         return new TestLoginFilter();
     }
 
+    /**
+     * Checks by class name only: {@link TestLogin} has Spring Security types in its signatures, so calling it
+     * without Spring Security fails with {@code NoClassDefFoundError} before it could answer.
+     */
     static final class SpringSecurityPresent implements Condition {
         @Override
         public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
-            return TestLogin.isAvailable() && org.springframework.util.ClassUtils.isPresent(
-                    "jakarta.servlet.Filter", context.getClassLoader());
+            ClassLoader classLoader = context.getClassLoader();
+            return ClassUtils.isPresent("org.springframework.security.core.context.SecurityContextHolder", classLoader)
+                    && ClassUtils.isPresent("jakarta.servlet.Filter", classLoader);
         }
     }
 }
