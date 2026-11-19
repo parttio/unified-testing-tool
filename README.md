@@ -86,6 +86,11 @@ Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha
 </dependencies>
 ```
 
+The BOM also sets the versions of the Testing Tools the adapters run on: Browserless Test (`com.vaadin:browserless-test-junit6` and `browserless-test-spring`, 25.3.2) and Dramafinder (`org.vaadin.addons:dramafinder`, 2.2.0).
+
+- **Import order.** The Vaadin BOM manages Browserless Test too, and when two imported BOMs manage a dependency, Maven takes the version of the one imported first. Import `unified-test-bom` before the Vaadin BOM to run on the versions the adapters are tested with: on Vaadin 25.3.5 both BOMs name 25.3.2, but on Vaadin 25.3.0 the Vaadin BOM's is 25.3.0.
+- **Dramafinder 2.** The Playwright adapter brings Dramafinder 2.2.0, so a project on Dramafinder 1.x moves to 2.x. Remove a direct `dramafinder` dependency: a version you declare wins over the BOM's, and the adapter needs 2.x. The class and method names are the same, so Dramafinder 1.x code left in the project still compiles, but its lookups now follow 2.x rules: `getByLabel` and `getByText` match the whole value and fail when several components match ([Dramafinder 1.x](docs/migrating-from-dramafinder.md#dramafinder-1x)).
+
 Run the tests on Browserless with `mvn test`, and on another Testing Tool with `-Dvaadin.testing.tool=playwright` or `selenium`. The Selenium adapter runs TestBench, which needs a TestBench license; Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath. Every setting: [Configuration](docs/guide/configuration.md).
 
 `unified-test-demo` shows a complete setup. To run the tests in CI, with the run summary on GitHub's job page, see [Running in CI](docs/guide/ci-setup.md).

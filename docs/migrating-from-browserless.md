@@ -146,7 +146,7 @@ Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIU
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left. It adds the import after the BOMs the project already imports; where the Vaadin BOM comes first, Browserless Test is the Vaadin BOM's version ([import order](index.md#try-it)).
 
 ## What it leaves for you
 
