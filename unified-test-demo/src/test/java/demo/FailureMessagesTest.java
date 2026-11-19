@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
+import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedSpan;
@@ -107,6 +108,13 @@ class FailureMessagesTest {
             page.navigate(ReportView.class);
             page.find(UnifiedButton.class).withText("Export CSV").click();
         }
+
+        @Test
+        @DisplayName("A misspelt combo box item lists the items nearby")
+        void missingItem(UnifiedPage page) {
+            page.navigate(OrderView.class);
+            page.find(UnifiedComboBox.class).withLabel("Country").selectItem("Germny");
+        }
     }
 
     private static TestingTool tool;
@@ -126,7 +134,7 @@ class FailureMessagesTest {
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
         TestExecutionSummary summary = listener.getSummary();
-        assertEquals(8, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+        assertEquals(9, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
         failures = summary.getFailures().stream().collect(Collectors.toMap(
                 f -> f.getTestIdentifier().getDisplayName(),
                 f -> assertInstanceOf(UnifiedAssertionError.class, f.getException(), f.getException()::toString)));
@@ -171,6 +179,17 @@ class FailureMessagesTest {
         assertEquals("find(UnifiedTextField.class).withLabel(\"Email\")", json.get("lookup").asString());
         assertTrue(Files.readString(evidence.resolve("user-steps.txt")).contains(
                 "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Email”, found none\n"));
+    }
+
+    /** The quick pick by filter (#403) finds nothing: every item is read for the Near Misses, as before. */
+    @Test
+    void aMissingComboBoxItemListsTheItemsNearby() {
+        UnifiedAssertionError failure = failures.get("A misspelt combo box item lists the items nearby");
+
+        assertEquals("item “Germny” in combo box “Country”", failure.getExpected(), failure.getMessage());
+        assertEquals("none", failure.getFound(), failure.getMessage());
+        assertTrue(failure.getNearMisses().contains("item “Germany”"), failure.getMessage());
+        assertEquals(Optional.of("selectItem(\"Germany\")"), failure.getSuggestion(), failure.getMessage());
     }
 
     @Test

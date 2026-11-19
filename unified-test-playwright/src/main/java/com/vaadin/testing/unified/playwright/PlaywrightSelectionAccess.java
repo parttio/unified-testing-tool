@@ -36,6 +36,28 @@ final class PlaywrightSelectionAccess implements SelectionAccess {
         return label == null ? List.of() : List.of(label);
     }
 
+    /**
+     * A combo box: filters it by the label, so the server sends only the items that match, and picks the item
+     * among them; else clears the filter and closes it, and the core reads every item (#403).
+     */
+    @Override
+    public boolean trySelect(String label) {
+        if (kind != Kind.COMBO_BOX) {
+            return false;
+        }
+        ComboBoxElement combo = new ComboBoxElement(locator);
+        combo.setFilter(label);
+        if (combo.getItemLabels().contains(label)) {
+            combo.filterAndSelectItem(label, label);
+            AutoWait.waitForVaadinIdle(session.page());
+            return true;
+        }
+        combo.setFilter("");
+        combo.close();
+        AutoWait.waitForVaadinIdle(session.page());
+        return false;
+    }
+
     /** Every item, a combo box's lazily loaded pages included. */
     @Override
     public List<String> items() {

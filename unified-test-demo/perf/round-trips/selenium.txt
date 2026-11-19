@@ -24,7 +24,7 @@ TestBenchPerfTest.smallForm:39 commands 9
 TestBenchPerfTest.smallForm:40 commands 7
 TestBenchPerfTest.smallForm:42 commands 7
 UnifiedPerfTest.comboBox:74 commands 2
-UnifiedPerfTest.comboBox:76 commands 56
+UnifiedPerfTest.comboBox:76 commands 19
 UnifiedPerfTest.comboBox:78 commands 3
 UnifiedPerfTest.largeGrid:63 commands 2
 UnifiedPerfTest.largeGrid:65 commands 285

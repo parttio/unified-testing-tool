@@ -20,12 +20,15 @@ public final class SelectionSupport {
         LazyElement element = Wrappers.lazyElementOf(field);
         element.act("select \"" + label + "\" in", e -> {
             SelectionAccess access = e.unwrap(SelectionAccess.class);
-            List<String> items = access.items();
-            if (!items.contains(label)) {
-                throw ItemFailures.missing(element.run(), "item", label, StepTarget.of(element).renderWithScope(),
-                        items, "selectItem");
+            // the quick way first (a combo box filtered by the label); every item only when it doesn't find it
+            if (!access.trySelect(label)) {
+                List<String> items = access.items();
+                if (!items.contains(label)) {
+                    throw ItemFailures.missing(element.run(), "item", label, StepTarget.of(element).renderWithScope(),
+                            items, "selectItem");
+                }
+                access.select(label);
             }
-            access.select(label);
             if (!access.selectedItems().contains(label)) {
                 throw new IllegalStateException("\"" + label + "\" could not be selected in " + element.describe());
             }

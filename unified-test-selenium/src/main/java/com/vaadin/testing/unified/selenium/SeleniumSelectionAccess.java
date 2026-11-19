@@ -133,6 +133,29 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         }
     }
 
+    /**
+     * A combo box: filters it by the label, so the server sends only the items that match, and picks the item
+     * among them; else clears the filter and closes it, and the core reads every item (#403).
+     */
+    @Override
+    public boolean trySelect(String label) {
+        if (kind != Kind.COMBO_BOX) {
+            return false;
+        }
+        ComboBoxElement combo = session.testBench(element).wrap(ComboBoxElement.class);
+        combo.setFilter(label);
+        session.waitForVaadin();
+        if (items().contains(label)) {
+            combo.selectByText(label);
+            session.waitForVaadin();
+            return true;
+        }
+        combo.setFilter("");
+        combo.closePopup();
+        session.waitForVaadin();
+        return false;
+    }
+
     @Override
     public void select(String label) {
         switch (kind) {
