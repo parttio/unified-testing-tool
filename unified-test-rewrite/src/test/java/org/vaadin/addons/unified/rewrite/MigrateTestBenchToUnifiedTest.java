@@ -323,6 +323,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     </dependencyManagement>
                     <dependencies>
                         <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
                             <groupId>org.vaadin.addons</groupId>
                             <artifactId>unified-test-browserless</artifactId>
                             <scope>test</scope>
@@ -413,6 +418,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                                 </dependencies>
                             </dependencyManagement>
                             <dependencies>
+                                <dependency>
+                                    <groupId>com.vaadin</groupId>
+                                    <artifactId>browserless-test-spring</artifactId>
+                                    <scope>test</scope>
+                                </dependency>
                                 <dependency>
                                     <groupId>org.vaadin.addons</groupId>
                                     <artifactId>unified-test-browserless</artifactId>
@@ -1869,6 +1879,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         </dependencyManagement>
                         <dependencies>
                             <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>browserless-test-spring</artifactId>
+                                <scope>test</scope>
+                            </dependency>
+                            <dependency>
                                 <groupId>org.vaadin.addons</groupId>
                                 <artifactId>unified-test-browserless</artifactId>
                                 <scope>test</scope>
@@ -1981,6 +1996,11 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                             </dependencies>
                         </dependencyManagement>
                         <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>browserless-test-spring</artifactId>
+                                <scope>test</scope>
+                            </dependency>
                             <dependency>
                                 <groupId>junit</groupId>
                                 <artifactId>junit</artifactId>

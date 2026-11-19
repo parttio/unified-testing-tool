@@ -103,6 +103,17 @@ class MigrateDramafinderBuildTest implements RewriteTest {
     }
 
     @Test
+    void browserlessInASpringProjectAlsoGetsBrowserlessTestSpring() {
+        // a @UnifiedSpringBootTest fails on Browserless without it, and unified-test-browserless has it optional
+        rewriteRun(spec -> spec.recipe(new MigrateDramafinderToUnified(true, null, null)),
+                pomXml(pom(false, DRAMAFINDER + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
+                        pom(true, dependency("com.vaadin", "browserless-test-spring", null)
+                                + unified("unified-test-playwright") + unified("unified-test-spring")
+                                + dependency("org.springframework.boot", "spring-boot-starter-test", null)
+                                + unified("unified-test-browserless"))));
+    }
+
+    @Test
     void aProjectWithoutDramafinderIsLeftAlone() {
         rewriteRun(pomXml(pom(false, dependency("org.springframework.boot", "spring-boot-starter-test", null))));
     }
