@@ -38,6 +38,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Playwright decides its own download at the JVM's first `Playwright.create()`, so code that creates a `Playwright`
   before the first test still downloads everything. A CI step that ran `install --with-deps chromium` before the
   tests can run `install-deps chromium` instead, for the system libraries only.
+- **`AddUnifiedTestingSkill` writes its pointer to `CLAUDE.md` when a project has no `AGENTS.md`**
+  ([#365](https://github.com/parttio/unified-testing-tool/issues/365)). Claude Code reads `CLAUDE.md`, not
+  `AGENTS.md`, so the marked section goes at the end of the existing `CLAUDE.md`, and no `AGENTS.md` is created.
+  The rest of `CLAUDE.md` is left as it is. A project with both files, or with neither, gets the section in
+  `AGENTS.md`, as before.
 - **Chrome on Selenium is started with a logging capability**
   ([#315](https://github.com/parttio/unified-testing-tool/pull/315)), and its console is read after every User
   Step.
