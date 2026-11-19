@@ -23,6 +23,9 @@ The demo's `ProfileBrowserlessTest`, and what the recipe makes of it. CI checks 
 
 ## Run it
 
+!!! warning "Vaadin 25.3 first"
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the recipe migrates the build all the same and *(unreleased)* leaves a Migration Marker at the top of `pom.xml`; the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+
 Commit or stash your work first: the recipe changes files in place.
 
 === "Maven"
@@ -78,6 +81,8 @@ Commit or stash your work first: the recipe changes files in place.
 | `includePageObjects` | `false` | Also converts page objects (see below) |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
+*(unreleased)* Up to 0.1.0-alpha3 the recipe ignores the options a `rewrite.yml` sets, without a warning, and runs with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). With those versions, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
+
 Without a browser adapter the migrated suite keeps running on Browserless only, as before; adding one is the step that makes it run in a browser (see **Running in a browser**).
 
 ## What it converts
@@ -103,8 +108,9 @@ Without a browser adapter the migrated suite keeps running on Browserless only, 
 | a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class)` |
 | the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.row().withCellText(text).getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
 | ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
+| MessageInput `send(s)`, MessageList `size()` | `send(s)`, `getMessageCount()` |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details and Grid; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
+A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
 
 ### Context API and extension tests
 
@@ -142,11 +148,11 @@ With `includePageObjects`, a page object that holds the Browserless test (`Brows
 
 ### TestBench UI Unit tests
 
-Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.
+Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.3.
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless, without a version of its own, so that the BOMs manage it. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless, without a version of its own when the project's Vaadin BOM manages it. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left.
 
 ## What it leaves for you
 
@@ -178,6 +184,7 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |
 | `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |
 | `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: run with `includePageObjects`, or make the page object take a `UnifiedPage` by hand, then run the migration again |
+| `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
@@ -201,6 +208,8 @@ The same `resolve-migration-markers` skill works through the Browserless Migrati
 /resolve-migration-markers
 ```
 
-Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
+Only you can start it. The skill is user-invoked (`disable-model-invocation: true`), so it adds nothing to an agent's context in a session that doesn't migrate, but an agent can't start it either: one driving the migration end to end stops at this step. Type the command yourself, or tell the agent to read `.claude/skills/resolve-migration-markers/SKILL.md` and follow its steps.
+
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md` (of `CLAUDE.md` *(unreleased)*, when the project has that and no `AGENTS.md`). It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 How it is evaluated, and what it scores: [Migrating from TestBench](migrating-from-testbench.md#the-agent-skill).

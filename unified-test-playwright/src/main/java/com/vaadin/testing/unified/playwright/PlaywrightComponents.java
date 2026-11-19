@@ -246,6 +246,10 @@ final class PlaywrightComponents {
                 PlaywrightCoreSetAccess.MenuBarAccessImpl::new));
         register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
                 PlaywrightCoreSetAccess.UploadAccessImpl::new));
+        register(com.vaadin.flow.component.messages.MessageInput.class, access(com.vaadin.testing.unified.spi.MessageInputAccess.class,
+                PlaywrightCoreSetAccess.MessageInputAccessImpl::new));
+        register(com.vaadin.flow.component.messages.MessageList.class, access(com.vaadin.testing.unified.spi.MessageListAccess.class,
+                PlaywrightCoreSetAccess.MessageListAccessImpl::new));
     }
 
     /** A support on plain locators whose job is giving the core an access object of this type. */

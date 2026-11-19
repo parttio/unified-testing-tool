@@ -79,6 +79,8 @@ Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 | Network interception, tracing | ✓ (Escape Hatch) | ✗ | ✗ |
 | The console's errors *(unreleased)* ([chapter 12](12-readable-tests.md#log-lines-under-the-user-step)) | ✓ | Chrome only | ✗ (no console) |
 | External URLs | ✓ | ✓ | ✗ |
+| Before the first `navigate(..)` | a blank page | a blank page | the view of the `""` route |
+| `navigate(..)` to the view already shown | a new page, new view instances | a new page, new view instances | the same view instance; `beforeEnter` and `setParameter` run again |
 | Back / forward history | Escape Hatch | Escape Hatch | ✗ |
 
 Differences in meaning are documented, not banned. Tests that depend on the browser meaning declare `@RequiresBrowser`.

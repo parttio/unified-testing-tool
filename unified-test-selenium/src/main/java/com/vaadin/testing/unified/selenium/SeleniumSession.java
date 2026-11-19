@@ -315,6 +315,11 @@ final class SeleniumSession implements AdapterSession {
         return Optional.empty();
     }
 
+    @Override
+    public String title() {
+        return driver().getTitle();
+    }
+
     // ---------------------------------------------------------------- windows
 
     /** A new tab of the same browser: same cookies, so the same HTTP and Vaadin session. */

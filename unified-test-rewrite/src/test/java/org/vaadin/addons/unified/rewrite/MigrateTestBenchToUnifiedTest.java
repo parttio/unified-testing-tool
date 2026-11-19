@@ -349,7 +349,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
     @Test
     void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
-        // 1.1.2 is the old standalone add-on line: its explicit version would win over both BOMs' 25.x (#354)
+        // 1.1.2 is the old standalone add-on line: its explicit version would win over the Vaadin BOM's 25.x (#354)
         rewriteRun(pomXml(
                 """
                 <project>
@@ -923,6 +923,48 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     void confirmsTheSave(UnifiedPage page) {
                         // TODO unified: was waitForFirst(); the lookup fails when several components match
                         assertThat(page.find(UnifiedNotification.class)).hasText("Saved");
+                    }
+                }
+                """));
+    }
+
+
+    /** A chat: MessageInputElement and MessageListElement (#357). */
+    @Test
+    void chatLookupsFindTheUnifiedMessageInputAndList() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.messages.testbench.MessageInputElement;
+                import com.vaadin.flow.component.messages.testbench.MessageListElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class ChatTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void asks() {
+                        $(MessageInputElement.class).first().submit("Pancakes");
+                        Assertions.assertEquals(3, $(MessageListElement.class).single().getMessageElements().size());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ChatTest {
+
+                    @Test
+                    void asks(UnifiedPage page) {
+                        // TODO unified: was first(); the lookup fails when several components match
+                        page.find(UnifiedMessageInput.class).send("Pancakes");
+                        Assertions.assertEquals(3, page.find(UnifiedMessageList.class).getMessageCount());
                     }
                 }
                 """));
@@ -1845,6 +1887,42 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         setUp(page);
                         page.find(UnifiedButton.class).withText("Save").click();
                         assertThat(page.find(UnifiedButton.class).withText("Save")).hasText("Save");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void anIgnoredJUnit4TestBenchTestStaysDisabled() {
+        // #386: JUnit 4's @Ignore means nothing to Jupiter, so a skipped test would start running
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.TestBenchTestCase;
+                import org.junit.Ignore;
+                import org.junit.Test;
+
+                public class ProfileIT extends TestBenchTestCase {
+                    @Ignore
+                    @Test
+                    public void saves() {
+                        $(ButtonElement.class).withText("Save").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Disabled;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                public class ProfileIT {
+                    @Disabled
+                    @Test
+                    public void saves(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withText("Save").click();
                     }
                 }
                 """));

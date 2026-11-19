@@ -115,7 +115,7 @@ class MigrateDramafinderBuildTest implements RewriteTest {
 
     @Test
     void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
-        // 1.1.2 is the old standalone add-on line: its explicit version would win over both BOMs' 25.x (#354)
+        // 1.1.2 is the old standalone add-on line: its explicit version would win over the Vaadin BOM's 25.x (#354)
         rewriteRun(pomXml(
                 pom(false, DRAMAFINDER + dependency("com.vaadin", "browserless-test-spring", "1.1.2")
                         + dependency("org.springframework.boot", "spring-boot-starter-test", null)),

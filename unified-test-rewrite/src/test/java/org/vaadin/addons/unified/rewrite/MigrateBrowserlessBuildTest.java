@@ -52,8 +52,13 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
     }
 
     private static String pom(boolean unifiedBom, String dependencies) {
+        return pom("", unifiedBom, dependencies);
+    }
+
+    /** {@code head}: what the recipe adds at the top of the project, such as a Migration Marker. */
+    private static String pom(String head, boolean unifiedBom, String dependencies) {
         return """
-                <project>
+                <project>%s
                     <modelVersion>4.0.0</modelVersion>
                     <groupId>com.example</groupId>
                     <artifactId>app</artifactId>
@@ -61,7 +66,7 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
                 %s    <dependencies>
                 %s    </dependencies>
                 </project>
-                """.formatted(MANAGED.formatted(unifiedBom ? "\n" + UNIFIED_BOM.formatted(UNIFIED_VERSION).stripTrailing() : ""),
+                """.formatted(head, MANAGED.formatted(unifiedBom ? "\n" + UNIFIED_BOM.formatted(UNIFIED_VERSION).stripTrailing() : ""),
                 dependencies);
     }
 
@@ -94,7 +99,7 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
 
     @Test
     void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
-        // 1.1.2 is the old standalone add-on line: its explicit version would win over both BOMs' 25.x (#354)
+        // 1.1.2 is the old standalone add-on line: its explicit version would win over the Vaadin BOM's 25.x (#354)
         rewriteRun(pomXml(
                 pom(false, dependency("com.vaadin", "browserless-test-junit6", "25.3.2")
                         + dependency("com.vaadin", "browserless-test-spring", "1.1.2")
@@ -132,5 +137,74 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
     @Test
     void projectWithoutBrowserlessIsLeftAlone() {
         rewriteRun(pomXml(pom(false, dependency("org.springframework.boot", "spring-boot-starter-test", null))));
+    }
+
+    @Test
+    void withoutAVaadinBomBrowserlessTestSpringKeepsItsVersion() {
+        // nothing manages it then: without its version, the pom would not build (#354, #387)
+        rewriteRun(pomXml(
+                """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-junit6</artifactId>
+                            <version>25.3.2</version>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <version>25.3.2</version>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                </project>
+                """,
+                """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-bom</artifactId>
+                                <version>%s</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <version>25.3.2</version>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-browserless</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                </project>
+                """.formatted(UNIFIED_VERSION)));
+    }
+
+    @Test
+    void olderVaadinIsMigratedWithAMarkerAtTheTop() {
+        String before = pom(false, dependency("com.vaadin", "browserless-test-junit6", "1.1.0")).replace("25.3.5", "25.2.0");
+        String after = pom("\n    <!-- TODO unified: the Unified API needs Vaadin 25.3 or newer, and this project has Vaadin 25.2"
+                + " (Flow 25.2.0). Move it to Vaadin 25.3 or newer: until then the migrated tests fail when they run. -->",
+                true, unified("unified-test-browserless")).replace("25.3.5", "25.2.0");
+        rewriteRun(spec -> spec.expectedCyclesThatMakeChanges(1), pomXml(before, after));
     }
 }

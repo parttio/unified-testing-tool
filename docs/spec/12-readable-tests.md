@@ -377,7 +377,7 @@ Suites with existing violations can wrap the rules in ArchUnit's `FreezingArchRu
 
 ## The agent skill
 
-`write-unified-ui-tests` is the one place agents learn this chapter. It ships in a jar, matching the API version. The recipe `AddUnifiedTestingSkill` (run by every Migration Recipe, or alone) writes it to `.claude/skills/write-unified-ui-tests/SKILL.md`, replaces an older stamped copy, leaves an unstamped (hand-edited) copy alone, and adds a pointer section to `AGENTS.md`.
+`write-unified-ui-tests` is the one place agents learn this chapter. It ships in a jar, matching the API version. The recipe `AddUnifiedTestingSkill` (run by every Migration Recipe, or alone) writes it to `.claude/skills/write-unified-ui-tests/SKILL.md`, replaces an older stamped copy, leaves an unstamped (hand-edited) copy alone, and adds a pointer section to `AGENTS.md` (or to `CLAUDE.md`, see below).
 
 The skill covers:
 - the canonical forms;
@@ -390,18 +390,16 @@ The skill covers:
 How the recipe decides:
 
 - **Stamp.** The shipped skill carries `<!-- unified-test-skill: write-unified-ui-tests <version> -->`, the release it came with (Maven resource filtering). A copy with an older version is replaced; one with the same or a newer version is left as it is; one without the line counts as hand-edited, is kept, and gets an OpenRewrite warning (`Markup.Warn`) naming how to take the shipped one.
-- **`AGENTS.md`.** The pointer is a section between `<!-- unified-test: write-unified-ui-tests -->` and `<!-- /unified-test -->`, added at the end or replaced where it is; the file is created when missing.
-- **Where.** It writes only at a project's root: one with a build file (`pom.xml`, Gradle), an `AGENTS.md` or the skill, and Java sources.
+- **`AGENTS.md`, or `CLAUDE.md`.** The pointer is a section between `<!-- unified-test: write-unified-ui-tests -->` and `<!-- /unified-test -->`, added at the end or replaced where it is; the rest of the file is left as it is. It goes in `AGENTS.md`, created when missing. A project with a `CLAUDE.md` and no `AGENTS.md` gets it in `CLAUDE.md` instead *(unreleased)*, and no `AGENTS.md`: Claude Code reads `CLAUDE.md` ([#365](https://github.com/parttio/unified-testing-tool/issues/365)). With both files, only `AGENTS.md` gets it.
+- **Where.** It writes only at a project's root: one with a build file (`pom.xml`, Gradle), an `AGENTS.md`, a `CLAUDE.md` or the skill, and Java sources.
 
 A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `scripts/eval-writing-skill.sh`) scores it: prose scenarios in, tests out, judged on compiling, passing on two Testing Tools, the style rules, intent share and no Escape Hatch. `resolve-migration-markers` defers to it for style.
 
 ### What an agent reads
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 - **The skill**, above, installed in the project.
-- **The [Findable View](#findable-view)**: `page.describe()` while writing a test, and `<test>.view.txt` after a failure, for lookups that match what is on the page.
-- **The API reference:** `META-INF/unified/api-reference.md` in the `unified-test-api` jar, so it is of the version the project uses and needs no network. Every Wrapper with its filters, actions, reads and checks, and the page's. Generated from the Wrapper interfaces and `UnifiedAssertions`; a test of the build fails when the file is not what the code says. The docs site has the same page.
+- **The [Findable View](#findable-view)** *(unreleased)*: `page.describe()` while writing a test, and `<test>.view.txt` after a failure, for lookups that match what is on the page.
+- **The API reference** *(unreleased)*: `META-INF/unified/api-reference.md` in the `unified-test-api` jar, so it is of the version the project uses and needs no network. Every Wrapper with its filters, actions, reads and checks, and the page's. Generated from the Wrapper interfaces and `UnifiedAssertions`; a test of the build fails when the file is not what the code says. The docs site has the same page.
 - **The docs site** for agents: `llms.txt` at its root (one link per page, to the page as Markdown with its code examples included; the specification and the ADRs under *Optional*), and `llms-full.txt` (the home page, the API reference, the developer guide and the glossary in one file). Written by the site's build from its navigation.
 
 ## Moving to this chapter

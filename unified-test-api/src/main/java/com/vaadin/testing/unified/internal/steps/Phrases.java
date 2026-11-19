@@ -47,6 +47,7 @@ public final class Phrases {
             case "open" -> Phrase.of(target.kind().equals("details") ? "expand" : "open", target);
             case "close" -> Phrase.of(target.kind().equals("details") ? "collapse" : "close", target);
             case "upload" -> Phrase.template("upload", "upload {value} to", target, uploadName(args));
+            case "send" -> Phrase.template("send", "send {value} in", target, values(args));
             case "pressKey" -> Phrase.template("press", "press {value} on", target, values(args));
             default -> {
                 String verb = String.join(" ", StepTarget.splitWords(name)).toLowerCase(Locale.ROOT);
@@ -207,6 +208,9 @@ public final class Phrases {
                 return Phrase.of("see", target).withTrailing("with " + what);
             }
             return Phrase.of("see", target, values).withValueLabel("with " + what);
+        }
+        if (expectation.startsWith("not to have ")) {
+            return Phrase.of("see", target, values).withValueLabel("without " + expectation.substring("not to have ".length()));
         }
         if (expectation.startsWith("to be ")) {
             return Phrase.of("see", target, values).withTrailing(expectation.substring("to be ".length()));

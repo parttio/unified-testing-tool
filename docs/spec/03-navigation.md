@@ -11,6 +11,7 @@ page.reload();
 
 assertThat(page).isAt(ProfileView.class);
 assertThat(page).hasPath("profile").hasQueryParameter("tab", "2");
+assertThat(page).hasTitle("Profile");                          // unreleased
 ```
 
 | Rule | Detail |
@@ -22,6 +23,7 @@ assertThat(page).hasPath("profile").hasQueryParameter("tab", "2");
 | Reload | `page.reload()` on every Testing Tool (Browserless simulates it, `@PreserveOnRefresh` respected). |
 | Back / forward | Escape Hatch only. |
 | `isAt(view)` | Browsers compare the page's current location (read in the page, so a RouterLink or `history.pushState` navigation counts) with the view's route. A view with no route (an error view) is matched by the view the page's UI shows: `@UnifiedSpringBootTest` serves a test-only endpoint (`/__unified/current-view`) that answers for the caller's own Vaadin session. Browserless checks the current view's class. |
+| `hasTitle(title)` *(unreleased)* | The page's title, exactly, on every Testing Tool: what a view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)` set. Browsers read `document.title`; Browserless reads the title the UI last sent (`UI.getInternals().getTitle()`), which Flow keeps on the server. A title set by the page's own script or the HTML template, not through Flow, is seen in a browser only. |
 
 ## Route class to URL (browser Testing Tools)
 
@@ -39,4 +41,5 @@ Routes registered at runtime (`RouteConfiguration`) use the path form.
 
 - Resolve route classes from `@Route` and parent layouts' `@RoutePrefix`, plus route and URL parameters.
 - After navigation, wait for the target view and an idle server.
-- Location assertions retry until the timeout.
+- Read the page's title as it is now (`AdapterSession.title()`) *(unreleased)*.
+- Location and title assertions retry until the timeout.

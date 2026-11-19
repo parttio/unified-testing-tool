@@ -842,6 +842,45 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 """));
     }
 
+
+    /** A chat: MessageInput and MessageList (#357). */
+    @Test
+    void chatTesterCallsTakeTheirWrapperNames() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.messages.MessageInput;
+                import com.vaadin.flow.component.messages.MessageList;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                class ChatTest extends BrowserlessTest {
+                    @Test
+                    void asks() {
+                        test($(MessageInput.class).single()).send("Pancakes");
+                        Assertions.assertEquals(3, test($(MessageList.class).single()).size());
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.find(UnifiedMessageInput.class).send("Pancakes");
+                        Assertions.assertEquals(3, page.find(UnifiedMessageList.class).getMessageCount());
+                    }
+                }
+                """));
+    }
+
     @Test
     void aTabSheetSelectedByIndexStaysBehindTheEscapeHatch() {
         rewriteRun(java(

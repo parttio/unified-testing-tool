@@ -106,6 +106,16 @@ When several notifications can be open at once, filter by text: an unfiltered `f
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:uploadsAFile"
 ```
 
+## Chat
+
+An app built on Vaadin's AI components has a `MessageInput` and a `MessageList`. `send` types the text and submits it as a user does; the reply is checked with an assertion, which waits for it:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ChatTest.java:sendsAMessage"
+```
+
+A message's text is the text the application gave it: with Markdown on, the Markdown source (`**Pancakes**`), not the rendered text, so that it reads the same on every Testing Tool. `getMessages()` gives each message's user name and text, `getMessageTexts()` the texts only. `hasMessageTexts(..)` checks every message, in order; `isEmpty()` checks there are none.
+
 ## Keyboard and DOM events
 
 ```java
@@ -125,3 +135,13 @@ On Browserless, key presses fire the server-side listeners and shortcuts; client
 ```
 
 `getText()` is the DOM text, the same on every Testing Tool: CSS such as `text-transform` doesn't change it. In a browser, `element().getVisibleText()` gives the text as rendered.
+
+*(unreleased)* A `Div`, `Span` or other plain HTML element with a click listener, such as a navigation tab or a wordmark, is clicked like a button. So is a layout, through `UnifiedContainer`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ClickableHtmlTest.java:clicksADiv"
+
+--8<-- "unified-test-demo/src/test/java/demo/ClickableHtmlTest.java:clicksAContainer"
+```
+
+`click()` reads as a User Step, `click div “Shop”`. A click on an element without a listener does nothing, as for a user.
