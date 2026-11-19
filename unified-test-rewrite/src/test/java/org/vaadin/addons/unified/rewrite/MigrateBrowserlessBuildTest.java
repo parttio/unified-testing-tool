@@ -86,7 +86,20 @@ class MigrateBrowserlessBuildTest implements RewriteTest {
                 pom(false, dependency("com.vaadin", "browserless-test-junit6", "25.3.2")
                         + dependency("com.vaadin", "browserless-test-spring", "25.3.2")
                         + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
-                pom(true, dependency("com.vaadin", "browserless-test-spring", "25.3.2")
+                pom(true, dependency("com.vaadin", "browserless-test-spring", null)
+                        + dependency("org.springframework.boot", "spring-boot-starter-test", null)
+                        + unified("unified-test-browserless")
+                        + unified("unified-test-spring"))));
+    }
+
+    @Test
+    void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
+        // 1.1.2 is the old standalone add-on line: its explicit version would win over both BOMs' 25.x (#354)
+        rewriteRun(pomXml(
+                pom(false, dependency("com.vaadin", "browserless-test-junit6", "25.3.2")
+                        + dependency("com.vaadin", "browserless-test-spring", "1.1.2")
+                        + dependency("org.springframework.boot", "spring-boot-starter-test", null)),
+                pom(true, dependency("com.vaadin", "browserless-test-spring", null)
                         + dependency("org.springframework.boot", "spring-boot-starter-test", null)
                         + unified("unified-test-browserless")
                         + unified("unified-test-spring"))));

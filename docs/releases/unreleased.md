@@ -123,6 +123,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - In a browser, a failure with several matches outside any container named Flow's root as their container,
   `in container (id “ROOT-2521314”)`, an id that changes on every page load and tells none of them apart
   ([#334](https://github.com/parttio/unified-testing-tool/issues/334)). It now reads as on Browserless.
+- The Browserless Migration Recipe kept the explicit version of `browserless-test-spring`, which wins over the
+  BOMs: a project on the old standalone add-on, 1.1.2, ended up with it beside Browserless 25
+  ([#354](https://github.com/parttio/unified-testing-tool/issues/354)). The recipe now removes it, and the BOMs
+  manage the version.
 
 ## Known limitations
 

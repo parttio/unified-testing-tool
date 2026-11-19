@@ -5,7 +5,8 @@ displayName: Swap Browserless Test for the Unified API in the Maven build
 description: >-
   Imports unified-test-bom, adds the Browserless adapter (and the Spring integration in Spring Boot projects) as
   test dependencies, and removes direct Browserless Test and TestBench UI Unit dependencies, which the Browserless
-  adapter brings in. Keeps `browserless-test-spring`, which Browserless runs of Spring tests need.
+  adapter brings in. Keeps `browserless-test-spring`, which Browserless runs of Spring tests need, without a version
+  of its own: the BOMs manage it.
 preconditions:
   - org.vaadin.addons.unified.rewrite.FindBrowserlessDependencies
 recipeList:
@@ -33,6 +34,11 @@ recipeList:
   - org.openrewrite.maven.RemoveDependency:
       groupId: com.vaadin
       artifactId: vaadin-testbench-unit*
+  # an explicit version wins over the BOMs: the old standalone add-on line (1.x) would sit beside Browserless 25 (#354)
+  - org.openrewrite.maven.RemoveRedundantDependencyVersions:
+      groupPattern: com.vaadin
+      artifactPattern: browserless-test-spring
+      onlyIfManagedVersionIs: ANY
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.vaadin.addons.unified.rewrite.AddSpringIntegrationToSpringBootProjects
