@@ -49,6 +49,8 @@ class FailureEvidenceTest {
                 .selectors(selectClass(Failing.class))
                 .configurationParameter("vaadin.testing.tool", tool.name().toLowerCase())
                 .configurationParameter("vaadin.testing.evidence-dir", dir.toString())
+                // these tests pin the User Steps' text; what the machine's application logs meanwhile is not theirs
+                .configurationParameter("vaadin.testing.user-steps.server-log", "off")
                 .build();
         Launcher launcher = LauncherFactory.create();
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
