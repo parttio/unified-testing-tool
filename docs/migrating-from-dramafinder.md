@@ -185,7 +185,14 @@ Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
 A migrated test that needs nothing Playwright-only can run on Browserless and Selenium too. Add the adapter (`addBrowserless`, `addSelenium`, or the dependency by hand; for Browserless in a Spring Boot project, by hand also add `com.vaadin:browserless-test-spring` in test scope) and run with `-Dvaadin.testing.tool=browserless` or `selenium`. Selenium is a real browser too, so tests that pass on Playwright usually pass there. Browserless runs in the test JVM without a browser ([limitations](spec/09-capabilities.md#limitations)); expect a few failures on the first run:
 
-- "Visible" means `setVisible(true)` on the server: a component hidden by CSS counts as visible.
+- "Visible" means `setVisible(true)` on the server: a component hidden by CSS counts as visible. So an action on
+  it passes on Browserless and rightly fails in a browser: `setValue(..)` on a date picker whose input CSS hides
+  (one that opens as a calendar overlay only) fails on Playwright with `Found 1, but hidden`.
+- The page starts at the `""` route, where a browser starts blank, and `navigate(..)` to the view already shown
+  keeps that view: its `beforeEnter` (or `setParameter`) runs again on the same instance, where a browser loads a
+  fresh page with new views. A test whose first step is `navigate(..)` to the view at `""`, or to where `""`
+  forwards, re-enters it. A view that isn't ready for that fails there and not in a browser; that is a bug a user
+  can hit too, by navigating to the view they are on.
 - No CSS, layout or client-side JavaScript: a test that depends on them belongs on a real browser, `@RequiresBrowser`.
 - A substring lookup carried over from Dramafinder 1.x can find a second component the browser didn't show yet; tighten it as its Migration Marker says.
 
