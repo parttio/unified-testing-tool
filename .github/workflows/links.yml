@@ -1,0 +1,63 @@
+name: Links
+
+# Checks the links of the published pages, external ones included: the Docs build (mkdocs --strict)
+# already fails on a broken link between pages, but not on a dead link to GitHub or another site.
+# Weekly as well, since external links break without a change here.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'GLOSSARY.md'
+      - 'CONTRIBUTING.md'
+      - 'docs/**'
+      - '.github/workflows/links.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'GLOSSARY.md'
+      - 'CONTRIBUTING.md'
+      - 'docs/**'
+      - '.github/workflows/links.yml'
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: links-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore the link cache
+        uses: actions/cache@v4
+        with:
+          path: .lycheecache
+          key: lychee-${{ github.sha }}
+          restore-keys: lychee-
+      # The site itself is left out: a page a pull request adds isn't on it until the merge.
+      # docs/research isn't published.
+      - name: Check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --cache --max-cache-age 1d
+            --max-retries 3
+            --accept 200,206,429
+            --exclude '^https?://localhost'
+            --exclude '^https://parttio\.github\.io/unified-testing-tool'
+            README.md GLOSSARY.md CONTRIBUTING.md
+            'docs/*.md' 'docs/guide/*.md' 'docs/spec/*.md' 'docs/adr/*.md' 'docs/releases/*.md'
+          fail: true
+        env:
+          # GitHub answers unauthenticated link checks with 429 after a few dozen requests
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
