@@ -52,7 +52,11 @@ class ProfileViewTest {
 
 ## Try it
 
-Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha3`. The API can still change between alphas. Import the BOM and add the adapters you run on as test dependencies:
+Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha3`. The API can still change between alphas.
+
+It needs Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. Nothing checks the Vaadin version: on Vaadin 25.2 or older the build passes, and the tests fail when they run, because the Browserless adapter is built on Browserless Test 25.3, which needs Flow 25.3. Move the application to Vaadin 25.3 first.
+
+Import the BOM and add the adapters you run on as test dependencies:
 
 ```xml
 <dependencyManagement>

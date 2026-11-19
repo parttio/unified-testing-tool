@@ -23,6 +23,9 @@ The demo's `ProfileBrowserlessTest`, and what the recipe makes of it. CI checks 
 
 ## Run it
 
+!!! warning "Vaadin 25.3 first"
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. The recipe doesn't check: on an older Vaadin it migrates the build all the same, and the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+
 Commit or stash your work first: the recipe changes files in place.
 
 === "Maven"
@@ -144,7 +147,7 @@ With `includePageObjects`, a page object that holds the Browserless test (`Brows
 
 ### TestBench UI Unit tests
 
-Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.
+Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIUnitTest`, and the JUnit 4 `UIUnit4Test`) first move to their Browserless Test equivalents, then convert as above: `com.vaadin.testbench.unit` becomes `com.vaadin.browserless`, the HTML testers move out of `com.vaadin.flow.component.html.testbench`, and JUnit 4 tests become JUnit 6. Run the migration after moving the application to Vaadin 25.3.
 
 ### The build
 
@@ -202,6 +205,8 @@ The same `resolve-migration-markers` skill works through the Browserless Migrati
 ```text
 /resolve-migration-markers
 ```
+
+Only you can start it. The skill is user-invoked (`disable-model-invocation: true`), so it adds nothing to an agent's context in a session that doesn't migrate, but an agent can't start it either: one driving the migration end to end stops at this step. Type the command yourself, or tell the agent to read `.claude/skills/resolve-migration-markers/SKILL.md` and follow its steps.
 
 Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md` (of `CLAUDE.md` *(unreleased)*, when the project has that and no `AGENTS.md`). It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
