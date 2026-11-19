@@ -79,10 +79,13 @@ enum BrowserInstall {
         // the driver of the run's Playwright: created once per JVM, by the first Playwright.create()
         ProcessBuilder install = Driver.ensureDriverInstalled(Map.of(), false).createProcessBuilder();
         install.command().addAll(args);
+        install.command().add("--no-progress"); // a line per browser in a CI log, not a progress bar
         install.environment().remove(SKIP_DOWNLOAD);
-        install.inheritIO();
+        // through System.out, not the JVM's own stdout: Surefire captures one and takes the other for its channel
+        install.redirectErrorStream(true);
         try {
             Process process = install.start();
+            Thread.ofVirtual().start(() -> process.inputReader().lines().forEach(System.out::println));
             if (!process.waitFor(10, TimeUnit.MINUTES)) {
                 process.destroy();
                 throw failure(args, "timed out after 10 minutes");
