@@ -47,7 +47,7 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 
 ## TestBench
 
-[TestBench: close the gaps with the Unified API](https://github.com/jcgueriaud1/unified-testing-tool/issues/21): no element-state wait before actions, no retrying assertions, no accessible-name lookup, filters not per type, test id only from 25.4, elements can go stale, deprecated `first()` in docs, no route-class navigation, no documented Spring Boot test integration, Grid without sorting or row details API, no way to start a test logged in.
+[TestBench: close the gaps with the Unified API](https://github.com/parttio/unified-testing-tool/issues/21): no element-state wait before actions, no retrying assertions, no accessible-name lookup, filters not per type, test id only from 25.4, elements can go stale, deprecated `first()` in docs, no route-class navigation, no documented Spring Boot test integration, Grid without sorting or row details API, no way to start a test logged in.
 
 | Gap | Issue |
 |---|---|
@@ -55,18 +55,18 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 
 ## Browserless Test
 
-[Browserless Test: close the gaps with the Unified API](https://github.com/jcgueriaud1/unified-testing-tool/issues/22): no accessible-name filter, few type-specific filters, background work needs manual flushing, no retrying assertions, no generated typed locators for custom testers, Grid without row details API or row lookup by cell text, row click doesn't open details.
+[Browserless Test: close the gaps with the Unified API](https://github.com/parttio/unified-testing-tool/issues/22): no accessible-name filter, few type-specific filters, background work needs manual flushing, no retrying assertions, no generated typed locators for custom testers, Grid without row details API or row lookup by cell text, row click doesn't open details.
 
 | Gap | Issue |
 |---|---|
-| `CheckboxTester` and `SwitchTester` have no `setValue` | [#59](https://github.com/jcgueriaud1/unified-testing-tool/issues/59) |
-| `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/jcgueriaud1/unified-testing-tool/issues/61) |
-| `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/jcgueriaud1/unified-testing-tool/issues/64) |
-| No public reload, key press on a component, DOM event, focused component, component tree dump or redirect-tolerant navigate | [#66](https://github.com/jcgueriaud1/unified-testing-tool/issues/66) |
-| Plain Elements can't be found or clicked; the generic tester's click skips DOM listeners | [#70](https://github.com/jcgueriaud1/unified-testing-tool/issues/70) |
+| `CheckboxTester` and `SwitchTester` have no `setValue` | [#59](https://github.com/parttio/unified-testing-tool/issues/59) |
+| `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/parttio/unified-testing-tool/issues/61) |
+| `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/parttio/unified-testing-tool/issues/64) |
+| No public reload, key press on a component, DOM event, focused component, component tree dump or redirect-tolerant navigate | [#66](https://github.com/parttio/unified-testing-tool/issues/66) |
+| Plain Elements can't be found or clicked; the generic tester's click skips DOM listeners | [#70](https://github.com/parttio/unified-testing-tool/issues/70) |
 
 ## Outside the Testing Tools
 
 | Gap | Ticket |
 |---|---|
-| Spring Boot: no hook to choose the test web environment at runtime (Browserless runs could otherwise skip the embedded server) | [#27](https://github.com/jcgueriaud1/unified-testing-tool/issues/27) |
+| Spring Boot: no hook to choose the test web environment at runtime (Browserless runs could otherwise skip the embedded server) | [#27](https://github.com/parttio/unified-testing-tool/issues/27) |

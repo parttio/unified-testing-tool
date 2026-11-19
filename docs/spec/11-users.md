@@ -1,6 +1,6 @@
 # 11. Users and windows
 
-Decided in [#34](https://github.com/jcgueriaud1/unified-testing-tool/issues/34).
+Decided in [#34](https://github.com/parttio/unified-testing-tool/issues/34).
 
 ## Running as a user
 

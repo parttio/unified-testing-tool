@@ -1,6 +1,6 @@
 # 2. Test setup
 
-Decided in [#9](https://github.com/jcgueriaud1/unified-testing-tool/issues/9) (choosing the Testing Tool), [#15](https://github.com/jcgueriaud1/unified-testing-tool/issues/15) and [#25](https://github.com/jcgueriaud1/unified-testing-tool/issues/25) (reaching the app), proven in [#24](https://github.com/jcgueriaud1/unified-testing-tool/issues/24).
+Decided in [#9](https://github.com/parttio/unified-testing-tool/issues/9) (choosing the Testing Tool), [#15](https://github.com/parttio/unified-testing-tool/issues/15) and [#25](https://github.com/parttio/unified-testing-tool/issues/25) (reaching the app), proven in [#24](https://github.com/parttio/unified-testing-tool/issues/24).
 
 ## Marking a test
 
