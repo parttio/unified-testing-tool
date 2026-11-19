@@ -276,6 +276,11 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                     h.append("<a href=\"").append(href(file)).append("\"><img src=\"").append(href(file))
                             .append("\" alt=\"Screenshot when ").append(esc(s.displayName()))
                             .append(" failed\" loading=\"lazy\"></a>\n");
+                } else if (TreePage.isTree(file)) {
+                    h.append("<iframe class=\"tree-frame\" src=\"").append(href(TreePage.pageFor(file)))
+                            .append("\" title=\"Component tree when ").append(esc(s.displayName()))
+                            .append(" failed\" loading=\"lazy\"></iframe>\n<p><a href=\"").append(href(file))
+                            .append("\">").append(esc(file)).append("</a></p>\n");
                 } else {
                     h.append("<p><a href=\"").append(href(file)).append("\">").append(esc(file))
                             .append("</a></p>\n");
@@ -362,9 +367,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         String snapshot = ScenarioResult.string(entry, "snapshot");
         if (snapshot != null && dir != null) {
             boolean image = snapshot.endsWith(".png");
-            h.append("<a class=\"snap\" href=\"").append(href(dir + snapshot)).append("\"")
-                    .append(image ? " data-image" : "").append(">").append(image ? "screenshot" : "tree")
-                    .append("</a>");
+            boolean tree = TreePage.isTree(snapshot);
+            h.append("<a class=\"snap\" href=\"").append(href(dir + (tree ? TreePage.pageFor(snapshot) : snapshot)))
+                    .append("\"").append(image ? " data-image" : tree ? " data-tree" : "").append(">")
+                    .append(image ? "screenshot" : "tree").append("</a>");
         }
         if (entry.get("durationMs") instanceof Number n) {
             h.append("<span class=\"dur\">").append(duration(n.longValue())).append("</span>");
@@ -467,6 +473,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             .dur,.site{color:var(--muted);font-weight:400;font-size:12px}
             .snap{font-size:12px;font-weight:400}
             img.snap-img{grid-column:2/-1;max-width:100%;margin:6px 0;border:1px solid var(--line);border-radius:6px}
+            iframe.snap-tree,iframe.tree-frame{display:block;grid-column:2/-1;width:100%;height:60vh;min-height:240px;\
+            margin:6px 0;border:1px solid var(--line);border-radius:6px;background:var(--surface);resize:vertical}
             ol.steps,ol.steps ol{list-style:none;margin:0;padding:0}
             ol.steps ol{padding-left:22px;border-left:1px solid var(--line);margin-left:6px}
             ol.steps li{padding:3px 0}
@@ -536,16 +544,23 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
               var diff=document.getElementById('show-diff');
               if(diff){diff.addEventListener('change',function(){
                 document.querySelector('main').classList.toggle('full-steps',!diff.checked);});}
-              // a step's screenshot opens under the step; a second click closes it
+              // a step's screenshot or component tree opens under the step; a second click closes it
               document.addEventListener('click',function(e){
-                var a=e.target.closest('a.snap[data-image]');
+                var a=e.target.closest('a.snap[data-image],a.snap[data-tree]');
                 if(!a||e.ctrlKey||e.metaKey||e.shiftKey){return;}
                 e.preventDefault();
-                var li=a.closest('li'),img=li.querySelector(':scope > img.snap-img');
-                if(img){img.remove();return;}
-                img=document.createElement('img');
-                img.className='snap-img';img.src=a.getAttribute('href');img.alt='The page after this step';
-                li.appendChild(img);
+                var tree=a.hasAttribute('data-tree'),li=a.closest('li'),
+                    shown=li.querySelector(tree?':scope > iframe.snap-tree':':scope > img.snap-img');
+                if(shown){shown.remove();return;}
+                if(tree){
+                  shown=document.createElement('iframe');
+                  shown.className='snap-tree';shown.title='The component tree after this step';
+                }else{
+                  shown=document.createElement('img');
+                  shown.className='snap-img';shown.alt='The page after this step';
+                }
+                shown.src=a.getAttribute('href');
+                li.appendChild(shown);
               });
               search.addEventListener('input',apply);
             })();
