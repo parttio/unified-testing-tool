@@ -26,21 +26,24 @@ flowchart LR
 | Act on it | the wrapper's methods: `setValue`, `click`, `selectItem`, … | [Working with components](components.md), [Grid](grid.md) |
 | Check the result | `assertThat(wrapper)`, also `exists()`, `doesNotExist()`, `hasCount(n)` | [Assertions and waiting](assertions-and-waiting.md) |
 
-Every action and assertion is reported as a User Step, in the user's words. To make a test read as its scenario, and to read what it reports:
+Every action and assertion is reported as a User Step, in the user's words. The rest of the guide, by what you are doing:
 
-- [Structuring a scenario](structuring-a-scenario.md): `@DisplayName`, given/when/then, User Tasks with `page.step(..)`, page objects.
-- [Reading reports and failures](reports-and-failures.md): the CI log, `user-steps.txt`, the run summary, the failure message with its Near Misses.
-- [Reviewing a test](reviewing-tests.md): what to read, in order, and a checklist for a test a colleague or an agent wrote.
-- [Common mistakes](common-mistakes.md): code to look for in a test, and what to write instead.
-- [Troubleshooting](troubleshooting.md): what a failure, a skip or a setup error says, its likely cause and the fix.
-- [Running in CI](ci-setup.md): a GitHub Actions workflow that puts the run summary on the job's page, and the setup for other CI servers.
-
-Then, when you need more:
-
-- [When a test needs one Testing Tool](tool-specific.md): the Escape Hatch, `@RequiresBrowser`, `@RequiresTestingTool`.
-- [Wrappers for your own components](custom-wrappers.md): add-ons, custom components, custom filters.
-- [Checking the style](style-rules.md): scenario sentences, no raw waits and `@RequiresTestingTool`, checked by a test.
-- [Configuration](configuration.md): every setting, from the Testing Tool and the timeout to the reports and each Testing Tool's browser.
+- **Get started:** [Getting started](getting-started.md): the dependencies, a first test, running it on each Testing Tool, and reading its failure.
+- **Write:** the four steps above, and
+    - [Structuring a scenario](structuring-a-scenario.md): `@DisplayName`, given/when/then, User Tasks with `page.step(..)`, page objects;
+    - [Common mistakes](common-mistakes.md): code to look for in a test, and what to write instead.
+- **Read and review:**
+    - [Reading reports and failures](reports-and-failures.md): the CI log, `user-steps.txt`, the run summary, the failure message with its Near Misses;
+    - [Reviewing a test](reviewing-tests.md): what to read, in order, and a checklist for a test a colleague or an agent wrote;
+    - [Troubleshooting](troubleshooting.md): what a failure, a skip or a setup error says, its likely cause and the fix.
+- **Run:**
+    - [Running in CI](ci-setup.md): a GitHub Actions workflow that puts the run summary on the job's page, and the setup for other CI servers;
+    - [Configuration](configuration.md): every setting, from the Testing Tool and the timeout to the reports and each Testing Tool's browser.
+- **Extend:**
+    - [When a test needs one Testing Tool](tool-specific.md): the Escape Hatch, `@RequiresBrowser`, `@RequiresTestingTool`;
+    - [Wrappers for your own components](custom-wrappers.md): add-ons, custom components, custom filters;
+    - [Checking the style](style-rules.md): scenario sentences, no raw waits and `@RequiresTestingTool`, checked by a test.
+- **For agents:** [For agents](for-agents.md): the skill, the API reference in the jar, `llms.txt`, and how to check what an agent did.
 
 ## Running it in a browser
 
@@ -55,10 +58,7 @@ The same test runs in a real browser when the run says so (`-Dvaadin.testing.too
 
 ## For agents
 
-- **In your project:** the `write-unified-ui-tests` skill, installed by the `AddUnifiedTestingSkill` recipe. It writes, fixes and *(unreleased)* reviews Unified UI Tests: ask the agent to review a test, and it applies the checklist of [Reviewing a test](reviewing-tests.md).
-- **In the `unified-test-api` jar *(unreleased)*:** the [API reference](../../unified-test-api/src/main/resources/META-INF/unified/api-reference.md) (`META-INF/unified/api-reference.md`), which is of the version you use and needs no network.
-- **On this site:** [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt) lists every page with a link to it as Markdown, and [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt) holds this guide, the API reference and the glossary in one file.
-- **After a run *(unreleased)*:** `summary.json` says what failed and where each test's files are ([The run as data](reports-and-failures.md#the-run-as-data)).
+The `write-unified-ui-tests` skill, the API reference in the jar, `llms.txt` and what an agent reads after a run: [For agents](for-agents.md).
 
 ## Rules of thumb
 

@@ -22,6 +22,7 @@ MARKER = re.compile(r'--8<-- \[(start|end):([\w-]+)\]')
 OPTIONAL = {"Specification", "Decisions (ADRs)", "Release notes"}
 # what llms-full.txt holds: enough to write and read a Unified UI Test
 FULL = {"Home", "API reference", "Developer guide", "Glossary"}
+# the nav is grouped by top-level section only: "Write", "Run", … are part of "Developer guide"
 
 
 class Loader(yaml.SafeLoader):
@@ -95,7 +96,7 @@ def pages(nav, group=None):
         else:
             (title, target), = entry.items()
             if isinstance(target, list):
-                yield from pages(target, title)
+                yield from pages(target, group or title)   # a nested section counts as its top-level group
             else:
                 yield group, title, target
 
