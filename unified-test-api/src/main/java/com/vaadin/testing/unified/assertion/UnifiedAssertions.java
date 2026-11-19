@@ -72,6 +72,7 @@ public final class UnifiedAssertions {
     public static GridAssert assertThat(UnifiedGrid grid) { return new GridAssert(grid); }
     public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { return new GridRowAssert(row); }
     public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { return new GridColumnAssert(column); }
+    public static MessageListAssert assertThat(com.vaadin.testing.unified.component.UnifiedMessageList list) { return new MessageListAssert(list); }
     public static GenericAssert assertThat(UnifiedWrapper wrapper) { return new GenericAssert(wrapper); }
 
     // ---------------------------------------------------------------- shared retry
@@ -449,6 +450,22 @@ public final class UnifiedAssertions {
         public GridAssert isEmpty() {
             return check("to be empty", null, grid::getRowCount, v -> Objects.equals(v, 0));
         }
+
+        /** A column with this header text, among others: for a column the application adds while the test runs. */
+        public GridAssert hasColumn(String header) {
+            return check("to have column", header, grid::getColumnHeaders, v -> ((List<?>) v).contains(header));
+        }
+
+        /** No column with this header text, e.g. after the application removed it. */
+        public GridAssert doesNotHaveColumn(String header) {
+            return check("not to have column", header, grid::getColumnHeaders, v -> !((List<?>) v).contains(header));
+        }
+
+        /** Exactly these column headers, in display order ({@link UnifiedGrid#getColumnHeaders()}). */
+        public GridAssert hasColumnHeaders(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have column headers", list, grid::getColumnHeaders, list::equals);
+        }
     }
 
     public static final class GridRowAssert {
@@ -633,6 +650,33 @@ public final class UnifiedAssertions {
 
         public DetailsAssert hasSummaryText(String expected) {
             return check("to have summary text", expected, details::getSummaryText, v -> Objects.equals(v, expected));
+        }
+    }
+
+    /** Retrying checks of a chat's messages: a reply the application adds later is waited for. */
+    public static final class MessageListAssert extends WrapperAssert<MessageListAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedMessageList list;
+
+        MessageListAssert(com.vaadin.testing.unified.component.UnifiedMessageList list) { super(list); this.list = list; }
+
+        public MessageListAssert hasMessageCount(int expected) {
+            return check("to have message count", expected, list::getMessageCount, v -> Objects.equals(v, expected));
+        }
+
+        public MessageListAssert isEmpty() {
+            return check("to have no messages", null, list::getMessageCount, v -> Objects.equals(v, 0));
+        }
+
+        /** Exactly these message texts, in this order. */
+        public MessageListAssert hasMessageTexts(String... expected) {
+            List<String> texts = List.of(expected);
+            return check("to have messages", texts, list::getMessageTexts, texts::equals);
+        }
+
+        /** Some message's text contains this part. */
+        public MessageListAssert hasMessageContaining(String part) {
+            return check("to have a message containing", part, list::getMessageTexts,
+                    v -> ((List<?>) v).stream().anyMatch(text -> text != null && text.toString().contains(part)));
         }
     }
 }

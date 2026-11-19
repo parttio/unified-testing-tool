@@ -152,7 +152,7 @@ Grid, Flow's `Grid`.
 - **Actions:** `deselectAll()`, `selectAll()`
 - **Reads:** `getColumnHeaders() → List<String>`, `getRowCount() → int`
 - **Also:** `column(String) → UnifiedGridColumn`, `column(int) → UnifiedGridColumn`, `columnWithId(String) → UnifiedGridColumn`, `row() → UnifiedGridRow`, `row(int) → UnifiedGridRow`
-- **Checks:** those of every Wrapper, and `hasRowCount(int)`, `isEmpty()`
+- **Checks:** those of every Wrapper, and `doesNotHaveColumn(String)`, `hasColumn(String)`, `hasColumnHeaders(String...)`, `hasRowCount(int)`, `isEmpty()`
 
 #### `UnifiedGrid.UnifiedGridColumn`
 
@@ -206,6 +206,20 @@ Menu bar, Flow's `MenuBar`.
 - **Actions:** `clickItem(String, String...)`
 - **Reads:** `getItems() → List<String>`, `getItems(String, String...) → List<String>`, `isItemEnabled(String, String...) → boolean`
 - **Checks:** those of every Wrapper
+
+### `UnifiedMessageInput`
+
+Message input, Flow's `MessageInput`.
+
+- **Actions:** `send(String)`
+- **Checks:** those of every Wrapper
+
+### `UnifiedMessageList`
+
+Message list, Flow's `MessageList`.
+
+- **Reads:** `getMessageCount() → int`, `getMessageTexts() → List<String>`, `getMessages() → List<Message>`
+- **Checks:** those of every Wrapper, and `hasMessageContaining(String)`, `hasMessageCount(int)`, `hasMessageTexts(String...)`, `isEmpty()`
 
 ### `UnifiedMultiSelectComboBox`
 
