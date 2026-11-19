@@ -30,7 +30,7 @@ jobs:
         run: |
           CP="target/test-classes:target/classes:$(cat cp.txt)"
           for i in 1 2; do
-            java -Dvaadin.testing.tool=selenium -cp "$CP" ../prototype-302/Bench302.java 26 demo.ProfileTestBenchTest demo.ProfileMigratedTest > selenium-$i.out 2> selenium-$i.err || true
+            java -Dvaadin.testing.tool=selenium -Dcom.vaadin.testbench.Parameters.headless=true -cp "$CP" ../prototype-302/Bench302.java 26 demo.ProfileTestBenchTest demo.ProfileMigratedTest > selenium-$i.out 2> selenium-$i.err || true
             grep ^BENCH selenium-$i.err > selenium-$i.csv || true
             echo "== run $i: rows per test and status"; cut -d, -f3,4,5 selenium-$i.csv | sort | uniq -c
             echo "== run $i: first errors"; grep -v '^BENCH' selenium-$i.err | grep -E "Exception|Error|at demo|Caused" | head -40
