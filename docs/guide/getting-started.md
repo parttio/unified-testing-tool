@@ -97,6 +97,35 @@ mvn test -Dvaadin.testing.tool=selenium          # the same, on TestBench
 - **Selenium** drives the installed Chrome or Firefox, and runs TestBench, which checks its license when it loads. Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath.
 - **A failing test** says which User Step failed and what was there instead ([Reading reports and failures](reports-and-failures.md)).
 
+## 4. Break it
+
+Before you write the next test, see what a failing one tells you. In the test, give the Email field a label the view doesn't have:
+
+```diff
+-        page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
++        page.find(UnifiedTextField.class).withLabel("E-mail").setValue("alice@example.com");
+```
+
+Run it again with `mvn test -Dtest=ProfileViewTest`. It fails after the timeout with:
+
+```
+--8<-- "unified-test-demo/src/test/resources/demo/break-it/message.txt"
+```
+
+- **Failed at** is the User Step that failed, in the words of the scenario, and its number.
+- **Expected** and **Found** say what the step looked for and what was there.
+- **Nearby** lists the Near Misses: components of the same kind on the page, closest first. Here the label is *Email*.
+- **Did you mean** is the lookup that finds the closest Near Miss, ready to paste.
+- **Code** is the line of your test, and **Evidence** the directory with the test's files.
+
+The test's User Steps are in that directory, in `user-steps.txt`. They tell the scenario as it ran, up to the step that failed:
+
+```
+--8<-- "unified-test-demo/src/test/resources/demo/break-it/user-steps.txt"
+```
+
+Put the label back and the test passes again. A passing test's `user-steps.txt` has a line for every action and a `see` line for every check: read it to check that a test does what its name says. More: [Reading reports and failures](reports-and-failures.md).
+
 ## Without Spring Boot
 
 Mark the class `@UnifiedUITest` instead of `@UnifiedSpringBootTest`, and leave out the two Spring dependencies. The Unified API never starts a server itself:
