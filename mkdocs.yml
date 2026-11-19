@@ -59,6 +59,7 @@ nav:
       - Grid: guide/grid.md
       - Assertions and waiting: guide/assertions-and-waiting.md
       - Structuring a scenario: guide/structuring-a-scenario.md
+      - Common mistakes: guide/common-mistakes.md
       - Reading reports and failures: guide/reports-and-failures.md
       - Reviewing a test: guide/reviewing-tests.md
       - Running in CI: guide/ci-setup.md
