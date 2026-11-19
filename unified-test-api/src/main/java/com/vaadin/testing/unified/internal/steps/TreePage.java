@@ -23,6 +23,12 @@ public final class TreePage {
     public static final String TEXT_SUFFIX = ".tree.txt";
     public static final String PAGE_SUFFIX = ".tree.html";
 
+    /**
+     * Ends the line of the component the step acted on, in the text: Browserless marks it, and the page shows it
+     * highlighted and scrolls to it.
+     */
+    public static final String TARGET_MARK = "  ← this step";
+
     /** The attributes that say which component it is, shown before the others. */
     private static final Set<String> NAMING = Set.of("label", "caption", "text", "value", "placeholder", "title",
             "header", "helperText", "errorMessage", "ariaLabel", "@aria-label", "href", "src", "alt");
@@ -173,7 +179,7 @@ public final class TreePage {
 
     static String html(String text) {
         Tree tree = parse(text);
-        int[] count = {0};
+        int[] count = {0, 0}; // components, of which marked
         StringBuilder body = new StringBuilder(text.length() * 2);
         body.append("<ul class=\"tree\">\n");
         tree.roots().forEach(n -> node(body, n, count));
@@ -188,6 +194,9 @@ public final class TreePage {
             h.append("<span class=\"k\">Location</span> <code>").append(RunReport.esc(tree.location()))
                     .append("</code>");
         }
+        if (count[1] > 0) {
+            h.append("<a href=\"#target\" id=\"to-target\">this step's component</a>");
+        }
         h.append("<span class=\"count\">").append(count[0]).append(count[0] == 1 ? " component" : " components")
                 .append("</span></p>\n<nav>")
                 .append("<input type=\"search\" id=\"q\" placeholder=\"Find a component\" ")
@@ -200,9 +209,17 @@ public final class TreePage {
 
     private static void node(StringBuilder h, Node node, int[] count) {
         count[0]++;
-        Label label = Label.of(node.label());
+        boolean target = node.label().endsWith(TARGET_MARK);
+        Label label = Label.of(target ? node.label().substring(0, node.label().length() - TARGET_MARK.length())
+                : node.label());
         boolean hidden = label.attributes().contains("INVIS");
-        h.append("<li").append(hidden ? " class=\"invis\"" : "").append(">");
+        String classes = ((hidden ? " invis" : "") + (target ? " target" : "")).strip();
+        h.append("<li").append(classes.isEmpty() ? "" : " class=\"" + classes + "\"")
+                .append(target && count[1]++ == 0 ? " id=\"target\"" : "").append(">");
+        if (target) {
+            label = new Label(label.type(), java.util.stream.Stream.concat(label.attributes().stream(),
+                    java.util.stream.Stream.of(TARGET_ATTRIBUTE)).toList());
+        }
         if (node.children().isEmpty()) {
             h.append("<div class=\"row leaf\">");
             line(h, label);
@@ -223,7 +240,9 @@ public final class TreePage {
         List<String> rest = new ArrayList<>();
         for (String a : label.attributes()) {
             int eq = a.indexOf('=');
-            if (a.startsWith("#")) {
+            if (a.equals(TARGET_ATTRIBUTE)) {
+                continue; // shown last
+            } else if (a.startsWith("#")) {
                 h.append(" <span class=\"id\">").append(RunReport.esc(a)).append("</span>");
             } else if (eq < 0 && a.equals(a.toUpperCase(java.util.Locale.ROOT)) && !a.isBlank()) {
                 h.append(" <span class=\"flag\">").append(RunReport.esc(a)).append("</span>");
@@ -232,6 +251,9 @@ public final class TreePage {
             } else {
                 rest.add(a);
             }
+        }
+        if (label.attributes().contains(TARGET_ATTRIBUTE)) {
+            h.append(" <span class=\"here\">this step</span>");
         }
         for (String a : rest) {
             int eq = a.indexOf('=');
@@ -243,6 +265,9 @@ public final class TreePage {
         }
     }
 
+    /** Stands in a label's attributes for the step's mark, which no attribute of Karibu's looks like. */
+    private static final String TARGET_ATTRIBUTE = "\u0000target";
+
     private static void attribute(StringBuilder h, String a, int eq, String cls) {
         h.append(" <span class=\"").append(cls).append("\"><span class=\"k\">").append(RunReport.esc(a.substring(0, eq)))
                 .append("</span>=<span class=\"v\">").append(RunReport.esc(a.substring(eq + 1))).append("</span></span>");
@@ -250,9 +275,9 @@ public final class TreePage {
 
     private static final String CSS = """
             :root{color-scheme:light dark;--bg:#fbfbfa;--surface:#fff;--text:#1d1d1f;--muted:#5f6368;--line:#e3e3e0;\
-            --accent:#1f5fbf;--id:#8a3ffc;--flag:#9a6700;--flag-bg:#fff4d6;--hit:#fff1a8;--code:#f3f3f1}
+            --accent:#1f5fbf;--id:#8a3ffc;--flag:#9a6700;--flag-bg:#fff4d6;--hit:#fff1a8;--code:#f3f3f1;--target-bg:#e6efff}
             @media (prefers-color-scheme: dark){:root{--bg:#141416;--surface:#1c1c1f;--text:#e8e8ea;--muted:#a0a0a8;\
-            --line:#2e2e33;--accent:#7aa7ff;--id:#c4a1ff;--flag:#f0c060;--flag-bg:#3a3018;--hit:#5a4d10;--code:#26262b}}
+            --line:#2e2e33;--accent:#7aa7ff;--id:#c4a1ff;--flag:#f0c060;--flag-bg:#3a3018;--hit:#5a4d10;--code:#26262b;--target-bg:#1f2b45}}
             *{box-sizing:border-box}
             body{margin:0;background:var(--bg);color:var(--text);font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,\
             Consolas,monospace}
@@ -261,6 +286,10 @@ public final class TreePage {
             .where{margin:0;flex:1 1 260px;min-width:0;overflow-wrap:anywhere}
             .where code{background:var(--code);padding:1px 4px;border-radius:4px}
             .count{color:var(--muted);margin-left:12px}
+            #to-target{margin-left:12px;color:var(--accent)}
+            li.target>.row,li.target>details>.row{background:var(--target-bg);box-shadow:inset 3px 0 0 var(--accent)}
+            .here{font-size:11px;padding:0 6px;border-radius:4px;background:var(--accent);color:var(--bg);\
+            font-weight:600}
             nav{display:flex;flex-wrap:wrap;gap:6px}
             nav input,nav button{font:inherit;padding:3px 8px;border:1px solid var(--line);border-radius:6px;\
             background:var(--surface);color:var(--text)}
@@ -291,6 +320,13 @@ public final class TreePage {
     /** Expand and collapse all; the search shows the components that match, and the ones they are in. */
     private static final String SCRIPT = """
             (function(){
+              // the step's component: in view on opening, and from the header's link; this page scrolls, not the report
+              var t=document.getElementById('target');
+              function toTarget(){if(t){window.scrollTo(0,Math.max(0,t.getBoundingClientRect().top+window.scrollY
+                -window.innerHeight/3));}}
+              var link=document.getElementById('to-target');
+              if(link){link.addEventListener('click',function(e){e.preventDefault();toTarget();});}
+              toTarget();
               var all=function(o){document.querySelectorAll('details').forEach(function(d){d.open=o;});};
               document.getElementById('open').addEventListener('click',function(){all(true);});
               document.getElementById('close').addEventListener('click',function(){all(false);});

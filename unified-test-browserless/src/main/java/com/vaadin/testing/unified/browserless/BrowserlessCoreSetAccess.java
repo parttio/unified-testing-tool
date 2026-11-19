@@ -65,7 +65,7 @@ final class BrowserlessCoreSetAccess {
         /** By position: TabsTester.select(label) compares the label, which a tab holding a component lacks. */
         @Override
         public void select(String label) {
-            session.act(() -> {
+            session.act(bar, () -> {
                 List<Tab> all = all();
                 int position = ItemNames.visiblePosition(all, ItemNames.find(all, label, "tab \"" + label + "\""), "Tab");
                 ((TabsTester<?>) session.window().test(bar)).select(position);
@@ -92,7 +92,7 @@ final class BrowserlessCoreSetAccess {
 
         @Override
         public void toggle() {
-            session.act(() -> {
+            session.act(details, () -> {
                 ((DetailsTester<?>) session.window().test(details)).toggleDetails();
                 session.window().roundTrip();
             });
@@ -120,7 +120,7 @@ final class BrowserlessCoreSetAccess {
 
         @Override
         public void click(List<String> path) {
-            session.act(() -> {
+            session.act(menuBar, () -> {
                 List<MenuItem> chosen = resolve(path);
                 int[] positions = new int[path.size()];
                 List<MenuItem> level = menuBar.getItems();
@@ -162,7 +162,7 @@ final class BrowserlessCoreSetAccess {
     record DateTimePickerAccessImpl(BrowserlessSession session, DateTimePicker picker) implements DateTimePickerAccess {
         @Override
         public void typeText(String date, String time) {
-            session.act(() -> {
+            session.act(picker, () -> {
                 BrowserlessUIContext window = session.window();
                 Optional<LocalDate> parsedDate = parse(date, LocalDate::parse);
                 Optional<LocalTime> parsedTime = parse(time, LocalTime::parse);
@@ -247,7 +247,7 @@ final class BrowserlessCoreSetAccess {
     record UploadAccessImpl(BrowserlessSession session, Upload upload) implements UploadAccess {
         @Override
         public void upload(String fileName, String mimeType, byte[] content) {
-            session.act(() -> {
+            session.act(upload, () -> {
                 ((UploadTester<?>) session.window().test(upload)).upload(fileName, mimeType, content);
                 session.window().roundTrip();
             });
@@ -257,7 +257,7 @@ final class BrowserlessCoreSetAccess {
     record MessageInputAccessImpl(BrowserlessSession session, MessageInput input) implements MessageInputAccess {
         @Override
         public void send(String text) {
-            session.act(() -> {
+            session.act(input, () -> {
                 ((MessageInputTester<?>) session.window().test(input)).send(text);
                 session.window().roundTrip();
             });

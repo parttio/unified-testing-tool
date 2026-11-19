@@ -96,6 +96,25 @@ class TreePageTest {
     }
 
     @Test
+    void highlightsTheComponentTheStepActedOnAndLinksToIt() {
+        String html = TreePage.html(TREE.replace("TextField[label='Name', value='Alan, Turing', placeholder='Full name',"
+                + " manualValidation='true']", "TextField[label='Name', value='Alan, Turing', placeholder='Full name',"
+                + " manualValidation='true']" + TreePage.TARGET_MARK));
+
+        assertTrue(html.contains("<a href=\"#target\" id=\"to-target\">this step's component</a>"), html);
+        String row = html.substring(html.indexOf("<li class=\"target\" id=\"target\">"));
+        row = row.substring(0, row.indexOf("</li>"));
+        assertTrue(row.contains("<span class=\"type\">TextField</span>"), row);
+        // the badge after what names the component, before the muted rest; the mark itself is not shown
+        assertTrue(row.indexOf("placeholder") < row.indexOf("<span class=\"here\">this step</span>"), row);
+        assertTrue(row.indexOf("<span class=\"here\">") < row.indexOf("manualValidation"), row);
+        assertFalse(html.contains("←"), html);
+        // without a mark, no highlight and no link
+        assertFalse(TreePage.html(TREE).contains("id=\"target\""));
+        assertFalse(TreePage.html(TREE).contains("id=\"to-target\""));
+    }
+
+    @Test
     void escapesWhatTheComponentsSay() {
         String html = TreePage.html("└── Span[text='<b>&</b>']\n");
 
