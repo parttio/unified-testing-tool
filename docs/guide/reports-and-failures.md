@@ -208,7 +208,7 @@ A click that makes the server throw often shows the user nothing, or a generic e
    4  see notification “Saved Alan Turing”   ✘
 ```
 
-- **The application's warnings and errors** show under the User Step during which they were logged, with the exception that was logged with them. It works on every Testing Tool, since the application runs in the test's JVM. `-Dvaadin.testing.user-steps.server-log=error` keeps errors only, `off` none.
+- **The application's warnings and errors** show under the User Step during which they were logged, with the exception that was logged with them. It works on every Testing Tool, since the application runs in the test's JVM. `-Dvaadin.testing.user-steps.server-log=error` keeps errors only, `off` none. There is nothing to add to your build: the lines are heard through Logback when your application logs with it, as a Spring Boot application does by default, and through `java.util.logging` otherwise. An application that logs through another backend, such as Log4j 2, gets no server lines; everything else works the same.
 - **The browser's console errors** show the same way on Playwright: `⚠ console ERROR: Failed to load resource: the server responded with a status of 404 () (http://localhost:8080/missing.css)`. A missing `/favicon.ico`, which every browser asks for by itself, is left out.
 - **By time, not by cause:** a line a background thread logs shows under the step that was running then. A line logged between two steps shows under the first.
 - **`assertThat(page).hasNoErrors()`** makes a scenario fail when anything was logged as an error so far, and lists what. Put it at the end of a scenario that should leave no error behind. Without it, a logged error is shown and fails nothing.
