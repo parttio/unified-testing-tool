@@ -38,7 +38,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: maven
+      # each job its own Maven repository: with one shared key, whichever job ends first saves it
+      - name: Cache the Maven repository
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ github.job }}-
+            ${{ runner.os }}-maven-
       - name: Build, unit tests and demo tests on Browserless
         run: mvn -B -ntp install -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload test reports
@@ -77,13 +85,21 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: maven
+      # each job its own Maven repository: with one shared key, whichever job ends first saves it
+      - name: Cache the Maven repository
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ github.job }}-
+            ${{ runner.os }}-maven-
       - name: Build without tests
         run: mvn -B -ntp install -DskipTests
       # the adapter downloads the browser itself, on the run's first test
       - name: Install the libraries Chromium needs
         run: >
-          mvn -B -ntp -pl unified-test-demo exec:java
+          mvn -B -ntp -pl unified-test-demo org.codehaus.mojo:exec-maven-plugin:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
           -Dexec.args="install-deps chromium"
@@ -129,7 +145,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: maven
+      # each job its own Maven repository: with one shared key, whichever job ends first saves it
+      - name: Cache the Maven repository
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ github.job }}-
+            ${{ runner.os }}-maven-
       - name: Build without tests
         run: mvn -B -ntp install -DskipTests
       - name: Demo tests on Selenium (installed Chrome, driver from Selenium Manager)
@@ -163,7 +187,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: maven
+      # each job its own Maven repository: with one shared key, whichever job ends first saves it
+      - name: Cache the Maven repository
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ github.job }}-
+            ${{ runner.os }}-maven-
       - name: Download the three jobs' Unified evidence
         env:
           GH_TOKEN: ${{ github.token }}
