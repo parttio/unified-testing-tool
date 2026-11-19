@@ -23,6 +23,9 @@ The demo's `EditPersonDramafinderTest`, and what the recipe makes of it. CI chec
 
 ## Run it
 
+!!! warning "Vaadin 25.3 first"
+    The migrated tests need Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. The recipe doesn't check: on an older Vaadin it migrates the build all the same, and the tests fail when they run. Move the application to Vaadin 25.3 before you run the recipe.
+
 Commit or stash your work first: the recipe changes files in place.
 
 === "Maven"
