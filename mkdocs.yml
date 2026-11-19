@@ -54,25 +54,31 @@ nav:
   - Developer guide:
       - Overview: guide/index.md
       - Getting started: guide/getting-started.md
-      - Finding components: guide/finding-components.md
-      - Working with components: guide/components.md
-      - Grid: guide/grid.md
-      - Assertions and waiting: guide/assertions-and-waiting.md
-      - Structuring a scenario: guide/structuring-a-scenario.md
-      - Common mistakes: guide/common-mistakes.md
-      - Reading reports and failures: guide/reports-and-failures.md
-      - Reviewing a test: guide/reviewing-tests.md
-      - Troubleshooting: guide/troubleshooting.md
-      - Running in CI: guide/ci-setup.md
-      - Configuration: guide/configuration.md
-      - Navigation, users and windows: guide/navigation-and-users.md
-      - When a test needs one Testing Tool: guide/tool-specific.md
-      - Wrappers for your own components: guide/custom-wrappers.md
-      - Checking the style: guide/style-rules.md
-  - One test, four ways: comparison.md
-  - Migrating from TestBench: migrating-from-testbench.md
-  - Migrating from Browserless: migrating-from-browserless.md
-  - Migrating from Dramafinder: migrating-from-dramafinder.md
+      - Write:
+          - Finding components: guide/finding-components.md
+          - Working with components: guide/components.md
+          - Grid: guide/grid.md
+          - Assertions and waiting: guide/assertions-and-waiting.md
+          - Structuring a scenario: guide/structuring-a-scenario.md
+          - Navigation, users and windows: guide/navigation-and-users.md
+          - Common mistakes: guide/common-mistakes.md
+      - Read and review:
+          - Reading reports and failures: guide/reports-and-failures.md
+          - Reviewing a test: guide/reviewing-tests.md
+          - Troubleshooting: guide/troubleshooting.md
+      - Run:
+          - Running in CI: guide/ci-setup.md
+          - Configuration: guide/configuration.md
+      - Extend:
+          - When a test needs one Testing Tool: guide/tool-specific.md
+          - Wrappers for your own components: guide/custom-wrappers.md
+          - Checking the style: guide/style-rules.md
+      - For agents: guide/for-agents.md
+  - Coming from another tool:
+      - One test, four ways: comparison.md
+      - Migrating from TestBench: migrating-from-testbench.md
+      - Migrating from Browserless: migrating-from-browserless.md
+      - Migrating from Dramafinder: migrating-from-dramafinder.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md
