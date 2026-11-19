@@ -29,6 +29,7 @@ class ProfileViewTest {
 - **Migrating from Browserless:** [docs/migrating-from-browserless.md](docs/migrating-from-browserless.md), the same for Browserless Test and TestBench UI Unit tests.
 - **Migrating from Dramafinder:** [docs/migrating-from-dramafinder.md](docs/migrating-from-dramafinder.md), the same for Dramafinder (Playwright) tests.
 - **Getting started:** [docs/guide/getting-started.md](docs/guide/getting-started.md): from the dependencies to a first test that passes on Browserless and in a browser.
+- **Reviewing tests:** [docs/guide/reviewing-tests.md](docs/guide/reviewing-tests.md): what to read, in order, and a checklist for a test a colleague or an agent wrote.
 - **Developer guide:** [docs/guide](docs/guide/index.md): how to write tests, structure scenarios and read their reports, with examples from the demo.
 - **API reference *(unreleased)*:** [every Wrapper](unified-test-api/src/main/resources/META-INF/unified/api-reference.md) with its filters, actions, reads and checks, generated from the code and shipped in the `unified-test-api` jar (`META-INF/unified/api-reference.md`).
 - **For agents:** the site has an [`llms.txt`](https://parttio.github.io/unified-testing-tool/llms.txt), every page as Markdown, and the whole guide in [`llms-full.txt`](https://parttio.github.io/unified-testing-tool/llms-full.txt); the `write-unified-ui-tests` skill is installed by the `AddUnifiedTestingSkill` recipe.

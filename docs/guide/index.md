@@ -30,6 +30,7 @@ Every action and assertion is reported as a User Step, in the user's words. To m
 
 - [Structuring a scenario](structuring-a-scenario.md): `@DisplayName`, given/when/then, User Tasks with `page.step(..)`, page objects.
 - [Reading reports and failures](reports-and-failures.md): the CI log, `user-steps.txt`, the run summary, the failure message with its Near Misses.
+- [Reviewing a test](reviewing-tests.md): what to read, in order, and a checklist for a test a colleague or an agent wrote.
 - [Running in CI](ci-setup.md): a GitHub Actions workflow that puts the run summary on the job's page, and the setup for other CI servers.
 
 Then, when you need more:
