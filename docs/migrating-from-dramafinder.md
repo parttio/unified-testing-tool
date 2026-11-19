@@ -87,6 +87,19 @@ Commit or stash your work first: the recipe changes files in place.
 
 Without another adapter the migrated suite keeps running on Playwright only, as before; adding one is the step that makes it run elsewhere (see **Running on the other Testing Tools**).
 
+### Which classes it skips
+
+The recipe leaves a test class it can't convert entirely as it is (see **What it leaves for you**). To see every such class and why in one pass, before migrating, run the search recipe `FindTestClassesToMigrate` *(unreleased)* as a dry run; it changes no file:
+
+```bash
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
+  -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
+  -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.FindTestClassesToMigrate \
+  -Drewrite.exportDatatables=true
+```
+
+On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`. `target/rewrite/rewrite.patch` marks every Dramafinder, Browserless and TestBench test class: `/*~~(migrates)~~>*/`, or `/*~~(skipped: overrides setupTest() of AbstractBasePlaywrightIT, calls getUrl() of SpringPlaywrightIT)~~>*/` naming the base class members that keep it from migrating, and with `exportDatatables` a CSV in `target/rewrite/datatables/` lists them with their reasons. Fix what blocks the skipped ones, run it again until none is left, then run the migration.
+
 ## What it converts
 
 | Dramafinder | Unified API |

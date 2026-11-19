@@ -116,6 +116,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `unified-test-rewrite`: after a failed run, it writes each failure's `Did you mean` into the test.
   `withLabel("Email")` becomes `withLabel("E-mail")`. No model, nothing at test time: a diff to review. See
   [Applying it](https://parttio.github.io/unified-testing-tool/guide/reports-and-failures/#applying-it).
+- **`FindTestClassesToMigrate`** ([#352](https://github.com/parttio/unified-testing-tool/issues/352)), a search
+  recipe in `unified-test-rewrite`: run as a dry run before a migration, it marks every TestBench, Browserless and
+  Dramafinder test class `migrates` or `skipped: <why>`, and lists them in a data table, so a suite's blockers show
+  in one pass instead of one per migration run. See [Which classes it skips](https://parttio.github.io/unified-testing-tool/migrating-from-dramafinder/#which-classes-it-skips).
 - **The Findable View** ([#204](https://github.com/parttio/unified-testing-tool/issues/204)): `page.describe()`,
   or `describe()` on a dialog or any other Scope, lists what a test can find there, one line each, with the lookup
   that singles it out. It reads the same on every Testing Tool, and a failed test writes the page's view next to

@@ -88,6 +88,19 @@ Commit or stash your work first: the recipe changes files in place.
 
 Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `playwright` or `selenium`) and work through the Migration Markers, by hand or with the agent skill.
 
+### Which classes it converts
+
+The recipe converts every class that is or extends `BrowserTestBase`; what it can't convert inside a class gets a Migration Marker instead. To list those classes before migrating, run the search recipe `FindTestClassesToMigrate` *(unreleased)* as a dry run; it changes no file:
+
+```bash
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
+  -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
+  -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.FindTestClassesToMigrate \
+  -Drewrite.exportDatatables=true
+```
+
+On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`. `target/rewrite/rewrite.patch` marks every TestBench, Browserless and Dramafinder test class `/*~~(migrates)~~>*/`, and with `exportDatatables` a CSV in `target/rewrite/datatables/` lists them. A project with Browserless or Dramafinder tests too sees which of those their migrations would skip.
+
 ## What it converts
 
 | TestBench | Unified API |
