@@ -3,6 +3,7 @@ package demo.addon.testing;
 import demo.addon.Badge;
 
 /** {@link UnifiedBadge} on Browserless: the server-side component through the Escape Hatch. */
+// --8<-- [start:badgeBrowserless]
 public interface UnifiedBadgeBrowserless extends UnifiedBadge {
 
     @Override
@@ -10,3 +11,4 @@ public interface UnifiedBadgeBrowserless extends UnifiedBadge {
         return unwrap(Badge.class).getCount();
     }
 }
+// --8<-- [end:badgeBrowserless]

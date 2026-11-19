@@ -82,21 +82,9 @@ When that doesn't read like what a user does, name the kind with `@UnifiedCompon
 Browserless runs no client-side JavaScript, so content the browser draws isn't there. Override the methods that need it for that tool, in an interface extending the Wrapper:
 
 ```java
-@UnifiedComponent(value = Badge.class,
-        overrides = @ToolImplementation(tool = TestingTool.BROWSERLESS, value = UnifiedBadgeBrowserless.class))
-public interface UnifiedBadge extends UnifiedWrapper, CommonFilters<UnifiedBadge> {
+--8<-- "unified-test-demo/src/main/java/demo/addon/testing/UnifiedBadge.java:badge"
 
-    /** From the text "3 new" the browser shows. */
-    default int getCount() {
-        String text = element().getText().strip();
-        return text.isEmpty() ? 0 : Integer.parseInt(text.split(" ")[0]);
-    }
-}
-
-public interface UnifiedBadgeBrowserless extends UnifiedBadge {
-    @Override
-    default int getCount() { return unwrap(Badge.class).getCount(); }   // the Java component
-}
+--8<-- "unified-test-demo/src/main/java/demo/addon/testing/UnifiedBadgeBrowserless.java:badgeBrowserless"
 ```
 
 Tests use `UnifiedBadge` and stay the same on every tool. The override runs only on the Testing Tool it is for, so the tests need no `@RequiresTestingTool`.

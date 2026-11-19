@@ -51,7 +51,9 @@ void savesName(UnifiedPage page) { ... }
 ```
 ````
 
-Write an example inline only when it can't compile on its own: a signature, a sketch with `...`, or a mistake to avoid.
+A short example that the demo app can't run, because it shows buttons or views the demo doesn't have, goes in [`GuideExamples`](unified-test-demo/src/test/java/demo/GuideExamples.java) instead: CI compiles it but doesn't run it, so an API change still breaks the build rather than the guide.
+
+Write an example inline only when it can't compile: a signature, a class skeleton, or a mistake to avoid.
 
 ## Cutting a release
 
