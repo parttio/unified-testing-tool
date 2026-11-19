@@ -26,6 +26,11 @@ recipeList:
   - org.openrewrite.maven.RemoveDependency:
       groupId: org.vaadin.addons
       artifactId: dramafinder
+  # an explicit version wins over the BOMs: the old standalone add-on line (1.x) would sit beside Browserless 25 (#354)
+  - org.openrewrite.maven.RemoveRedundantDependencyVersions:
+      groupPattern: com.vaadin
+      artifactPattern: browserless-test-spring
+      onlyIfManagedVersionIs: ANY
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.vaadin.addons.unified.rewrite.AddBrowserlessAdapter

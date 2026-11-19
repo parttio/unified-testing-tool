@@ -4,8 +4,8 @@ name: org.vaadin.addons.unified.rewrite.MigrateTestBenchBuild
 displayName: Swap TestBench for the Unified API in the Maven build
 description: >-
   Imports unified-test-bom, adds the Spring integration, `browserless-test-spring` (which Browserless runs of Spring
-  tests need) and the Browserless and Selenium adapters as test dependencies, and removes direct TestBench
-  dependencies, which the Selenium adapter brings in.
+  tests need, without a version of its own: the BOMs manage it) and the Browserless and Selenium adapters as test
+  dependencies, and removes direct TestBench dependencies, which the Selenium adapter brings in.
 preconditions:
   - org.openrewrite.maven.search.DependencyInsight:
       groupIdPattern: com.vaadin
@@ -41,6 +41,11 @@ recipeList:
   - org.openrewrite.maven.RemoveDependency:
       groupId: com.vaadin
       artifactId: vaadin-testbench*
+  # an explicit version wins over the BOMs: the old standalone add-on line (1.x) would sit beside Browserless 25 (#354)
+  - org.openrewrite.maven.RemoveRedundantDependencyVersions:
+      groupPattern: com.vaadin
+      artifactPattern: browserless-test-spring
+      onlyIfManagedVersionIs: ANY
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode

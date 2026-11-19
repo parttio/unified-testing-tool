@@ -141,7 +141,7 @@ In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the BOM manages its version). It removes the direct `dramafinder` dependency: the Playwright adapter brings Dramafinder.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-playwright` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. With `addBrowserless` it also adds `unified-test-browserless`, and `com.vaadin:browserless-test-spring` in a Spring Boot project: a `@UnifiedSpringBootTest` fails at once on Browserless without it, and the adapter doesn't bring it (the BOM manages its version). It removes the direct `dramafinder` dependency, and the version of a `browserless-test-spring` the project already has: the Playwright adapter brings Dramafinder.
 
 ## What it leaves for you
 
