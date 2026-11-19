@@ -126,7 +126,8 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 - Run with the rewrite-maven-plugin, the TestBench and UI Unit migrations logged `recipe
   'org.openrewrite.java.testing.junit5.IgnoreToDisabled' does not exist` and left JUnit 4's `@Ignore` in place
   ([#355](https://github.com/parttio/unified-testing-tool/issues/355)). `@Ignore` now becomes `@Disabled`, and the
-  documented commands name the plugin version, 6.46.1, the recipes are tested against.
+  documented commands name the plugin versions the recipes are tested against: 6.46.1 for Maven, 7.39.0 for
+  Gradle.
 
 ## Known limitations
 

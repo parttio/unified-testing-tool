@@ -56,7 +56,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```kotlin
     plugins {
-        id("org.openrewrite.rewrite") version "latest.release"
+        id("org.openrewrite.rewrite") version "7.39.0"
     }
     rewrite {
         activeRecipe("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified")
@@ -69,6 +69,8 @@ Commit or stash your work first: the recipe changes files in place.
     ```bash
     gradle rewriteRun
     ```
+
+    As with Maven, the plugin version is the one whose OpenRewrite the recipes are built and tested against.
 
     The build changes are Maven only: on Gradle, add the dependencies by hand (see **The build** below). Without a Maven build the recipe can't read the Dramafinder version from it, and finds it from the classpath instead (see **Dramafinder 1.x**).
 
