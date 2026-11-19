@@ -40,7 +40,7 @@ public class DramafinderSkippedMarked extends Recipe {
                 if (!Dramafinder.isDramafinderClass(classDecl)) {
                     return c;
                 }
-                List<String> blockers = Dramafinder.blockers(classDecl);
+                List<String> blockers = Dramafinder.blockers(classDecl, DramafinderCopies.of(ctx));
                 if (blockers.isEmpty() || c.getComments().stream().anyMatch(comment -> comment instanceof TextComment t
                         && t.getText().contains("TODO unified: " + PREFIX))) {
                     return c;

@@ -67,7 +67,10 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   (`not migrated: calls loginAs(..) of SpringPlaywrightIT, uses chatModel of SpringPlaywrightIT; ...`). Such a
   class used to stay unchanged, with nothing saying why. A `setupTest()` override that seeds data and then calls
   `super.setupTest()` no longer keeps a class from migrating: it becomes a plain `@BeforeEach`, without the
-  `super.setupTest()`, since each test now navigates itself.
+  `super.setupTest()`, since each test now navigates itself. Nor do the members of a project's copy of
+  `SpringPlaywrightIT`: each migrated test gets the copy's fields and helpers it uses, and its `@BeforeEach`,
+  `@AfterEach` and `@RegisterExtension` members, as its own. A member that uses the test base where no rule
+  converts it (an extension reading `page`, an override of `setupTest()`) still keeps the test from migrating.
 - **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
   outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
 

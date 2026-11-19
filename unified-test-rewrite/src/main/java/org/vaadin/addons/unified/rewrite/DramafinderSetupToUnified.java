@@ -73,6 +73,7 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                 if (Dramafinder.isCopiedSpringBase(classDecl.getType())) {
                     copies.put(classDecl.getType().getFullyQualifiedName(), classDecl.getLeadingAnnotations());
                 }
+                DramafinderCopies.collect(classDecl, ctx);
                 return super.visitClassDeclaration(classDecl, ctx);
             }
         };
@@ -83,9 +84,17 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
         return new JavaIsoVisitor<>() {
 
             @Override
-            public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
-                if (!Dramafinder.isDramafinderClass(classDecl) || !Dramafinder.migratable(classDecl)) {
-                    return super.visitClassDeclaration(classDecl, ctx);
+            public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration original, ExecutionContext ctx) {
+                if (!Dramafinder.isDramafinderClass(original) || !Dramafinder.migratable(original, DramafinderCopies.of(ctx))) {
+                    return super.visitClassDeclaration(original, ctx);
+                }
+                // the members the test takes from a copied base class, as its own
+                DramafinderCopies.Merged merged = DramafinderCopies.merge(original, DramafinderCopies.of(ctx));
+                J.ClassDeclaration classDecl = merged.c();
+                for (Statement s : classDecl.getBody().getStatements()) {
+                    if (merged.inlined().containsKey(s.getId())) {
+                        typesIn(s).forEach(t -> maybeAddImport(t));
+                    }
                 }
                 Set<String> helpers = new java.util.HashSet<>(Helpers.using(classDecl, Set.of(), Dramafinder::usesTestBase));
                 // a setupTest() that seeds and then calls super.setupTest() becomes a plain @BeforeEach
@@ -349,8 +358,8 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
         };
     }
 
-    /** The classes an annotation names: its own type, and those of class literals and constants in its arguments. */
-    private static Set<String> typesIn(J.Annotation annotation) {
+    /** The classes a tree names by their simple name: an annotation's type, a field's type, a class literal's. */
+    private static Set<String> typesIn(J tree) {
         Set<String> types = new LinkedHashSet<>();
         new JavaIsoVisitor<Set<String>>() {
             @Override
@@ -361,7 +370,7 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                 }
                 return identifier;
             }
-        }.visit(annotation, types);
+        }.visit(tree, types);
         return types;
     }
 
