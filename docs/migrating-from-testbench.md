@@ -149,7 +149,7 @@ Add `addAgentSkill: true` to the recipe's options (see **Run it**): the migratio
 /resolve-migration-markers
 ```
 
-Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md`. It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
+Every migration, with or without `addAgentSkill`, also runs `org.vaadin.addons.unified.rewrite.AddUnifiedTestingSkill`: it writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the skill agents follow to write and change Unified UI Tests (and which `resolve-migration-markers` defers to for the shape of the code it writes), and points to it from a marked section of `AGENTS.md` (of `CLAUDE.md` *(unreleased)*, when the project has that and no `AGENTS.md`). It replaces an older copy of the skill, keeps one you edited by hand (it then warns), and can run alone on a project that wasn't migrated ([spec 12, The agent skill](spec/12-readable-tests.md#the-agent-skill)).
 
 Review its changes like any other. The skill's source is in [`unified-test-rewrite`](https://github.com/parttio/unified-testing-tool/blob/main/unified-test-rewrite/src/main/resources/META-INF/unified/skills/resolve-migration-markers/SKILL.md).
 

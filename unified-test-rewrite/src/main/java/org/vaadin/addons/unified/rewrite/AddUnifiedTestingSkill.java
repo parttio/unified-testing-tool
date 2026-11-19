@@ -24,23 +24,28 @@ import org.openrewrite.text.PlainTextParser;
 
 /**
  * Installs the {@code write-unified-ui-tests} agent skill (spec chapter 12, "The agent skill") in a project: writes
- * {@code .claude/skills/write-unified-ui-tests/SKILL.md} and a pointer section in {@code AGENTS.md}.
+ * {@code .claude/skills/write-unified-ui-tests/SKILL.md} and a pointer section in {@code AGENTS.md}, or in
+ * {@code CLAUDE.md} when the project has that and no {@code AGENTS.md}.
  * <p>
  * The skill ships in this jar with a stamp, {@code <!-- unified-test-skill: write-unified-ui-tests VERSION -->},
  * VERSION being the release it came with (Maven resource filtering). A copy already in the project is replaced when
  * its stamp names an older release, left as it is when it names this one or a newer one, and left alone with a
  * warning ({@link Markup.Warn} on the file) when it has no stamp: someone edited it by hand.
  * <p>
- * {@code AGENTS.md} gets a section between {@code <!-- unified-test: write-unified-ui-tests -->} and
- * {@code <!-- /unified-test -->}; the file is created when missing, and the section added or brought up to date.
+ * The pointer is a section between {@code <!-- unified-test: write-unified-ui-tests -->} and
+ * {@code <!-- /unified-test -->}, added at the end or brought up to date where it is; nothing else in the file
+ * changes. It goes in {@code AGENTS.md}, created when missing, unless the project has a {@code CLAUDE.md} and no
+ * {@code AGENTS.md}: Claude Code reads {@code CLAUDE.md}, so the section goes there and no {@code AGENTS.md} is
+ * created. With both files, only {@code AGENTS.md} gets it.
  * <p>
- * It writes only into a project: a root with a build file ({@code pom.xml}, Gradle), {@code AGENTS.md} or the
- * skill, that has Java sources. Every Migration Recipe runs it; it can also run alone.
+ * It writes only into a project: a root with a build file ({@code pom.xml}, Gradle), {@code AGENTS.md},
+ * {@code CLAUDE.md} or the skill, that has Java sources. Every Migration Recipe runs it; it can also run alone.
  */
 public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkill.Scan> {
 
     static final Path PATH = Path.of(".claude/skills/write-unified-ui-tests/SKILL.md");
     static final Path AGENTS = Path.of("AGENTS.md");
+    static final Path CLAUDE = Path.of("CLAUDE.md");
     private static final String RESOURCE = "/META-INF/unified/skills/write-unified-ui-tests/SKILL.md";
     private static final Pattern STAMP = Pattern.compile("<!-- unified-test-skill: write-unified-ui-tests (\\S+) -->");
     private static final Set<Path> BUILD_FILES = Set.of(Path.of("pom.xml"), Path.of("build.gradle"),
@@ -60,6 +65,12 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
         boolean javaSources;
         boolean skillExists;
         boolean agentsExists;
+        boolean claudeExists;
+
+        /** The file that gets the pointer section. */
+        Path pointerFile() {
+            return claudeExists && !agentsExists ? CLAUDE : AGENTS;
+        }
     }
 
     @Override
@@ -71,7 +82,7 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
     public String getDescription() {
         return "Writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the agent skill for writing Unified UI Tests "
                 + "of this Unified API version, replacing an older copy (but not a hand-edited one), and points to it "
-                + "from `AGENTS.md`.";
+                + "from `AGENTS.md` (or from `CLAUDE.md`, when the project has that and no `AGENTS.md`).";
     }
 
     @Override
@@ -91,6 +102,9 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
                         scan.project = true;
                     } else if (path.equals(AGENTS)) {
                         scan.agentsExists = true;
+                        scan.project = true;
+                    } else if (path.equals(CLAUDE)) {
+                        scan.claudeExists = true;
                         scan.project = true;
                     } else if (BUILD_FILES.contains(path)) {
                         scan.project = true;
@@ -113,7 +127,7 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
         if (!scan.skillExists) {
             parser.parse(skill()).map(s -> (SourceFile) s.withSourcePath(PATH)).forEach(generated::add);
         }
-        if (!scan.agentsExists) {
+        if (!scan.agentsExists && !scan.claudeExists) {
             parser.parse(SECTION).map(s -> (SourceFile) s.withSourcePath(AGENTS)).forEach(generated::add);
         }
         return generated;
@@ -130,7 +144,7 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
                 if (text.getSourcePath().equals(PATH)) {
                     return updateSkill(text);
                 }
-                if (text.getSourcePath().equals(AGENTS)) {
+                if (text.getSourcePath().equals(scan.pointerFile())) {
                     String updated = withSection(text.getText());
                     return updated.equals(text.getText()) ? text : text.withText(updated);
                 }
@@ -163,21 +177,21 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
     }
 
     /**
-     * {@code AGENTS.md} with the pointer section replaced where it is, or added at the end; the file keeps its
+     * {@code AGENTS.md} or {@code CLAUDE.md} with the pointer section replaced where it is, or added at the end; the file keeps its
      * newline at the end, or its lack of one.
      */
-    static String withSection(String agents) {
+    static String withSection(String file) {
         String section = SECTION.substring(0, SECTION.length() - 1);
-        int start = agents.indexOf(SECTION_START);
-        int end = start < 0 ? -1 : agents.indexOf(SECTION_END, start);
+        int start = file.indexOf(SECTION_START);
+        int end = start < 0 ? -1 : file.indexOf(SECTION_END, start);
         if (start >= 0 && end >= 0) {
-            return agents.substring(0, start) + section + agents.substring(end + SECTION_END.length());
+            return file.substring(0, start) + section + file.substring(end + SECTION_END.length());
         }
-        if (agents.isBlank()) {
+        if (file.isBlank()) {
             return SECTION;
         }
-        String body = agents.stripTrailing();
-        return body + "\n\n" + section + (agents.endsWith("\n") ? "\n" : "");
+        String body = file.stripTrailing();
+        return body + "\n\n" + section + (file.endsWith("\n") ? "\n" : "");
     }
 
     /** The skill as this release ships it. */
