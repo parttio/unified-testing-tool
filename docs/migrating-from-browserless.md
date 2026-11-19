@@ -89,6 +89,21 @@ Commit or stash your work first: the recipe changes files in place.
 
 Without a browser adapter the migrated suite keeps running on Browserless only, as before; adding one is the step that makes it run in a browser (see **Running in a browser**).
 
+### Which classes it skips
+
+The recipe leaves a test class that passes itself to a page object, or uses the context API beyond opening a window, as it is (see **What it leaves for you**). To see every such class and why in one pass, before migrating, run the search recipe `FindTestClassesToMigrate` *(unreleased)* as a dry run; it changes no file:
+
+```bash
+mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
+  -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:<version> \
+  -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.FindTestClassesToMigrate \
+  -Drewrite.exportDatatables=true
+```
+
+`target/rewrite/rewrite.patch` (one per module) marks every Browserless, Dramafinder and TestBench test class: `/*~~(migrates)~~>*/`, or `/*~~(skipped: passes itself (this) to a page object or helper; ...)~~>*/`, and with `exportDatatables` the file `FindTestClassesToMigrate$TestClasses.csv`, in `target/rewrite/datatables/<date-time>/` under the directory you ran Maven in, lists them one row per class with their reasons. Fix what blocks the skipped ones, run it again until none is left, then run the migration.
+
+On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch is `build/reports/rewrite/rewrite.patch`.
+
 ## What it converts
 
 | Browserless | Unified API |
