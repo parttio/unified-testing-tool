@@ -110,7 +110,7 @@ With `includePageObjects`, a page object that holds the TestBench test (`HasElem
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the BOM manages its version), and removes direct `vaadin-testbench*` dependencies (the Selenium adapter brings TestBench). It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine. It adds the import after the BOMs the project already imports; where the Vaadin BOM comes first, Browserless Test is the Vaadin BOM's version ([import order](index.md#try-it)).
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the BOM manages its version), and removes direct `vaadin-testbench*` dependencies (the Selenium adapter brings TestBench). It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine.
 
 ## What it leaves for you
 
