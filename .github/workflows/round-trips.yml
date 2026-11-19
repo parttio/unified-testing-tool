@@ -85,7 +85,14 @@ jobs:
           -Dexec.args="install-deps chromium"
       - name: Count the round trips and compare them with the committed counts
         if: steps.licence.outputs.skip != 'true'
-        run: scripts/bench-unified.sh --tool "${{ matrix.tool }}" --counts --skip-build
+        # TEMPORARY: write Selenium's committed counts once (reverted before merge)
+        run: |
+          if [ "${{ matrix.tool }}" = selenium ]; then
+            scripts/bench-unified.sh --tool selenium --update-counts --skip-build
+            echo "----- selenium.txt -----"; cat unified-test-demo/perf/round-trips/selenium.txt; echo "----- end -----"
+          else
+            scripts/bench-unified.sh --tool "${{ matrix.tool }}" --counts --skip-build
+          fi
       - name: Upload the measured counts and the test log
         if: always() && steps.licence.outputs.skip != 'true'
         uses: actions/upload-artifact@v7
