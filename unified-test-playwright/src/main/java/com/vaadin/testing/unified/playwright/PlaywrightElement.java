@@ -18,7 +18,7 @@ import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
  * else a generic Dramafinder element on the locator. Dramafinder's actions wait for the server round-trip;
  * actions on a raw locator wait here.
  */
-final class PlaywrightElement implements UnifiedElement {
+final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unified.spi.UsabilityCheck {
 
     private final PlaywrightSession session;
     private final Locator locator;
@@ -147,6 +147,50 @@ final class PlaywrightElement implements UnifiedElement {
     public boolean isVisible() {
         return support.visible(locator).orElseGet(locator::isVisible);
     }
+
+    /**
+     * Auto-Wait's check in one call for an element found with its query's candidates: Playwright's own
+     * visibility rule (non-empty box, visibility visible, display: contents by its children) and no
+     * {@code disabled} attribute, read in the page together. Otherwise, or when the component has its own
+     * visibility rule, {@link #isVisible()} and {@link #isEnabled()} (#402).
+     */
+    @Override
+    public boolean isVisibleAndEnabled() {
+        java.util.Optional<Boolean> own = support.visible(locator);
+        if (own.isPresent() || candidates == null) {
+            return own.orElseGet(locator::isVisible) && isEnabled();
+        }
+        return Boolean.TRUE.equals(candidates.evaluateAll(VISIBLE_AND_ENABLED, index));
+    }
+
+    /** As Playwright's isVisible() and Dramafinder's isEnabled() (the disabled attribute) decide them. */
+    private static final String VISIBLE_AND_ENABLED = """
+            (els, i) => {
+              const el = els[i];
+              if (!el) return false;
+              const textVisible = (node) => {
+                const range = document.createRange();
+                range.selectNode(node);
+                const r = range.getBoundingClientRect();
+                return r.width > 0 && r.height > 0;
+              };
+              const visible = (e) => {
+                const style = getComputedStyle(e);
+                if (!style) return true;
+                if (style.display === 'contents') {
+                  for (let c = e.firstChild; c; c = c.nextSibling) {
+                    if (c.nodeType === 1 && visible(c)) return true;
+                    if (c.nodeType === 3 && textVisible(c)) return true;
+                  }
+                  return false;
+                }
+                if (e.checkVisibility && !e.checkVisibility()) return false;
+                if (style.visibility !== 'visible') return false;
+                const r = e.getBoundingClientRect();
+                return r.width > 0 && r.height > 0;
+              };
+              return visible(el) && !el.hasAttribute('disabled');
+            }""";
 
     /** No {@code disabled} attribute: Vaadin components reflect the property to it. */
     @Override
