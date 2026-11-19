@@ -54,7 +54,11 @@ recipeList:
   - org.openrewrite.java.testing.junit5.UpdateBeforeAfterAnnotations
   - org.openrewrite.java.testing.junit5.UpdateTestAnnotation
   - org.openrewrite.java.testing.junit5.AssertToAssertions
-  - org.openrewrite.java.testing.junit5.IgnoreToDisabled
+  # rewrite-testing-frameworks' IgnoreToDisabled is declarative: the composites load only this module's YAML, so
+  # it would never resolve (#386). Its whole recipe:
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: org.junit.Ignore
+      newFullyQualifiedTypeName: org.junit.jupiter.api.Disabled
   - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified
