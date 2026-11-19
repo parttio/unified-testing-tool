@@ -50,6 +50,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - API reference: api-reference.md
   - Developer guide:
       - Overview: guide/index.md
       - Finding components: guide/finding-components.md
