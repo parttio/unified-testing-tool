@@ -25,29 +25,24 @@ jobs:
       - name: Classpath
         working-directory: unified-test-demo
         run: mvn -B -ntp -q dependency:build-classpath -Dmdep.outputFile=cp.txt && mvn -B -ntp -q test-compile
-      - name: Install Chromium for Playwright
-        run: >
-          mvn -B -ntp -pl unified-test-demo exec:java
-          -Dexec.mainClass=com.microsoft.playwright.CLI
-          -Dexec.classpathScope=test
-          -Dexec.args="install --with-deps chromium"
-      - name: Benchmark
+      - name: Benchmark (Selenium)
         working-directory: unified-test-demo
         run: |
           CP="target/test-classes:target/classes:$(cat cp.txt)"
           for i in 1 2; do
-            java -Dvaadin.testing.tool=browserless -cp "$CP" ../prototype-302/Bench302.java 36 demo.ProfileBrowserlessTest demo.ProfileBrowserlessMigratedTest 2>&1 >/dev/null | grep ^BENCH > browserless-$i.csv || true
-            java -Dvaadin.testing.tool=playwright -cp "$CP" ../prototype-302/Bench302.java 26 demo.ProfileDramafinderTest demo.ProfileMigratedTest 2>&1 >/dev/null | grep ^BENCH > playwright-$i.csv || true
-            java -Dvaadin.testing.tool=selenium -cp "$CP" ../prototype-302/Bench302.java 26 demo.ProfileTestBenchTest demo.ProfileMigratedTest 2>&1 >/dev/null | grep ^BENCH > selenium-$i.csv || true
+            java -Dvaadin.testing.tool=selenium -cp "$CP" ../prototype-302/Bench302.java 26 demo.ProfileTestBenchTest demo.ProfileMigratedTest > selenium-$i.out 2> selenium-$i.err || true
+            grep ^BENCH selenium-$i.err > selenium-$i.csv || true
+            echo "== run $i: rows per test and status"; cut -d, -f3,4,5 selenium-$i.csv | sort | uniq -c
+            echo "== run $i: first errors"; grep -v '^BENCH' selenium-$i.err | grep -E "Exception|Error|at demo|Caused" | head -40
           done
           for i in 1 2; do
-            python3 -I ../prototype-302/an302.py browserless-$i.csv ProfileBrowserlessTest ProfileBrowserlessMigratedTest savesTheProfile
-            python3 -I ../prototype-302/an302.py playwright-$i.csv ProfileDramafinderTest ProfileMigratedTest savesTheProfile pw-launch
-            python3 -I ../prototype-302/an302.py selenium-$i.csv ProfileTestBenchTest ProfileMigratedTest savesTheProfile
-            python3 -I ../prototype-302/an302.py selenium-$i.csv ProfileTestBenchTest ProfileMigratedTest savesTheProfile se-launch
+            python3 -I ../prototype-302/an302.py selenium-$i.csv ProfileTestBenchTest ProfileMigratedTest savesTheProfile || true
+            python3 -I ../prototype-302/an302.py selenium-$i.csv ProfileTestBenchTest ProfileMigratedTest savesTheProfile se-launch || true
           done | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: prototype-302
-          path: unified-test-demo/*.csv
+          path: |
+            unified-test-demo/*.csv
+            unified-test-demo/*.err
