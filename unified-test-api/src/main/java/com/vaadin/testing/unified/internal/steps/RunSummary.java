@@ -81,6 +81,16 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
         return md.toString();
     }
 
+    /**
+     * The comparisons alone, each under {@code #### Compared with <Testing Tool>}: what {@code CompareRuns} prints
+     * for runs that have ended. Empty without a run to compare with.
+     */
+    public String comparisonsMarkdown() {
+        StringBuilder md = new StringBuilder();
+        comparisons.forEach(c -> compared(md, c));
+        return md.toString();
+    }
+
     /** At most this many scenarios that differ from another Testing Tool's run are listed; the rest are counted. */
     static final int DIFFERENCES_LISTED = 10;
 

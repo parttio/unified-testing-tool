@@ -52,7 +52,8 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   [#312](https://github.com/parttio/unified-testing-tool/pull/312)): give a run the evidence directory of a run on
   another Testing Tool (`vaadin.testing.user-steps.compare-dir`), and its summary says which scenarios pass on one
   and fail on the other, which take different User Steps and where they part, and whether both runs tested the
-  same code.
+  same code. In CI, where each Testing Tool has its own job, the `CompareRuns` command does the same from the
+  jobs' evidence; see [Running in CI](https://parttio.github.io/unified-testing-tool/guide/ci-setup/#comparing-the-testing-tools-runs).
   ```
   mvn test -Dvaadin.testing.evidence-dir=target/evidence-browserless
   mvn test -Dvaadin.testing.tool=playwright \

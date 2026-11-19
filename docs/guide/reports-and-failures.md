@@ -319,6 +319,8 @@ Both runs are of commit `3e74f89`.
 
 - **The same code?** A difference only says something about the Testing Tools when both runs tested the same code. Each run records its commit, and a fingerprint of the uncommitted changes to tracked files, and the section says whether they match: `Both runs are of commit …`, or **Not the same code** with what each run is of. Change a file between the two runs and the second one tells you. Without git, or with evidence from an earlier version of the Unified API, it says that it can't tell. Untracked files are not seen.
 
+In CI, where each Testing Tool has its own job, a job after them does the same from their uploaded evidence ([Running in CI](ci-setup.md#comparing-the-testing-tools-runs)).
+
 The first run needs an evidence directory of its own (`vaadin.testing.evidence-dir`), or the second run overwrites it. The section reports; it fails no test. It doesn't say whether a difference is one of the documented ones ([Tool-specific code](tool-specific.md)): read the step it names. `report.html` has the same section, and `summary.json` marks each such scenario with `differsOn`.
 
 ### Scenarios without a check
