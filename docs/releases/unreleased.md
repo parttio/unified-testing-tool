@@ -160,6 +160,14 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   the application adds or removes while the test runs. They replace `page.waitUntil(() ->
   grid.getColumnHeaders().contains(..))`, a gap in the reports, and fail with the headers the grid has. See
   [Columns](https://parttio.github.io/unified-testing-tool/guide/grid/#columns).
+- **The Dramafinder recipe converts raw locators on an id or test id**
+  ([#356](https://github.com/parttio/unified-testing-tool/issues/356)): `page.locator("#week-next")`,
+  `locator("[data-testid=card]")` and `getByTestId("card")` become `page.find(UnifiedButton.class).withId(..)` or
+  `withTestId(..)`, with the Wrapper of the component the application's views set that id on (`setId("..")`,
+  `getElement().setAttribute("data-testid", "..")`), and `fill`, `inputValue`, `check` and `click` become the
+  Wrapper's calls. So do `assertThat(locator)`'s `isVisible()`, `isEnabled()`, `isDisabled()`, `hasValue(..)` and
+  `isChecked()`. An id no view sets becomes a `UnifiedContainer` lookup, which finds any component, with a Migration
+  Marker. They used to stay behind the Escape Hatch, one marker each.
 
 ## New settings
 

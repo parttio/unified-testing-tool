@@ -70,6 +70,8 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 
 **`was getCell(..).click(); a row's click() clicks the row, not that cell`.** Read the view: when the cell holds nothing clickable of its own, the row click does the same; delete the marker. When it holds a component (a button, a checkbox), find it in the cell: `row.cell("<header>").find(UnifiedButton.class)...`.
 
+**`was locator("#x"): no view in the sources sets this id; UnifiedContainer finds any component, ...`** (also `getByTestId(..)`, `[data-testid=..]`, and `the sources set this id on components of different classes`). The recipe found no component class for the id, so it used `UnifiedContainer`, which finds any component. Find where the application sets the id or test id (a builder, a constant, another module) and, when that component has a Wrapper, replace `UnifiedContainer` with it (`UnifiedButton`, `UnifiedTextField`, ...); keep `UnifiedContainer` for a layout or a component without one. Run the test, then delete the marker.
+
 **`was getByText(..), a substring and first match; ...`** (a notification or badge). As `was first()`: run the test, add a filter when it finds several, then delete the marker.
 
 ## Reference: marker kinds of the TestBench recipe

@@ -62,6 +62,7 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `DialogElement.getByHeaderText(page, s)` | `.withHeaderTitle(s)` |
 | `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s)` + Migration Marker |
 | query `first()` / `get(i)` | the plain lookup + `was first()` Migration Marker / `all().get(i)` |
+| `page.locator("#x")` / `locator("[data-testid=x]")` / `getByTestId("x")` *(unreleased)* | `page.find(W.class).withId("x")` / `withTestId("x")`, `W` the Wrapper of the component the sources give that id, else `UnifiedContainer` + Migration Marker; `fill(s)` / `inputValue()` are `setValue(s)` / `getValue()` |
 | `assertVisible` / `assertHidden` / `assertEnabled` / `assertDisabled` | `assertThat(w).isVisible()` / `isHidden()` / `isEnabled()` / `isDisabled()` |
 | `assertValue` / `assertLabel` / `assertValid` / `assertInvalid` / `assertErrorMessage` | `hasValue` / `hasLabel` / `isValid` / `isInvalid` / `hasErrorMessage` |
 | `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |
