@@ -42,9 +42,38 @@ final class SeleniumSession implements AdapterSession {
         final TestBenchDriverProxy driver;
         String current;
 
+        /** False once the browser refused its log: Firefox's driver has none. */
+        private boolean consoleReadable = true;
+
         Browser(TestBenchDriverProxy driver) {
             this.driver = driver;
             this.current = driver.getWindowHandle();
+            // a browser shared by the run's tests: what an earlier test left in the console is not this one's
+            consoleErrors();
+        }
+
+        /**
+         * The errors in the browser's console since they were last read, for all its windows: Selenium's browser
+         * log, which Chrome's driver has. Without the browser's own request for {@code /favicon.ico}.
+         */
+        List<String> consoleErrors() {
+            if (!consoleReadable) {
+                return List.of();
+            }
+            try {
+                List<String> errors = new ArrayList<>();
+                for (org.openqa.selenium.logging.LogEntry entry : driver.manage().logs()
+                        .get(org.openqa.selenium.logging.LogType.BROWSER)) {
+                    if (entry.getLevel().intValue() >= java.util.logging.Level.SEVERE.intValue()
+                            && !entry.getMessage().contains("/favicon.ico")) {
+                        errors.add(entry.getMessage());
+                    }
+                }
+                return errors;
+            } catch (RuntimeException e) {
+                consoleReadable = false;
+                return List.of();
+            }
         }
     }
 
@@ -147,6 +176,11 @@ final class SeleniumSession implements AdapterSession {
         List<WebElement> web = elements.stream().map(e -> ((SeleniumElement) e).webElement()).toList();
         List<?> read = (List<?>) js("return arguments[0].map(e => (" + BrowserQueries.FACTS + ")(e));", web);
         return read.stream().map(BrowserQueries::facts).toList();
+    }
+
+    @Override
+    public List<String> consoleErrors() {
+        return browser.consoleErrors();
     }
 
     @Override
