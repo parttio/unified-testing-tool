@@ -141,6 +141,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `includePageObjects` ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). OpenRewrite matches
   options to a recipe's constructor parameters by name, and `unified-test-rewrite` was compiled without the names,
   so the recipe ran with its defaults and said nothing. It is now compiled with `-parameters`.
+- A JUnit 4 test that `@Ignore` skipped ran again after the TestBench or Browserless (UI Unit) Migration Recipe
+  ([#386](https://github.com/parttio/unified-testing-tool/issues/386)): `@Test` became JUnit 6's, but `@Ignore`
+  stayed JUnit 4's, which JUnit 6 doesn't read. The recipes named OpenRewrite's `IgnoreToDisabled`, a declarative
+  recipe in another jar that they never loaded, and the plugin logged a validation error. `@Ignore` now becomes
+  `@Disabled`.
 
 ## Known limitations
 
