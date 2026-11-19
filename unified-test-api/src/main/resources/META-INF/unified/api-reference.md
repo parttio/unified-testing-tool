@@ -200,6 +200,20 @@ Menu bar, Flow's `MenuBar`.
 - **Reads:** `getItems() → List<String>`, `getItems(String, String...) → List<String>`, `isItemEnabled(String, String...) → boolean`
 - **Checks:** those of every Wrapper
 
+### `UnifiedMessageInput`
+
+Message input, Flow's `MessageInput`.
+
+- **Actions:** `send(String)`
+- **Checks:** those of every Wrapper
+
+### `UnifiedMessageList`
+
+Message list, Flow's `MessageList`.
+
+- **Reads:** `getMessageCount() → int`, `getMessageTexts() → List<String>`, `getMessages() → List<Message>`
+- **Checks:** those of every Wrapper, and `hasMessageContaining(String)`, `hasMessageCount(int)`, `hasMessageTexts(String...)`, `isEmpty()`
+
 ### `UnifiedMultiSelectComboBox`
 
 Multi-select combo box, Flow's `MultiSelectComboBox`.

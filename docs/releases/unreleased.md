@@ -100,6 +100,15 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   button “Archive” (disabled)          page.find(UnifiedButton.class).withText("Archive")
   button “Delete account”              page.find(UnifiedButton.class).withAccessibleName("Delete account")
   ```
+- **Wrappers for a chat** ([#357](https://github.com/parttio/unified-testing-tool/issues/357)):
+  `UnifiedMessageInput` and `UnifiedMessageList`, for apps built on Vaadin's AI components. `send(text)` types and
+  submits a message; the list's `getMessages()` reads each message's user name and text, the text the application
+  gave it (the Markdown source), the same on every Testing Tool. Its checks wait for a reply:
+  ```java
+  page.find(UnifiedMessageInput.class).send("Pancakes");
+  assertThat(page.find(UnifiedMessageList.class)).hasMessageCount(3).hasMessageContaining("Pancakes");
+  ```
+  See [Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat).
 - **For agents** ([#319](https://github.com/parttio/unified-testing-tool/pull/319)): the `unified-test-api` jar
   ships [`META-INF/unified/api-reference.md`](https://parttio.github.io/unified-testing-tool/api-reference/), every
   Wrapper with its filters, actions, reads and checks, generated from the code. The site has an
