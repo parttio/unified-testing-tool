@@ -326,6 +326,13 @@ final class BrowserlessSession implements AdapterSession {
         return values == null || values.isEmpty() ? Optional.empty() : Optional.of(values.get(0));
     }
 
+    /** The title the UI last set; Flow keeps it on the server as it sends it to the browser. */
+    @Override
+    public String title() {
+        String title = window().getUI().getInternals().getTitle();
+        return title == null ? "" : title;
+    }
+
     private Location activeLocation() {
         return window().getUI().getInternals().getActiveViewLocation();
     }

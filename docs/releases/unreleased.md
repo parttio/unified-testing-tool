@@ -46,8 +46,8 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   the screenshot can't be.
 - **`Scope` has a new method, `describe()`.** The Unified API implements it for the page and for every Wrapper
   that is a Scope, custom ones included. Only a class of your own that implements `Scope` must add it.
-- **Adapters:** `AdapterSession` has a new method with a default, `consoleErrors()`. An adapter outside this
-  repository keeps compiling.
+- **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()` and `title()`. An adapter
+  outside this repository keeps compiling; its `hasTitle(..)` fails until it implements `title()`.
 
 ## New
 
@@ -99,6 +99,12 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   text field “Name” = “Alan Turing”    page.find(UnifiedTextField.class).withLabel("Name")
   button “Archive” (disabled)          page.find(UnifiedButton.class).withText("Archive")
   button “Delete account”              page.find(UnifiedButton.class).withAccessibleName("Delete account")
+  ```
+- **`assertThat(page).hasTitle(..)`** ([#360](https://github.com/parttio/unified-testing-tool/issues/360)): the
+  page's title, from the view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)`, on every Testing Tool.
+  Browserless reads the title the UI last set; a "page has its title" test no longer needs the Escape Hatch.
+  ```java
+  assertThat(page).isAt(ProfileView.class).hasTitle("Profile");
   ```
 - **For agents** ([#319](https://github.com/parttio/unified-testing-tool/pull/319)): the `unified-test-api` jar
   ships [`META-INF/unified/api-reference.md`](https://parttio.github.io/unified-testing-tool/api-reference/), every

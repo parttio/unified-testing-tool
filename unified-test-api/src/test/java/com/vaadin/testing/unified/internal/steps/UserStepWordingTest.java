@@ -220,6 +220,7 @@ public class UserStepWordingTest {
         assertThat(fake.page.find(UnifiedButton.class).withText("Delete")).hasCount(2);
         assertThat(fake.page.find(UnifiedCheckbox.class).withLabel("Terms")).isChecked();
         assertThat(fake.page).isAt(com.vaadin.flow.component.html.Div.class);
+        assertThat(fake.page).hasTitle("People");
 
         assertEquals(List.of(
                 "see text field “Name” with value “Alan”",
@@ -227,7 +228,8 @@ public class UserStepWordingTest {
                 "see no button “Archive”",
                 "see 2 buttons “Delete”",
                 "see checkbox “Terms” checked",
-                "see Div"), texts());
+                "see Div",
+                "see title “People”"), texts());
     }
 
     @Test

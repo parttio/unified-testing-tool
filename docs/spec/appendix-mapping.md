@@ -11,6 +11,7 @@ How each Unified API call maps onto the three Testing Tools: Browserless Test 25
 | `page.navigate(View.class)` | `navigate(View.class)` | `RouteNavigation` / `navigate(View.class)` | `getDriver().get(baseUrl + path)` |
 | `page.reload()` | page reload simulation | `page.reload()` | `navigate().refresh()` |
 | `assertThat(page).isAt(View.class)` | `getCurrentView()` | `assertAt(View.class)` | URL vs resolved path (adapter) |
+| `assertThat(page).hasTitle(s)` *(unreleased)* | `UI.getInternals().getTitle()` (adapter) | `page.title()` | `getDriver().getTitle()` |
 
 ## Locating
 

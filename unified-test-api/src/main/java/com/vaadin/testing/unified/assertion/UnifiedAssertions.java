@@ -156,6 +156,17 @@ public final class UnifiedAssertions {
         }
 
         /**
+         * The page's title is exactly this: what the browser shows on the tab, set by the view's
+         * {@code @PageTitle}, {@code HasDynamicTitle} or {@code Page.setTitle(..)}. On Browserless, the title the
+         * UI last set.
+         */
+        public PageAssert hasTitle(String title) {
+            check(run, () -> Phrase.template("see", "see title {value}", null, List.of(title)), () -> "the page",
+                    "to have title", title, () -> run.session().title(), v -> Objects.equals(v, title));
+            return this;
+        }
+
+        /**
          * Nothing went wrong behind the user's back so far in this test: the application logged no error, and no
          * browser console of the test's windows got one. What was logged is in the failure, and under the User
          * Step during which it was logged in the reports. It doesn't wait: put it after the check that shows the
