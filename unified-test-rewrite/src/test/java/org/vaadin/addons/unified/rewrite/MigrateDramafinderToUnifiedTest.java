@@ -585,6 +585,114 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void navigatingToTheBaseUrlPlusAPathNavigatesToThePath() {
+        // issue #351: getUrl() + "/path" is how Dramafinder tests open a view with query parameters
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void opensTheWeek() {
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        page.navigate(getUrl() + "/plan?week=" + monday);
+                        assertPath("plan");
+                    }
+
+                    @Test
+                    void opensPeople() {
+                        page.navigate(getUrl() + "people");
+                        openPlan();
+                    }
+
+                    @Test
+                    void opensTheStart() {
+                        this.page.navigate(getUrl());
+                    }
+
+                    private void openPlan() {
+                        getPage().navigate(getUrl() + "/" + "plan");
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import java.time.LocalDate;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    void opensTheWeek(UnifiedPage page) {
+                        page.navigate("");
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        page.navigate("plan?week=" + monday);
+                        assertThat(page).hasPath("plan");
+                    }
+
+                    @Test
+                    void opensPeople(UnifiedPage page) {
+                        page.navigate("people");
+                        openPlan(page);
+                    }
+
+                    @Test
+                    void opensTheStart(UnifiedPage page) {
+                        page.navigate("");
+                    }
+
+                    private void openPlan(UnifiedPage page) {
+                        page.navigate("plan");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void theBaseUrlUsedOtherThanToNavigateStillKeepsTheClass() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LinkTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        String url = getUrl() + "people";
+                        page.navigate(url);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                // TODO unified: not migrated: calls getUrl() of SpringPlaywrightIT; convert them by hand, then run the migration again
+                class LinkTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        String url = getUrl() + "people";
+                        page.navigate(url);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aTestUsingABaseClassMemberNoRuleConvertsStaysAndSaysWhy() {
         // issue #350: a skipped class says what kept it from migrating
         rewriteRun(java(VIEW), java(

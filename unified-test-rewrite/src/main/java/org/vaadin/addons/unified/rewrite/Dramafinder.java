@@ -10,9 +10,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JLeftPadded;
 import org.openrewrite.java.tree.JavaType;
+import org.openrewrite.java.tree.Space;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeUtils;
+import org.openrewrite.marker.Markers;
 
 /** What the Dramafinder recipes know about Dramafinder's test base classes and API (ADR 0006). */
 final class Dramafinder {
@@ -90,6 +93,69 @@ final class Dramafinder {
     /** {@code getPage()} on this test: the base class's page. */
     static boolean isGetPage(J.MethodInvocation m) {
         return isBaseCall(m) && m.getSimpleName().equals("getPage") && m.getArguments().stream().allMatch(a -> a instanceof J.Empty);
+    }
+
+    /**
+     * {@code page.navigate(getUrl() + "/path")} on the base class's page: the path, after the base URL, to navigate
+     * to on the Unified Page, without its leading slash ({@code "plan?week=" + monday}); {@code null} for any other
+     * call.
+     */
+    static Expression baseUrlNavigationPath(J.MethodInvocation m) {
+        List<Expression> operands = baseUrlNavigation(m);
+        if (operands == null) {
+            return null;
+        }
+        List<Expression> tail = new ArrayList<>(operands.subList(1, operands.size()));
+        if (!tail.isEmpty() && tail.get(0) instanceof J.Literal l && l.getValue() instanceof String s && s.startsWith("/")) {
+            if (s.length() == 1 && tail.size() > 1) {
+                tail.remove(0);
+            } else {
+                tail.set(0, Stubs.literal(s.substring(1)));
+            }
+        }
+        if (tail.isEmpty()) {
+            return Stubs.literal("");
+        }
+        Expression path = tail.get(0).withPrefix(Space.EMPTY);
+        for (Expression next : tail.subList(1, tail.size())) {
+            path = new J.Binary(java.util.UUID.randomUUID(), Space.EMPTY, Markers.EMPTY, path,
+                    JLeftPadded.build(J.Binary.Type.Addition).withBefore(Space.SINGLE_SPACE),
+                    next.withPrefix(Space.SINGLE_SPACE), JavaType.Primitive.String);
+        }
+        return path;
+    }
+
+    /**
+     * The operands of the URL in {@code page.navigate(getUrl() + ..)} on the base class's page, the first of them
+     * the {@code getUrl()} call; {@code null} for any other call.
+     */
+    static List<Expression> baseUrlNavigation(J.MethodInvocation m) {
+        if (!m.getSimpleName().equals("navigate") || m.getArguments().size() != 1 || m.getSelect() == null
+                || !(isPageField(m.getSelect()) || m.getSelect() instanceof J.MethodInvocation s && isGetPage(s))) {
+            return null;
+        }
+        List<Expression> operands = new ArrayList<>();
+        // without getUrl(), the rest must still be a string: getUrl() + id + "/edit" isn't id + "/edit"
+        return concatenation(m.getArguments().get(0), operands) && operands.get(0) instanceof J.MethodInvocation first
+                && isGetUrl(first) && (operands.size() == 1 || TypeUtils.isString(operands.get(1).getType()))
+                ? operands : null;
+    }
+
+    /** {@code getUrl()} on this test: the base URL, which is configuration in a Unified UI Test. */
+    static boolean isGetUrl(J.MethodInvocation m) {
+        return isBaseCall(m) && m.getSimpleName().equals("getUrl") && m.getArguments().stream().allMatch(a -> a instanceof J.Empty);
+    }
+
+    /** The operands of a string concatenation {@code a + b + c}, left to right; false if it isn't one. */
+    private static boolean concatenation(Expression e, List<Expression> operands) {
+        if (e instanceof J.Binary b && b.getOperator() == J.Binary.Type.Addition) {
+            if (!TypeUtils.isString(b.getType())) {
+                return false;
+            }
+            return concatenation(b.getLeft(), operands) && operands.add(b.getRight());
+        }
+        operands.add(e);
+        return true;
     }
 
     /** A call that needs the test base: a base class method, or a call handed or made on the base class's page. */
@@ -176,13 +242,18 @@ final class Dramafinder {
         }
         for (Statement s : c.getBody().getStatements()) {
             String where = inlined.containsKey(s.getId()) ? " in " + inlined.get(s.getId()) : "";
+            Set<java.util.UUID> navigationBaseUrls = new HashSet<>(); // page.navigate(getUrl() + ..): the setup converts it
             new JavaIsoVisitor<Integer>() {
                 @Override
                 public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, Integer p) {
+                    List<Expression> navigation = baseUrlNavigation(m);
+                    if (navigation != null) {
+                        navigationBaseUrls.add(navigation.get(0).getId());
+                    }
                     boolean superOfOverride = m.getSelect() instanceof J.Identifier sel && sel.getSimpleName().equals("super")
                             && overridden.contains(m.getSimpleName());
                     if (isBaseCall(m) && !CONVERTED_CALLS.contains(m.getSimpleName()) && !seedingSuperCalls.contains(m.getId())
-                            && !superOfOverride) {
+                            && !superOfOverride && !navigationBaseUrls.contains(m.getId())) {
                         blockers.add("calls " + m.getSimpleName() + (m.getMethodType().getParameterTypes().isEmpty() ? "()" : "(..)")
                                 + " of " + m.getMethodType().getDeclaringType().getClassName() + where);
                     }
