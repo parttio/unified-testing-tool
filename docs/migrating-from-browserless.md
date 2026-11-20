@@ -125,6 +125,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `fireShortcut(Key.KEY_S, KeyModifier.CONTROL)` | `page.pressKey("Control+s")`, with a Migration Marker (see below) |
 | Grid `size()`, `getCellText(row, col)`, `clickRow(row)`, `select(row)` | `getRowCount()`, `row(row).getCellText(col)`, `row(row).click()`, `row(row).select()` |
 | a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class)` |
+| in a class that `implements Locators`: `findButton().withText("Save")`, `withAriaLabel(..)`, `findGrid(..).getCellText(row, col)` | `page.find(UnifiedButton.class).withText("Save")`, `withAccessibleName(..)`, `page.find(UnifiedGrid.class).row(row).getCellText(col)`; `implements Locators` goes once no mixin call is left *(unreleased)* |
 | the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.row().withCellText(text).getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
 | ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
 | MessageInput `send(s)`, MessageList `size()` | `send(s)`, `getMessageCount()` |
@@ -199,6 +200,8 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `was a scan of column <col>; withCellText(text) matches any column ...` | If another column can hold the text, name the column: `withCellText("Header", text)` |
 | `was fireShortcut(..); pressKey also reaches the focused component and an open dialog` | `fireShortcut` fired the shortcut on the UI only; `pressKey` also reaches the focused component and an open dialog (Escape closes it). Check the test still means the same |
+| `Browserless Locators mixin: <call>` *(unreleased)* | The `Locators` mixin's call has no Wrapper form (`getRow(..)`, `component()`, a locator passed to a helper) and runs on Browserless only: find the component with `page.find(..)` and use its Wrapper, then drop `@RequiresTestingTool`. The class keeps `implements Locators`, with a marker, until no call is left |
+| `server-side state: <call>: only Browserless runs the server in the test's JVM ...` *(unreleased)* | `UI.getCurrent()` and `VaadinSession.getCurrent()` are null on the other Testing Tools: check what the user sees instead (a Wrapper, `assertThat(page)`), or keep the test on Browserless |
 | `Browserless-only pattern: @Transactional ...` | The test's transaction reaches the views only on Browserless ([test data](spec/02-test-setup.md)): keep it, or commit test data and clean up |
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |
 | `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |

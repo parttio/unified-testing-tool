@@ -57,10 +57,17 @@ final class MigrationMarkers {
             if (texts != null) {
                 String indent = s.getPrefix().getIndent();
                 List<Comment> comments = new ArrayList<>(s.getPrefix().getComments());
+                int before = comments.size();
                 for (String text : texts) {
-                    comments.add(new TextComment(false, " TODO unified: " + text, "\n" + indent, Markers.EMPTY));
+                    // a recipe running again in a later cycle finds the marker it left
+                    if (comments.stream().noneMatch(c -> c instanceof TextComment t
+                            && t.getText().equals(" TODO unified: " + text))) {
+                        comments.add(new TextComment(false, " TODO unified: " + text, "\n" + indent, Markers.EMPTY));
+                    }
                 }
-                s = s.withPrefix(s.getPrefix().withComments(comments));
+                if (comments.size() > before) {
+                    s = s.withPrefix(s.getPrefix().withComments(comments));
+                }
             }
             statements.add(s);
         }

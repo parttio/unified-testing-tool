@@ -1111,4 +1111,247 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    /** The Locators mixin's lookups are Unified Page lookups; the mixin goes when nothing uses it (#323). */
+    @Test
+    void locatorsMixinLookupsBecomeUnifiedPageLookups() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class ProfileTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void saves() {
+                        findTextField().withLabel("Name").setValue("Alice");
+                        findButton().withText("Save").click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ProfileTest {
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    /** An aria-label is what the Unified API calls the accessible name (#323). */
+    @Test
+    void locatorsMixinAriaLabelBecomesTheAccessibleName() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class ProfileTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void closes() {
+                        findButton().withAriaLabel("Close").click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ProfileTest {
+                    @Test
+                    void closes(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withAccessibleName("Close").click();
+                    }
+                }
+                """));
+    }
+
+    /** A GridLocator's cell reads are UnifiedGrid row reads, on the locator and on a local holding it (#323). */
+    @Test
+    void locatorsMixinGridCellReadsBecomeUnifiedGridRows() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import com.vaadin.flow.component.grid.GridLocator;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class PeopleTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void lists() {
+                        Assertions.assertEquals("Ada", findGrid(String.class).getCellText(0, 1));
+                        GridLocator<String> people = findGrid(String.class).withId("people");
+                        Assertions.assertEquals(3, people.size());
+                        Assertions.assertEquals("Alan", people.getCellText(2, 0));
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    void lists(UnifiedPage page) {
+                        Assertions.assertEquals("Ada", page.find(UnifiedGrid.class).row(0).getCellText(1));
+                        UnifiedGrid people = page.find(UnifiedGrid.class).withId("people");
+                        Assertions.assertEquals(3, people.getRowCount());
+                        Assertions.assertEquals("Alan", people.row(2).getCellText(0));
+                    }
+                }
+                """));
+    }
+
+    /**
+     * A Locators mixin call no Wrapper says the same as keeps running on Browserless, marked, and the class keeps
+     * the mixin, marked too (#323).
+     */
+    @Test
+    void locatorsMixinCallsThatDontConvertAreMarkedAndRequireBrowserless() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import com.vaadin.flow.component.grid.GridLocator;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class PeopleTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void lists() {
+                        findButton().withText("Load").click();
+                        Assertions.assertEquals("Ada", findGrid(String.class).getRow(0));
+                        Assertions.assertEquals(2, column(findGrid(String.class), 1));
+                    }
+
+                    private int column(GridLocator<String> grid, int index) {
+                        return grid.getColumnPosition("name") + index;
+                    }
+                }
+                """,
+                """
+                import com.vaadin.browserless.locator.Locators;
+                import com.vaadin.flow.component.grid.GridLocator;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                // TODO unified: Browserless Locators mixin: its locators run on Browserless only; find the components the marked calls use with page.find(..), then drop implements Locators
+                @UnifiedSpringBootTest
+                class PeopleTest implements Locators {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void lists(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withText("Load").click();
+                        // TODO unified: Browserless Locators mixin: findGrid(String.class).getRow(0)
+                        Assertions.assertEquals("Ada", findGrid(String.class).getRow(0));
+                        // TODO unified: Browserless Locators mixin: findGrid(String.class)
+                        Assertions.assertEquals(2, column(findGrid(String.class), 1));
+                    }
+
+                    private int column(GridLocator<String> grid, int index) {
+                        return grid.getColumnPosition("name") + index;
+                    }
+                }
+                """));
+    }
+
+    /**
+     * The current UI and session are the server's, which only Browserless runs in the test's JVM: reading them is
+     * marked and requires Browserless, in a test and in a helper it calls (#323).
+     */
+    @Test
+    void currentUiAndSessionAreMarkedAndRequireBrowserless() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.flow.component.UI;
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.flow.server.VaadinSession;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class ErrorsTest extends SpringBrowserlessTest {
+                    @Test
+                    void handlesErrors() {
+                        UI.getCurrent().navigate(Div.class);
+                        Assertions.assertNotNull(VaadinSession.getCurrent().getErrorHandler());
+                    }
+
+                    @Test
+                    void welcomes() {
+                        Assertions.assertTrue(pageText().contains("Welcome"));
+                    }
+
+                    private String pageText() {
+                        return UI.getCurrent().getElement().getTextRecursively();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.UI;
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.flow.server.VaadinSession;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ErrorsTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void handlesErrors(UnifiedPage page) {
+                        page.navigate(Div.class);
+                        // TODO unified: server-side state: VaadinSession.getCurrent().getErrorHandler(): only Browserless runs the server in the test's JVM; check what the user sees instead
+                        Assertions.assertNotNull(VaadinSession.getCurrent().getErrorHandler());
+                    }
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void welcomes(UnifiedPage page) {
+                        Assertions.assertTrue(pageText().contains("Welcome"));
+                    }
+
+                    private String pageText() {
+                        // TODO unified: server-side state: UI.getCurrent().getElement().getTextRecursively(): only Browserless runs the server in the test's JVM; check what the user sees instead
+                        return UI.getCurrent().getElement().getTextRecursively();
+                    }
+                }
+                """));
+    }
 }
