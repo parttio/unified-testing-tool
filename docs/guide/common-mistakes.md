@@ -108,7 +108,7 @@ A test id names nothing the user reads, in the test or in its User Steps, and th
 --8<-- "unified-test-demo/src/test/java/demo/CommonMistakes.java:noCheckGood"
 ```
 
-A test that clicks *Save* and stops passes whether or not the save works. End on what the user sees after the action. The run summary lists such tests under *Scenarios without a check* *(unreleased)*. More: [Scenarios without a check](reports-and-failures.md#scenarios-without-a-check).
+A test that clicks *Save* and stops passes whether or not the save works. End on what the user sees after the action. The run summary lists such tests under *Scenarios without a check*. More: [Scenarios without a check](reports-and-failures.md#scenarios-without-a-check).
 
 ## The Escape Hatch for what the Unified API has
 

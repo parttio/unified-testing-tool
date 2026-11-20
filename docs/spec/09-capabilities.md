@@ -77,7 +77,7 @@ Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 | Property values | browser | browser | server-side; equal only for synchronised properties |
 | Server-side Java state | ✗ | ✗ | ✓ (Escape Hatch) |
 | Network interception, tracing | ✓ (Escape Hatch) | ✗ | ✗ |
-| The console's errors *(unreleased)* ([chapter 12](12-readable-tests.md#log-lines-under-the-user-step)) | ✓ | Chrome only | ✗ (no console) |
+| The console's errors ([chapter 12](12-readable-tests.md#log-lines-under-the-user-step)) | ✓ | Chrome only | ✗ (no console) |
 | External URLs | ✓ | ✓ | ✗ |
 | Before the first `navigate(..)` | a blank page | a blank page | the view of the `""` route |
 | `navigate(..)` to the view already shown | a new page, new view instances | a new page, new view instances | the same view instance; `beforeEnter` and `setParameter` run again |

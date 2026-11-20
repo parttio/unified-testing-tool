@@ -149,8 +149,6 @@ There is no `first()`. When several components match, either the filter is not p
 
 ## What is there to find?
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 `describe()` on the page, or on any Scope, returns the **Findable View**: every component a lookup can reach, one line each, with the lookup that singles it out. Print it while writing a test, then paste the lookups:
 
 ```java

@@ -43,7 +43,7 @@ To check how the field handles text it can't parse, type it:
 
 Text is typed as it is, and Browserless parses only ISO dates while a browser parses the field's locale format, so
 `"2026-07-01"` is bad input in a browser. For incomplete input, a date the field can parse with no time, give the
-date as a `LocalDate` *(unreleased)*: `typeText(LocalDate, String)` types it in the field's own format, on every
+date as a `LocalDate`: `typeText(LocalDate, String)` types it in the field's own format, on every
 Testing Tool and in every locale.
 
 ```java
@@ -90,7 +90,7 @@ A MenuBar opens its sub-menus as a user does: give the path of item names.
 An icon-only item is named by its `aria-label`. `assertThat(menu).hasItems(..)` checks the top-level items and
 `hasItems(List.of("File", "Export"), ..)` those of a sub-menu; `hasItem(..)`, `hasItemEnabled(..)` and
 `hasItemDisabled(..)` take a path like `clickItem(..)` and check that the user sees the item, and whether they can
-click it *(unreleased)*:
+click it:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ItemNameTest.java:assertsWhetherAMenuItemIsEnabled"
@@ -154,7 +154,7 @@ On Browserless, key presses fire the server-side listeners and shortcuts; client
 
 `getText()` is the DOM text, the same on every Testing Tool: CSS such as `text-transform` doesn't change it. In a browser, `element().getVisibleText()` gives the text as rendered.
 
-*(unreleased)* A `Div`, `Span` or other plain HTML element with a click listener, such as a navigation tab or a wordmark, is clicked like a button. So is a layout, through `UnifiedContainer`:
+A `Div`, `Span` or other plain HTML element with a click listener, such as a navigation tab or a wordmark, is clicked like a button. So is a layout, through `UnifiedContainer`:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ClickableHtmlTest.java:clicksADiv"
