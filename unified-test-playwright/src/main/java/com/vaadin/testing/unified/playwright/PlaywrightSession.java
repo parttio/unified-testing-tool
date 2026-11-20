@@ -146,6 +146,7 @@ final class PlaywrightSession implements AdapterSession {
     /** Opens the test-only login URL: the browser context's session belongs to that user afterwards. */
     void logIn(String loginUrl) {
         com.microsoft.playwright.Response response = page.navigate(loginUrl);
+        loadWaitedFor();
         if (response == null || !response.ok()) {
             throw new IllegalStateException("Test login failed: " + (response == null ? "no response" : response.status()
                     + " " + response.text()));
@@ -329,16 +330,19 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public void navigate(Class<? extends Component> view) {
         RouteNavigation.navigate(page, baseUrl, view);
+        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, Object urlParameter) {
         RouteNavigation.navigate(page, baseUrl, view, urlParameter);
+        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters));
+        loadWaitedFor();
     }
 
     @Override
@@ -346,6 +350,7 @@ final class PlaywrightSession implements AdapterSession {
         String queryString = query.getQueryString();
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters)
                 + (queryString.isEmpty() ? "" : "?" + queryString));
+        loadWaitedFor();
     }
 
     @Override
@@ -356,12 +361,23 @@ final class PlaywrightSession implements AdapterSession {
         } else {
             RouteNavigation.open(page, baseUrl, path.startsWith("/") ? path.substring(1) : path);
         }
+        loadWaitedFor();
     }
 
     @Override
     public void reload() {
         page.reload();
         AutoWait.waitForVaadinIdle(page);
+        loadWaitedFor();
+    }
+
+    /**
+     * The session loaded the page itself and has waited for it: the next action's {@link #settle()} has no page
+     * load of its own to wait for, and no extra calls to make (#397).
+     */
+    private void loadWaitedFor() {
+        pageLoaded = false;
+        loaded = true;
     }
 
     @Override
