@@ -397,20 +397,60 @@ final class SeleniumSession implements AdapterSession {
         }
     }
 
-    /** A screenshot of the window. */
+    /** A screenshot of the window, with where it shows the failed step's Step Target. */
     @Override
-    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeFailureEvidence(Path directory, String name, com.vaadin.testing.unified.UnifiedElement target)
+            throws java.io.IOException {
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(screenshotInto(directory, name)), highlight(target));
+    }
+
+    private Path screenshotInto(Path directory, String name) throws java.io.IOException {
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".png");
         Files.write(file, driver().getScreenshotAs(OutputType.BYTES));
-        return List.of(file);
+        return file;
     }
 
     /** A screenshot of the window after the step: a WebDriver round trip each, so only when asked for. */
     @Override
-    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
-        return writeFailureEvidence(directory, name);
+    public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
+            com.vaadin.testing.unified.UnifiedElement target) throws java.io.IOException {
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(screenshotInto(directory, name)), highlight(target));
     }
+
+    /** The Step Target's box in the window's screenshot, in fractions of it; null without a target. */
+    private com.vaadin.testing.unified.spi.Highlight highlight(com.vaadin.testing.unified.UnifiedElement target) {
+        if (!(target instanceof SeleniumElement element)) {
+            return null;
+        }
+        Object result;
+        try {
+            result = ((JavascriptExecutor) driver()).executeScript(TARGET_BOX, element.webElement());
+        } catch (org.openqa.selenium.StaleElementReferenceException e) {
+            return com.vaadin.testing.unified.spi.Highlight.gone(); // removed from the page
+        } catch (RuntimeException e) {
+            return null; // the screenshot is kept without a box: a highlight never costs the snapshot
+        }
+        if (!(result instanceof List<?> box) || box.size() != 6) {
+            return com.vaadin.testing.unified.spi.Highlight.gone();
+        }
+        return com.vaadin.testing.unified.spi.Highlight.of(number(box.get(0)), number(box.get(1)), number(box.get(2)),
+                number(box.get(3)), number(box.get(4)), number(box.get(5)));
+    }
+
+    private static double number(Object value) {
+        return ((Number) value).doubleValue();
+    }
+
+    /**
+     * The element's box in the viewport, in pixels, and the viewport's size: [left, top, width, height, viewport
+     * width, viewport height]; null when it is no longer on the page or not shown.
+     */
+    private static final String TARGET_BOX = """
+            const e = arguments[0];
+            if (!e.isConnected || !e.checkVisibility()) return null;
+            const r = e.getBoundingClientRect();
+            return [r.left, r.top, r.width, r.height, innerWidth, innerHeight];""";
 
     @Override
     public <T> Optional<T> unwrap(Class<T> type) {

@@ -49,15 +49,16 @@ class TestLifecycleTest {
         AdapterSession proxy() {
             return (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
                     new Class<?>[] { AdapterSession.class }, (proxy, method, args) -> {
-                        calls.add(method.getName() + (args == null ? "" : List.of(args)));
+                        calls.add(method.getName() + (args == null ? "" : java.util.Arrays.asList(args)));
                         return switch (method.getName()) {
                             case "writeFailureEvidence" -> {
                                 if (evidenceFailure != null) {
                                     throw evidenceFailure;
                                 }
-                                yield evidence;
+                                yield com.vaadin.testing.unified.spi.Evidence.of(evidence);
                             }
-                            case "writeStepSnapshot" -> List.of(((Path) args[0]).resolve(args[1] + ".png"));
+                            case "writeStepSnapshot" -> com.vaadin.testing.unified.spi.Evidence.of(
+                                    List.of(((Path) args[0]).resolve(args[1] + ".png")));
                             case "testEnded" -> traces ? List.of(((Path) args[0]).resolve("trace.zip")) : List.of();
                             case "tracesSteps" -> traces;
                             case "unwrap", "queryParameter" -> Optional.empty();
@@ -209,7 +210,7 @@ class TestLifecycleTest {
         // the Findable View, on every Testing Tool; this fake page has nothing to find
         assertEquals("Findable view of “/” on playwright: no component a Unified UI Test can find\n",
                 Files.readString(view));
-        assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves]",
+        assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves, null]",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"),
                 session.calls.stream().filter(call -> !call.startsWith("find[") && !call.equals("currentPath")
                         && !call.equals("browserName")).toList()); // the Findable View's reads
@@ -249,8 +250,8 @@ class TestLifecycleTest {
         test.page().navigate("people");
         test.close(null, SAVES);
 
-        assertTrue(session.calls.contains("writeStepSnapshot[" + steps + ", 001]"), session.calls.toString());
-        assertTrue(session.calls.contains("writeStepSnapshot[" + steps + ", 002]"), session.calls.toString());
+        assertTrue(session.calls.contains("writeStepSnapshot[" + steps + ", 001, null]"), session.calls.toString());
+        assertTrue(session.calls.contains("writeStepSnapshot[" + steps + ", 002, null]"), session.calls.toString());
         assertFalse(Files.exists(steps.resolve("009.png")));
         String json = Files.readString(steps.getParent().resolve("user-steps.json"));
         assertTrue(json.contains("\"snapshot\": \"steps/001.png\""), json);

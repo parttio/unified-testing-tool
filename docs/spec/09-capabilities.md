@@ -89,8 +89,8 @@ Differences in meaning are documented, not banned. Tests that depend on the brow
 
 | Testing Tool | Captured automatically on failure |
 |---|---|
-| Playwright, Selenium | full-page screenshot: `<test class>.<method>.png` |
-| Browserless | location and component tree as text: `<test class>.<method>.tree.txt`, the component the failed step acted on marked `← this step` |
+| Playwright, Selenium | screenshot: `<test class>.<method>.png` (Playwright: the full page; Selenium: the window), with the failed step's Step Target's box in `user-steps.json` |
+| Browserless | location and component tree as text: `<test class>.<method>.tree.txt`, the failed step's Step Target marked `← this step` |
 | every Testing Tool | the [Findable View](12-readable-tests.md#findable-view) of the page: `<test class>.<method>.view.txt` |
 
 Written to `vaadin.testing.evidence-dir` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes. The failure names the files (a suppressed exception), so they show in the test report. Next to them, every test writes its User Steps (`<test class>/<test method>/user-steps.txt` and `user-steps.json`), and the run writes `summary.md`; the failure's `Evidence` line names that directory ([12. Readable tests, Reports](12-readable-tests.md#reports)).
