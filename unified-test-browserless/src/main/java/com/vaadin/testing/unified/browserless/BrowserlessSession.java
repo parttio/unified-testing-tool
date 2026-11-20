@@ -388,7 +388,7 @@ final class BrowserlessSession implements AdapterSession {
     /** The UI's component tree as text, with the location: what Browserless's TreeOnFailureExtension prints. */
     @Override
     public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
-        return writeTree(directory, name);
+        return writeTree(directory, name, target);
     }
 
     /** The component tree after the step: Browserless has no screenshot, and the tree is cheap. */
@@ -396,17 +396,18 @@ final class BrowserlessSession implements AdapterSession {
     public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
             com.vaadin.testing.unified.UnifiedElement stepTarget) throws java.io.IOException {
         try {
-            return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name));
+            Component marked = stepTarget instanceof BrowserlessElement element ? element.component() : target;
+            return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name, marked));
         } finally {
             target = null;
         }
     }
 
-    private List<Path> writeTree(Path directory, String name) throws java.io.IOException {
+    private List<Path> writeTree(Path directory, String name, Component marked) throws java.io.IOException {
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".tree.txt");
         Location location = activeLocation();
-        String tree = maskPasswords(tree(window().getUI(), target).print());
+        String tree = maskPasswords(tree(window().getUI(), marked).print());
         Files.writeString(file, "Location: /" + (location == null ? "" : location.getPathWithQueryParameters())
                 + "\n\n" + tree);
         return List.of(file);

@@ -87,6 +87,21 @@ class StepTargetHighlightTest {
         assertTrue(save.matches("(?s).*\"highlight\": \\{\\s*\"missing\": \"gone\"\\s*}.*"), save);
     }
 
+    @Test
+    void onBrowserlessACheckStepsTreeMarksTheComponentItChecked(@TempDir Path dir) throws Exception {
+        assumeTrue(!TOOL.hasRealBrowser(), "component trees only on Browserless");
+        String json = run(dir, Scenario.class, "editProfile");
+
+        Matcher snapshot = Pattern.compile("\"snapshot\": \"([^\"]+)\"")
+                .matcher(step(json, "see text field “Name”"));
+        assertTrue(snapshot.find(), "the check has a snapshot");
+        String tree = Files.readString(dir.resolve("StepTargetHighlightTest$Scenario").resolve("editProfile")
+                .resolve(snapshot.group(1)));
+        assertTrue(tree.contains("label='Name'") && tree.lines().filter(l -> l.endsWith("  ← this step"))
+                .allMatch(l -> l.contains("label='Name'")) && tree.contains("  ← this step"),
+                "the Name field's line, and only it, is marked: " + tree);
+    }
+
     /** Runs the scenario's test with snapshots on; its {@code user-steps.json}. */
     static String run(Path dir, Class<?> scenario, String method) throws Exception {
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
