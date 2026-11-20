@@ -6,7 +6,11 @@ import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.spi.SelectionAccess;
 import com.vaadin.testing.unified.internal.failures.ItemFailures;
 import com.vaadin.testing.unified.internal.steps.StepTarget;
+import com.vaadin.testing.unified.UnifiedAssertionError;
+import com.vaadin.testing.unified.internal.failures.FailureParts;
+import com.vaadin.testing.unified.spi.StaleElementException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /** Selection field behaviour shared by the selection wrappers: Auto-Wait, then verify the result. */
 public final class SelectionSupport {
@@ -33,8 +37,17 @@ public final class SelectionSupport {
             if (!stillFound(element)) {
                 return;
             }
-            if (!access.selectedItems().contains(label)) {
-                throw new IllegalStateException("\"" + label + "\" could not be selected in " + element.describe());
+            List<String> selected;
+            try {
+                selected = access.selectedItems();
+            } catch (StaleElementException stale) {
+                throw stale;
+            } catch (RuntimeException readFailed) {
+                // e.g. Playwright's own timeout: the Unified failure, with it as the cause
+                throw notSelected(element, label, null, readFailed);
+            }
+            if (!selected.contains(label)) {
+                throw notSelected(element, label, selected, null);
             }
         });
     }
@@ -65,6 +78,15 @@ public final class SelectionSupport {
                 throw new IllegalStateException("Selection could not be cleared in " + element.describe());
             }
         });
+    }
+
+    /** {@code Expected  item “Large” selected in combo box “Size”}, {@code Found  “Small”}. */
+    private static UnifiedAssertionError notSelected(LazyElement element, String label, List<String> selected,
+            Throwable cause) {
+        String found = selected == null ? null : selected.isEmpty() ? "none"
+                : selected.stream().map(s -> "“" + s + "”").collect(Collectors.joining(", "));
+        return element.run().failure(FailureParts.of("item “" + label + "” selected in "
+                + StepTarget.of(element).renderWithScope(), found), cause);
     }
 
     /** Whether the lookup still finds the field, without waiting. */

@@ -115,6 +115,13 @@ class FailureMessagesTest {
             page.navigate(OrderView.class);
             page.find(UnifiedComboBox.class).withLabel("Country").selectItem("Germny");
         }
+
+        @Test
+        @DisplayName("A pick the application turns down fails as a Unified failure")
+        void rejectedPick(UnifiedPage page) {
+            page.navigate(RejectingPickView.class);
+            page.find(UnifiedComboBox.class).withLabel("Size").selectItem("Large");
+        }
     }
 
     private static TestingTool tool;
@@ -134,7 +141,7 @@ class FailureMessagesTest {
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
         TestExecutionSummary summary = listener.getSummary();
-        assertEquals(9, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+        assertEquals(10, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
         failures = summary.getFailures().stream().collect(Collectors.toMap(
                 f -> f.getTestIdentifier().getDisplayName(),
                 f -> assertInstanceOf(UnifiedAssertionError.class, f.getException(), f.getException()::toString)));
@@ -182,6 +189,15 @@ class FailureMessagesTest {
     }
 
     /** The quick pick by filter (#403) finds nothing: every item is read for the Near Misses, as before. */
+    /** The check after a pick fails in the Unified API's own format, on every Testing Tool (#377). */
+    @Test
+    void aPickThatDoesNotTakeNamesWhatIsSelected() {
+        UnifiedAssertionError failure = failures.get("A pick the application turns down fails as a Unified failure");
+
+        assertEquals("item “Large” selected in combo box “Size”", failure.getExpected(), failure.getMessage());
+        assertEquals("none", failure.getFound(), failure.getMessage());
+    }
+
     @Test
     void aMissingComboBoxItemListsTheItemsNearby() {
         UnifiedAssertionError failure = failures.get("A misspelt combo box item lists the items nearby");
