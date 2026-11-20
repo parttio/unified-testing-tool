@@ -171,8 +171,9 @@ class TestLifecycleTest {
         assertFalse(browserless.decide(BrowserClass.class, BrowserClass.class).runs());
         assertFalse(browserless.decide(method(BrowserClass.class, "anything"), BrowserClass.class).runs());
         assertFalse(browserless.decide(method(ImplementsBrowserOnly.class, "anything"), ImplementsBrowserOnly.class).runs());
-        // @RequiresBrowser is not @Inherited, as with JUnit's annotation search
-        assertTrue(browserless.decide(ExtendsBrowserClass.class, ExtendsBrowserClass.class).runs());
+        // a base class's Capabilities apply to the test classes that extend it
+        assertFalse(browserless.decide(ExtendsBrowserClass.class, ExtendsBrowserClass.class).runs());
+        assertFalse(browserless.decide(method(BrowserClass.class, "anything"), ExtendsBrowserClass.class).runs());
     }
 
     // ---------------------------------------------------------------- open and close
