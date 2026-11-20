@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -36,6 +37,7 @@ class StepTargetHighlightTest {
     @Tag("launched-only")
     static class Scenario {
         @Test
+        @DisplayName("The user fills the profile, checks the name, and changes the email in the dialog")
         void editProfile(UnifiedPage page) {
             page.navigate(ProfileView.class);
             page.find(UnifiedTextField.class).withLabel("Name").setValue("Ada");
@@ -52,6 +54,7 @@ class StepTargetHighlightTest {
     @Tag("launched-only")
     static class FailingCheck {
         @Test
+        @DisplayName("The user fills the name, then the test expects another name")
         void checksTheWrongName(UnifiedPage page) {
             page.navigate(ProfileView.class);
             page.find(UnifiedTextField.class).withLabel("Name").setValue("Ada");
