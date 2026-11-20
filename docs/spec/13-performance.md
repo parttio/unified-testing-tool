@@ -24,7 +24,7 @@ The demo's golden migration pairs are not Performance Pairs. They are fixtures f
 1. The same user actions and checks, in the same order.
 2. Each Direct Test is written the way a skilled user of its tool would write it, with the waits that tool needs. It is not stripped down.
 3. The Unified UI Test uses no Escape Hatch and has no Migration Markers.
-4. The browser starts and stops the same way on both sides. Only the test body is timed.
+4. The browser starts and stops the same way on both sides. Only the test body is timed. On a browser, the body starts in a new browser context with nothing of the application loaded yet: the first page load in a context is the slowest, so it belongs inside the body on both sides. Dramafinder's `SpringPlaywrightIT` loads the application before each test, so its Direct Test opens a new page after that setup ([#444](https://github.com/parttio/unified-testing-tool/issues/444)).
 5. Settings stay at their defaults.
 
 ## What is measured
