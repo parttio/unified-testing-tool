@@ -24,10 +24,10 @@ DramafinderPerfTest.smallForm:31 calls 3
 DramafinderPerfTest.smallForm:32 calls 2
 DramafinderPerfTest.smallForm:34 calls 1
 UnifiedPerfTest.comboBox:74 calls 2
-UnifiedPerfTest.comboBox:76 calls 20
+UnifiedPerfTest.comboBox:76 calls 14
 UnifiedPerfTest.comboBox:78 calls 2
 UnifiedPerfTest.largeGrid:63 calls 2
-UnifiedPerfTest.largeGrid:65 calls 16
+UnifiedPerfTest.largeGrid:65 calls 15
 UnifiedPerfTest.largeGrid:67 calls 2
 UnifiedPerfTest.largeGrid:68 calls 2
 UnifiedPerfTest.longForm:41 calls 2

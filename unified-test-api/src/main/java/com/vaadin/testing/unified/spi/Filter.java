@@ -1,5 +1,7 @@
 package com.vaadin.testing.unified.spi;
 
+import java.util.regex.Pattern;
+
 /**
  * One filter of a query, as the adapter receives it. {@code exact} is false for the {@code ...Containing}
  * variants, which match case-insensitively (as in Dramafinder). {@code name} is used by {@link Kind#ATTRIBUTE}.
@@ -12,9 +14,32 @@ public record Filter(Kind kind, String name, String value, boolean exact) {
         if (actual == null) {
             return false;
         }
-        String normalized = actual.strip().replaceAll("\\s+", " ");
+        String normalized = normalize(actual);
         return exact ? normalized.equals(value)
                 : normalized.toLowerCase(java.util.Locale.ROOT).contains(value.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+
+    /**
+     * Stripped, each run of whitespace one space. A grid row lookup matches every cell of a column, so the
+     * pattern is compiled once, and a text with only single spaces is not copied.
+     */
+    static String normalize(String text) {
+        String stripped = text.strip();
+        for (int i = 0; i < stripped.length(); i++) {
+            char c = stripped.charAt(i);
+            if (c == ' ' ? i + 1 < stripped.length() && isRegexWhitespace(stripped.charAt(i + 1))
+                    : isRegexWhitespace(c)) {
+                return WHITESPACE.matcher(stripped).replaceAll(" ");
+            }
+        }
+        return stripped;
+    }
+
+    /** Whitespace as {@link Pattern}'s {@code \s} matches it: {@code [ \t\n\x0B\f\r]}. */
+    private static boolean isRegexWhitespace(char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\u000B' || c == '\f' || c == '\r';
     }
 
     @Override
