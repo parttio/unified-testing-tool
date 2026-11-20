@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.component.UnifiedParagraph;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteParameters;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.router.RouterLink;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -121,6 +122,61 @@ class NavigationTest {
 
         String href = script(page, "return location.href;");
         assertTrue(href.endsWith("/profile"), href);
+    }
+
+    /**
+     * A link out of the router loads a new page. Flow starts its UI when the router asks for the server's routes,
+     * which can come well after load: in development mode, while the bundle builds or the server redeploys. Until
+     * then only Flow's TypeScript client is registered, not active, so the page reads as idle while it shows
+     * nothing: Auto-Wait waits until Flow has started the page's UI (#397). Here the router starts 500 ms after
+     * load, so the race is lost every time without that wait.
+     */
+    @Test
+    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+    @DisplayName("The profile shows as soon as the link that loads it anew returns, however late Flow starts")
+    void showsTheViewOfAPageLoadedByALink(UnifiedPage page) {
+        page.navigate(HomeView.class);
+        com.microsoft.playwright.Page playwright = page.unwrap(com.microsoft.playwright.Page.class);
+        // in every page loaded from now on, React's scheduler (MessageChannel), and so the router that starts Flow,
+        // waits until 500 ms after load
+        playwright.addInitScript("""
+                const post = MessagePort.prototype.postMessage;
+                const held = [];
+                let started = false;
+                addEventListener('load', () => setTimeout(() => {
+                  started = true;
+                  held.splice(0).forEach(send => send());
+                }, 500));
+                MessagePort.prototype.postMessage = function (...args) {
+                  if (started) return post.apply(this, args);
+                  held.push(() => post.apply(this, args));
+                };""");
+
+        page.findComponent(Anchor.class).withText("Profile, loaded anew").element().click();
+
+        // one read, no retry: what a screenshot or the Escape Hatch would see right after the step
+        Object fields = playwright.evaluate("() => document.querySelectorAll('vaadin-text-field').length");
+        assertTrue(((Number) fields).intValue() > 0, "the profile's fields, right after the click");
+    }
+
+    /**
+     * Page.setLocation changes the location while Flow handles the click's response: the browser asks for the next
+     * page after Flow is idle again, and nothing in Flow waits for it. Auto-Wait sees the page start that load and
+     * waits for the new page, then for Flow to start it (#397). Here the server answers the new page 500 ms late,
+     * so the race is lost every time without that wait.
+     */
+    @Test
+    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+    @DisplayName("The profile shows as soon as the button that sends the user there through a slow server returns")
+    void showsTheViewOfAPageTheServerSentTheUserTo(UnifiedPage page) {
+        page.navigate(HomeView.class);
+
+        page.find(UnifiedButton.class).withText("Open profile from a slow server").click();
+
+        // one read, no retry: what a screenshot or the Escape Hatch would see right after the step
+        Object fields = page.unwrap(com.microsoft.playwright.Page.class)
+                .evaluate("() => document.querySelectorAll('vaadin-text-field').length");
+        assertTrue(((Number) fields).intValue() > 0, "the profile's fields, right after the click");
     }
 
     /** Runs a script in the page through the Escape Hatch: no retry, unlike hasPath. */
