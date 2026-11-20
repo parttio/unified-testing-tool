@@ -1,12 +1,17 @@
 package com.vaadin.testing.unified.browserless;
 
+import com.vaadin.browserless.component.GridKt;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.grid.ColumnPathRenderer;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridTester;
 import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.data.provider.SortDirection;
+import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.GridAccess;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -69,6 +74,61 @@ final class BrowserlessGridAccess implements GridAccess {
     @Override
     public String cellText(int row, int column) {
         return tester.getCellText(row, column);
+    }
+
+    /**
+     * The column's texts as {@link GridTester#getCellText} reads them, with one fetch for all rows. GridTester
+     * fetches each cell's row on its own, and checks the size twice: in a 500-row grid, half the time of a test that
+     * finds a row by its text (#443). A column that isn't a plain value column (a component renderer, for
+     * instance) is read cell by cell, as before.
+     */
+    @Override
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public List<String> columnTexts(int column) {
+        int count = rowCount();
+        if (count == 0) {
+            return new ArrayList<>();
+        }
+        // first through GridTester, for its checks (the grid is visible, the column exists) and their messages
+        String first = tester.getCellText(0, column);
+        ValueProvider<Object, ?> provider = valueProvider(columns().get(column));
+        List<?> items = provider == null ? null : GridKt._fetch((Grid) grid, 0, count);
+        if (items == null || items.size() != count) {
+            return GridAccess.super.columnTexts(column);
+        }
+        List<String> texts = new ArrayList<>(count);
+        texts.add(first);
+        for (int row = 1; row < count; row++) {
+            Object value = provider.apply(items.get(row));
+            // a null value: as GridTester reads it, which fails
+            texts.add(value == null ? tester.getCellText(row, column) : value.toString());
+        }
+        return texts;
+    }
+
+    private static final Field COLUMN_PATH_PROVIDER = columnPathProvider();
+
+    private static Field columnPathProvider() {
+        try {
+            Field field = ColumnPathRenderer.class.getDeclaredField("provider");
+            field.setAccessible(true);
+            return field;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** The value provider GridTester reads a plain value column with, or null for any other column. */
+    @SuppressWarnings("unchecked")
+    private static ValueProvider<Object, ?> valueProvider(Grid.Column<?> column) {
+        if (COLUMN_PATH_PROVIDER == null || !(column.getRenderer() instanceof ColumnPathRenderer<?> renderer)) {
+            return null;
+        }
+        try {
+            return (ValueProvider<Object, ?>) COLUMN_PATH_PROVIDER.get(renderer);
+        } catch (IllegalAccessException e) {
+            return null;
+        }
     }
 
     // ---------------------------------------------------------------- selection, clicks
