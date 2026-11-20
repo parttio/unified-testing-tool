@@ -1,0 +1,263 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throwaway. Question: what should the Step Target highlight look like in report.html?
+  Three variants of how report.html shows a browser screenshot with the Step Target's box, switchable via
+  ?variant=A|B|C and the floating bar (← → keys). The page copies report.html's real CSS and step markup
+  (RunReport.CSS); screenshots and boxes are real: taken and measured with Playwright on a stand-in app page.
+  Open this file directly in a browser. Not part of the build.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step Target highlight · prototype</title>
+<style>
+/* ---- RunReport.CSS, copied as is ---- */
+:root{--bg:#fbfbfa;--surface:#fff;--text:#1d1d1f;--muted:#5f6368;--line:#e3e3e0;--pass:#1a7f37;--fail:#c62828;--fail-bg:#fdecea;--accent:#1f5fbf;--badge:#eef3fb;--code:#f3f3f1}
+@media (prefers-color-scheme: dark){:root:not([data-theme=light]){--bg:#141416;--surface:#1c1c1f;--text:#e8e8ea;--muted:#a0a0a8;--line:#2e2e33;--pass:#57c470;--fail:#ff6b6b;--fail-bg:#3a1e1e;--accent:#7aa7ff;--badge:#22304a;--code:#26262b}}
+:root[data-theme=dark]{--bg:#141416;--surface:#1c1c1f;--text:#e8e8ea;--muted:#a0a0a8;--line:#2e2e33;--pass:#57c470;--fail:#ff6b6b;--fail-bg:#3a1e1e;--accent:#7aa7ff;--badge:#22304a;--code:#26262b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:24px 16px 96px}
+h1{font-size:22px;margin:0 0 4px}h1 .tool{color:var(--muted);font-weight:500}
+h2{font-size:17px;margin:32px 0 8px}
+.counts{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0;color:var(--muted)}
+.count{font-weight:600}.count.passed{color:var(--pass)}.count.failed{color:var(--fail)}
+.controls{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:16px -16px 0;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+.controls input[type=search]{flex:1 1 220px;min-width:0;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:inherit}
+.lead,.none{color:var(--muted)}
+details.scenario{background:var(--surface);border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:0 14px}
+details.scenario.failed{border-left:4px solid var(--fail)}
+details.scenario>summary{cursor:pointer;padding:10px 0;font-weight:600;overflow-wrap:anywhere}
+.mark{font-weight:700}.step.failed .mark,.failed>summary .mark{color:var(--fail)}
+.class{color:var(--muted);font-weight:400;font-size:13px}
+.dur,.site{color:var(--muted);font-weight:400;font-size:12px}
+.snap{font-size:12px;font-weight:400}
+ol.steps,ol.steps ol{list-style:none;margin:0;padding:0}
+ol.steps ol{padding-left:22px;border-left:1px solid var(--line);margin-left:6px}
+ol.steps li{padding:3px 0}
+li.step,li.group>details>summary{display:grid;grid-template-columns:2.6em minmax(0,1fr) auto;column-gap:8px;align-items:baseline}
+li.group>details>summary{cursor:pointer;font-weight:600;list-style:none}
+li.group>details>summary::-webkit-details-marker{display:none}
+.idx{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:400}
+.text{min-width:0;overflow-wrap:anywhere}
+.meta{display:flex;gap:8px;justify-content:flex-end;white-space:nowrap}
+li.step.failed{background:var(--fail-bg);border-radius:4px;padding:3px 6px;margin:0 -6px}
+.error{grid-column:2/-1;color:var(--fail);font-size:13px;overflow-wrap:anywhere}
+dl.failure{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:0 0 12px;padding:10px 12px;background:var(--fail-bg);border-radius:6px}
+dl.failure dt{color:var(--muted)}dl.failure dd{margin:0;min-width:0;overflow-wrap:anywhere}
+code{font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);padding:1px 4px;border-radius:4px}
+a{color:var(--accent)}
+@media (max-width:600px){dl.failure{grid-template-columns:1fr}li.step,li.group>details>summary{grid-template-columns:2.2em minmax(0,1fr)}.meta{grid-column:2;justify-content:flex-start;white-space:normal;flex-wrap:wrap;gap:0 8px}}
+
+/* ---- new: the Step Target box, shared by every variant ---- */
+.shot{position:relative;display:block;line-height:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.shot img{display:block;width:100%;height:auto}
+/* 2px accent outline + faint fill, as Q10; a 1px white/black halo so it reads on the app's own blue */
+.hl{position:absolute;pointer-events:none;border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:3px;box-shadow:0 0 0 1px #fff,inset 0 0 0 1px #fff}
+.no-hl .hl,.no-hl .hl-tag{display:none}
+.note{display:block;font-size:12px;color:var(--muted);line-height:1.5;padding:4px 2px 0}
+.note::before{content:"◌ ";}
+.no-hl .note{display:none}
+.toggle{display:inline-flex;gap:6px;align-items:center;font-size:14px}
+
+/* Variant A: inline under the step */
+.A .inline{grid-column:2/-1;margin:6px 0}
+
+/* Variant B: viewer */
+.viewer{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column}
+.viewer[hidden]{display:none}
+.viewer header{display:flex;gap:12px;align-items:baseline;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--bg)}
+.viewer header .t{flex:1;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.viewer header button{font:inherit;padding:4px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}
+.viewer .stage{flex:1;overflow:auto;padding:20px;display:flex;justify-content:center;align-items:flex-start}
+.viewer .stage>div{width:min(100%,1100px)}
+.viewer .filmstrip{display:flex;gap:6px;overflow-x:auto;padding:8px 20px 64px;border-top:1px solid var(--line);background:var(--bg)}
+.viewer .filmstrip button{flex:0 0 auto;border:2px solid transparent;border-radius:4px;padding:0;background:none;cursor:pointer;line-height:0;position:relative}
+.viewer .filmstrip button.on{border-color:var(--accent)}
+.viewer .filmstrip img{height:54px;border-radius:2px}
+.viewer .filmstrip span{position:absolute;left:2px;top:2px;font:600 10px/1 system-ui;background:var(--bg);color:var(--text);padding:2px 3px;border-radius:3px}
+
+/* Variant C: side pane + spotlight */
+.C main{max-width:1400px}
+.C .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+.C .pane{position:sticky;top:64px}
+.C .pane .cap{font-size:13px;color:var(--muted);margin:0 0 6px}
+.C .pane .cap b{color:var(--text)}
+.C li.step{cursor:pointer;border-radius:4px;padding-left:6px;margin-left:-6px}
+.C li.step:hover{background:var(--code)}
+.C li.step.on{box-shadow:inset 3px 0 0 var(--accent);background:var(--badge)}
+.C li.step.failed.on{background:var(--fail-bg)}
+.C .spot{position:absolute;pointer-events:none;border:2px solid var(--accent);border-radius:3px;box-shadow:0 0 0 1px #fff,0 0 0 9999px rgba(0,0,0,.38)}
+.C .no-hl .spot{display:none}
+.hl-tag{position:absolute;pointer-events:none;transform:translateY(-100%);margin-top:-4px;font:600 11px/1.3 system-ui;background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;white-space:nowrap;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+.hl-tag.below{transform:none;margin-top:4px}
+@media (max-width:820px){.C .split{grid-template-columns:1fr}.C .pane{position:static}}
+
+/* the prototype's own switcher: not part of the design */
+.proto-bar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:50;display:flex;gap:4px;align-items:center;background:#111;color:#fff;border-radius:999px;padding:6px;box-shadow:0 6px 24px rgba(0,0,0,.35);font:13px system-ui}
+.proto-bar button{background:#2a2a2a;color:#fff;border:0;border-radius:999px;padding:6px 12px;font:inherit;cursor:pointer}
+.proto-bar .label{padding:0 12px;white-space:nowrap}
+</style>
+</head>
+<body>
+<main id="main">
+<header>
+<h1>Unified UI Tests <span class="tool">Playwright</span></h1>
+<p class="counts"><span class="count passed">11 passed</span><span class="count failed">1 failed</span><span>prototype data</span></p>
+</header>
+<div class="controls">
+<input type="search" placeholder="Search scenarios and steps" aria-label="Search">
+<label class="toggle"><input type="checkbox" id="show-passing"> show passing</label>
+<label class="toggle"><input type="checkbox" id="hl" checked> highlight step targets</label>
+</div>
+<section id="failed"><h2>Failed scenarios</h2><div id="scenario"></div></section>
+</main>
+
+<div class="viewer" id="viewer" hidden>
+<header><span class="t" id="v-title"></span>
+<button id="v-prev" aria-label="Previous step">‹ prev</button><button id="v-next" aria-label="Next step">next ›</button>
+<a id="v-png" href="#">open PNG</a><button id="v-close">close · Esc</button></header>
+<div class="stage"><div id="v-shot"></div></div>
+<div class="filmstrip" id="v-strip"></div>
+</div>
+
+<div class="proto-bar" role="toolbar" aria-label="Prototype variants">
+<button id="p-prev" aria-label="Previous variant">←</button><span class="label" id="p-label"></span><button id="p-next" aria-label="Next variant">→</button>
+<button id="p-theme" title="Cycle the report's theme">theme: auto</button>
+</div>
+
+<script>
+// Real boxes from Playwright (boxes.json), fractions of the image; inlined so file:// works.
+const BOX={"001":{"x":0.025,"y":0.3375,"width":0.5708,"height":0.0667},"002":{"x":0.6385,"y":0.2725,"width":0.3187,"height":0.06},
+"003":{"x":0.6385,"y":0.2725,"width":0.3187,"height":0.06},"004":{"missing":"gone"},"005":{"x":0.7172,"y":0.5942,"width":0.0818,"height":0.06},
+"006":{"x":0.3125,"y":0.5413,"width":0.0818,"height":0.06},"007":{"missing":"outside"},"failure":{"x":0.3125,"y":0.5413,"width":0.0818,"height":0.06}};
+const STEPS=[
+ {i:"1.1",t:"click row where Name is “Alan Turing” in grid",s:"001",d:"84 ms"},
+ {i:"1.2",t:"fill text field “Name” with “Alan M. Turing”",s:"002",d:"61 ms"},
+ {i:"1.3",t:"see text field “Name” has value “Alan M. Turing”",s:"003",d:"12 ms"},
+ {i:"1.4",t:"click button “Save”",s:"004",d:"140 ms"},
+ {i:"2.1",t:"see row where Name is “Barbara Liskov” in grid",s:"007",d:"9 ms"},
+ {i:"2.2",t:"click button “Delete”",s:"005",d:"73 ms"},
+ {i:"2.3",t:"click button “Delete” in dialog “Delete Alan M. Turing?”",s:"006",d:"5.0 s",failed:true,
+  err:"button “Delete” in dialog “Delete Alan M. Turing?” is disabled"}];
+const GROUPS=[["1","Edit Alan Turing's name",0,4],["2","Delete Alan Turing",4,7]];
+const NOTES={gone:"No box: the component is no longer on the page.",outside:"No box: the component is outside the visible area."};
+const V=["A","B","C"],NAMES={A:"Inline under the step",B:"Viewer with filmstrip",C:"Side pane + spotlight"};
+let variant=new URLSearchParams(location.search).get("variant");if(!V.includes(variant))variant="A";
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// one screenshot with its box (or note); the same markup in every variant, styles differ
+function shot(src,box,{spot=false,tag=null}={}){
+  let h=`<span class="shot"><img src="${src}" alt="The page after this step">`;
+  if(box&&!box.missing){
+    const st=`left:${box.x*100}%;top:${box.y*100}%;width:${box.width*100}%;height:${box.height*100}%`;
+    h+=`<span class="${spot?"spot":"hl"}" style="${st}"></span>`;
+    if(tag){const below=box.y<0.06;const right=box.x+box.width/2>0.5,pos=right?`right:${(1-box.x-box.width)*100}%`:`left:${box.x*100}%`;h+=`<span class="hl-tag${below?" below":""}" style="${pos};top:${(below?box.y+box.height:box.y)*100}%">${esc(tag)}</span>`;}
+  }
+  h+=`</span>`;
+  if(box&&box.missing)h+=`<span class="note">${NOTES[box.missing]}</span>`;
+  return h;
+}
+
+function stepsHtml(){
+  let h=`<ol class="steps">`;
+  for(const [gi,gn,a,b] of GROUPS){
+    const failed=STEPS.slice(a,b).some(s=>s.failed);
+    h+=`<li class="group${failed?" failed":""}"><details open><summary><span class="idx">${gi}</span><span class="text">${esc(gn)}</span><span class="meta"></span></summary><ol>`;
+    STEPS.slice(a,b).forEach((s,k)=>{
+      const n=a+k;
+      h+=`<li class="step${s.failed?" failed":""}" data-n="${n}"><span class="idx">${s.i}</span><span class="text">${esc(s.t)}${s.failed?' <span class="mark">✘</span>':""}</span>`+
+         `<span class="meta">${variant==="C"?"":`<a class="snap" href="steps/${s.s}.png" data-n="${n}">screenshot</a>`}<span class="dur">${s.d}</span><span class="site">EditPersonTest.java:${20+n*2} (editAndDelete)</span></span>`+
+         (s.failed?`<div class="error">${esc(s.err)}</div>`:"")+`</li>`;
+    });
+    h+=`</ol></details></li>`;
+  }
+  return h+`</ol>`;
+}
+
+function failureHtml(){
+  return `<dl class="failure"><dt>Failed at</dt><dd>2.3 click button “Delete” in dialog “Delete Alan M. Turing?”</dd>`+
+    `<dt>Expected</dt><dd>an enabled button</dd><dt>Found</dt><dd>a disabled button</dd>`+
+    `<dt>Code</dt><dd><code>EditPersonTest.java:32 (editAndDelete)</code></dd></dl>`+
+    `<div class="evidence">${variant==="B"?`<a href="failure.png" class="fail-shot">`:""}${shot("failure.png",BOX.failure,{tag:variant==="C"?"click button “Delete”":null})}${variant==="B"?"</a>":""}`+
+    `<p class="note" style="padding-top:2px;">full page · <a href="failure.png">EditPersonTest.editAndDelete.png</a></p></div>`;
+}
+
+function render(){
+  document.body.className=variant;
+  const sc=document.getElementById("scenario");
+  const head=`<summary><span class="mark">✘</span> editAndDelete <span class="class">EditPersonTest</span></summary>`;
+  if(variant==="C"){
+    sc.innerHTML=`<details class="scenario failed" open>${head}${failureHtml()}<div class="split"><div>${stepsHtml()}</div><div class="pane" id="pane"></div></div></details>`;
+    select(STEPS.length-1);
+  }else{
+    sc.innerHTML=`<details class="scenario failed" open>${head}${failureHtml()}${stepsHtml()}</details>`;
+  }
+  document.getElementById("p-label").textContent=`${variant} · ${NAMES[variant]}`;
+}
+
+// ---- Variant A: image opens under the step, a second click closes it
+// ---- Variant B: opens the viewer
+document.addEventListener("click",e=>{
+  const a=e.target.closest("a.snap");
+  if(a&&!e.ctrlKey&&!e.metaKey){
+    e.preventDefault();const n=+a.dataset.n;
+    if(variant==="A"){
+      const li=a.closest("li"),open=li.querySelector(":scope>.inline");
+      if(open){open.remove();return;}
+      const d=document.createElement("div");d.className="inline";d.innerHTML=shot(`steps/${STEPS[n].s}.png`,BOX[STEPS[n].s]);li.appendChild(d);
+    }else if(variant==="B")openViewer(n);
+    return;
+  }
+  const f=e.target.closest("a.fail-shot");
+  if(f&&variant==="B"){e.preventDefault();openViewer(-1);return;}
+  const li=e.target.closest("li.step");
+  if(li&&variant==="C")select(+li.dataset.n);
+});
+
+let vn=0;
+function openViewer(n){vn=n;document.getElementById("viewer").hidden=false;showViewer();}
+function showViewer(){
+  const failure=vn<0,s=STEPS[vn];
+  const src=failure?"failure.png":`steps/${s.s}.png`,box=failure?BOX.failure:BOX[s.s];
+  document.getElementById("v-title").innerHTML=failure?`Failure · 2.3 ${esc(STEPS[6].t)} <span class="mark" style="color:var(--fail)">✘</span>`
+    :`<span class="idx">${s.i}</span> ${esc(s.t)}${s.failed?' <span class="mark" style="color:var(--fail)">✘</span>':""}`;
+  document.getElementById("v-shot").innerHTML=shot(src,box);
+  document.getElementById("v-png").href=src;
+  document.getElementById("v-strip").innerHTML=STEPS.map((s,k)=>`<button data-k="${k}" class="${k===vn?"on":""}" title="${esc(s.t)}"><img src="steps/${s.s}.png" alt=""><span>${s.i}</span></button>`).join("")+
+    `<button data-k="-1" class="${failure?"on":""}" title="Failure"><img src="failure.png" alt=""><span>✘</span></button>`;
+}
+document.getElementById("v-strip").addEventListener("click",e=>{const b=e.target.closest("button");if(b){vn=+b.dataset.k;showViewer();}});
+document.getElementById("v-prev").onclick=()=>{vn=vn<0?STEPS.length-1:Math.max(0,vn-1);showViewer();};
+document.getElementById("v-next").onclick=()=>{vn=vn<0?-1:vn+1>=STEPS.length?-1:vn+1;showViewer();};
+document.getElementById("v-close").onclick=()=>document.getElementById("viewer").hidden=true;
+
+// ---- Variant C: the pane follows the selected step
+function select(n){
+  document.querySelectorAll("li.step").forEach(li=>li.classList.toggle("on",+li.dataset.n===n));
+  const s=STEPS[n];
+  document.getElementById("pane").innerHTML=`<p class="cap"><b>${s.i}</b> after “${esc(s.t)}” · <a href="steps/${s.s}.png">PNG</a></p>`+shot(`steps/${s.s}.png`,BOX[s.s],{spot:true,tag:s.t});
+}
+
+// report-wide toggle
+const hl=document.getElementById("hl");
+hl.addEventListener("change",()=>document.documentElement.classList.toggle("no-hl",!hl.checked));
+
+// prototype switcher
+function go(d){variant=V[(V.indexOf(variant)+d+V.length)%V.length];const u=new URL(location);u.searchParams.set("variant",variant);history.replaceState(null,"",u);
+  document.getElementById("viewer").hidden=true;render();}
+document.getElementById("p-prev").onclick=()=>go(-1);document.getElementById("p-next").onclick=()=>go(1);
+const themes=["auto","light","dark"];let ti=0;
+document.getElementById("p-theme").onclick=e=>{ti=(ti+1)%3;const t=themes[ti];if(t==="auto")delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t;e.target.textContent="theme: "+t;};
+document.addEventListener("keydown",e=>{
+  if(e.target.closest("input,textarea,[contenteditable]"))return;
+  const viewerOpen=!document.getElementById("viewer").hidden;
+  if(viewerOpen&&e.key==="Escape"){document.getElementById("v-close").click();return;}
+  if(viewerOpen&&(e.key==="j"||e.key==="k")){document.getElementById(e.key==="j"?"v-next":"v-prev").click();return;}
+  if(e.key==="ArrowLeft")go(-1);if(e.key==="ArrowRight")go(1);
+});
+render();
+</script>
+</body>
+</html>
