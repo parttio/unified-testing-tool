@@ -1,6 +1,8 @@
 package demo.perf;
 
+import com.microsoft.playwright.Page;
 import demo.ProfileView;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -22,6 +24,25 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @EnabledIfSystemProperty(named = "vaadin.testing.tool", matches = "playwright")
 class DramafinderPerfTest extends SpringPlaywrightIT {
+
+    /**
+     * SpringPlaywrightIT's setup, then a new page in a browser context of its own: the browser starts as on the
+     * Unified side (fairness rule 4, #444). The base class loads the application in its page before the test,
+     * so the body's {@code navigate} would be the context's second load, about 300 ms faster than the first,
+     * which the Unified UI Test's {@code navigate} makes in a new context.
+     */
+    @Override
+    @BeforeEach
+    public void setupTest() throws Exception {
+        super.setupTest();
+        Page fresh = getBrowser().newPage();
+        prepareBrowserContext(fresh.context());
+        // the base class's timeouts
+        fresh.setDefaultNavigationTimeout(4000);
+        fresh.setDefaultTimeout(15000);
+        page.close();
+        page = fresh;
+    }
 
     @Test
     void smallForm() {

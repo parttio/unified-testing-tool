@@ -3,26 +3,26 @@
 # one fails, and one below it asks for this file to be lowered with --update-counts (a range, min-max, is a count that
 # depends on timing and is checked against its max only). Raise a count only by editing
 # this file, with the reason in the pull request.
-DramafinderPerfTest.comboBox:72 calls 2
-DramafinderPerfTest.comboBox:74 calls 20
-DramafinderPerfTest.comboBox:76 calls 1
-DramafinderPerfTest.largeGrid:60 calls 2
-DramafinderPerfTest.largeGrid:63 calls 1
-DramafinderPerfTest.largeGrid:64 calls 13
-DramafinderPerfTest.largeGrid:66 calls 1
-DramafinderPerfTest.largeGrid:67 calls 1
-DramafinderPerfTest.longForm:39 calls 2
-DramafinderPerfTest.longForm:42 calls 72
-DramafinderPerfTest.longForm:45 calls 6
-DramafinderPerfTest.longForm:48 calls 4
-DramafinderPerfTest.longForm:51 calls 6
-DramafinderPerfTest.longForm:53 calls 2
-DramafinderPerfTest.longForm:55 calls 1
-DramafinderPerfTest.smallForm:28 calls 2
-DramafinderPerfTest.smallForm:30 calls 3
-DramafinderPerfTest.smallForm:31 calls 3
-DramafinderPerfTest.smallForm:32 calls 2
-DramafinderPerfTest.smallForm:34 calls 1
+DramafinderPerfTest.comboBox:93 calls 2
+DramafinderPerfTest.comboBox:95 calls 20
+DramafinderPerfTest.comboBox:97 calls 1
+DramafinderPerfTest.largeGrid:81 calls 2
+DramafinderPerfTest.largeGrid:84 calls 1
+DramafinderPerfTest.largeGrid:85 calls 13
+DramafinderPerfTest.largeGrid:87 calls 1
+DramafinderPerfTest.largeGrid:88 calls 1
+DramafinderPerfTest.longForm:60 calls 2
+DramafinderPerfTest.longForm:63 calls 72
+DramafinderPerfTest.longForm:66 calls 6
+DramafinderPerfTest.longForm:69 calls 4
+DramafinderPerfTest.longForm:72 calls 6
+DramafinderPerfTest.longForm:74 calls 2
+DramafinderPerfTest.longForm:76 calls 1
+DramafinderPerfTest.smallForm:49 calls 2
+DramafinderPerfTest.smallForm:51 calls 3
+DramafinderPerfTest.smallForm:52 calls 3
+DramafinderPerfTest.smallForm:53 calls 2
+DramafinderPerfTest.smallForm:55 calls 1
 UnifiedPerfTest.comboBox:74 calls 2
 UnifiedPerfTest.comboBox:76 calls 14
 UnifiedPerfTest.comboBox:78 calls 2
