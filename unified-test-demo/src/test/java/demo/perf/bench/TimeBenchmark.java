@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 import org.junit.platform.launcher.Launcher;
 import org.junit.platform.launcher.LauncherDiscoveryRequest;
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
@@ -118,15 +119,17 @@ public final class TimeBenchmark {
         };
     }
 
-    /** The test method by its name alone, fully qualified: the Unified UI Test's methods take a parameter, the Direct Tests' none. */
-    private static String method(String testClass, String name) {
+    /**
+     * The method's parameter types, as a method selector names them: {@code com.vaadin.testing.unified.UnifiedPage}
+     * for a Unified UI Test, none for a Direct Test. A selector without them only finds a method with none.
+     */
+    private static String parameterTypes(String testClass, String method) {
         try {
             return Arrays.stream(Class.forName(testClass).getDeclaredMethods())
-                    .filter(m -> m.getName().equals(name))
-                    .findFirst()
-                    .map(m -> testClass + "#" + name + "(" + String.join(",",
-                            Arrays.stream(m.getParameterTypes()).map(Class::getName).toList()) + ")")
-                    .orElseThrow(() -> new IllegalArgumentException("No scenario " + name + " in " + testClass));
+                    .filter(m -> m.getName().equals(method)).findFirst()
+                    .map(m -> Arrays.stream(m.getParameterTypes()).map(Class::getName)
+                            .collect(Collectors.joining(",")))
+                    .orElse("");
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(e);
         }
@@ -135,7 +138,8 @@ public final class TimeBenchmark {
     /** Runs one test class (or one of its methods), as the demo's Surefire configuration would; exits 2 on a failure. */
     private static void run(Launcher launcher, String testClass, String method, String tool) {
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-                .selectors(method == null ? selectClass(testClass) : selectMethod(method(testClass, method)))
+                .selectors(method == null ? selectClass(testClass)
+                        : selectMethod(testClass, method, parameterTypes(testClass, method)))
                 .configurationParameter("vaadin.testing.tool", tool)
                 .configurationParameter("vaadin.testing.browserless.route-errors-to-session", "true")
                 .configurationParameter("junit.jupiter.execution.parallel.enabled", "false")

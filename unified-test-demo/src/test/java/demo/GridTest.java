@@ -107,6 +107,20 @@ class GridTest {
     }
 
     @Test
+    @DisplayName("A whole column reads as its cells do, in a lazy grid and in a column of buttons")
+    void readsAColumnAsItsCells(UnifiedPage page) {
+        UnifiedGrid users = grid(page, "users");
+
+        for (String header : List.of("Name", "Actions")) {
+            List<String> texts = users.column(header).getCellTexts();
+            assertEquals(120, texts.size(), header);
+            for (int row : List.of(0, 59, 119)) {
+                assertEquals(users.row(row).getCellText(header), texts.get(row), header + " of row " + row);
+            }
+        }
+    }
+
+    @Test
     @DisplayName("The archived users grid is empty")
     void knowsAnEmptyGrid(UnifiedPage page) {
         assertThat(grid(page, "archived")).isEmpty();
