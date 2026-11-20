@@ -51,7 +51,7 @@ Every action and assertion is reported as a User Step, in the user's words. The 
 The same test runs in a real browser when the run says so (`-Dvaadin.testing.tool=playwright` or `selenium`); [Running in CI](ci-setup.md) shows the jobs. Two things are set up for you:
 
 - **The application is served in development mode**, with the frontend bundle that ships with `vaadin-dev`, so a browser run needs no frontend build first.
-- **Vaadin's development tools are off** *(unreleased)* in a `@UnifiedSpringBootTest`'s application (`vaadin.devmode.devTools.enabled=false`). A test needs neither Copilot nor the tools' overlay, and with them on, Copilot starts file watchers for every browser session and keeps them until the application stops, which runs a long test run out of them. To have the tools in a test, set the property yourself; anything that sets it wins over this default:
+- **Vaadin's development tools are off** in a `@UnifiedSpringBootTest`'s application (`vaadin.devmode.devTools.enabled=false`). A test needs neither Copilot nor the tools' overlay, and with them on, Copilot starts file watchers for every browser session and keeps them until the application stops, which runs a long test run out of them. To have the tools in a test, set the property yourself; anything that sets it wins over this default:
 
 ```java
 @UnifiedSpringBootTest(properties = "vaadin.devmode.devTools.enabled=true")

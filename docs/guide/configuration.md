@@ -13,15 +13,15 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`): whose User Steps go to the CI log |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; the base for "Changed in this PR" ([Reading reports and failures](reports-and-failures.md)) |
-| `vaadin.testing.user-steps.compare-dir` *(unreleased)* | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([Reading reports and failures](reports-and-failures.md#compared-with-another-testing-tool)) |
-| `vaadin.testing.user-steps.server-log` *(unreleased)* | `warn`: the application's warnings and errors under the User Step during which they were logged; `error`, or `off` |
+| `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([Reading reports and failures](reports-and-failures.md#compared-with-another-testing-tool)) |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged; `error`, or `off` |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
 | `vaadin.testing.browserless.view-packages` | in a Spring test, the `@SpringBootApplication`'s packages and the test's package; otherwise the test's package |
 | `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends an exception thrown by a listener to the session's `ErrorHandler`, as in a browser |
-| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`); the run downloads this browser only, when it isn't installed *(unreleased)* |
+| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`); the run downloads this browser only, when it isn't installed |
 | `vaadin.testing.playwright.headless` | `true` |
-| `vaadin.testing.playwright.executable` | Playwright's own browser; a path to a browser skips the download of Playwright's browsers *(unreleased)* |
+| `vaadin.testing.playwright.executable` | Playwright's own browser; a path to a browser skips the download of Playwright's browsers |
 | `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
 | `vaadin.testing.selenium.headless` | `true` |
 | `vaadin.testing.selenium.executable` | the installed browser |

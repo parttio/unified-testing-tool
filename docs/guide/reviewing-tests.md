@@ -6,8 +6,8 @@ For the reviewer of a pull request that adds or changes Unified UI Tests, writte
 
 1. **The run summary**, on the CI job's page or in `summary.md` ([The run summary](reports-and-failures.md#the-run-summary)):
     - **Changed in this PR** lists the new and changed scenarios. With the base branch's last run, it shows how each changed scenario's User Steps differ, as a diff ([How a changed scenario's steps changed](reports-and-failures.md#how-a-changed-scenarios-steps-changed)).
-    - **Scenarios without a check** *(unreleased)* lists the passing scenarios whose last steps nothing checks ([Scenarios without a check](reports-and-failures.md#scenarios-without-a-check)).
-    - **Compared with another Testing Tool** *(unreleased)* lists the scenarios that end differently, or take different steps, in a browser ([Compared with another Testing Tool](reports-and-failures.md#compared-with-another-testing-tool)).
+    - **Scenarios without a check** lists the passing scenarios whose last steps nothing checks ([Scenarios without a check](reports-and-failures.md#scenarios-without-a-check)).
+    - **Compared with another Testing Tool** lists the scenarios that end differently, or take different steps, in a browser ([Compared with another Testing Tool](reports-and-failures.md#compared-with-another-testing-tool)).
 2. **The User Steps of each new or changed scenario**: in the summary, or in the test's `user-steps.txt` in the CI artifact ([The User Steps of a test](reports-and-failures.md#the-user-steps-of-a-test)). Read them as the person who asked for the scenario would.
 3. **The diff of the test code**, with the checklist below. [Common mistakes](common-mistakes.md) shows the code to look for.
 
@@ -76,7 +76,7 @@ An agent following the `write-unified-ui-tests` skill reports the test's `@Displ
 4. **Read the diff with the checklist above.** Look for changes outside the tests: an agent asked to make a test pass may have changed the application instead.
 5. **For a test the agent fixed**, read [When a test was changed to pass](#when-a-test-was-changed-to-pass). A fix that adds a sleep, raises a timeout or drops a check is not a fix.
 
-An agent can do the same review *(unreleased)*: ask one that has the `write-unified-ui-tests` skill to review a test or a pull request's tests. It follows this checklist and reports its findings without changing the code.
+An agent can do the same review: ask one that has the `write-unified-ui-tests` skill to review a test or a pull request's tests. It follows this checklist and reports its findings without changing the code.
 
 ## What the tools check, and what they don't
 
@@ -85,8 +85,8 @@ An agent can do the same review *(unreleased)*: ask one that has the `write-unif
 | a `@DisplayName` of more than one word | the style rule `SCENARIO_SENTENCE` |
 | no `Thread.sleep(..)` or Testing Tool waits in a test class | the style rule `NO_RAW_WAITS` |
 | Testing Tool code in a test class only with `@RequiresTestingTool` | the style rule `TOOL_CODE_NEEDS_CAPABILITY` |
-| scenarios that end without a check *(unreleased)* | the run summary |
-| scenarios that behave differently on two Testing Tools *(unreleased)* | the run summary, with a compared run |
+| scenarios that end without a check | the run summary |
+| scenarios that behave differently on two Testing Tools | the run summary, with a compared run |
 | what a change did to a scenario's steps | the run summary, with the base branch's run |
 
 Left to you: whether the sentence describes the right scenario, whether a check is the right one, Testing Tool code in shared classes, and the rest of [What the rules don't check](style-rules.md#what-the-rules-dont-check).

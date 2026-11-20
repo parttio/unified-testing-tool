@@ -8,7 +8,7 @@ Every Wrapper action and every retrying assertion is recorded as a **User Step**
 | [`user-steps.txt`, `user-steps.json`](#the-user-steps-of-a-test) | the evidence directory, per test | every test | people, agents and tools |
 | [`summary.md`](#the-run-summary) | the evidence directory, per run | every run | the reviewer |
 | [`report.html`](#the-html-report) | the evidence directory, per run | every run | the reviewer, in a browser |
-| [`summary.json`](#the-run-as-data) *(unreleased)* | the evidence directory, per run | every run | agents and CI tooling |
+| [`summary.json`](#the-run-as-data) | the evidence directory, per run | every run | agents and CI tooling |
 | [GitHub job summary](#the-github-job-summary) | the job's summary page | every run in GitHub Actions | the reviewer |
 
 The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
@@ -73,8 +73,6 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
 
 ### Applying it
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 When a label changed in the application and the tests that used it fail, each failure already says what to write instead. The `ApplyDidYouMean` recipe writes it for you. Run the tests, then, in the same directory:
 
 ```
@@ -123,8 +121,6 @@ A component that is there but can't be used:
 ```
 
 ### The Findable View
-
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
 
 Next to the screenshot or the component tree, a failed test writes `<test class>.<method>.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Failure evidence` line names it.
 
@@ -198,8 +194,6 @@ What the recorder can't see is never left out silently. Escape Hatch calls, `pag
 
 ### What the application logged
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 A click that makes the server throw often shows the user nothing, or a generic error. The reason is in the application's log, and the Unified API puts it where the click is:
 
 ```
@@ -225,8 +219,8 @@ When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the
 1. a header with the Testing Tool and the counts;
 2. **Changed in this PR**: the scenarios that call code changed against the base branch, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. A new scenario shows its User Steps; a changed one shows how its User Steps differ from the base branch's last run, when the build gives it that run ([below](#how-a-changed-scenarios-steps-changed)). Left out when the run has no base to compare against;
 3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory;
-4. **Compared with another Testing Tool** *(unreleased)*: the scenarios that end differently, or take different User Steps, on another Testing Tool, when the build gives it that run ([below](#compared-with-another-testing-tool));
-5. **Scenarios without a check** *(unreleased)*: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
+4. **Compared with another Testing Tool**: the scenarios that end differently, or take different User Steps, on another Testing Tool, when the build gives it that run ([below](#compared-with-another-testing-tool));
+5. **Scenarios without a check**: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
 
 Passing scenarios count in the header only, unless the pull request changed them or they have no check: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
 
@@ -305,8 +299,6 @@ The directory is any copy of the base branch's evidence directory, such as its d
 
 ### Compared with another Testing Tool
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 A Unified UI Test runs on Browserless in milliseconds, and the fast run is the one a developer or an agent repeats. When the same test then fails in a browser, the first question is where the two runs part. Give a run the evidence directory of a run on another Testing Tool, and its summary answers that:
 
 ```
@@ -343,8 +335,6 @@ The first run needs an evidence directory of its own (`vaadin.testing.evidence-d
 
 ### Scenarios without a check
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 A test that fills a form, clicks *Save* and stops there passes whether or not the save works. The run summary lists the passing scenarios that end this way, so the author, or the reviewer of a test an agent wrote, sees them without reading each test:
 
 ```markdown
@@ -374,8 +364,6 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the s
 Each User Step shows its number, its text, how long it took and the line that called it. User Tasks fold, and calls outside the Unified API show as dimmed gap lines. Each scenario links its `user-steps.txt` and `user-steps.json`.
 
 ## The run as data
-
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
 
 Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the same run for a program to read. An agent that has run the tests, or a CI step that posts a comment, reads the verdict from one file instead of parsing Markdown or walking the evidence directory.
 
@@ -469,9 +457,9 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
-| `vaadin.testing.user-steps.server-log` *(unreleased)* | `warn`: the application's warnings and errors under the User Step during which they were logged ([above](#what-the-application-logged)); `error`, or `off` |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged ([above](#what-the-application-logged)); `error`, or `off` |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it |
-| `vaadin.testing.user-steps.compare-dir` *(unreleased)* | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
+| `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step, as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |

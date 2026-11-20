@@ -11,7 +11,7 @@ How each Unified API call maps onto the three Testing Tools: Browserless Test 25
 | `page.navigate(View.class)` | `navigate(View.class)` | `RouteNavigation` / `navigate(View.class)` | `getDriver().get(baseUrl + path)` |
 | `page.reload()` | page reload simulation | `page.reload()` | `navigate().refresh()` |
 | `assertThat(page).isAt(View.class)` | `getCurrentView()` | `assertAt(View.class)` | URL vs resolved path (adapter) |
-| `assertThat(page).hasTitle(s)` *(unreleased)* | `UI.getInternals().getTitle()` (adapter) | `page.title()` | `getDriver().getTitle()` |
+| `assertThat(page).hasTitle(s)` | `UI.getInternals().getTitle()` (adapter) | `page.title()` | `getDriver().getTitle()` |
 
 ## Locating
 
@@ -57,13 +57,13 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 
 | Dramafinder | Unified API |
 |---|---|
-| `page.navigate(getUrl() + "/path?q=" + q)` *(unreleased)* | `page.navigate("path?q=" + q)` |
+| `page.navigate(getUrl() + "/path?q=" + q)` | `page.navigate("path?q=" + q)` |
 | `XElement.getByLabel(page, s)` / `getByText` / `getById` / `getByTestId` / `…Containing` | `page.find(UnifiedX.class).withLabel(s)` / `withText` / `withId` / `withTestId` / `…Containing` |
 | `ButtonElement.getByLabel(page, s)` | `.withAccessibleName(s)` |
 | `DialogElement.getByHeaderText(page, s)` | `.withHeaderTitle(s)` |
 | `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s)` + Migration Marker |
 | query `first()` / `get(i)` | the plain lookup + `was first()` Migration Marker / `all().get(i)` |
-| `page.locator("#x")` / `locator("[data-testid=x]")` / `getByTestId("x")` *(unreleased)* | `page.find(W.class).withId("x")` / `withTestId("x")`, `W` the Wrapper of the component the sources give that id, else `UnifiedContainer` + Migration Marker; `fill(s)` / `inputValue()` are `setValue(s)` / `getValue()` |
+| `page.locator("#x")` / `locator("[data-testid=x]")` / `getByTestId("x")` | `page.find(W.class).withId("x")` / `withTestId("x")`, `W` the Wrapper of the component the sources give that id, else `UnifiedContainer` + Migration Marker; `fill(s)` / `inputValue()` are `setValue(s)` / `getValue()` |
 | `assertVisible` / `assertHidden` / `assertEnabled` / `assertDisabled` | `assertThat(w).isVisible()` / `isHidden()` / `isEnabled()` / `isDisabled()` |
 | `assertValue` / `assertLabel` / `assertValid` / `assertInvalid` / `assertErrorMessage` | `hasValue` / `hasLabel` / `isValid` / `isInvalid` / `hasErrorMessage` |
 | `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |

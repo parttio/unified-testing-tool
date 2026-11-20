@@ -12,13 +12,13 @@ No component matched the lookup.
 
 | Likely cause | Fix |
 |---|---|
-| The test names it differently from the view: a label, a text, a header title. `Nearby` lists what is there, closest first. | Apply `Did you mean`, by hand or with the [`ApplyDidYouMean` recipe](reports-and-failures.md#applying-it) *(unreleased)*. Write lookups from the view's code, and from the translation files when the view calls `getTranslation(..)`. |
+| The test names it differently from the view: a label, a text, a header title. `Nearby` lists what is there, closest first. | Apply `Did you mean`, by hand or with the [`ApplyDidYouMean` recipe](reports-and-failures.md#applying-it). Write lookups from the view's code, and from the translation files when the view calls `getTranslation(..)`. |
 | The application changed by mistake, and the test was right. | Fix the view, not the test. |
 | The step that shows it didn't happen: the dialog isn't open, the tab isn't selected. `Nearby` then lists the Near Misses of the missing scope. | Add the step the user takes first, such as the click that opens the dialog. |
 | It is in another scope than the lookup searches. | Search from the right container: `dialog.find(..)`, `tabs.content().find(..)` ([Scopes](finding-components.md#scopes)). |
 | It is hidden. `Nearby` marks it `(hidden)`. | Do what makes it visible to the user. |
 
-When `Nearby` doesn't help, look at the Findable View *(unreleased)*: what the page held at the failure, as lookups ([The Findable View](reports-and-failures.md#the-findable-view)). In a test, `page.describe()` prints the same.
+When `Nearby` doesn't help, look at the Findable View: what the page held at the failure, as lookups ([The Findable View](reports-and-failures.md#the-findable-view)). In a test, `page.describe()` prints the same.
 
 ### `Found 2: …`
 
@@ -47,7 +47,7 @@ A check timed out. The values are what the component showed while the check wait
 |---|---|
 | A getter with `assertEquals`: it reads once, and in a browser the value arrives a moment later. | `assertThat(..)` ([Checking with a getter](common-mistakes.md#checking-with-a-getter)). |
 | The test relies on client-side behaviour that Browserless simulates or doesn't have. | See [Known limitations](#known-limitations-by-testing-tool). |
-| The two runs take different steps. | Run the browser run with the Browserless run's evidence, and read its *Compared with another Testing Tool* section *(unreleased)* ([Compared with another Testing Tool](reports-and-failures.md#compared-with-another-testing-tool)). |
+| The two runs take different steps. | Run the browser run with the Browserless run's evidence, and read its *Compared with another Testing Tool* section ([Compared with another Testing Tool](reports-and-failures.md#compared-with-another-testing-tool)). |
 
 ## The test fails before its first step
 
@@ -108,4 +108,4 @@ What doesn't work the same on every Testing Tool yet. The full list, with the ga
 | Browserless: `page.reload()`, `pressKey`, `dispatchEvent` | simulated: events bubble from the target to the UI; `page.pressKey` goes to the focused component or the open dialog; client-side behaviour (e.g. typing text, Tab moving focus) doesn't happen ([#66](https://github.com/parttio/unified-testing-tool/issues/66)) |
 | Browserless: deselecting one item of a MultiSelectComboBox | done on the server, not as from the client ([#61](https://github.com/parttio/unified-testing-tool/issues/61)) |
 | Selenium: a combo box's `getItems()` | the drop-down's first page only (50 items by default; [#127](https://github.com/parttio/unified-testing-tool/issues/127)) |
-| The browser's console errors *(unreleased)* (under each User Step, and in `hasNoErrors()`) | Playwright, and Selenium with Chrome; Firefox on Selenium has no browser log ([#316](https://github.com/parttio/unified-testing-tool/issues/316)) |
+| The browser's console errors (under each User Step, and in `hasNoErrors()`) | Playwright, and Selenium with Chrome; Firefox on Selenium has no browser log ([#316](https://github.com/parttio/unified-testing-tool/issues/316)) |

@@ -7,11 +7,11 @@ The Unified API needs no CI plugin. When the tests have run, it writes its repor
 | Failed tests' User Steps in the CI log | nothing |
 | `summary.md`: the counts, the scenarios changed in the pull request, the failed scenarios | nothing: written to `target/surefire-reports/unified-evidence/` |
 | `report.html`: the same run in a browser, with every scenario's User Steps and the failure screenshots | nothing: written next to `summary.md`; read it from the artifact |
-| `summary.json` *(unreleased)*: the same run as data, for a script or an agent | nothing: written next to `summary.md` |
+| `summary.json`: the same run as data, for a script or an agent | nothing: written next to `summary.md` |
 | The summary on the GitHub job's page | GitHub Actions: nothing |
 | **Changed in this PR** in the summary | the git history and the base branch in the checkout |
 | How each changed scenario's User Steps differ from the base branch's | the base branch's evidence artifact, downloaded |
-| Where the Testing Tools' runs differ *(unreleased)* | a job after the others, with `CompareRuns` ([below](#comparing-the-testing-tools-runs)) |
+| Where the Testing Tools' runs differ | a job after the others, with `CompareRuns` ([below](#comparing-the-testing-tools-runs)) |
 | Every test's User Steps and failure screenshots after the build | an artifact upload of the evidence directory |
 
 ## GitHub Actions
@@ -129,8 +129,6 @@ What each part does:
 
 ### Comparing the Testing Tools' runs
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 With a job per Testing Tool, the jobs run side by side and none has another's evidence, so `vaadin.testing.user-steps.compare-dir` has nothing to read. A job after them compares what they uploaded, with the `CompareRuns` command of `unified-test-api`:
 
 ```yaml
@@ -201,7 +199,7 @@ The jobs above run the tests once each. To run them on two Testing Tools in one 
                 <systemPropertyVariables>
                     <vaadin.testing.tool>playwright</vaadin.testing.tool>
                     <vaadin.testing.evidence-dir>${project.build.directory}/failsafe-reports/playwright/unified-evidence</vaadin.testing.evidence-dir>
-                    <!-- unreleased: the run before this one, for "Compared with Browserless" in this run's summary -->
+                    <!-- the run before this one, for "Compared with Browserless" in this run's summary -->
                     <vaadin.testing.user-steps.compare-dir>${project.build.directory}/failsafe-reports/browserless/unified-evidence</vaadin.testing.user-steps.compare-dir>
                 </systemPropertyVariables>
             </configuration>
@@ -212,7 +210,7 @@ The jobs above run the tests once each. To run them on two Testing Tools in one 
 
 - **Three settings per execution.** `reportsDirectory` and `summaryFile` are Failsafe's; `vaadin.testing.evidence-dir` is the Unified API's. Each `verify` goal reads its own execution's summary, so a failure on either Testing Tool fails the build.
 - **The parent's execution.** `spring-boot-starter-parent` binds Failsafe with an execution of its own, `default`, which runs the tests on the default Testing Tool, Browserless. Skip it as above. Without that parent there is no `default` execution to skip.
-- **The comparison.** Executions bound to the same phase run in the order of the POM, so the second can read the first's evidence: its `summary.md` gets [Compared with Browserless](reports-and-failures.md#compared-with-another-testing-tool) *(unreleased)*, with no `CompareRuns` job.
+- **The comparison.** Executions bound to the same phase run in the order of the POM, so the second can read the first's evidence: its `summary.md` gets [Compared with Browserless](reports-and-failures.md#compared-with-another-testing-tool), with no `CompareRuns` job.
 - **CI.** Upload `target/failsafe-reports/*/unified-evidence/`. On GitHub Actions each run adds its own block, headed with its Testing Tool, to the job summary.
 - **Surefire** (tests named `*Test`) is the same with `maven-surefire-plugin`: its own execution is `default-test`, give it the first Testing Tool's settings, and it has no `summaryFile`.
 
