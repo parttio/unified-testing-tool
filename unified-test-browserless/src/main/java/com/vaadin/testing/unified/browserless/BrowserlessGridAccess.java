@@ -47,12 +47,14 @@ final class BrowserlessGridAccess implements GridAccess {
     }
 
     /**
-     * The column's header text: the first header row with text for it, top to bottom. Column.getHeaderText()
-     * reads only one row, which is empty once a second header row (e.g. with filters) is added.
+     * The column's header text: the first header row with text for it, bottom to top, so its own caption wins
+     * over a group's joined cell above it (#338). Column.getHeaderText() reads only one row, which is empty once
+     * a second header row (e.g. with filters) is added.
      */
     private String headerText(Grid.Column<?> column) {
-        for (HeaderRow row : grid.getHeaderRows()) {
-            String text = row.getCell(column).getText();
+        List<HeaderRow> rows = grid.getHeaderRows();
+        for (int i = rows.size() - 1; i >= 0; i--) {
+            String text = rows.get(i).getCell(column).getText();
             if (text != null && !text.isBlank()) {
                 return text;
             }

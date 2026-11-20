@@ -94,7 +94,20 @@ public class UsersView extends VerticalLayout {
         tasks.setAllRowsVisible(true);
         tasks.addItemClickListener(e -> Notification.show("Clicked " + e.getItem().name()));
 
-        add(users, roles, archived, archivedOn, tasks);
+        // a header group row above the captions: the captions are in the second header row (#338)
+        Grid<User> staff = new Grid<>();
+        staff.setTestId("staff");
+        Grid.Column<User> staffName = staff.addColumn(User::name).setHeader("Name").setSortable(true)
+                .setComparator(User::name);
+        Grid.Column<User> staffRole = staff.addColumn(User::role).setHeader("Role").setSortable(true)
+                .setComparator(User::role);
+        staff.addColumn(User::email).setHeader("Email").setSortable(true).setComparator(User::email);
+        staff.setItems(List.of(new User("Ada", "b@example.com", "Editor"), new User("Bob", "c@example.com", "Admin"),
+                new User("Cy", "a@example.com", "Viewer")));
+        staff.prependHeaderRow().join(staffName, staffRole).setText("Person");
+        staff.setAllRowsVisible(true);
+
+        add(users, roles, archived, archivedOn, tasks, staff);
     }
 
     private java.util.stream.Stream<User> filtered() {

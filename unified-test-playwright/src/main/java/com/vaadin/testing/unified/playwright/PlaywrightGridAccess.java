@@ -51,10 +51,52 @@ final class PlaywrightGridAccess implements GridAccess {
         return grid.getTotalRowCount();
     }
 
+    /**
+     * Per visible column, in display order (Dramafinder's column index): the first non-blank text of its header
+     * cells, its own cell first, then those of the column groups around it, so a caption under a header group
+     * wins over the group's joined cell (#338); "" when none has text. A cell whose content isn't rendered yet
+     * gives [header row index, index of the th in its row] instead, to scroll it into view and read again.
+     */
+    private static final String HEADER_TEXTS_JS = """
+            g => {
+                const rows = [...g.shadowRoot.querySelectorAll('thead tr')];
+                const columns = g._getColumns().filter(c => !c.hidden).sort((a, b) => a._order - b._order);
+                return columns.map(column => {
+                    for (let c = column; c && c.localName.startsWith('vaadin-grid-column'); c = c.parentElement) {
+                        const th = c._headerCell;
+                        if (!th || !rows.includes(th.parentElement) || th.parentElement.hidden) continue;
+                        const slot = th.querySelector('slot');
+                        const content = slot && g.querySelector(
+                                ':scope > vaadin-grid-cell-content[slot="' + CSS.escape(slot.name) + '"]');
+                        if (!content) {
+                            return [rows.indexOf(th.parentElement), [...th.parentElement.children].indexOf(th)];
+                        }
+                        const text = content.innerText.trim();
+                        if (text) return text;
+                    }
+                    return '';
+                });
+            }
+            """;
+
+    /** Each column's caption, read from whichever header row holds it (a header group may sit above). */
     @Override
     public List<String> columnHeaders() {
-        List<String> all = grid.getHeaderCellContents();
-        return domColumns().stream().map(i -> all.get(i).strip()).toList();
+        List<?> all = (List<?>) locator.evaluate(HEADER_TEXTS_JS);
+        boolean scrolled = false;
+        for (Object value : all) {
+            if (value instanceof List<?> position) {
+                locator.locator("thead tr").nth(((Number) position.get(0)).intValue())
+                        .locator(":scope > *").nth(((Number) position.get(1)).intValue())
+                        .scrollIntoViewIfNeeded();
+                scrolled = true;
+            }
+        }
+        if (scrolled) {
+            all = (List<?>) locator.evaluate(HEADER_TEXTS_JS);
+        }
+        List<?> texts = all;
+        return domColumns().stream().map(i -> texts.get(i) instanceof String text ? text : "").toList();
     }
 
     @Override
@@ -213,9 +255,21 @@ final class PlaywrightGridAccess implements GridAccess {
                 : GridElement.SortDirection.DESCENDING);
     }
 
+    /**
+     * The header cell holding the column's sorter: its own cell or a group's, in whichever header row (#338).
+     * Without a sorter, the column's own cell, the lowest one, for Dramafinder's "not sortable" error.
+     */
     private GridElement.HeaderCellElement headerCell(int column) {
-        return grid.findHeaderCell(dom(column))
-                .orElseThrow(() -> new IllegalStateException("No header cell for column " + column));
+        List<GridElement.HeaderCellElement> cells = grid.getHeaderCells(dom(column));
+        if (cells.isEmpty()) {
+            throw new IllegalStateException("No header cell for column " + column);
+        }
+        for (int i = cells.size() - 1; i >= 0; i--) {
+            if (cells.get(i).isSortable()) {
+                return cells.get(i);
+            }
+        }
+        return cells.get(cells.size() - 1);
     }
 
     // ---------------------------------------------------------------- details
