@@ -23,6 +23,7 @@ Each assertion retries until it holds or the timeout (10 s by default) passes, t
 | `UnifiedNotification` | `isOpen()`, `hasText(..)` |
 | `UnifiedTabSheet`, `UnifiedTabs` | `hasSelectedTab(..)`, `hasTabs(..)` |
 | `UnifiedDetails` | `isOpen()`, `isClosed()`, `hasSummaryText(..)` |
+| `UnifiedMenuBar` | `hasItems(..)`, `hasItems(path, ..)`, `hasItem(..)`, `hasItemEnabled(..)`, `hasItemDisabled(..)` *(unreleased)* |
 | `UnifiedGrid` | `hasRowCount(..)`, `isEmpty()`, `hasColumn(..)`, `doesNotHaveColumn(..)`, `hasColumnHeaders(..)` *(unreleased)* |
 | grid row | `exists()`, `doesNotExist()`, `hasCount(n)`, `hasCellText(column, text)`, `isSelected()`, `isNotSelected()`, `hasDetailsOpen()`, `hasDetailsClosed()` |
 | grid column | `hasCellTexts(..)`, `isSortedAscending()`, `isSortedDescending()` |

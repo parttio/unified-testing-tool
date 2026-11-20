@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
+import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
 import java.lang.reflect.Proxy;
 import java.time.Duration;
@@ -97,7 +98,7 @@ final class FakePage {
                     case "getTag" -> component.get("tag");
                     case "getProperty", "getAttribute" -> component.get((String) args[0]);
                     case "getPropertyBoolean" -> Boolean.valueOf(component.get((String) args[0]));
-                    case "tryUnwrap" -> Optional.empty();
+                    case "tryUnwrap" -> args[0] == MenuBarAccess.class ? Optional.of(menuBar(component)) : Optional.empty();
                     case "setValueAsUser" -> {
                         component.put("value", String.valueOf(args[0]));
                         component.put("checked", String.valueOf(args[0]));
@@ -115,6 +116,28 @@ final class FakePage {
                     case "equals" -> proxy == args[0];
                     default -> null;
                 });
+    }
+
+    /**
+     * A menu bar's items from its properties: {@code "items"} for the top level, {@code "items File/Export"}
+     * under a path, and {@code "disabled"} listing the paths of disabled items ({@code "File/Print"}).
+     */
+    private static MenuBarAccess menuBar(Map<String, String> component) {
+        return new MenuBarAccess() {
+            @Override
+            public List<String> items(List<String> path) {
+                String key = path.isEmpty() ? "items" : "items " + String.join("/", path);
+                return List.of(component.getOrDefault(key, "").split(","));
+            }
+
+            @Override
+            public void click(List<String> path) { }
+
+            @Override
+            public boolean isEnabled(List<String> path) {
+                return !List.of(component.getOrDefault("disabled", "").split(",")).contains(String.join("/", path));
+            }
+        };
     }
 
     /** The recorded steps as text, one line each, without the header line. */

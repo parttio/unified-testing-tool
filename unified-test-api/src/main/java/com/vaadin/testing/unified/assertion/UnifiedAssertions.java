@@ -66,6 +66,7 @@ public final class UnifiedAssertions {
     public static DateTimePickerAssert assertThat(com.vaadin.testing.unified.component.UnifiedDateTimePicker field) { return new DateTimePickerAssert(field); }
     public static TabsAssert assertThat(com.vaadin.testing.unified.component.UnifiedTabs tabs) { return new TabsAssert(tabs); }
     public static DetailsAssert assertThat(com.vaadin.testing.unified.component.UnifiedDetails details) { return new DetailsAssert(details); }
+    public static MenuBarAssert assertThat(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { return new MenuBarAssert(menuBar); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
@@ -661,6 +662,61 @@ public final class UnifiedAssertions {
 
         public DetailsAssert hasSummaryText(String expected) {
             return check("to have summary text", expected, details::getSummaryText, v -> Objects.equals(v, expected));
+        }
+    }
+
+    /** Retrying checks of a menu bar's items, named by their Item Names from the top level down. */
+    public static final class MenuBarAssert extends WrapperAssert<MenuBarAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedMenuBar menuBar;
+
+        MenuBarAssert(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { super(menuBar); this.menuBar = menuBar; }
+
+        /** Exactly these top-level items, in this order. */
+        public MenuBarAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, menuBar::getItems, list::equals);
+        }
+
+        /**
+         * Exactly these items, in this order, in the sub-menu at this path:
+         * {@code hasItems(List.of("File", "Export"), "PDF", "CSV")}. Opens the menus along the path in a browser.
+         */
+        public MenuBarAssert hasItems(List<String> path, String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items under " + shown(String.join(" › ", path)), list, () -> itemsUnder(path),
+                    list::equals);
+        }
+
+        /** The menu offers the item at this path: {@code hasItem("File", "Export", "CSV")}. Opens its menus in a browser. */
+        public MenuBarAssert hasItem(String topLevel, String... nested) {
+            List<String> path = path(topLevel, nested);
+            String item = path.get(path.size() - 1);
+            return check("to have item", String.join(" › ", path), () -> itemsUnder(path.subList(0, path.size() - 1)),
+                    v -> ((List<?>) v).contains(item));
+        }
+
+        /** The user can click the item at this path. Opens the menus along it in a browser. */
+        public MenuBarAssert hasItemEnabled(String topLevel, String... nested) {
+            return check("to have enabled item", String.join(" › ", path(topLevel, nested)),
+                    () -> menuBar.isItemEnabled(topLevel, nested), Boolean.TRUE::equals);
+        }
+
+        /** The item at this path is shown but can't be clicked. Opens the menus along it in a browser. */
+        public MenuBarAssert hasItemDisabled(String topLevel, String... nested) {
+            return check("to have disabled item", String.join(" › ", path(topLevel, nested)),
+                    () -> menuBar.isItemEnabled(topLevel, nested), Boolean.FALSE::equals);
+        }
+
+        private static List<String> path(String topLevel, String... nested) {
+            List<String> path = new java.util.ArrayList<>();
+            path.add(topLevel);
+            path.addAll(List.of(nested));
+            return List.copyOf(path);
+        }
+
+        private List<String> itemsUnder(List<String> path) {
+            return path.isEmpty() ? menuBar.getItems()
+                    : menuBar.getItems(path.get(0), path.subList(1, path.size()).toArray(String[]::new));
         }
     }
 
