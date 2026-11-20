@@ -217,6 +217,15 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
 
 ## Fixed
 
+- On Playwright, `selectItem(..)`, `selectItems(..)` and `deselectItems(..)` in a field the application replaces
+  as it takes the value waited 10 s and failed with Playwright's `TimeoutError`, though the change went through, as
+  in the order editor of Vaadin's Bakery ([#377](https://github.com/parttio/unified-testing-tool/issues/377)). A
+  field the lookup no longer finds is not checked after the change, and a multi-select combo box's drop-down is
+  closed only while the field is still there.
+- A pick that didn't take failed with a plain `IllegalStateException`, `"Large" could not be selected in …`, and
+  a read that timed out while checking it with Playwright's `TimeoutError`. Both now fail as a
+  `UnifiedAssertionError`: `Expected  item “Large” selected in combo box “Size”`, `Found` what is selected, the
+  Testing Tool's own error as the cause ([#377](https://github.com/parttio/unified-testing-tool/issues/377)).
 - A run without the adapter of its Testing Tool named the dependency to add as `com.vaadin:unified-test-<tool>`,
   which the alphas aren't published as. It now names `org.vaadin.addons:unified-test-<tool>`
   ([#435](https://github.com/parttio/unified-testing-tool/issues/435)).

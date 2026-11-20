@@ -5,11 +5,13 @@ import com.vaadin.flow.component.combobox.testbench.MultiSelectComboBoxElement;
 import com.vaadin.flow.component.radiobutton.testbench.RadioButtonGroupElement;
 import com.vaadin.testbench.HasClearButton;
 import com.vaadin.testing.unified.spi.SelectionAccess;
+import com.vaadin.testing.unified.spi.StaleElementException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 
 /**
@@ -37,6 +39,10 @@ final class SeleniumSelectionAccess implements SelectionAccess {
 
     @Override
     public List<String> selectedItems() {
+        return SeleniumSession.stale(this::readSelected);
+    }
+
+    private List<String> readSelected() {
         return switch (kind) {
             case COMBO_BOX -> {
                 String text = session.testBench(element).wrap(ComboBoxElement.class).getSelectedText();
@@ -146,7 +152,7 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         combo.setFilter(label);
         session.waitForVaadin();
         if (items().contains(label)) {
-            combo.selectByText(label);
+            replaceable(() -> combo.selectByText(label));
             session.waitForVaadin();
             return true;
         }
@@ -158,24 +164,41 @@ final class SeleniumSelectionAccess implements SelectionAccess {
 
     @Override
     public void select(String label) {
-        switch (kind) {
-            case COMBO_BOX -> session.testBench(element).wrap(ComboBoxElement.class).selectByText(label);
-            case MULTI_SELECT_COMBO_BOX -> {
-                MultiSelectComboBoxElement multi = session.testBench(element).wrap(MultiSelectComboBoxElement.class);
-                multi.selectByText(label);
-                multi.closePopup();
+        replaceable(() -> {
+            switch (kind) {
+                case COMBO_BOX -> session.testBench(element).wrap(ComboBoxElement.class).selectByText(label);
+                case MULTI_SELECT_COMBO_BOX -> {
+                    MultiSelectComboBoxElement multi = session.testBench(element).wrap(MultiSelectComboBoxElement.class);
+                    multi.selectByText(label);
+                    multi.closePopup();
+                }
+                case RADIO_BUTTON_GROUP -> session.testBench(element).wrap(RadioButtonGroupElement.class).selectByText(label);
             }
-            case RADIO_BUTTON_GROUP -> session.testBench(element).wrap(RadioButtonGroupElement.class).selectByText(label);
-        }
+        });
         session.waitForVaadin();
     }
 
     @Override
     public void deselect(String label) {
-        MultiSelectComboBoxElement multi = session.testBench(element).wrap(MultiSelectComboBoxElement.class);
-        multi.deselectByText(label);
-        multi.closePopup();
+        replaceable(() -> {
+            MultiSelectComboBoxElement multi = session.testBench(element).wrap(MultiSelectComboBoxElement.class);
+            multi.deselectByText(label);
+            multi.closePopup();
+        });
         session.waitForVaadin();
+    }
+
+    /**
+     * A change after which the element may be stale: the app may replace the field as it takes the value (#377),
+     * and TestBench closes the drop-down after it. The core's check after the change reads the field again and
+     * tells a replaced field (nothing to check) from a re-rendered one (the change is retried).
+     */
+    private static void replaceable(Runnable change) {
+        try {
+            change.run();
+        } catch (StaleElementReferenceException | StaleElementException e) {
+            // left to the core's check
+        }
     }
 
     /** The clear button when shown, as a user would; otherwise TestBench's clear. */
