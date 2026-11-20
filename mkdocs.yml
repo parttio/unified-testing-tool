@@ -74,6 +74,8 @@ nav:
           - Wrappers for your own components: guide/custom-wrappers.md
           - Checking the style: guide/style-rules.md
       - For agents: guide/for-agents.md
+      - Maintain:
+          - Benchmarking the Unified layer: guide/performance-benchmark.md
   - Coming from another tool:
       - One test, four ways: comparison.md
       - Migrating from TestBench: migrating-from-testbench.md
@@ -93,6 +95,7 @@ nav:
       - 10. Packaging: spec/10-packaging.md
       - 11. Users: spec/11-users.md
       - 12. Readable tests: spec/12-readable-tests.md
+      - 13. Performance: spec/13-performance.md
       - Open questions: spec/open-questions.md
       - "Appendix: gaps": spec/appendix-gaps.md
       - "Appendix: mapping": spec/appendix-mapping.md

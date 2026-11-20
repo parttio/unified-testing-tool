@@ -86,6 +86,7 @@ Java 21, JUnit 6 (Jupiter) as the Test Runner integration shipped, Vaadin 25, Sp
 | 10 | [10-packaging.md](10-packaging.md) | Modules, artifacts, versioning, licenses |
 | 11 | [11-users.md](11-users.md) | Running as a user, several windows and users |
 | 12 | [12-readable-tests.md](12-readable-tests.md) | Readable tests: lookups without a terminal, User Tasks, User Step reports, failures, style rules, the agent skill |
+| 13 | [13-performance.md](13-performance.md) | Performance: Performance Pairs, round trips and time, the budget, where the checks run |
 | A | [appendix-mapping.md](appendix-mapping.md) | Unified API call → each Testing Tool |
 | B | [appendix-gaps.md](appendix-gaps.md) | Gaps to close in the Testing Tools |
 | C | [open-questions.md](open-questions.md) | What is not decided yet |

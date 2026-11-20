@@ -44,6 +44,7 @@ Every action and assertion is reported as a User Step, in the user's words. The 
     - [Wrappers for your own components](custom-wrappers.md): add-ons, custom components, custom filters;
     - [Checking the style](style-rules.md): scenario sentences, no raw waits and `@RequiresTestingTool`, checked by a test.
 - **For agents:** [For agents](for-agents.md): the skill, the API reference in the jar, `llms.txt`, and how to check what an agent did.
+- **Maintain:** [Benchmarking the Unified layer](performance-benchmark.md): for contributors to the Unified API, the round-trip check and the time benchmark that compare Unified UI Tests with Direct Tests.
 
 ## Running it in a browser
 
