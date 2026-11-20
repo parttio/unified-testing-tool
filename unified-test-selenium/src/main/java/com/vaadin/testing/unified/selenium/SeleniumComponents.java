@@ -79,18 +79,6 @@ final class SeleniumComponents {
         }
     }
 
-    /** How long a notification's card may show nothing before its text is read as empty: TestBench's 1 s. */
-    private static final java.time.Duration NOTIFICATION_CONTENT_WAIT = java.time.Duration.ofSeconds(1);
-
-    /**
-     * Waits about a frame, then tells whether the card has a visible child element: what NotificationElement
-     * waits for besides text. A timeout, not requestAnimationFrame, which doesn't run in a background tab.
-     */
-    private static final String NEXT_FRAME_VISIBLE_CHILD = """
-            const card = arguments[0], done = arguments[arguments.length - 1];
-            setTimeout(() => done([...card.querySelectorAll('*')].some(e =>
-                e.checkVisibility({ opacityProperty: true, visibilityProperty: true }))), 16);""";
-
     static final Support DEFAULT = new Support() {};
     private static final Map<Class<? extends Component>, Support> REGISTRY = new LinkedHashMap<>();
 
@@ -145,8 +133,8 @@ final class SeleniumComponents {
             }
 
             /**
-             * The card the notification shows its content in. Not NotificationElement.getContext(): it waits for
-             * the card's content like getText() below.
+             * The card the notification shows its content in. Not NotificationElement.getContext(), which waits
+             * for the card to show its content, polling every 500 ms.
              */
             @Override
             public WebElement content(WebElement element, SeleniumSession session) {
@@ -154,23 +142,15 @@ final class SeleniumComponents {
             }
 
             /**
-             * The card's visible text, once it shows text or a visible child, as NotificationElement.getText()
-             * reads it, but checked about every frame. TestBench's own wait polls every 500 ms, and right
-             * after the action that opened the notification the card isn't shown yet: 500 ms on each read (#447).
+             * The card's DOM text, as the Playwright adapter reads it: not NotificationElement.getText(), the
+             * visible text, which is empty while the card's open animation runs, and which TestBench waits for
+             * in 500 ms polls (#447). getVisibleText() still reads what is shown.
              */
             @Override
             public Optional<String> text(WebElement element, SeleniumSession session) {
-                WebElement card = card(element, session);
-                long deadline = System.nanoTime() + NOTIFICATION_CONTENT_WAIT.toNanos();
-                while (true) {
-                    String text = SeleniumSession.stale(card::getText);
-                    if (!text.isEmpty() || System.nanoTime() > deadline) {
-                        return Optional.of(text); // empty after the wait: the card may be empty on purpose
-                    }
-                    if (Boolean.TRUE.equals(session.jsAsync(NEXT_FRAME_VISIBLE_CHILD, card))) {
-                        return Optional.of(SeleniumSession.stale(card::getText));
-                    }
-                }
+                return Optional.of((String) session.js("const card = arguments[0]._card;"
+                        + " return card ? (" + com.vaadin.testing.unified.internal.BrowserQueries.TEXT + ")(card) : '';",
+                        element));
             }
 
             @Override
