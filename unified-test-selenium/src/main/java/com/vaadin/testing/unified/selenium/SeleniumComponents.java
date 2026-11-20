@@ -2,7 +2,6 @@ package com.vaadin.testing.unified.selenium;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.checkbox.Checkbox;
-import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -118,13 +117,11 @@ final class SeleniumComponents {
         register(Checkbox.class, new Support() {
             @Override
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {
-                CheckboxElement checkbox = session.testBench(element).wrap(CheckboxElement.class);
-                boolean checked = Boolean.TRUE.equals(value);
-                if (checkbox.isChecked() != checked) {
-                    // TestBench sets the property without a click, which would clear indeterminate
-                    checkbox.setProperty("indeterminate", false);
-                }
-                checkbox.setChecked(checked);
+                // TestBench's setChecked: the property, then change; plus what a click does to indeterminate,
+                // in the same script so it costs no extra round trip
+                session.js("if (arguments[0].checked !== arguments[1]) { arguments[0].indeterminate = false; }"
+                        + " arguments[0].checked = arguments[1];", element, Boolean.TRUE.equals(value));
+                session.testBench(element).dispatchEvent("change", Map.of("bubbles", true));
                 return true;
             }
         });
