@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import org.junit.platform.engine.discovery.MethodSelector;
 import org.junit.platform.launcher.Launcher;
 import org.junit.platform.launcher.LauncherDiscoveryRequest;
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
@@ -118,10 +119,25 @@ public final class TimeBenchmark {
         };
     }
 
+    /**
+     * The test method by name, whatever its parameters: {@code selectMethod(class, name)} only finds one without
+     * any, and the Unified UI Tests take a {@code UnifiedPage}.
+     */
+    private static MethodSelector testMethod(String testClass, String method) {
+        try {
+            Class<?> type = Class.forName(testClass);
+            return Arrays.stream(type.getDeclaredMethods())
+                    .filter(m -> m.getName().equals(method)).findFirst().map(m -> selectMethod(type, m))
+                    .orElseThrow(() -> new IllegalArgumentException("No test method " + testClass + "." + method));
+        } catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("No test class " + testClass, e);
+        }
+    }
+
     /** Runs one test class (or one of its methods), as the demo's Surefire configuration would; exits 2 on a failure. */
     private static void run(Launcher launcher, String testClass, String method, String tool) {
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-                .selectors(method == null ? selectClass(testClass) : selectMethod(testClass, method))
+                .selectors(method == null ? selectClass(testClass) : testMethod(testClass, method))
                 .configurationParameter("vaadin.testing.tool", tool)
                 .configurationParameter("vaadin.testing.browserless.route-errors-to-session", "true")
                 .configurationParameter("junit.jupiter.execution.parallel.enabled", "false")
