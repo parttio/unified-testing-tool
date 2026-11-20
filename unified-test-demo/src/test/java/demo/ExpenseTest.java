@@ -102,6 +102,32 @@ class ExpenseTest {
         assertNull(departure.getValue());
     }
 
+    // --8<-- [start:typesADateWithoutATime]
+    @Test
+    @DisplayName("A departure with a date but no time asks for both, on every Testing Tool and locale")
+    void typesADateWithoutATime(UnifiedPage page) {
+        page.navigate(ExpenseView.class);
+        UnifiedDateTimePicker departure = page.find(UnifiedDateTimePicker.class).withLabel("Departure");
+
+        departure.typeText(LocalDate.of(2026, 7, 1), "");
+
+        assertThat(departure).isInvalid().hasErrorMessage("Enter both a date and a time");
+        assertNull(departure.getValue());
+    }
+    // --8<-- [end:typesADateWithoutATime]
+
+    @Test
+    @DisplayName("A Finnish-locale arrival with a date but no time asks for both")
+    void typesADateInTheFieldsLocale(UnifiedPage page) {
+        page.navigate(ExpenseView.class);
+        UnifiedDateTimePicker arrival = page.find(UnifiedDateTimePicker.class).withLabel("Arrival");
+
+        arrival.typeText(LocalDate.of(2026, 7, 1), "");
+
+        assertThat(arrival).isInvalid().hasErrorMessage("Enter both a date and a time");
+        assertNull(arrival.getValue());
+    }
+
     @Test
     @DisplayName("The user filters the expenses to the rejected ones")
     void selectsATab(UnifiedPage page) {

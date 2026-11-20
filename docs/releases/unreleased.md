@@ -196,6 +196,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `clickItem(..)`. They replace `assertEquals` on `getItems(..)` and `isItemEnabled(..)`, which read once and left
   no `see` line in `user-steps.txt`. See
   [Buttons and menus](https://parttio.github.io/unified-testing-tool/guide/components/#buttons-and-menus).
+- **`UnifiedDateTimePicker.typeText(LocalDate, String)`**
+  ([#329](https://github.com/parttio/unified-testing-tool/issues/329)): types the date in the field's own format,
+  which a browser takes from the field's locale, and the time as it is. A test of incomplete input, a date with no
+  time, no longer branches on the Testing Tool: `typeText("2026-07-01", "")` was incomplete input on Browserless
+  and bad input in a browser.
 
 ## New settings
 

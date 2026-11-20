@@ -41,6 +41,15 @@ To check how the field handles text it can't parse, type it:
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:unparsableText"
 ```
 
+Text is typed as it is, and Browserless parses only ISO dates while a browser parses the field's locale format, so
+`"2026-07-01"` is bad input in a browser. For incomplete input, a date the field can parse with no time, give the
+date as a `LocalDate` *(unreleased)*: `typeText(LocalDate, String)` types it in the field's own format, on every
+Testing Tool and in every locale.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:typesADateWithoutATime"
+```
+
 ## Checkbox
 
 ```java

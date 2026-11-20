@@ -22,6 +22,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.server.streams.UploadHandler;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /** An expense form with the fields, menus, tabs, details and upload a typical Flow app has. */
 @AnonymousAllowed
@@ -33,7 +34,15 @@ public class ExpenseView extends VerticalLayout {
         IntegerField nights = new IntegerField("Nights");
         BigDecimalField amount = new BigDecimalField("Amount");
         DateTimePicker departure = new DateTimePicker("Departure");
+        departure.setI18n(new DateTimePicker.DateTimePickerI18n()
+                .setBadInputErrorMessage("Enter a valid date and time")
+                .setIncompleteInputErrorMessage("Enter both a date and a time"));
         DatePicker returnDate = new DatePicker("Return date");
+        // a field in its own locale: Finnish dates read 1.7.2026
+        DateTimePicker arrival = new DateTimePicker("Arrival");
+        arrival.setLocale(Locale.forLanguageTag("fi-FI"));
+        arrival.setI18n(new DateTimePicker.DateTimePickerI18n()
+                .setIncompleteInputErrorMessage("Enter both a date and a time"));
 
         Span status = new Span();
         status.setId("status");
@@ -74,7 +83,7 @@ public class ExpenseView extends VerticalLayout {
         Button save = new Button("Save", e -> Notification.show("Saved: " + notes.getValue() + " / "
                 + nights.getValue() + " nights / " + amount.getValue() + " / " + departure.getValue() + " / "
                 + returnDate.getValue() + " / " + costCenter.getValue()));
-        add(menu, filter, status, notes, nights, amount, departure, returnDate, advanced, receipt, attachment,
+        add(menu, filter, status, notes, nights, amount, departure, arrival, returnDate, advanced, receipt, attachment,
                 attachments, summary, help, save);
     }
 }

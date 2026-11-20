@@ -20,6 +20,7 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
 3. **Prove it.** For every test class you changed, run it on Browserless and on Playwright:
    `mvn test -Dtest=<Class>` and `mvn test -Dtest=<Class> -Dvaadin.testing.tool=playwright`.
    A test passes, or is skipped because it still declares `@RequiresTestingTool`. When one fails, fix it or put the Escape Hatch back with an explanation. Remove a `@RequiresTestingTool(TestingTool.PLAYWRIGHT)` only once the test passes on both. Done when every changed class passes on both.
+   Last, run the whole test suite on both: `mvn test` and `mvn test -Dvaadin.testing.tool=playwright`. A per-class run can't show test data one class leaves behind for the next. Done when both pass.
 4. **Report** a table: marker, outcome (resolved or kept), what you changed.
 
 ## Reference: the Unified API
@@ -27,6 +28,16 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
 Write the Unified code the way the `write-unified-ui-tests` skill (`.claude/skills/write-unified-ui-tests/SKILL.md`)
 says: its canonical forms for lookups, grid rows and retrying assertions, and how to read a failure. Read it before
 the first marker. Read a Wrapper's methods in the `unified-test-api` sources before writing a call.
+
+## Reference: where a literal conversion changes meaning
+
+Check every converted test for these, marker or not; each passed before migration and fails after, on one Testing Tool or both:
+
+- **An absence check.** Lookups include hidden components, on every Testing Tool; the old Browserless locators didn't. Where the view hides a component instead of removing it, `assertFalse(findButton().withText("Approve").exists())` becomes `assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist()`. Text the same way: `getText()` and `hasText(..)` include hidden content, so for "the dialog doesn't say X", look up the component that holds X with `.visible()` and check `doesNotExist()`.
+- **A checkbox click.** `element().click()` toggles a checkbox on Browserless only. Set it: `check()`, `uncheck()` or `setChecked(..)` on `UnifiedCheckbox`, with the state the test expects after the click.
+- **A navigation that was expected to throw** (`assertThrows(.., () -> navigate(..))`, a denied or missing route). `page.navigate(..)` doesn't throw: where the router sends the user is the result. Assert what the user sees: `assertThat(page).isAt(LoginView.class)` or the not-found view, and `doesNotExist()` on what the denied view would show (its grid, its form).
+- **A test of the application's error handling** (an error dialog after an action fails). On Browserless an exception from a listener goes into the test by default. Set `vaadin.testing.browserless.route-errors-to-session=true` (in `junit-platform.properties`) to send it to the session's `ErrorHandler`, as a browser does, and assert the error dialog on every Testing Tool.
+- **Several Spring contexts.** Each class with its own context setup (a `@ServiceConnection` container field, `@MockitoBean`, `@Import`, properties, profiles) starts another Spring context, each with an embedded server on every Testing Tool. When migrated classes each declare the same container field, move it, `@UnifiedSpringBootTest` and the profile to one shared base class they all extend, so the suite runs on one context.
 
 ## Reference: the Escape Hatches
 
@@ -47,7 +58,11 @@ When a method no longer uses its Escape Hatch variable, delete that line. When a
 
 **`was withCaption(..)` / `was withLabel(..)` on a button.** Read the view: when the button shows that text, delete the marker. When it is an icon-only button, the text is its accessible name: use `withAccessibleName(..)`, then delete the marker.
 
-**`..., no Wrapper for X: write one (ADR 0003)` / `..., a custom element: write a Wrapper for it (ADR 0003)`.** Look for an existing Wrapper first: search for `@UnifiedComponent(` naming the same Flow component (a TestBench element's `@Element` tag is the component's `@Tag`). Use it when found. Otherwise write one next to the tests: an interface with `@UnifiedComponent(TheComponent.class)`, extending `UnifiedWrapper` and the filter mixins it needs with itself as the type argument (`CommonFilters<UnifiedX>`, and `LabelFilter<UnifiedX>`, `TextFilter<UnifiedX>` or `PlaceholderFilter<UnifiedX>`), with `default` methods written on `element()` (`getProperty`, `getText`, `findChildren(..)`, `click()`). Translate each call the test makes, then replace the lookup and delete the Escape Hatch. Keep it when the component's state lives only on the server (Browserless) or needs real browser rendering (Selenium).
+**`..., no Wrapper for X: write one (ADR 0003)` / `..., a custom element: write a Wrapper for it (ADR 0003)`.** Look for an existing Wrapper first, for X and then for each of its superclasses (a TestBench element's `@Element` tag is the component's `@Tag`):
+- the Core Set: the library's Wrappers are in a jar, where a source search can't see them. Each is listed with the Flow class it finds ("Flow's `Dialog`") in `META-INF/unified/api-reference.md` inside the `unified-test-api` jar (the same page is [on the site](https://parttio.github.io/unified-testing-tool/api-reference.md));
+- the project: search the test sources for `@UnifiedComponent(` naming the class.
+
+Use the Wrapper found for X. For a superclass's Wrapper, add the filter that tells X apart: `RowActionMenu extends MenuBar` is `page.find(UnifiedMenuBar.class).withClassName("row-action-menu")`, `ErrorDialog extends Dialog` is `page.find(UnifiedDialog.class).withHeaderTitle(..)`. A Flow class with no Wrapper on its chain is `page.findComponent(X.class)` with a filter when the test only finds, clicks or reads its text. Otherwise write one next to the tests: an interface with `@UnifiedComponent(TheComponent.class)`, extending `UnifiedWrapper` and the filter mixins it needs with itself as the type argument (`CommonFilters<UnifiedX>`, and `LabelFilter<UnifiedX>`, `TextFilter<UnifiedX>` or `PlaceholderFilter<UnifiedX>`), with `default` methods written on `element()` (`getProperty`, `getText`, `findChildren(..)`, `click()`). Translate each call the test makes, then replace the lookup and delete the Escape Hatch. Keep it when the component's state lives only on the server (Browserless) or needs real browser rendering (Selenium).
 
 ## Reference: marker kinds of the Dramafinder recipe
 
@@ -94,7 +109,11 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 
 **`was a scan of column <col>; withCellText(text) matches any column: name the column, withCellText(header, text), if another column can hold the text`.** The test scanned one column's cells for a text; `row().withCellText(text)` looks in every column. Read the view: when no other column can hold that text, delete the marker. Otherwise find column `<col>`'s header (the view's `addColumn(..).setHeader(..)`, or `grid.getColumnHeaders()`) and write `row().withCellText("<header>", text)`, then delete the marker. Run the test to prove the row is found.
 
-**`Browserless-only pattern: @Transactional ...`.** The test's transaction reaches the views only on Browserless. Keep it, with `// Escape Hatch kept: test data rolled back by @Transactional`, unless the test can commit its data and clean up after itself; then remove `@Transactional` and `@RequiresTestingTool(TestingTool.BROWSERLESS)`.
+**`Browserless-only pattern: @Transactional ...`.** The test's transaction reaches the views only on Browserless. Keep it, with `// Escape Hatch kept: test data rolled back by @Transactional`, unless the test can commit its data and clean up after itself; then remove `@Transactional` and `@RequiresTestingTool(TestingTool.BROWSERLESS)`. Cleaning up:
+- Clean every table the test writes to, through the view and through services the test or its fixtures call. A missed table passes per class and breaks later classes, and with a reused Testcontainers database, later runs too.
+- A fixture that loads an entity and calls a method on it relied on the test's open session: run it in a transaction of its own (`TransactionTemplate`).
+- For a base class whose subclasses all write to the same tables, snapshot those tables once and restore them after each test, instead of each test cleaning up its own rows.
+- Step 3's full-suite run on both Testing Tools proves the cleanup.
 
 **`Browserless-only pattern: a Spring context without @SpringBootTest ...`.** A narrow `@ContextConfiguration` has no web server for the browser Testing Tools. To run everywhere: replace `@UnifiedUITest`, `@ContextConfiguration` and `@ExtendWith(SpringExtension.class)` with `@UnifiedSpringBootTest`, mock the beans the narrow context left out with `@MockitoBean`, and remove `@RequiresTestingTool(TestingTool.BROWSERLESS)`. Keep it when the full application context can't start in the test.
 

@@ -1,6 +1,8 @@
 package com.vaadin.testing.unified.spring;
 
 import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.internal.Settings;
+import com.vaadin.testing.unified.internal.TestLifecycle;
 import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +19,9 @@ import org.springframework.core.annotation.AnnotationAttributes;
  * Browserless the same test passes, so it would pass on one tool and fail (or leak data) on another.
  * <p>
  * A condition, not a before-each callback: JUnit evaluates it before Spring starts the transaction, and
- * reports the exception as the test's failure.
+ * reports the exception as the test's failure. A test that doesn't run on this Testing Tool (its Capabilities,
+ * such as {@code @RequiresTestingTool(BROWSERLESS)}, on it or a superclass) is left to be skipped, whichever
+ * condition JUnit evaluates first.
  */
 final class TransactionalCheck implements ExecutionCondition {
 
@@ -26,10 +30,13 @@ final class TransactionalCheck implements ExecutionCondition {
 
     @Override
     public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
-        TestingTool tool = context.getConfigurationParameter("vaadin.testing.tool").filter(v -> !v.isBlank())
-                .map(TestingTool::parse).orElse(TestingTool.BROWSERLESS);
-        if (!tool.hasRealBrowser() || context.getTestClass().isEmpty()) {
+        TestLifecycle lifecycle = TestLifecycle.create(Settings.from(context::getConfigurationParameter));
+        TestingTool tool = lifecycle.settings().tool();
+        if (!tool.hasRealBrowser() || context.getTestClass().isEmpty() || context.getElement().isEmpty()) {
             return ConditionEvaluationResult.enabled("no transaction check needed");
+        }
+        if (!lifecycle.decide(context.getElement().get(), context.getRequiredTestClass()).runs()) {
+            return ConditionEvaluationResult.enabled("doesn't run on " + tool + "; @UnifiedUITest skips it");
         }
         List<AnnotatedElement> elements = new ArrayList<>();
         context.getTestMethod().ifPresent(elements::add);
