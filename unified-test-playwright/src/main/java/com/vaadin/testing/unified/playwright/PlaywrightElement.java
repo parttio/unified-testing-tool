@@ -245,8 +245,17 @@ final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unif
 
     @Override
     public void focus() {
-        focusable().focus();
+        if (dramafinder instanceof FocusableElement focusable) {
+            focusable.focus();
+            return;
+        }
+        // as on Selenium: a Vaadin field's focus part, whatever query found it (#450)
+        locator.evaluate(FOCUS);
+        AutoWait.afterAction(page());
     }
+
+    /** The part of a Vaadin component that takes focus: {@code focusElement}, else {@code inputElement}, else itself. */
+    private static final String FOCUS = "el => (el.focusElement || el.inputElement || el).focus()";
 
     @Override
     public void blur() {
