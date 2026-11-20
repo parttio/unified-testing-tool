@@ -204,8 +204,31 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |
 | `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: run with `includePageObjects`, or make the page object take a `UnifiedPage` by hand, then run the migration again |
 | `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
+| `one Spring context per class: N test classes (...) declare their own @ServiceConnection field ...`, on the field *(unreleased)* | Move the container, `@UnifiedSpringBootTest` and the profile to one shared base class (see [One Spring context](#one-spring-context)), then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
+
+## One Spring context
+
+`@UnifiedSpringBootTest` always starts the application on a random port, also on Browserless ([test setup](spec/02-test-setup.md)), so each Spring context the suite starts also starts an embedded server: about a second each. Spring caches a context and shares it between the test classes whose configuration is the same. Every difference starts another one: a class's own `@MockitoBean`s, `@Import`s, `properties`, profile or `@ServiceConnection` container field. Browserless suites often declare those per class, and the migration keeps them. One such suite started 9 contexts after the migration, and ran 54 % slower than before; with one shared base class it ran 7.5 % faster than before ([#331](https://github.com/parttio/unified-testing-tool/issues/331)).
+
+Keep the suite on one context: put `@UnifiedSpringBootTest`, the profile and the container in one base class, and have the test classes extend it.
+
+```java
+@UnifiedSpringBootTest
+@ActiveProfiles("test")
+abstract class UiTestBase {
+    @ServiceConnection
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
+}
+
+class DashboardViewTest extends UiTestBase {
+    @Test
+    void showsTheOrders(UnifiedPage page) { ... }
+}
+```
+
+Give a class setup of its own only when its tests need it, and move mocks several classes share to the base. *(unreleased)* When several migrated classes declare their own `@ServiceConnection` field, the recipe leaves a Migration Marker on each. To count the contexts a run starts, count `Tomcat started on port` in its log.
 
 ## Running in a browser
 
