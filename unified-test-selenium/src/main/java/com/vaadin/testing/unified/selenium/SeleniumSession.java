@@ -397,20 +397,25 @@ final class SeleniumSession implements AdapterSession {
         }
     }
 
-    /** A screenshot of the window. */
+    /** A screenshot of the window, with where it shows the failed step's Step Target. */
     @Override
-    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeFailureEvidence(Path directory, String name, com.vaadin.testing.unified.UnifiedElement target)
+            throws java.io.IOException {
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(screenshotInto(directory, name)), highlight(target));
+    }
+
+    private Path screenshotInto(Path directory, String name) throws java.io.IOException {
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".png");
         Files.write(file, driver().getScreenshotAs(OutputType.BYTES));
-        return List.of(file);
+        return file;
     }
 
     /** A screenshot of the window after the step: a WebDriver round trip each, so only when asked for. */
     @Override
     public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
             com.vaadin.testing.unified.UnifiedElement target) throws java.io.IOException {
-        return new com.vaadin.testing.unified.spi.Evidence(writeFailureEvidence(directory, name), highlight(target));
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(screenshotInto(directory, name)), highlight(target));
     }
 
     /** The Step Target's box in the window's screenshot, in fractions of it; null without a target. */

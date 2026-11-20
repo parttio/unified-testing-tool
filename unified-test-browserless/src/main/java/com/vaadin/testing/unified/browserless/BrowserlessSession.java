@@ -387,8 +387,14 @@ final class BrowserlessSession implements AdapterSession {
 
     /** The UI's component tree as text, with the location: what Browserless's TreeOnFailureExtension prints. */
     @Override
-    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
-        return writeTree(directory, name, target);
+    public com.vaadin.testing.unified.spi.Evidence writeFailureEvidence(Path directory, String name, com.vaadin.testing.unified.UnifiedElement stepTarget)
+            throws java.io.IOException {
+        return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name, marked(stepTarget)));
+    }
+
+    /** The component a tree marks: the Step Target the API names, else the one this session last acted on. */
+    private Component marked(com.vaadin.testing.unified.UnifiedElement stepTarget) {
+        return stepTarget instanceof BrowserlessElement element ? element.component() : target;
     }
 
     /** The component tree after the step: Browserless has no screenshot, and the tree is cheap. */
@@ -396,8 +402,7 @@ final class BrowserlessSession implements AdapterSession {
     public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
             com.vaadin.testing.unified.UnifiedElement stepTarget) throws java.io.IOException {
         try {
-            Component marked = stepTarget instanceof BrowserlessElement element ? element.component() : target;
-            return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name, marked));
+            return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name, marked(stepTarget)));
         } finally {
             target = null;
         }

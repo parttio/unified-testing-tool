@@ -47,6 +47,18 @@ class StepTargetHighlightTest {
         }
     }
 
+    /** Fails on a check of a field it found: the failure's screenshot marks that field. */
+    @UnifiedSpringBootTest
+    @Tag("launched-only")
+    static class FailingCheck {
+        @Test
+        void checksTheWrongName(UnifiedPage page) {
+            page.navigate(ProfileView.class);
+            page.find(UnifiedTextField.class).withLabel("Name").setValue("Ada");
+            assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Grace");
+        }
+    }
+
     private static final TestingTool TOOL = TestingTool
             .parse(System.getProperty("vaadin.testing.tool", "browserless"));
 
@@ -102,6 +114,19 @@ class StepTargetHighlightTest {
                 "the Name field's line, and only it, is marked: " + tree);
     }
 
+    @Test
+    void theFailuresScreenshotHasTheFailedStepsTargetsBox(@TempDir Path dir) throws Exception {
+        assumeTrue(TOOL.hasRealBrowser(), "screenshots only in a browser");
+        String json = run(dir, FailingCheck.class, "checksTheWrongName");
+
+        double[] filled = box(json, "fill text field “Name” with “Ada”");
+        String failure = json.substring(json.indexOf("\"failure\": {"), json.indexOf("\"steps\":"));
+        double[] failed = box(failure);
+        // the failure shot is the whole page, the step's the viewport: the same field, so the same left edge
+        assertEquals(filled[0], failed[0], 0.01, failure);
+        assertTrue(failed[2] > 0 && failed[3] > 0, failure);
+    }
+
     /** Runs the scenario's test with snapshots on; its {@code user-steps.json}. */
     static String run(Path dir, Class<?> scenario, String method) throws Exception {
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
@@ -110,6 +135,7 @@ class StepTargetHighlightTest {
                 .configurationParameter("vaadin.testing.evidence-dir", dir.toString())
                 .configurationParameter("vaadin.testing.user-steps.snapshots", "true")
                 .configurationParameter("vaadin.testing.user-steps.server-log", "off")
+                .configurationParameter("vaadin.testing.timeout", "2s")
                 .build();
         LauncherFactory.create().execute(request, new SummaryGeneratingListener());
         String outer = scenario.getEnclosingClass().getSimpleName() + "$" + scenario.getSimpleName();
@@ -118,10 +144,14 @@ class StepTargetHighlightTest {
 
     /** The {@code highlight} box of the step with this text: x, y, width, height. */
     static double[] box(String json, String stepText) {
-        String step = step(json, stepText);
+        return box(step(json, stepText));
+    }
+
+    /** The first {@code highlight} box in this JSON: x, y, width, height. */
+    static double[] box(String step) {
         Matcher m = Pattern.compile("\"highlight\": \\{\\s*\"x\": ([\\d.]+),\\s*\"y\": ([\\d.]+),\\s*"
                 + "\"width\": ([\\d.]+),\\s*\"height\": ([\\d.]+)\\s*}").matcher(step);
-        assertTrue(m.find(), "a highlight box on “" + stepText + "”: " + step);
+        assertTrue(m.find(), "a highlight box in: " + step);
         return new double[] { Double.parseDouble(m.group(1)), Double.parseDouble(m.group(2)),
                 Double.parseDouble(m.group(3)), Double.parseDouble(m.group(4)) };
     }

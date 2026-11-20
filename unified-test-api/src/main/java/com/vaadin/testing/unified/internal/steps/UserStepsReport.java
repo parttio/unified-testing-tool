@@ -225,6 +225,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             json.key("codePath").open('[');
             codePath().forEach(site -> callSite(json, site));
             json.close(']');
+            highlight(json, steps.failureHighlight());
             if (failure instanceof UnifiedAssertionError unified) {
                 json.optional("expected", steps.mask(unified.getExpected()));
                 json.optional("found", steps.mask(unified.getFound()));

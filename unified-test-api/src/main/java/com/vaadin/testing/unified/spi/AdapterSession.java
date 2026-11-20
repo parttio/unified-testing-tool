@@ -65,9 +65,11 @@ public interface AdapterSession extends AutoCloseable {
      * Writes what a developer needs to see why a test failed (browsers: a screenshot; Browserless: the
      * component tree) into {@code directory}, with file names starting with {@code name}.
      *
-     * @return the files written
+     * @param target the Step Target of the step that failed, as this session found it; null when the failure
+     *        was no step's, or its step singled out nothing
+     * @return the files written, and where the screenshot shows the Step Target
      */
-    List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException;
+    Evidence writeFailureEvidence(Path directory, String name, UnifiedElement target) throws java.io.IOException;
 
     /**
      * Evidence of the page right after one User Step, when {@code vaadin.testing.user-steps.snapshots} is on:

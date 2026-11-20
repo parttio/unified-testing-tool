@@ -73,6 +73,8 @@ public final class StepRecorder {
         private List<CallSite> codePath = List.of();
         private String snapshot;
         private com.vaadin.testing.unified.spi.Highlight highlight;
+        /** A failed step's Step Target, for the failure's evidence; null otherwise. */
+        private transient com.vaadin.testing.unified.UnifiedElement target;
 
         Step(String index, int number, Phrase phrase, String window, CallSite callSite) {
             this.index = index;
@@ -526,6 +528,7 @@ public final class StepRecorder {
         if (error != null) {
             step.status = Status.FAILED;
             step.error = error;
+            step.target = f.target;
             List<CallSite> path = new ArrayList<>();
             for (Iterator<Group> it = open.descendingIterator(); it.hasNext();) {
                 CallSite site = it.next().callSite;
@@ -751,6 +754,23 @@ public final class StepRecorder {
     }
 
     /** The User Step that threw this failure (or a failure it caused), if any. */
+    /** The Step Target of the step that threw this failure, for its evidence; null when there is none. */
+    public com.vaadin.testing.unified.UnifiedElement targetOf(Throwable failure) {
+        Step step = stepThatThrew(failure);
+        return step == null ? null : step.target;
+    }
+
+    private volatile com.vaadin.testing.unified.spi.Highlight failureHighlight;
+
+    /** Where the failure's screenshot shows the failed step's Step Target; null without one. */
+    public com.vaadin.testing.unified.spi.Highlight failureHighlight() {
+        return failureHighlight;
+    }
+
+    public void failureHighlight(com.vaadin.testing.unified.spi.Highlight highlight) {
+        this.failureHighlight = highlight;
+    }
+
     public synchronized Step stepThatThrew(Throwable failure) {
         Step[] found = { null };
         visit(root.children, entry -> {

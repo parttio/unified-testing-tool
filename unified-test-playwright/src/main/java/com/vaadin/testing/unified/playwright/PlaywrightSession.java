@@ -431,13 +431,14 @@ final class PlaywrightSession implements AdapterSession {
               return false;
             }""";
 
-    /** A full-page screenshot. */
+    /** A full-page screenshot, with where it shows the failed step's Step Target. */
     @Override
-    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeFailureEvidence(Path directory, String name, com.vaadin.testing.unified.UnifiedElement target)
+            throws java.io.IOException {
         java.nio.file.Files.createDirectories(directory);
         Path file = directory.resolve(name + ".png");
         page.screenshot(new Page.ScreenshotOptions().setPath(file).setFullPage(true));
-        return List.of(file);
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(file), highlight(target, true));
     }
 
     /** The viewport after the step: what the user saw, with where it shows the Step Target. */
@@ -447,20 +448,21 @@ final class PlaywrightSession implements AdapterSession {
         java.nio.file.Files.createDirectories(directory);
         Path file = directory.resolve(name + ".png");
         page.screenshot(new Page.ScreenshotOptions().setPath(file));
-        return new com.vaadin.testing.unified.spi.Evidence(List.of(file), highlight(target));
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(file), highlight(target, false));
     }
 
     /**
-     * The Step Target's box in the viewport, in fractions of it; null without a target. Read with
-     * {@code evaluateAll}, which doesn't wait for an element that is gone.
+     * The Step Target's box in fractions of the screenshot: the viewport, or the whole document for a full-page
+     * one; null without a target. Read with {@code evaluateAll}, which doesn't wait for an element that is gone.
      */
-    private com.vaadin.testing.unified.spi.Highlight highlight(com.vaadin.testing.unified.UnifiedElement target) {
+    private com.vaadin.testing.unified.spi.Highlight highlight(com.vaadin.testing.unified.UnifiedElement target,
+            boolean fullPage) {
         if (!(target instanceof PlaywrightElement element)) {
             return null;
         }
         Object result;
         try {
-            result = element.locator().evaluateAll(TARGET_BOX);
+            result = element.locator().evaluateAll(TARGET_BOX, fullPage);
         } catch (RuntimeException e) {
             return null; // the screenshot is kept without a box: a highlight never costs the snapshot
         }
@@ -476,14 +478,18 @@ final class PlaywrightSession implements AdapterSession {
     }
 
     /**
-     * The first element's box in the viewport, in pixels, and the viewport's size: [left, top, width, height,
-     * viewport width, viewport height]; null when it is no longer on the page or not shown.
+     * The first element's box in pixels, and the size of what the screenshot shows: [left, top, width, height,
+     * image width, image height]. The viewport, or with {@code fullPage} the whole document, in which the box
+     * moves by the scroll position. Null when it is no longer on the page or not shown.
      */
     private static final String TARGET_BOX = """
-            els => {
+            (els, fullPage) => {
               if (!els.length || !els[0].isConnected || !els[0].checkVisibility()) return null;
-              const r = els[0].getBoundingClientRect();
-              return [r.left, r.top, r.width, r.height, innerWidth, innerHeight];
+              const r = els[0].getBoundingClientRect(), d = document.documentElement;
+              return fullPage
+                  ? [r.left + scrollX, r.top + scrollY, r.width, r.height,
+                     Math.max(d.scrollWidth, innerWidth), Math.max(d.scrollHeight, innerHeight)]
+                  : [r.left, r.top, r.width, r.height, innerWidth, innerHeight];
             }""";
 
     @Override
