@@ -118,7 +118,13 @@ final class SeleniumComponents {
         register(Checkbox.class, new Support() {
             @Override
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {
-                session.testBench(element).wrap(CheckboxElement.class).setChecked(Boolean.TRUE.equals(value));
+                CheckboxElement checkbox = session.testBench(element).wrap(CheckboxElement.class);
+                boolean checked = Boolean.TRUE.equals(value);
+                if (checkbox.isChecked() != checked) {
+                    // TestBench sets the property without a click, which would clear indeterminate
+                    checkbox.setProperty("indeterminate", false);
+                }
+                checkbox.setChecked(checked);
                 return true;
             }
         });
