@@ -152,7 +152,7 @@ final class SeleniumSelectionAccess implements SelectionAccess {
         combo.setFilter(label);
         session.waitForVaadin();
         if (items().contains(label)) {
-            combo.selectByText(label);
+            replaceable(() -> combo.selectByText(label));
             session.waitForVaadin();
             return true;
         }
