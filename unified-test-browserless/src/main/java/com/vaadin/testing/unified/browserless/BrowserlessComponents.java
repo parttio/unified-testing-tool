@@ -132,7 +132,9 @@ final class BrowserlessComponents {
             public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
                 // CheckboxTester has check() and uncheck() instead of setValue
                 boolean checked = Boolean.TRUE.equals(value);
-                if (((Checkbox) component).getValue() != checked) {
+                Checkbox checkbox = (Checkbox) component;
+                if (checkbox.getValue() != checked) {
+                    checkbox.setIndeterminate(false); // as the browser does when a user clicks it
                     invoke(window.test(component), checked ? "check" : "uncheck");
                 }
                 return true;

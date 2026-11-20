@@ -126,7 +126,7 @@ final class Browserless {
                     Map.of("getText", "getText"), Map.of("isOpened", "isOpen")),
             "com.vaadin.flow.component.checkbox.Checkbox", new Wrapper("com.vaadin.testing.unified.component.UnifiedCheckbox",
                     with(COMMON_FILTERS, Map.of("withLabel", "withLabel", "withCaption", "withLabel")),
-                    Map.of("check", "check", "uncheck", "uncheck", "isChecked", "isChecked"),
+                    Map.of("check", "check", "uncheck", "uncheck", "click", "click", "isChecked", "isChecked"),
                     Map.of("getValue", "isChecked", "getLabel", "getLabel", "isEnabled", "isEnabled")),
             "com.vaadin.flow.component.dialog.Dialog", new Wrapper("com.vaadin.testing.unified.component.UnifiedDialog",
                     COMMON_FILTERS, Map.of(), Map.of("isOpened", "isOpen", "getHeaderTitle", "getHeaderTitle")));

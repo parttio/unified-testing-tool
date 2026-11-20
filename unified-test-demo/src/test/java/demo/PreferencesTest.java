@@ -120,6 +120,35 @@ class PreferencesTest {
     }
 
     @Test
+    @DisplayName("The user clicks Subscribe to newsletter on and Remember me off")
+    void clickToggles(UnifiedPage page) {
+        page.navigate(PreferencesView.class);
+        UnifiedCheckbox remember = page.find(UnifiedCheckbox.class).withLabel("Remember me");
+        UnifiedCheckbox newsletter = page.find(UnifiedCheckbox.class).withLabel("Subscribe to newsletter");
+
+        newsletter.click();
+        remember.click();
+        page.find(UnifiedButton.class).withText("Save").click();
+
+        assertThat(newsletter).isChecked();
+        assertThat(remember).isNotChecked();
+        assertThat(page.find(UnifiedNotification.class))
+                .hasText("Saved: height null, birthday null, newsletter yes, remember no");
+    }
+
+    @Test
+    @DisplayName("The user clicks Accept terms, which started neither checked nor unchecked")
+    void clickChecksIndeterminate(UnifiedPage page) {
+        page.navigate(PreferencesView.class);
+        UnifiedCheckbox terms = page.find(UnifiedCheckbox.class).withLabel("Accept terms");
+
+        terms.click();
+
+        assertThat(terms).isChecked();
+        assertEquals(false, terms.isIndeterminate());
+    }
+
+    @Test
     @DisplayName("Accept terms starts neither checked nor unchecked")
     void readsIndeterminate(UnifiedPage page) {
         page.navigate(PreferencesView.class);

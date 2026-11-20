@@ -56,7 +56,7 @@ Testing Tool and in every locale.
 --8<-- "unified-test-demo/src/test/java/demo/PreferencesTest.java:savesTypedValues"
 ```
 
-`check()` and `uncheck()` do nothing when the checkbox is already in that state; `setChecked(boolean)` does either. Assertions: `isChecked()`, `isNotChecked()`, `isIndeterminate()`.
+`check()` and `uncheck()` do nothing when the checkbox is already in that state; `setChecked(boolean)` does either. `click()` toggles it, as a user's click does, on every Testing Tool; prefer it to `element().click()`, which in a browser misses a checkbox wider than its box and label. Assertions: `isChecked()`, `isNotChecked()`, `isIndeterminate()`.
 
 ## Selection: ComboBox, RadioButtonGroup, MultiSelectComboBox
 
