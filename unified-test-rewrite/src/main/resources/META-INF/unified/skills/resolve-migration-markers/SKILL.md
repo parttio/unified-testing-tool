@@ -58,6 +58,8 @@ When a method no longer uses its Escape Hatch variable, delete that line. When a
 
 **`was withCaption(..)` / `was withLabel(..)` on a button.** Read the view: when the button shows that text, delete the marker. When it is an icon-only button, the text is its accessible name: use `withAccessibleName(..)`, then delete the marker.
 
+**`..., X has a Core Set Wrapper: use UnifiedX` / `..., X extends Y: use UnifiedY with a filter (...)`.** The Wrapper exists: replace the lookup with `page.find(UnifiedX.class)` (for a subclass, `page.find(UnifiedY.class)` plus the filters that pick its components, such as `withClassName(..)`), translate each call the test makes, then delete the Escape Hatch. Keep it when the call has no Unified form.
+
 **`..., no Wrapper for X: write one (ADR 0003)` / `..., a custom element: write a Wrapper for it (ADR 0003)`.** Look for an existing Wrapper first, for X and then for each of its superclasses (a TestBench element's `@Element` tag is the component's `@Tag`):
 - the Core Set: the library's Wrappers are in a jar, where a source search can't see them. Each is listed with the Flow class it finds ("Flow's `Dialog`") in `META-INF/unified/api-reference.md` inside the `unified-test-api` jar (the same page is [on the site](https://parttio.github.io/unified-testing-tool/api-reference.md));
 - the project: search the test sources for `@UnifiedComponent(` naming the class.
