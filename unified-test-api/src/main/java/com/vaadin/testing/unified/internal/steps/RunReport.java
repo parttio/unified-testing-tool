@@ -43,7 +43,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 .append("<title>Unified UI Tests · ").append(esc(summary.tool())).append("</title>\n")
                 .append("<style>").append(CSS).append("</style>\n</head>\n<body>\n<main>\n");
         header(h, scenarios);
-        controls(h, passed.size(), changes != null, summary.base() != null && !summary.base().isEmpty());
+        controls(h, passed.size(), changes != null, summary.base() != null && !summary.base().isEmpty(),
+                scenarios.stream().anyMatch(RunReport::hasHighlight));
         if (changes != null) {
             changed(h, changes);
         }
@@ -111,7 +112,57 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         h.append("</p>\n</header>\n");
     }
 
-    private static void controls(StringBuilder h, int passing, boolean changes, boolean baseRun) {
+    /** Whether a screenshot of the scenario shows a Step Target: a step's, or its failure's. */
+    private static boolean hasHighlight(ScenarioResult s) {
+        if (s.failure() != null && s.failure().get("highlight") instanceof Map) {
+            return true;
+        }
+        boolean[] found = {false};
+        visit(s.steps(), e -> found[0] |= e.get("highlight") instanceof Map);
+        return found[0];
+    }
+
+    private static void visit(List<Map<String, Object>> entries, java.util.function.Consumer<Map<String, Object>> f) {
+        for (Map<String, Object> e : entries) {
+            f.accept(e);
+            visit(ScenarioResult.entries(e.get("steps")), f);
+        }
+    }
+
+    /** A highlight's attribute: {@code data-highlight="x y w h"}, {@code data-missing="gone"}, or nothing. */
+    private static String highlightAttribute(Object highlight) {
+        if (!(highlight instanceof Map<?, ?> map)) {
+            return "";
+        }
+        if (map.get("missing") instanceof String missing) {
+            return " data-missing=\"" + esc(missing) + "\"";
+        }
+        return " data-highlight=\"" + fraction(map.get("x")) + " " + fraction(map.get("y")) + " "
+                + fraction(map.get("width")) + " " + fraction(map.get("height")) + "\"";
+    }
+
+    /** A fraction as JSON had it, without float noise: {@code 0.1}, not {@code 0.1000000001}. */
+    private static String fraction(Object value) {
+        return value instanceof Number n ? java.math.BigDecimal.valueOf(n.doubleValue()).stripTrailingZeros()
+                .toPlainString() : "0";
+    }
+
+    /** The box over an image, in % of it, which the CSS dims around: its spotlight. */
+    private static String spotlight(Object highlight) {
+        if (!(highlight instanceof Map<?, ?> map) || map.get("missing") != null) {
+            return "";
+        }
+        return "<span class=\"spot\" style=\"left:" + percent(map.get("x")) + "%;top:" + percent(map.get("y"))
+                + "%;width:" + percent(map.get("width")) + "%;height:" + percent(map.get("height")) + "%\"></span>";
+    }
+
+    private static String percent(Object value) {
+        return value instanceof Number n ? java.math.BigDecimal.valueOf(n.doubleValue()).movePointRight(2)
+                .stripTrailingZeros().toPlainString() : "0";
+    }
+
+    private static void controls(StringBuilder h, int passing, boolean changes, boolean baseRun,
+            boolean highlights) {
         h.append("<nav class=\"controls\">\n")
                 .append("<label><input type=\"checkbox\" id=\"show-passing\"> Show passing (").append(passing)
                 .append(")</label>\n");
@@ -121,6 +172,9 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         if (baseRun) {
             h.append("<label title=\"Changed scenarios: their User Steps against the base branch's last run, or in ")
                     .append("full\"><input type=\"checkbox\" id=\"show-diff\" checked> Diff against base run</label>\n");
+        }
+        if (highlights) {
+            h.append("<label><input type=\"checkbox\" id=\"highlight\" checked> highlight step targets</label>\n");
         }
         h.append("<input type=\"search\" id=\"search\" placeholder=\"Search scenarios and steps\" ")
                 .append("aria-label=\"Search scenarios and steps\">\n</nav>\n");
@@ -273,9 +327,11 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             h.append("<div class=\"evidence\">\n");
             for (String file : files) {
                 if (file.endsWith(".png")) {
-                    h.append("<a href=\"").append(href(file)).append("\"><img src=\"").append(href(file))
+                    Object highlight = s.failure() == null ? null : s.failure().get("highlight");
+                    h.append("<a class=\"shot\" href=\"").append(href(file)).append("\" data-image")
+                            .append(highlightAttribute(highlight)).append("><img src=\"").append(href(file))
                             .append("\" alt=\"Screenshot when ").append(esc(s.displayName()))
-                            .append(" failed\" loading=\"lazy\"></a>\n");
+                            .append(" failed\" loading=\"lazy\">").append(spotlight(highlight)).append("</a>\n");
                 } else if (TreePage.isTree(file)) {
                     h.append("<iframe class=\"tree-frame\" src=\"").append(href(TreePage.pageFor(file)))
                             .append("\" title=\"Component tree when ").append(esc(s.displayName()))
@@ -369,7 +425,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             boolean image = snapshot.endsWith(".png");
             boolean tree = TreePage.isTree(snapshot);
             h.append("<a class=\"snap\" href=\"").append(href(dir + (tree ? TreePage.pageFor(snapshot) : snapshot)))
-                    .append("\"").append(image ? " data-image" : tree ? " data-tree" : "").append(">")
+                    .append("\"").append(image ? " data-image" + highlightAttribute(entry.get("highlight"))
+                            : tree ? " data-tree" : "").append(">")
                     .append(image ? "screenshot" : "tree").append("</a>");
         }
         if (entry.get("durationMs") instanceof Number n) {

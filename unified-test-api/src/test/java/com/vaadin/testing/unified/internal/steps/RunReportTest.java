@@ -191,6 +191,49 @@ class RunReportTest {
         assertFalse(html.contains("class=\"evidence\""), html);
     }
 
+    /** The checkout scenario, its steps with screenshots: one boxed, one whose target is gone; its failure boxed. */
+    private static String highlighted() {
+        String json = RunSummaryTest.CHECKOUT_FAILED
+                .replace("\"stepNumber\": 2,", "\"stepNumber\": 2, \"highlight\": {\"x\": 0.1, \"y\": 0.25, "
+                        + "\"width\": 0.3, \"height\": 0.05},")
+                .replace("\"text\": \"open Checkout\", \"verb\": \"open\",", "\"text\": \"open Checkout\", \"verb\": "
+                        + "\"open\", \"snapshot\": \"steps/001.png\", \"highlight\": {\"x\": 0.5, \"y\": 0.125, "
+                        + "\"width\": 0.25, \"height\": 0.0625},")
+                .replace("\"verb\": \"click\",", "\"verb\": \"click\", \"snapshot\": \"steps/002.png\", "
+                        + "\"highlight\": {\"missing\": \"gone\"},");
+        return new RunReport(new RunSummary("Playwright", List.of(scenario(json, "CheckoutTest$AsGuest/paysByCard")),
+                0, null), s -> List.of("demo.CheckoutTest$AsGuest.paysByCard.png")).html();
+    }
+
+    @Test
+    void aStepsScreenshotLinkCarriesItsStepTargetsBoxOrWhyThereIsNone() {
+        String html = highlighted();
+
+        assertTrue(html.contains("<a class=\"snap\" href=\"CheckoutTest$AsGuest/paysByCard/steps/001.png\" "
+                + "data-image data-highlight=\"0.5 0.125 0.25 0.0625\">screenshot</a>"), html);
+        assertTrue(html.contains("<a class=\"snap\" href=\"CheckoutTest$AsGuest/paysByCard/steps/002.png\" "
+                + "data-image data-missing=\"gone\">screenshot</a>"), html);
+    }
+
+    @Test
+    void theFailuresScreenshotShowsTheSpotlightInline() {
+        String html = highlighted();
+        String evidence = html.substring(html.indexOf("<div class=\"evidence\">"));
+
+        assertTrue(evidence.startsWith("<div class=\"evidence\">\n<a class=\"shot\" "
+                + "href=\"demo.CheckoutTest$AsGuest.paysByCard.png\" data-image data-highlight=\"0.1 0.25 0.3 0.05\">"
+                + "<img src=\"demo.CheckoutTest$AsGuest.paysByCard.png\""), evidence);
+        assertTrue(evidence.contains("<span class=\"spot\" style=\"left:10%;top:25%;width:30%;height:5%\"></span>"
+                + "</a>"), evidence);
+    }
+
+    @Test
+    void aReportWithHighlightsCanTurnThemOff() {
+        assertTrue(highlighted().contains("<label><input type=\"checkbox\" id=\"highlight\" checked> "
+                + "highlight step targets</label>"));
+        assertFalse(report(null).contains("id=\"highlight\""), "no highlights, no switch");
+    }
+
     @Test
     void showsAFailuresComponentTreeInThePageWithItsTextLinked() {
         String html = new RunReport(new RunSummary("Browserless", run(), 0, null),
