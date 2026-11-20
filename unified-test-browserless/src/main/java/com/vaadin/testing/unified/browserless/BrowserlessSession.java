@@ -393,9 +393,10 @@ final class BrowserlessSession implements AdapterSession {
 
     /** The component tree after the step: Browserless has no screenshot, and the tree is cheap. */
     @Override
-    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
+            com.vaadin.testing.unified.UnifiedElement stepTarget) throws java.io.IOException {
         try {
-            return writeTree(directory, name);
+            return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name));
         } finally {
             target = null;
         }

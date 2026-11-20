@@ -76,10 +76,12 @@ public final class LazyElement implements UnifiedElement {
         return run.pollFor(() -> {
             List<UnifiedElement> found = source.resolve();
             lastCount[0] = found.size();
-            if (index < 0) {
-                return found.size() == 1 ? found.get(0) : null;
+            UnifiedElement one = index < 0 ? (found.size() == 1 ? found.get(0) : null)
+                    : index < found.size() ? found.get(index) : null;
+            if (one != null) {
+                run.steps().singledOut(one);
             }
-            return index < found.size() ? found.get(index) : null;
+            return one;
         }, () -> LookupFailures.notSingledOut(this, lastCount[0]));
     }
 

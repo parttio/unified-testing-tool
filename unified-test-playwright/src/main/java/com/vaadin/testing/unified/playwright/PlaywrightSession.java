@@ -440,14 +440,43 @@ final class PlaywrightSession implements AdapterSession {
         return List.of(file);
     }
 
-    /** The viewport after the step: what the user saw. */
+    /** The viewport after the step: what the user saw, with where it shows the Step Target. */
     @Override
-    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
+            com.vaadin.testing.unified.UnifiedElement target) throws java.io.IOException {
         java.nio.file.Files.createDirectories(directory);
         Path file = directory.resolve(name + ".png");
         page.screenshot(new Page.ScreenshotOptions().setPath(file));
-        return List.of(file);
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(file), highlight(target));
     }
+
+    /**
+     * The Step Target's box in the viewport, in fractions of it; null without a target. Read with
+     * {@code evaluateAll}, which doesn't wait for an element that is gone.
+     */
+    private com.vaadin.testing.unified.spi.Highlight highlight(com.vaadin.testing.unified.UnifiedElement target) {
+        if (!(target instanceof PlaywrightElement element)) {
+            return null;
+        }
+        Object result = element.locator().evaluateAll(TARGET_BOX);
+        if (!(result instanceof List<?> box) || box.size() != 4) {
+            return null;
+        }
+        return com.vaadin.testing.unified.spi.Highlight.box(number(box.get(0)), number(box.get(1)),
+                number(box.get(2)), number(box.get(3)));
+    }
+
+    private static double number(Object value) {
+        return ((Number) value).doubleValue();
+    }
+
+    /** The first element's box in fractions of the viewport: [x, y, width, height]; null when there is none. */
+    private static final String TARGET_BOX = """
+            els => {
+              if (!els.length) return null;
+              const r = els[0].getBoundingClientRect(), w = innerWidth, h = innerHeight;
+              return [r.left / w, r.top / h, r.width / w, r.height / h];
+            }""";
 
     @Override
     public boolean tracesSteps() {

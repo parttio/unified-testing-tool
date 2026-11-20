@@ -1,0 +1,94 @@
+package demo;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;
+
+import com.vaadin.testing.unified.TestingTool;
+import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.component.UnifiedTextField;
+import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.platform.launcher.LauncherDiscoveryRequest;
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
+import org.junit.platform.launcher.core.LauncherFactory;
+import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
+
+/**
+ * Runs a Unified UI Test with a snapshot per User Step and checks each browser screenshot names its Step Target's
+ * box in {@code user-steps.json} (issue #472).
+ */
+class StepTargetHighlightTest {
+
+    /** The scenario; tagged so Surefire doesn't run it on its own. */
+    @UnifiedSpringBootTest
+    @Tag("launched-only")
+    static class Scenario {
+        @Test
+        void editProfile(UnifiedPage page) {
+            page.navigate(ProfileView.class);
+            page.find(UnifiedTextField.class).withLabel("Name").setValue("Ada");
+            page.find(UnifiedTextField.class).withLabel("Email").setValue("ada@example.com");
+        }
+    }
+
+    private static final TestingTool TOOL = TestingTool
+            .parse(System.getProperty("vaadin.testing.tool", "browserless"));
+
+    @Test
+    void anActionStepsScreenshotHasItsTargetsBox(@TempDir Path dir) throws Exception {
+        assumeTrue(TOOL.hasRealBrowser(), "screenshots only in a browser");
+        String json = run(dir, Scenario.class, "editProfile");
+
+        double[] name = box(json, "fill text field “Name” with “Ada”");
+        double[] email = box(json, "fill text field “Email” with “ada@example.com”");
+        for (double[] b : new double[][] { name, email }) {
+            for (double v : b) {
+                assertTrue(v >= 0 && v <= 1, "a fraction of the image: " + v);
+            }
+            assertTrue(b[2] > 0 && b[3] > 0, "a box with a size");
+        }
+        // the view lays its fields out top-down: Name, then Email
+        assertTrue(name[1] + name[3] <= email[1], "Name's box is above Email's");
+        assertEquals(name[0], email[0], 0.01, "both fields start at the same x");
+    }
+
+    /** Runs the scenario's test with snapshots on; its {@code user-steps.json}. */
+    static String run(Path dir, Class<?> scenario, String method) throws Exception {
+        LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
+                .selectors(selectClass(scenario))
+                .configurationParameter("vaadin.testing.tool", TOOL.name().toLowerCase())
+                .configurationParameter("vaadin.testing.evidence-dir", dir.toString())
+                .configurationParameter("vaadin.testing.user-steps.snapshots", "true")
+                .configurationParameter("vaadin.testing.user-steps.server-log", "off")
+                .build();
+        LauncherFactory.create().execute(request, new SummaryGeneratingListener());
+        String outer = scenario.getEnclosingClass().getSimpleName() + "$" + scenario.getSimpleName();
+        return Files.readString(dir.resolve(outer).resolve(method).resolve("user-steps.json"));
+    }
+
+    /** The {@code highlight} box of the step with this text: x, y, width, height. */
+    static double[] box(String json, String stepText) {
+        String step = step(json, stepText);
+        Matcher m = Pattern.compile("\"highlight\": \\{\\s*\"x\": ([\\d.]+),\\s*\"y\": ([\\d.]+),\\s*"
+                + "\"width\": ([\\d.]+),\\s*\"height\": ([\\d.]+)\\s*}").matcher(step);
+        assertTrue(m.find(), "a highlight box on “" + stepText + "”: " + step);
+        return new double[] { Double.parseDouble(m.group(1)), Double.parseDouble(m.group(2)),
+                Double.parseDouble(m.group(3)), Double.parseDouble(m.group(4)) };
+    }
+
+    /** The JSON object of the step with this text, up to the next step. */
+    static String step(String json, String stepText) {
+        int at = json.indexOf("\"text\": \"" + stepText + "\"");
+        assertTrue(at >= 0, "a step “" + stepText + "” in " + json);
+        int next = json.indexOf("\"type\":", at);
+        return json.substring(at, next < 0 ? json.length() : next);
+    }
+}

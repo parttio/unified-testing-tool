@@ -408,8 +408,9 @@ final class SeleniumSession implements AdapterSession {
 
     /** A screenshot of the window after the step: a WebDriver round trip each, so only when asked for. */
     @Override
-    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
-        return writeFailureEvidence(directory, name);
+    public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
+            com.vaadin.testing.unified.UnifiedElement target) throws java.io.IOException {
+        return com.vaadin.testing.unified.spi.Evidence.of(writeFailureEvidence(directory, name));
     }
 
     @Override
