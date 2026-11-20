@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.openrewrite.Cursor;
 import org.openrewrite.java.tree.Comment;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.Space;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TextComment;
 import org.openrewrite.marker.Markers;
@@ -44,6 +45,11 @@ final class MigrationMarkers {
             texts.add(line);
         }
         return true;
+    }
+
+    /** The code a marker quotes: the tree printed without its prefix, so without the comments above its statement. */
+    static String code(J tree, Cursor parent) {
+        return tree.withPrefix(Space.EMPTY).printTrimmed(parent);
     }
 
     /** The method with the collected markers written above their statements. */

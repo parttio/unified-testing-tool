@@ -202,7 +202,7 @@ public class BrowserlessLeftoversToEscapeHatch extends Recipe {
                         && chained.getSelect() == shown.getValue()) {
                     shown = shown.getParentTreeCursor();
                 }
-                String printed = ((J) shown.getValue()).printTrimmed(shown.getParentTreeCursor());
+                String printed = MigrationMarkers.code(shown.getValue(), shown.getParentTreeCursor());
                 Expression query = Browserless.isTest(call) ? call.getArguments().get(0) : call;
                 J.MethodInvocation start = queryStart(query);
                 if (Browserless.isTest(call) && start == null) {
