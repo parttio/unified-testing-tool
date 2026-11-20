@@ -80,6 +80,10 @@ _Avoid_: Step method, log line, trace, keyword
 A named piece of user work in a Unified UI Test ("edit Alan Turing's name"), shown in the reports as one heading over the User Steps it performs.
 _Avoid_: Task, step method, keyword, flow, journey, page object
 
+**Step Target**:
+The component a User Step acts on or checks, marked in its snapshot and failure evidence on every Testing Tool: its line in a Browserless tree, a spotlighted box over a browser screenshot.
+_Avoid_: Highlighted element, focus, subject
+
 **Base Run**:
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run
