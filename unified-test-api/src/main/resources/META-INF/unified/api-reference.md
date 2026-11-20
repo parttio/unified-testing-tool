@@ -120,6 +120,7 @@ Date-time picker, Flow's `DateTimePicker`. Guide: [Working with components, Type
 - **Actions**, each with the User Step it reports:
   - `clear()`: clear date-time picker “…”
   - `setValue(LocalDateTime)`: fill date-time picker “…” with “…”
+  - `typeText(LocalDate, String)`: fill date-time picker “…” with “…”, “…”
   - `typeText(String, String)`: fill date-time picker “…” with “…”, “…”
 - **Reads:** `getErrorMessage() → String`, `getHelperText() → String`, `getLabel() → String`, `getValue() → LocalDateTime`, `isInvalid() → boolean`, `isRequired() → boolean`
 - **Checks:** those of every Wrapper, and `hasErrorMessage(String)`, `hasLabel(String)`, `hasValue(LocalDateTime)`, `isEmpty()`, `isInvalid()`, `isRequired()`, `isValid()`
