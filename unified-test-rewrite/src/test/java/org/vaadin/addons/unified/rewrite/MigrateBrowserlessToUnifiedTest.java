@@ -472,6 +472,47 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void aMigrationMarkerCarriesOnlyTheCallNotTheCommentAboveIt() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.textfield.TextField;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest extends BrowserlessTest {
+                    @Test
+                    void reads() {
+                        // the field is capped:
+                        // twenty characters
+                        $(TextField.class).withLabel("Name").single().getMaxLength();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.textfield.TextField;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ProfileTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void reads(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // the field is capped:
+                        // twenty characters
+                        // TODO unified: Browserless Escape Hatch: $(TextField.class).withLabel("Name").single().getMaxLength()
+                        browserless.$(TextField.class).withLabel("Name").single().getMaxLength();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aTransactionalTestRequiresBrowserless() {
         rewriteRun(java(
                 """
