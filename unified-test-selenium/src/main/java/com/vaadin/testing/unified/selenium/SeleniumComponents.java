@@ -132,15 +132,25 @@ final class SeleniumComponents {
                 return notification(element, session).isOpen();
             }
 
-            /** The card the notification shows its content in. */
+            /**
+             * The card the notification shows its content in. Not NotificationElement.getContext(), which waits
+             * for the card to show its content, polling every 500 ms.
+             */
             @Override
             public WebElement content(WebElement element, SeleniumSession session) {
-                return (WebElement) notification(element, session).getContext();
+                return card(element, session);
             }
 
+            /**
+             * The card's DOM text, as the Playwright adapter reads it: not NotificationElement.getText(), the
+             * visible text, which is empty while the card's open animation runs, and which TestBench waits for
+             * in 500 ms polls (#447). getVisibleText() still reads what is shown.
+             */
             @Override
             public Optional<String> text(WebElement element, SeleniumSession session) {
-                return Optional.of(notification(element, session).getText());
+                return Optional.of((String) session.js("const card = arguments[0]._card;"
+                        + " return card ? (" + com.vaadin.testing.unified.internal.BrowserQueries.TEXT + ")(card) : '';",
+                        element));
             }
 
             @Override
@@ -156,6 +166,10 @@ final class SeleniumComponents {
 
             private NotificationElement notification(WebElement element, SeleniumSession session) {
                 return session.testBench(element).wrap(NotificationElement.class);
+            }
+
+            private WebElement card(WebElement element, SeleniumSession session) {
+                return SeleniumSession.stale(() -> session.testBench(element).getPropertyElement("_card"));
             }
         });
         register(Dialog.class, new Support() {

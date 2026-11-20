@@ -58,7 +58,7 @@ esac
 [ "$mode" = update ] || runs=1
 
 if $build; then
-    mvn -B -q -ntp install -DskipTests "${maven_args[@]}"
+    mvn -B -q -ntp install -DskipTests ${maven_args[@]+"${maven_args[@]}"}
 fi
 
 if [ "$mode" = time ]; then
@@ -72,7 +72,7 @@ if [ "$mode" = time ]; then
     # from the demo module, as Surefire runs its tests: the application's dev mode writes its front-end files there
     (cd unified-test-demo && mvn -B -ntp -q test-compile exec:java -Dexec.mainClass=demo.perf.bench.TimeBenchmark \
         -Dexec.classpathScope=test -Dexec.args="$bench_args" -Dvaadin.testing.tool="$tool" \
-        "${extra[@]}" "${maven_args[@]}") || status=$?
+        ${extra[@]+"${extra[@]}"} ${maven_args[@]+"${maven_args[@]}"}) || status=$?
     exit $status
 fi
 
@@ -91,7 +91,7 @@ measured=()
 for i in $(seq 1 "$runs"); do
     echo "Counting round trips on $tool, run $i of $runs"
     if ! mvn -B -ntp -pl unified-test-demo verify -Pperformance -Dvaadin.testing.tool="$tool" \
-            -Dvaadin.testing.perf.round-trips="$out/run-$i" "${tests[@]}" "${maven_args[@]}" > "$out.log" 2>&1; then
+            -Dvaadin.testing.perf.round-trips="$out/run-$i" ${tests[@]+"${tests[@]}"} ${maven_args[@]+"${maven_args[@]}"} > "$out.log" 2>&1; then
         grep -E "Tests run:|FAIL|ERROR" "$out.log" | tail -30
         echo "The Performance Pairs failed on $tool: see $out.log" >&2
         exit 2
