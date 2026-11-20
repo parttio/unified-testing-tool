@@ -87,6 +87,7 @@ class EditPersonTest {
 | a key press | `page.pressKey("Enter")`, sent to the focused component |
 | a grid row | `grid.row().withCellText("Name", "Alan Turing")`; `grid.row(0)` by index; cell components: `row.cell("Actions").find(UnifiedButton.class)` |
 | a check | `assertThat(wrapper).hasText(..)`, `.hasValue(..)`, `.isOpen()`, `.isDisabled()`, `assertThat(row).hasCellText(..)`, `assertThat(page).isAt(View.class)` |
+| a menu's items | `assertThat(menu).hasItems("File", "Help")`, `.hasItems(List.of("File", "Export"), "PDF", "CSV")`, `.hasItem("File", "Print")`, `.hasItemEnabled(..)`, `.hasItemDisabled(..)` |
 | present, absent, how many | `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on grid rows |
 | a condition no assertion states | `page.waitUntil(() -> ..)`: a last resort, it shows as a gap in the reports |
 | every match, to act on each | `for (UnifiedButton b : page.find(UnifiedButton.class).withText("Done").all()) { .. }` |

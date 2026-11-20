@@ -190,6 +190,12 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Wrapper's calls. So do `assertThat(locator)`'s `isVisible()`, `isEnabled()`, `isDisabled()`, `hasValue(..)` and
   `isChecked()`. An id no view sets becomes a `UnifiedContainer` lookup, which finds any component, with a Migration
   Marker. They used to stay behind the Escape Hatch, one marker each.
+- **Retrying assertions for a menu bar's items** ([#330](https://github.com/parttio/unified-testing-tool/issues/330)):
+  `assertThat(menu).hasItems("File", "Help")`, `hasItems(List.of("File", "Export"), "PDF", "CSV")` for a
+  sub-menu, and `hasItem(..)`, `hasItemEnabled(..)` and `hasItemDisabled(..)`, which take a path like
+  `clickItem(..)`. They replace `assertEquals` on `getItems(..)` and `isItemEnabled(..)`, which read once and left
+  no `see` line in `user-steps.txt`. See
+  [Buttons and menus](https://parttio.github.io/unified-testing-tool/guide/components/#buttons-and-menus).
 
 ## New settings
 

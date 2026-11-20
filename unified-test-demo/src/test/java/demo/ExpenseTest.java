@@ -137,7 +137,8 @@ class ExpenseTest {
         page.navigate(ExpenseView.class);
         UnifiedMenuBar menu = page.find(UnifiedMenuBar.class).withItem("File");
 
-        assertEquals(List.of("File", "Help"), menu.getItems());
+        assertThat(menu).hasItems("File", "Help")
+                .hasItems(List.of("File", "Export"), "PDF", "CSV");
         menu.clickItem("File", "Export", "CSV");
         assertStatus(page, "Exported CSV");
 

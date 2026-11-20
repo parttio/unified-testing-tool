@@ -61,4 +61,17 @@ class ItemNameTest {
         assertFalse(hotel.isItemEnabled("Actions for Hotel", "Delete"));
         assertTrue(taxi.isItemEnabled("Actions for Taxi", "Delete"));
     }
+
+    // --8<-- [start:assertsWhetherAMenuItemIsEnabled]
+    @Test
+    @DisplayName("The user sees that the hotel expense can be edited but not deleted")
+    void assertsWhetherAMenuItemIsEnabled(UnifiedPage page) {
+        page.navigate(ExpenseListView.class);
+        UnifiedMenuBar hotel = page.find(UnifiedMenuBar.class).withItem("Actions for Hotel");
+
+        assertThat(hotel).hasItem("Actions for Hotel", "Delete")
+                .hasItemEnabled("Actions for Hotel", "Edit")
+                .hasItemDisabled("Actions for Hotel", "Delete");
+    }
+    // --8<-- [end:assertsWhetherAMenuItemIsEnabled]
 }

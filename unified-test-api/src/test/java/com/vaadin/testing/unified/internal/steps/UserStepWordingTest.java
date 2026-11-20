@@ -237,6 +237,23 @@ public class UserStepWordingTest {
     }
 
     @Test
+    void menuBarAssertionsReadAsSeeWithItems() {
+        fake.add("vaadin-menu-bar", "testId", "menu", "items", "File,Help", "items File", "Export,Print",
+                "items File/Export", "PDF,CSV", "disabled", "File/Print");
+        UnifiedMenuBar menu = fake.page.find(UnifiedMenuBar.class).withTestId("menu");
+
+        assertThat(menu).hasItems("File", "Help").hasItems(List.of("File", "Export"), "PDF", "CSV")
+                .hasItem("File", "Export", "CSV").hasItemEnabled("File", "Export").hasItemDisabled("File", "Print");
+
+        assertEquals(List.of(
+                "see menu bar (test id “menu”) with items “File”, “Help”",
+                "see menu bar (test id “menu”) with items under “File › Export” “PDF”, “CSV”",
+                "see menu bar (test id “menu”) with item “File › Export › CSV”",
+                "see menu bar (test id “menu”) with enabled item “File › Export”",
+                "see menu bar (test id “menu”) with disabled item “File › Print”"), texts());
+    }
+
+    @Test
     void aMissingColumnReadsAsWithout() {
         fake.add("vaadin-grid", "testId", "archived");
         StepTarget grid = StepTarget.of(Wrappers.lazyElementOf(
