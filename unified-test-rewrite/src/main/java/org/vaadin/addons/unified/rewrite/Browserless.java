@@ -65,8 +65,10 @@ final class Browserless {
         }
     }
 
+    /** Every Wrapper's filters; a locator's {@code withAriaLabel} is the accessible name it sets. */
     private static final Map<String, String> COMMON_FILTERS = Map.of("withId", "withId", "withClassName",
-            "withClassName", "withTheme", "withTheme", "withTestId", "withTestId");
+            "withClassName", "withTheme", "withTheme", "withTestId", "withTestId", "withAriaLabel", "withAccessibleName",
+            "withAriaLabelContaining", "withAccessibleNameContaining");
     private static final Map<String, String> FIELD_FILTERS = with(COMMON_FILTERS, Map.of("withLabel", "withLabel",
             "withCaption", "withLabel", "withPlaceholder", "withPlaceholder"));
     private static final Map<String, String> FIELD_GETTERS = Map.of("getValue", "getValue", "getLabel", "getLabel",
@@ -290,11 +292,13 @@ final class Browserless {
     }
 
     /**
-     * A locator's start, {@code window.findTextField()}: a {@code find..()} on a handle returning a
-     * {@code ..Locator} of a component that has a Wrapper. Its Wrapper, else {@code null}.
+     * A locator's start, {@code window.findTextField()}: a {@code find..()} on a handle, or of the
+     * {@code Locators} mixin, returning a {@code ..Locator} of a component that has a Wrapper. Its Wrapper, else
+     * {@code null}.
      */
     static Wrapper ofLocatorStart(Expression e) {
-        if (!(e instanceof J.MethodInvocation call) || call.getSelect() == null || !isHandle(call.getSelect())
+        if (!(e instanceof J.MethodInvocation call)
+                || (call.getSelect() == null ? !isLocatorsMixinCall(call) : !isHandle(call.getSelect()))
                 || !call.getSimpleName().startsWith("find") || call.getMethodType() == null
                 || !(call.getMethodType().getReturnType() instanceof JavaType.FullyQualified locator)
                 || !locator.getFullyQualifiedName().endsWith("Locator")) {
@@ -302,6 +306,17 @@ final class Browserless {
         }
         String fqn = locator.getFullyQualifiedName();
         return forComponent(fqn.substring(0, fqn.length() - "Locator".length()));
+    }
+
+    /** The fluent locator mixin a test class implements: {@code findButton()} and friends without a receiver. */
+    static final String LOCATORS = "com.vaadin.browserless.locator.Locators";
+    private static final Set<String> LOCATORS_TYPES = Set.of(LOCATORS, "com.vaadin.browserless.locator.GeneratedLocators",
+            "com.vaadin.browserless.locator.CommercialLocators", "com.vaadin.browserless.locator.GeneratedCommercialLocators");
+
+    /** A call to a method of the {@code Locators} mixin, made without a receiver. */
+    static boolean isLocatorsMixinCall(J.MethodInvocation call) {
+        return call.getSelect() == null && call.getMethodType() != null
+                && LOCATORS_TYPES.contains(call.getMethodType().getDeclaringType().getFullyQualifiedName());
     }
 
     /** The Wrapper a whole locator expression converts to: its start, then only the Wrapper's filters. */
