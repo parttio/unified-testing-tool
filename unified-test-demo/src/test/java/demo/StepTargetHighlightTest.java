@@ -1,5 +1,7 @@
 package demo;
 
+import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -7,6 +9,8 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.component.UnifiedButton;
+import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.nio.file.Files;
@@ -36,6 +40,10 @@ class StepTargetHighlightTest {
             page.navigate(ProfileView.class);
             page.find(UnifiedTextField.class).withLabel("Name").setValue("Ada");
             page.find(UnifiedTextField.class).withLabel("Email").setValue("ada@example.com");
+            assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Ada");
+            page.find(UnifiedButton.class).withText("Change email").click();
+            UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Change email");
+            dialog.find(UnifiedButton.class).withText("Save").click(); // closes the dialog: its Save is gone
         }
     }
 
@@ -58,6 +66,25 @@ class StepTargetHighlightTest {
         // the view lays its fields out top-down: Name, then Email
         assertTrue(name[1] + name[3] <= email[1], "Name's box is above Email's");
         assertEquals(name[0], email[0], 0.01, "both fields start at the same x");
+    }
+
+    @Test
+    void aCheckStepsScreenshotHasTheBoxOfTheComponentItChecked(@TempDir Path dir) throws Exception {
+        assumeTrue(TOOL.hasRealBrowser(), "screenshots only in a browser");
+        String json = run(dir, Scenario.class, "editProfile");
+
+        double[] filled = box(json, "fill text field “Name” with “Ada”");
+        double[] checked = box(json, "see text field “Name”");
+        assertArrayEquals(filled, checked, 0.001, "the check marks the field it checked");
+    }
+
+    @Test
+    void aStepWhoseTargetIsGoneAfterItSaysSo(@TempDir Path dir) throws Exception {
+        assumeTrue(TOOL.hasRealBrowser(), "screenshots only in a browser");
+        String json = run(dir, Scenario.class, "editProfile");
+
+        String save = step(json, "click button “Save” in dialog “Change email”");
+        assertTrue(save.matches("(?s).*\"highlight\": \\{\\s*\"missing\": \"gone\"\\s*}.*"), save);
     }
 
     /** Runs the scenario's test with snapshots on; its {@code user-steps.json}. */
@@ -86,7 +113,7 @@ class StepTargetHighlightTest {
 
     /** The JSON object of the step with this text, up to the next step. */
     static String step(String json, String stepText) {
-        int at = json.indexOf("\"text\": \"" + stepText + "\"");
+        int at = json.indexOf("\"text\": \"" + stepText);
         assertTrue(at >= 0, "a step “" + stepText + "” in " + json);
         int next = json.indexOf("\"type\":", at);
         return json.substring(at, next < 0 ? json.length() : next);

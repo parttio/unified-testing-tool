@@ -459,6 +459,9 @@ final class PlaywrightSession implements AdapterSession {
             return null;
         }
         Object result = element.locator().evaluateAll(TARGET_BOX);
+        if (result instanceof String missing) {
+            return new com.vaadin.testing.unified.spi.Highlight(0, 0, 0, 0, missing);
+        }
         if (!(result instanceof List<?> box) || box.size() != 4) {
             return null;
         }
@@ -470,10 +473,13 @@ final class PlaywrightSession implements AdapterSession {
         return ((Number) value).doubleValue();
     }
 
-    /** The first element's box in fractions of the viewport: [x, y, width, height]; null when there is none. */
+    /**
+     * The first element's box in fractions of the viewport, [x, y, width, height]; {@code gone} when it is no
+     * longer on the page or not shown.
+     */
     private static final String TARGET_BOX = """
             els => {
-              if (!els.length) return null;
+              if (!els.length || !els[0].isConnected || !els[0].checkVisibility()) return 'gone';
               const r = els[0].getBoundingClientRect(), w = innerWidth, h = innerHeight;
               return [r.left / w, r.top / h, r.width / w, r.height / h];
             }""";
