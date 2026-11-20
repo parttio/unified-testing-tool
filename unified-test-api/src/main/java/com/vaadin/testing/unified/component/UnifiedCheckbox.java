@@ -13,6 +13,12 @@ public interface UnifiedCheckbox extends UnifiedWrapper, CommonFilters<UnifiedCh
     default void check() { setChecked(true); }
     default void uncheck() { setChecked(false); }
     default void setChecked(boolean checked) { element().setValueAsUser(checked); }
+    /**
+     * Toggles it, as a user clicking it does: an indeterminate checkbox becomes checked. Not
+     * {@code element().click()}, which in a browser clicks the middle of the component and misses
+     * the box and label when the checkbox is wider than they are (#328).
+     */
+    default void click() { setChecked(!isChecked()); }
 
     // getters (immediate)
     default boolean isChecked() { return Boolean.TRUE.equals(element().getPropertyBoolean("checked")); }

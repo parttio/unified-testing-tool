@@ -250,6 +250,37 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void checkboxClickStaysAClickThatTogglesOnEveryTool() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.checkbox.Checkbox;
+                import org.junit.jupiter.api.Test;
+
+                class TermsTest extends BrowserlessTest {
+                    @Test
+                    void toggles() {
+                        test($(Checkbox.class).withLabel("Terms").single()).click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class TermsTest {
+                    @Test
+                    void toggles(UnifiedPage page) {
+                        page.find(UnifiedCheckbox.class).withLabel("Terms").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void buttonCaptionBecomesTextAndOtherTerminalsBecomeSingle() {
         rewriteRun(java(
                 """

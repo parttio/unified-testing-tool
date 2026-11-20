@@ -75,6 +75,7 @@ Checkbox, Flow's `Checkbox`. Guide: [Working with components, Checkbox](https://
 - **Filters:** `withLabel(String)`, `withLabelContaining(String)`
 - **Actions**, each with the User Step it reports:
   - `check()`: check checkbox “…”
+  - `click()`: click checkbox “…”
   - `setChecked(boolean)`: check checkbox “…”
   - `uncheck()`: uncheck checkbox “…”
 - **Reads:** `getHelperText() → String`, `getLabel() → String`, `isChecked() → boolean`, `isIndeterminate() → boolean`
