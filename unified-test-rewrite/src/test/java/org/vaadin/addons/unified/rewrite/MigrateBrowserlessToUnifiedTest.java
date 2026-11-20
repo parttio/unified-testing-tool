@@ -432,6 +432,87 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 """));
     }
 
+    /** The page goes up the call graph, through overloads, to the tests (#324). */
+    @Test
+    void thePageIsThreadedThroughEveryHelperUpToTheTests() {
+        rewriteRun(java(
+                """
+                package com.example;
+
+                import com.vaadin.flow.component.Component;
+
+                public class RowActionMenu extends Component {
+                    public void choose(String action) {
+                    }
+                }
+                """),
+                java(
+                """
+                import com.example.RowActionMenu;
+                import com.vaadin.browserless.BrowserlessTest;
+                import org.junit.jupiter.api.Test;
+
+                class LinesTest extends BrowserlessTest {
+                    @Test
+                    void overrides() {
+                        overrideCount("Line 1", 3, "Recount");
+                    }
+
+                    private void overrideCount(String lineLabel, int count, String reason) {
+                        clickRowAction(lineLabel, "Override");
+                    }
+
+                    private void clickRowAction(String rowLabel, String action) {
+                        clickRowAction(rowMenu(rowLabel), action);
+                    }
+
+                    private void clickRowAction(RowActionMenu menu, String action) {
+                        menu.choose(action);
+                    }
+
+                    private RowActionMenu rowMenu(String rowLabel) {
+                        return $(RowActionMenu.class).withId(rowLabel).single();
+                    }
+                }
+                """,
+                """
+                import com.example.RowActionMenu;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LinesTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void overrides(UnifiedPage page) {
+                        overrideCount(page, "Line 1", 3, "Recount");
+                    }
+
+                    private void overrideCount(UnifiedPage page, String lineLabel, int count, String reason) {
+                        clickRowAction(page, lineLabel, "Override");
+                    }
+
+                    private void clickRowAction(UnifiedPage page, String rowLabel, String action) {
+                        clickRowAction(page, rowMenu(page, rowLabel), action);
+                    }
+
+                    private void clickRowAction(UnifiedPage page, RowActionMenu menu, String action) {
+                        menu.choose(action);
+                    }
+
+                    private RowActionMenu rowMenu(UnifiedPage page, String rowLabel) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: $(RowActionMenu.class).withId(rowLabel).single(), no Wrapper for RowActionMenu: write one (ADR 0003)
+                        return browserless.$(RowActionMenu.class).withId(rowLabel).single();
+                    }
+                }
+                """));
+    }
+
     @Test
     void aLookupWithACallItsWrapperLacksStaysBehindTheEscapeHatch() {
         rewriteRun(java(
