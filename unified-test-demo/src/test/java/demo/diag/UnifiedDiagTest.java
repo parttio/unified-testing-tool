@@ -1,4 +1,4 @@
-package diag;
+package demo.diag;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 

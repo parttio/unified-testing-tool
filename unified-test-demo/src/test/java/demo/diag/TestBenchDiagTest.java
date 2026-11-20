@@ -1,4 +1,4 @@
-package diag;
+package demo.diag;
 
 import com.vaadin.flow.component.button.testbench.ButtonElement;
 import com.vaadin.flow.component.notification.testbench.NotificationElement;
