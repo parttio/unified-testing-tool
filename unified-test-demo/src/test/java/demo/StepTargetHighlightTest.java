@@ -10,7 +10,6 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
-import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.nio.file.Files;
@@ -37,15 +36,16 @@ class StepTargetHighlightTest {
     @Tag("launched-only")
     static class Scenario {
         @Test
-        @DisplayName("The user fills the profile, checks the name, and changes the email in the dialog")
+        @DisplayName("The user fills the profile, checks the name, then approves, which hides Approve")
         void editProfile(UnifiedPage page) {
             page.navigate(ProfileView.class);
             page.find(UnifiedTextField.class).withLabel("Name").setValue("Ada");
             page.find(UnifiedTextField.class).withLabel("Email").setValue("ada@example.com");
             assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Ada");
-            page.find(UnifiedButton.class).withText("Change email").click();
-            UnifiedDialog dialog = page.find(UnifiedDialog.class).withHeaderTitle("Change email");
-            dialog.find(UnifiedButton.class).withText("Save").click(); // closes the dialog: its Save is gone
+            page.navigate(ApprovalView.class);
+            // hides itself in the click's own round trip, on every Testing Tool (a closing dialog's buttons
+            // stay on screen while it animates, and how long a screenshot sees them depends on the tool)
+            page.find(UnifiedButton.class).withText("Approve").click();
         }
     }
 
@@ -98,7 +98,7 @@ class StepTargetHighlightTest {
         assumeTrue(TOOL.hasRealBrowser(), "screenshots only in a browser");
         String json = run(dir, Scenario.class, "editProfile");
 
-        String save = step(json, "click button “Save” in dialog “Change email”");
+        String save = step(json, "click button “Approve”");
         assertTrue(save.matches("(?s).*\"highlight\": \\{\\s*\"missing\": \"gone\"\\s*}.*"), save);
     }
 
