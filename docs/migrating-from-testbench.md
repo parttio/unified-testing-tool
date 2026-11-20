@@ -165,6 +165,8 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
 
+Each Spring context a run starts also starts the application's server. Keep the suite on one: a shared base class with `@UnifiedSpringBootTest`, the profile and any `@ServiceConnection` container, rather than per-class `@MockitoBean`s, `@Import`s, properties or containers ([One Spring context](migrating-from-browserless.md#one-spring-context)).
+
 ## The agent skill
 
 `resolve-migration-markers` is a [Claude Code](https://claude.com/claude-code) skill that works through the Migration Markers: it resolves each one into Unified API code, or keeps the Escape Hatch and replaces the marker with `// Escape Hatch kept: <reason>`. It runs the tests it changed on Browserless and Playwright, and reports what it did.

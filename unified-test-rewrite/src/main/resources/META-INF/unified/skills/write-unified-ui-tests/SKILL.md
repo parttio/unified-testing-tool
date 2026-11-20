@@ -78,6 +78,10 @@ class EditPersonTest {
 - **Page objects** are optional and hold structure only: methods returning Wrappers
   (`UnifiedTextField name() { return page.find(UnifiedTextField.class).withLabel("Name"); }`). User work goes in
   User Tasks, checks in the test.
+- **One Spring context**: with Spring Boot, the test classes extend one shared base class that holds
+  `@UnifiedSpringBootTest`, the profile (`@ActiveProfiles`) and any `@ServiceConnection` container field. A class
+  with its own `@MockitoBean`, `@Import`, properties or container field gets a Spring context of its own, and each
+  context starts the application's server, on Browserless too. Add one only when the test needs that setup.
 
 ## Canonical forms
 

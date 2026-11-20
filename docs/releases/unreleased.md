@@ -76,6 +76,12 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `@Route("plan")` is among the migrated sources, where it used to write `page.navigate("/plan")`. A renamed route
   then breaks at compile time, and the User Step reads `open Plan`. With no such view, several, or one under a
   layout with a `@RoutePrefix`, the path stays.
+- **The Browserless recipe marks per-class `@ServiceConnection` fields** ([#331](https://github.com/parttio/unified-testing-tool/issues/331)):
+  when several migrated classes declare their own, each field gets a Migration Marker (`one Spring context per
+  class: 3 test classes (...) declare their own @ServiceConnection field, ...`). Each such class starts its own
+  Spring context and, with `@UnifiedSpringBootTest`, its own embedded server, on Browserless too; one suite ran
+  54 % slower after the migration for that reason. The guide and the `write-unified-ui-tests` skill now recommend
+  one shared base class ([One Spring context](../migrating-from-browserless.md#one-spring-context)).
 - **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()`, `title()` and
   `navigate(view, parameters, query)`. An adapter outside this repository keeps compiling; its `hasTitle(..)` fails
   until it implements `title()`, and its navigation with query parameters opens the path the annotations give.

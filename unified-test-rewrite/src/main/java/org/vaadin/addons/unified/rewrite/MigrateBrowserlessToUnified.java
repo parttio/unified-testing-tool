@@ -111,6 +111,7 @@ public class MigrateBrowserlessToUnified extends Recipe {
             list.add(list.size() - 1, new BrowserlessPageObjectsToUnified());
         }
         list.add(new BrowserlessPageObjectsMarked()); // the classes the test code recipes skip
+        list.add(new ServiceConnectionsPerClassMarked()); // one Spring context per class: scans every source
         list.add(new RemoveJUnit4WhenUnused()); // UI Unit's JUnit 4 tests: scans every source
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
