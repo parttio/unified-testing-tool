@@ -49,6 +49,17 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- runs sample tests to check which tests TransactionalCheck fails and which it leaves to be skipped -->
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-testkit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -56,6 +67,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- sample tests; run by other tests through the JUnit test kit -->
+                    <excludedGroups>launched-only</excludedGroups>
+                </configuration>
                 <executions>
                     <execution>
                         <id>default-test</id>
