@@ -17,6 +17,9 @@ public class HomeView extends VerticalLayout {
         reload.setRouterIgnore(true);
         add(new H1("Home"), new Button("Go to profile", e -> getUI().ifPresent(ui -> ui.navigate(ProfileView.class))),
                 new RouterLink("Reports", ReportView.class),
-                new Button("Broken link", e -> getUI().ifPresent(ui -> ui.navigate("no-such-page"))), reload);
+                new Button("Broken link", e -> getUI().ifPresent(ui -> ui.navigate("no-such-page"))), reload,
+                // a page load Flow starts while it handles the click's response, from a slow server
+                new Button("Open profile from a slow server", e -> getUI().ifPresent(ui -> ui.getPage()
+                        .setLocation("profile?" + SlowPageFilter.PARAMETER + "=500"))));
     }
 }

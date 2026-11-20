@@ -159,6 +159,26 @@ class NavigationTest {
         assertTrue(((Number) fields).intValue() > 0, "the profile's fields, right after the click");
     }
 
+    /**
+     * Page.setLocation changes the location while Flow handles the click's response: the browser asks for the next
+     * page after Flow is idle again, and nothing in Flow waits for it. Auto-Wait sees the page start that load and
+     * waits for the new page, then for Flow to start it (#397). Here the server answers the new page 500 ms late,
+     * so the race is lost every time without that wait.
+     */
+    @Test
+    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+    @DisplayName("The profile shows as soon as the button that sends the user there through a slow server returns")
+    void showsTheViewOfAPageTheServerSentTheUserTo(UnifiedPage page) {
+        page.navigate(HomeView.class);
+
+        page.find(UnifiedButton.class).withText("Open profile from a slow server").click();
+
+        // one read, no retry: what a screenshot or the Escape Hatch would see right after the step
+        Object fields = page.unwrap(com.microsoft.playwright.Page.class)
+                .evaluate("() => document.querySelectorAll('vaadin-text-field').length");
+        assertTrue(((Number) fields).intValue() > 0, "the profile's fields, right after the click");
+    }
+
     /** Runs a script in the page through the Escape Hatch: no retry, unlike hasPath. */
     private static String script(UnifiedPage page, String body) {
         var playwright = page.tryUnwrap(com.microsoft.playwright.Page.class);

@@ -85,9 +85,26 @@ final class PlaywrightSession implements AdapterSession {
         page.onRequest(request -> {
             if (request.isNavigationRequest() && request.frame() == page.mainFrame()) {
                 pageLoaded = true;
+                loaded = false;
             }
         });
+        page.onLoad(p -> loaded = true);
+        page.addInitScript(SEE_LEAVING);
     }
+
+    /** Whether the page has fired {@code load} since it last started loading another document. */
+    private volatile boolean loaded = true;
+
+    /**
+     * Notes in the page when it starts loading another document: the Navigation API's {@code navigate} event fires
+     * inside the location change, the link's click or the form's submit, before the request goes out (#397).
+     */
+    private static final String SEE_LEAVING = """
+            window.navigation?.addEventListener('navigate', e => {
+              if (!e.destination.sameDocument && e.downloadRequest === null) {
+                window.__unifiedLeaving = true;
+              }
+            });""";
 
     /** Whether the page has started loading another document since {@link #settle()} last ran (#397). */
     private volatile boolean pageLoaded;
@@ -401,8 +418,12 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public void settle() {
         try {
-            if (Boolean.TRUE.equals(page.evaluate(SETTLE_AND_IDLE,
-                    List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS))) && !pageLoaded) {
+            Object state = page.evaluate(SETTLE_AND_IDLE, List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS));
+            if ("leaving".equals(state)) {
+                // the request for the next page may not be out yet: its load is still to come
+                pageLoaded = true;
+                loaded = false;
+            } else if ("idle".equals(state) && !pageLoaded) {
                 return;
             }
         } catch (com.microsoft.playwright.PlaywrightException e) {
@@ -415,11 +436,17 @@ final class PlaywrightSession implements AdapterSession {
     }
 
     /**
-     * After a page load: waits for {@code load}, then until Flow has started the page's UI. Before that, only Flow's
-     * TypeScript client is registered, or none, and the page reads as idle while it shows nothing yet (#397).
+     * After a page load: waits for the new page's {@code load}, then until Flow has started the page's UI. Before
+     * that, only Flow's TypeScript client is registered, or none, and the page reads as idle while it shows nothing
+     * yet (#397).
      */
     private void waitForFlowStart() {
         pageLoaded = false;
+        try {
+            page.waitForCondition(() -> loaded, new Page.WaitForConditionOptions().setTimeout(timeoutMillis));
+        } catch (com.microsoft.playwright.TimeoutError e) {
+            // the navigation loaded no page (a 204, a cancelled one): the page in place is the one to wait for
+        }
         page.waitForLoadState(com.microsoft.playwright.options.LoadState.LOAD);
         try {
             page.waitForFunction(FLOW_STARTED, null, new Page.WaitForFunctionOptions().setTimeout(FLOW_START_CAP_MS));
@@ -441,7 +468,8 @@ final class PlaywrightSession implements AdapterSession {
 
     /**
      * {@link BrowserQueries#SETTLE_NAVIGATION}, then Dramafinder's idle condition (no Flow client active, the dev
-     * server loaded), polled: true once idle, false when still busy after the given time.
+     * server loaded), polled: {@code idle}, {@code busy} when still busy after the given time, or {@code leaving}
+     * once the page has started loading another document ({@link #SEE_LEAVING}).
      */
     private static final String SETTLE_AND_IDLE = """
             async ([cap, idleMs]) => {
@@ -458,11 +486,12 @@ final class PlaywrightSession implements AdapterSession {
                 }
                 return !(flow && flow.devServerIsNotLoaded);
               };
+              let state = 'busy';
               for (let t = 0; t <= idleMs; t += 10) {
-                if (idle()) return true;
+                if (idle()) { state = 'idle'; break; }
                 await tick(10);
               }
-              return false;
+              return window.__unifiedLeaving ? 'leaving' : state;
             }""";
 
     /** A full-page screenshot. */
