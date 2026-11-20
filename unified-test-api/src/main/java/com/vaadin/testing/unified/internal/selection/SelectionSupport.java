@@ -33,20 +33,22 @@ public final class SelectionSupport {
                 }
                 access.select(label);
             }
-            // the app may replace the field as it takes the value (#377): a field gone has nothing to check
-            if (!stillFound(element)) {
-                return;
-            }
+            // the app may replace the field as it takes the value (#377): when the check can't confirm the pick,
+            // a field the lookup no longer finds has nothing to check. Asked only then, to keep a pick's round trips.
             List<String> selected;
             try {
                 selected = access.selectedItems();
-            } catch (StaleElementException stale) {
-                throw stale;
             } catch (RuntimeException readFailed) {
+                if (!stillFound(element)) {
+                    return;
+                }
+                if (readFailed instanceof StaleElementException stale) {
+                    throw stale;
+                }
                 // e.g. Playwright's own timeout: the Unified failure, with it as the cause
                 throw notSelected(element, label, null, readFailed);
             }
-            if (!selected.contains(label)) {
+            if (!selected.contains(label) && stillFound(element)) {
                 throw notSelected(element, label, selected, null);
             }
         });
@@ -60,10 +62,16 @@ public final class SelectionSupport {
                 return;
             }
             access.deselect(label);
-            if (!stillFound(element)) {
-                return;
+            List<String> selected;
+            try {
+                selected = access.selectedItems();
+            } catch (RuntimeException readFailed) {
+                if (!stillFound(element)) {
+                    return; // replaced as it took the change (#377)
+                }
+                throw readFailed;
             }
-            if (access.selectedItems().contains(label)) {
+            if (selected.contains(label) && stillFound(element)) {
                 throw new IllegalStateException("\"" + label + "\" could not be deselected in " + element.describe());
             }
         });
