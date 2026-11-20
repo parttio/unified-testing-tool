@@ -47,6 +47,7 @@ class TestBenchDiagTest extends BrowserTestBase {
             $(TextFieldElement.class).withLabel("Name").single().setValue("Alice");
             $(TextFieldElement.class).withLabel("Email").single().setValue("alice@example.com");
             $(ButtonElement.class).withText("Save").single().click();
+            System.out.println("DIAG samples-tb" + UnifiedDiagTest.samples(getDriver()));
             Object state = ((JavascriptExecutor) getDriver()).executeScript(
                     "const n = document.querySelector('vaadin-notification'); const c = n && n._card;"
                             + "return String(!!n) + ' opened=' + (n && n.opened) + ' card=' + !!c"

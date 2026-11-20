@@ -67,6 +67,7 @@ class UnifiedDiagTest {
             page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");
             page.find(UnifiedButton.class).withText("Save").click();
             WebDriver d = page.unwrap(WebDriver.class);
+            System.out.println("DIAG samples-unified" + samples(d));
             Object state = ((JavascriptExecutor) d).executeScript(
                     "const n = document.querySelector('vaadin-notification'); const c = n && n._card;"
                             + "return String(!!n) + ' opened=' + (n && n.opened) + ' card=' + !!c"
@@ -75,5 +76,28 @@ class UnifiedDiagTest {
                             + " + ' text=' + (c && c.innerText.trim());");
             System.out.println("DIAG cardAfterClick " + state);
         }
+    }
+
+    static final String SAMPLE = "const n = document.querySelector('vaadin-notification'); const c = n && n._card;"
+            + "return document.visibilityState + ' focus=' + document.hasFocus()"
+            + " + ' op=' + (c && getComputedStyle(c).opacity)"
+            + " + ' anim=' + (c && c.getAnimations({subtree: true}).map(a => a.playState + ':' + Math.round(a.currentTime)).join(','))"
+            + " + ' t=' + Math.round(performance.now());";
+
+    static String samples(org.openqa.selenium.WebDriver d) {
+        org.openqa.selenium.JavascriptExecutor js = (org.openqa.selenium.JavascriptExecutor) d;
+        org.openqa.selenium.WebElement card = (org.openqa.selenium.WebElement) js.executeScript(
+                "return document.querySelector('vaadin-notification')._card");
+        StringBuilder sb = new StringBuilder();
+        long t0 = System.nanoTime();
+        for (int i = 0; i < 30; i++) {
+            String text = card.getText();
+            sb.append(String.format("%n  %4dms text='%s' %s", (System.nanoTime() - t0) / 1_000_000, text,
+                    js.executeScript(SAMPLE)));
+            if (!text.isEmpty()) {
+                break;
+            }
+        }
+        return sb.toString();
     }
 }
