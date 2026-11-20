@@ -118,10 +118,27 @@ public final class TimeBenchmark {
         };
     }
 
+    /**
+     * The parameter types of the scenario's test method in the class: a Unified UI Test's method takes a
+     * {@code UnifiedPage}, so its name alone doesn't select it.
+     */
+    private static String parameterTypes(String testClass, String method) {
+        try {
+            Class<?> type = Class.forName(testClass, false, Thread.currentThread().getContextClassLoader());
+            return Arrays.stream(type.getDeclaredMethods())
+                    .filter(m -> m.getName().equals(method))
+                    .findFirst()
+                    .map(m -> String.join(",", Arrays.stream(m.getParameterTypes()).map(Class::getName).toList()))
+                    .orElse("");
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /** Runs one test class (or one of its methods), as the demo's Surefire configuration would; exits 2 on a failure. */
     private static void run(Launcher launcher, String testClass, String method, String tool) {
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-                .selectors(method == null ? selectClass(testClass) : selectMethod(testClass, method))
+                .selectors(method == null ? selectClass(testClass) : selectMethod(testClass, method, parameterTypes(testClass, method)))
                 .configurationParameter("vaadin.testing.tool", tool)
                 .configurationParameter("vaadin.testing.browserless.route-errors-to-session", "true")
                 .configurationParameter("junit.jupiter.execution.parallel.enabled", "false")
