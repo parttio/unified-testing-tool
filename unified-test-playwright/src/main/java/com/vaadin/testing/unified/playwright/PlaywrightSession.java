@@ -458,15 +458,17 @@ final class PlaywrightSession implements AdapterSession {
         if (!(target instanceof PlaywrightElement element)) {
             return null;
         }
-        Object result = element.locator().evaluateAll(TARGET_BOX);
-        if (result instanceof String missing) {
-            return new com.vaadin.testing.unified.spi.Highlight(0, 0, 0, 0, missing);
+        Object result;
+        try {
+            result = element.locator().evaluateAll(TARGET_BOX);
+        } catch (RuntimeException e) {
+            return null; // the screenshot is kept without a box: a highlight never costs the snapshot
         }
-        if (!(result instanceof List<?> box) || box.size() != 4) {
-            return null;
+        if (!(result instanceof List<?> box) || box.size() != 6) {
+            return com.vaadin.testing.unified.spi.Highlight.gone();
         }
-        return com.vaadin.testing.unified.spi.Highlight.box(number(box.get(0)), number(box.get(1)),
-                number(box.get(2)), number(box.get(3)));
+        return com.vaadin.testing.unified.spi.Highlight.of(number(box.get(0)), number(box.get(1)), number(box.get(2)),
+                number(box.get(3)), number(box.get(4)), number(box.get(5)));
     }
 
     private static double number(Object value) {
@@ -474,14 +476,14 @@ final class PlaywrightSession implements AdapterSession {
     }
 
     /**
-     * The first element's box in fractions of the viewport, [x, y, width, height]; {@code gone} when it is no
-     * longer on the page or not shown.
+     * The first element's box in the viewport, in pixels, and the viewport's size: [left, top, width, height,
+     * viewport width, viewport height]; null when it is no longer on the page or not shown.
      */
     private static final String TARGET_BOX = """
             els => {
-              if (!els.length || !els[0].isConnected || !els[0].checkVisibility()) return 'gone';
-              const r = els[0].getBoundingClientRect(), w = innerWidth, h = innerHeight;
-              return [r.left / w, r.top / h, r.width / w, r.height / h];
+              if (!els.length || !els[0].isConnected || !els[0].checkVisibility()) return null;
+              const r = els[0].getBoundingClientRect();
+              return [r.left, r.top, r.width, r.height, innerWidth, innerHeight];
             }""";
 
     @Override
