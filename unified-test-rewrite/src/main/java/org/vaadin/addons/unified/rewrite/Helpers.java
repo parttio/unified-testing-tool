@@ -51,7 +51,8 @@ final class Helpers {
         for (Statement s : c.getBody().getStatements()) {
             if (s instanceof J.MethodDeclaration m && m.getBody() != null && !isBrowserTest(m)
                     && !m.hasModifier(J.Modifier.Type.Static)) {
-                calls.put(m.getSimpleName(), new HashSet<>());
+                // keyed by name, as calls are: overloads share one entry, so one doesn't drop another's calls
+                calls.computeIfAbsent(m.getSimpleName(), k -> new HashSet<>());
                 AtomicBoolean direct = new AtomicBoolean();
                 new JavaIsoVisitor<Integer>() {
                     @Override

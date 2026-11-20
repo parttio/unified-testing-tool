@@ -1,6 +1,7 @@
 package demo;
 
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
@@ -11,8 +12,14 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 @Route("")
 public class HomeView extends VerticalLayout {
     public HomeView() {
+        // a full page load, not a router navigation
+        Anchor reload = new Anchor("profile", "Profile, loaded anew");
+        reload.setRouterIgnore(true);
         add(new H1("Home"), new Button("Go to profile", e -> getUI().ifPresent(ui -> ui.navigate(ProfileView.class))),
                 new RouterLink("Reports", ReportView.class),
-                new Button("Broken link", e -> getUI().ifPresent(ui -> ui.navigate("no-such-page"))));
+                new Button("Broken link", e -> getUI().ifPresent(ui -> ui.navigate("no-such-page"))), reload,
+                // a page load Flow starts while it handles the click's response, from a slow server
+                new Button("Open profile from a slow server", e -> getUI().ifPresent(ui -> ui.getPage()
+                        .setLocation("profile?" + SlowPageFilter.PARAMETER + "=500"))));
     }
 }

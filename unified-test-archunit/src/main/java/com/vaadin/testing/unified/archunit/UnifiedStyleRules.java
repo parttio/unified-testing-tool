@@ -137,7 +137,8 @@ public final class UnifiedStyleRules {
      * {@code @RequiresTestingTool} on the test method or its class (or an enclosing class), so other Testing Tools
      * skip it. Testing Tool code is a call to {@code unwrap(..)} or to an {@code ...EscapeHatch.of(..)}, or any use
      * of the Playwright, Dramafinder, TestBench, Selenium or Browserless Test packages. A code unit that calls
-     * {@code tryUnwrap(..)} is an optional extra check (spec 08) and may use the Testing Tool types it unwraps.
+     * {@code tryUnwrap(..)} is an optional extra check (spec 08) and may use the Testing Tool types it unwraps, and
+     * so may the class's own methods it calls; an {@code unwrap(..)} or Escape Hatch there still counts.
      * Lifecycle methods ({@code @BeforeEach}, ...) and constructors run for every test, so they need the
      * annotation on the class.
      */
@@ -312,17 +313,20 @@ public final class UnifiedStyleRules {
 
     /** The first Testing Tool code {@code start} reaches through the test class's own code units. */
     private static Optional<ToolUse> reachedToolUse(JavaCodeUnit start, JavaClass testClass) {
-        Set<JavaCodeUnit> seen = new HashSet<>();
-        Deque<JavaCodeUnit> queue = new ArrayDeque<>(List.of(start));
+        Set<Reach> seen = new HashSet<>();
+        Deque<Reach> queue = new ArrayDeque<>(List.of(new Reach(start, false)));
         while (!queue.isEmpty()) {
-            JavaCodeUnit codeUnit = queue.removeFirst();
-            if (!seen.add(codeUnit)) {
+            Reach reach = queue.removeFirst();
+            if (!seen.add(reach)) {
                 continue;
             }
-            Optional<ToolUse> use = toolUse(codeUnit);
+            JavaCodeUnit codeUnit = reach.codeUnit();
+            Optional<ToolUse> use = toolUse(codeUnit, reach.inOptionalCheck());
             if (use.isPresent()) {
                 return use;
             }
+            // what an optional check calls is part of it
+            boolean inOptionalCheck = reach.inOptionalCheck() || callsTryUnwrap(codeUnit);
             Set<JavaAccess<?>> calls = new LinkedHashSet<>(codeUnit.getCallsFromSelf());
             calls.addAll(codeUnit.getCodeUnitReferencesFromSelf());
             for (JavaAccess<?> call : calls) {
@@ -331,20 +335,31 @@ public final class UnifiedStyleRules {
                     call.getTarget().resolveMember()
                             .filter(JavaCodeUnit.class::isInstance)
                             .map(JavaCodeUnit.class::cast)
-                            .ifPresent(queue::addLast);
+                            .ifPresent(callee -> queue.addLast(new Reach(callee, inOptionalCheck)));
                 } else if ((owner.isAnonymousClass() || owner.isLocalClass())
                         && selfAndEnclosing(owner).contains(testClass)) {
                     // an anonymous or local class of the test: whatever it declares may run
-                    queue.addAll(owner.getCodeUnits());
+                    owner.getCodeUnits().forEach(declared -> queue.addLast(new Reach(declared, inOptionalCheck)));
                 }
             }
         }
         return Optional.empty();
     }
 
-    /** Testing Tool code used directly in {@code codeUnit} (including its lambdas). */
-    private static Optional<ToolUse> toolUse(JavaCodeUnit codeUnit) {
-        boolean optionalCheck = false;
+    /** A code unit the walk reached, and whether it got there through an optional check ({@code tryUnwrap}). */
+    private record Reach(JavaCodeUnit codeUnit, boolean inOptionalCheck) {}
+
+    private static boolean callsTryUnwrap(JavaCodeUnit codeUnit) {
+        return codeUnit.getMethodCallsFromSelf().stream().anyMatch(call ->
+                call.getTargetOwner().isAssignableTo(HAS_ESCAPE_HATCH) && call.getTarget().getName().equals("tryUnwrap"));
+    }
+
+    /**
+     * Testing Tool code used directly in {@code codeUnit} (including its lambdas). Inside an optional check, only
+     * entering an Escape Hatch counts.
+     */
+    private static Optional<ToolUse> toolUse(JavaCodeUnit codeUnit, boolean inOptionalCheck) {
+        boolean optionalCheck = inOptionalCheck;
         for (JavaMethodCall call : codeUnit.getMethodCallsFromSelf()) {
             JavaClass owner = call.getTargetOwner();
             String name = call.getTarget().getName();

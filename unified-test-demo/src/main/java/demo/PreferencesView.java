@@ -25,6 +25,7 @@ public class PreferencesView extends VerticalLayout {
         birthday.setMax(LocalDate.of(2026, 1, 1));
 
         Checkbox newsletter = new Checkbox("Subscribe to newsletter");
+        newsletter.setWidthFull(); // wider than its box and label: a click must still toggle it (#328)
         Checkbox rememberMe = new Checkbox("Remember me", true);
         Checkbox terms = new Checkbox("Accept terms");
         terms.setIndeterminate(true);

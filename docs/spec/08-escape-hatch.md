@@ -55,7 +55,7 @@ In `user-steps.json` the line is an entry of type `gap`, with `reason` `Escape H
 
 ## Style rule
 
-The opt-in style rule `TOOL_CODE_NEEDS_CAPABILITY` ([12. Readable tests, Style rules](12-readable-tests.md#style-rules)) fails a Unified UI Test class that calls an Escape Hatch, or depends on Playwright, TestBench or Browserless packages, directly or through its own helpers, without `@RequiresTestingTool` on the class or test method. `tryUnwrap(..)` is an optional extra check and needs no annotation. Guide: [Checking the style](../guide/style-rules.md).
+The opt-in style rule `TOOL_CODE_NEEDS_CAPABILITY` ([12. Readable tests, Style rules](12-readable-tests.md#style-rules)) fails a Unified UI Test class that calls an Escape Hatch, or depends on Playwright, TestBench or Browserless packages, directly or through its own helpers, without `@RequiresTestingTool` on the class or test method. `tryUnwrap(..)` is an optional extra check and needs no annotation; nor do the class's own helpers it calls, unless they call `unwrap(..)` or an Escape Hatch. Guide: [Checking the style](../guide/style-rules.md).
 
 ## Requirements on Testing Tool adapters
 

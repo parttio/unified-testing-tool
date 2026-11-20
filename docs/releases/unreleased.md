@@ -76,6 +76,12 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   `@Route("plan")` is among the migrated sources, where it used to write `page.navigate("/plan")`. A renamed route
   then breaks at compile time, and the User Step reads `open Plan`. With no such view, several, or one under a
   layout with a `@RoutePrefix`, the path stays.
+- **The Browserless recipe marks per-class `@ServiceConnection` fields** ([#331](https://github.com/parttio/unified-testing-tool/issues/331)):
+  when several migrated classes declare their own, each field gets a Migration Marker (`one Spring context per
+  class: 3 test classes (...) declare their own @ServiceConnection field, ...`). Each such class starts its own
+  Spring context and, with `@UnifiedSpringBootTest`, its own embedded server, on Browserless too; one suite ran
+  54 % slower after the migration for that reason. The guide and the `write-unified-ui-tests` skill now recommend
+  one shared base class ([One Spring context](../migrating-from-browserless.md#one-spring-context)).
 - **Adapters:** `AdapterSession` has new methods with a default, `consoleErrors()`, `title()` and
   `navigate(view, parameters, query)`. An adapter outside this repository keeps compiling; its `hasTitle(..)` fails
   until it implements `title()`, and its navigation with query parameters opens the path the annotations give.
@@ -190,6 +196,17 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Wrapper's calls. So do `assertThat(locator)`'s `isVisible()`, `isEnabled()`, `isDisabled()`, `hasValue(..)` and
   `isChecked()`. An id no view sets becomes a `UnifiedContainer` lookup, which finds any component, with a Migration
   Marker. They used to stay behind the Escape Hatch, one marker each.
+- **Retrying assertions for a menu bar's items** ([#330](https://github.com/parttio/unified-testing-tool/issues/330)):
+  `assertThat(menu).hasItems("File", "Help")`, `hasItems(List.of("File", "Export"), "PDF", "CSV")` for a
+  sub-menu, and `hasItem(..)`, `hasItemEnabled(..)` and `hasItemDisabled(..)`, which take a path like
+  `clickItem(..)`. They replace `assertEquals` on `getItems(..)` and `isItemEnabled(..)`, which read once and left
+  no `see` line in `user-steps.txt`. See
+  [Buttons and menus](https://parttio.github.io/unified-testing-tool/guide/components/#buttons-and-menus).
+- **`UnifiedDateTimePicker.typeText(LocalDate, String)`**
+  ([#329](https://github.com/parttio/unified-testing-tool/issues/329)): types the date in the field's own format,
+  which a browser takes from the field's locale, and the time as it is. A test of incomplete input, a date with no
+  time, no longer branches on the Testing Tool: `typeText("2026-07-01", "")` was incomplete input on Browserless
+  and bad input in a browser.
 
 ## New settings
 

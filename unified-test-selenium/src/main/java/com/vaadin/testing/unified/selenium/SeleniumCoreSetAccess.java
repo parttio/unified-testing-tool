@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 import org.openqa.selenium.WebElement;
 
@@ -165,6 +166,12 @@ final class SeleniumCoreSetAccess {
             timePicker.selectByText(time);
             timePicker.getTimePickerInputElement().callFunction("blur"); // no TestBenchElement.blur(): #164
             session.waitForVaadin();
+        }
+
+        @Override
+        public String formatDate(LocalDate date) {
+            return (String) session.js("return (" + BrowserQueries.FORMAT_DATE + ")(arguments[0], arguments[1]);",
+                    element, BrowserQueries.formatDateArgument(date));
         }
     }
 

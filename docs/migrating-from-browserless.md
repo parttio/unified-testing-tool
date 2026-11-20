@@ -125,6 +125,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `fireShortcut(Key.KEY_S, KeyModifier.CONTROL)` | `page.pressKey("Control+s")`, with a Migration Marker (see below) |
 | Grid `size()`, `getCellText(row, col)`, `clickRow(row)`, `select(row)` | `getRowCount()`, `row(row).getCellText(col)`, `row(row).click()`, `row(row).select()` |
 | a local `GridTester<..> grid = test(..)` or `GridLocator<..> grid = window.findGrid(..)` | `UnifiedGrid grid = page.find(UnifiedGrid.class)` |
+| in a class that `implements Locators`: `findButton().withText("Save")`, `withAriaLabel(..)`, `findGrid(..).getCellText(row, col)` | `page.find(UnifiedButton.class).withText("Save")`, `withAccessibleName(..)`, `page.find(UnifiedGrid.class).row(row).getCellText(col)`; `implements Locators` goes once no mixin call is left *(unreleased)* |
 | the row scan `IntStream.range(0, grid.size()).filter(i -> grid.getCellText(i, col).equals(text)).findFirst().orElseThrow()` | `grid.row().withCellText(text).getIndex()`, with a Migration Marker: `withCellText(text)` matches any column |
 | ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
 | MessageInput `send(s)`, MessageList `size()` | `send(s)`, `getMessageCount()` |
@@ -192,6 +193,8 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | Migration Marker | What to do |
 |---|---|
 | `Browserless Escape Hatch: <call>` | Rewrite the call with the Unified API if it can express it, then drop the Escape Hatch and `@RequiresTestingTool` |
+| `..., X has a Core Set Wrapper: use UnifiedX` | Find the component with that Wrapper and translate the call |
+| `..., X extends Y: use UnifiedY with a filter (...)` | Find the component with the superclass's Wrapper, plus a filter (`withClassName(..)`, ...) that picks it |
 | `..., no Wrapper for X: write one (ADR 0003)` | Write a [Wrapper](guide/custom-wrappers.md) for the component |
 | `Component Reference: <call>: replace it with a locator ...` | The test holds a component's Java object (a view field, `view.getChildren()...`): find the component with a locator instead |
 | `filter runs Java on the component: <call>: replace withCondition(..) with a locator` | `withCondition(..)` and `withPropertyValue(..)` run Java on each component: pick a label, text or test id that finds the same one |
@@ -199,13 +202,38 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `was a scan of column <col>; withCellText(text) matches any column ...` | If another column can hold the text, name the column: `withCellText("Header", text)` |
 | `was fireShortcut(..); pressKey also reaches the focused component and an open dialog` | `fireShortcut` fired the shortcut on the UI only; `pressKey` also reaches the focused component and an open dialog (Escape closes it). Check the test still means the same |
+| `Browserless Locators mixin: <call>` *(unreleased)* | The `Locators` mixin's call has no Wrapper form (`getRow(..)`, `component()`, a locator passed to a helper) and runs on Browserless only: find the component with `page.find(..)` and use its Wrapper, then drop `@RequiresTestingTool`. The class keeps `implements Locators`, with a marker, until no call is left |
+| `server-side state: <call>: only Browserless runs the server in the test's JVM ...` *(unreleased)* | `UI.getCurrent()` and `VaadinSession.getCurrent()` are null on the other Testing Tools: check what the user sees instead (a Wrapper, `assertThat(page)`), or keep the test on Browserless |
 | `Browserless-only pattern: @Transactional ...` | The test's transaction reaches the views only on Browserless ([test data](spec/02-test-setup.md)): keep it, or commit test data and clean up |
 | `Browserless-only pattern: a Spring context without @SpringBootTest ...` | A narrow `@ContextConfiguration` has no web server: keep it, or switch to `@UnifiedSpringBootTest` with `@MockitoBean` |
 | `not migrated: this test uses the Browserless application or user context ...` | The class is left as it is: use `page.openWindow()` or `page.openAsUser(..)` for the second window or user, then run the migration again |
 | `not migrated: this class passes itself (this) to a page object or helper ...` | The class is left as Browserless Test: run with `includePageObjects`, or make the page object take a `UnifiedPage` by hand, then run the migration again |
 | `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` *(unreleased)* | Move the application to Vaadin 25.3, then delete the marker |
+| `one Spring context per class: N test classes (...) declare their own @ServiceConnection field ...`, on the field *(unreleased)* | Move the container, `@UnifiedSpringBootTest` and the profile to one shared base class (see [One Spring context](#one-spring-context)), then delete the marker |
 
 Once done, a marker is gone, or it reads `// Escape Hatch kept: <reason>`.
+
+## One Spring context
+
+`@UnifiedSpringBootTest` always starts the application on a random port, also on Browserless ([test setup](spec/02-test-setup.md)), so each Spring context the suite starts also starts an embedded server: about a second each. Spring caches a context and shares it between the test classes whose configuration is the same. Every difference starts another one: a class's own `@MockitoBean`s, `@Import`s, `properties`, profile or `@ServiceConnection` container field. Browserless suites often declare those per class, and the migration keeps them. One such suite started 9 contexts after the migration, and ran 54 % slower than before; with one shared base class it ran 7.5 % faster than before ([#331](https://github.com/parttio/unified-testing-tool/issues/331)).
+
+Keep the suite on one context: put `@UnifiedSpringBootTest`, the profile and the container in one base class, and have the test classes extend it.
+
+```java
+@UnifiedSpringBootTest
+@ActiveProfiles("test")
+abstract class UiTestBase {
+    @ServiceConnection
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
+}
+
+class DashboardViewTest extends UiTestBase {
+    @Test
+    void showsTheOrders(UnifiedPage page) { ... }
+}
+```
+
+Give a class setup of its own only when its tests need it, and move mocks several classes share to the base. *(unreleased)* When several migrated classes declare their own `@ServiceConnection` field, the recipe leaves a Migration Marker on each. To count the contexts a run starts, count `Tomcat started on port` in its log.
 
 ## Running in a browser
 

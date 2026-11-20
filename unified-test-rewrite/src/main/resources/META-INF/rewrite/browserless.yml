@@ -83,6 +83,7 @@ recipeList:
   - org.vaadin.addons.unified.rewrite.BrowserlessLookupsToUnified
   - org.vaadin.addons.unified.rewrite.BrowserlessGridScansToRows
   - org.vaadin.addons.unified.rewrite.BrowserlessLeftoversToEscapeHatch
+  - org.vaadin.addons.unified.rewrite.BrowserlessOnlyCallsMarked
   - org.openrewrite.java.ChangeType:
       oldFullyQualifiedTypeName: org.springframework.boot.test.context.SpringBootTest
       newFullyQualifiedTypeName: com.vaadin.testing.unified.spring.UnifiedSpringBootTest

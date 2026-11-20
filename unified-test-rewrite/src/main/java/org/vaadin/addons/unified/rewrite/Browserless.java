@@ -65,8 +65,10 @@ final class Browserless {
         }
     }
 
+    /** Every Wrapper's filters; a locator's {@code withAriaLabel} is the accessible name it sets. */
     private static final Map<String, String> COMMON_FILTERS = Map.of("withId", "withId", "withClassName",
-            "withClassName", "withTheme", "withTheme", "withTestId", "withTestId");
+            "withClassName", "withTheme", "withTheme", "withTestId", "withTestId", "withAriaLabel", "withAccessibleName",
+            "withAriaLabelContaining", "withAccessibleNameContaining");
     private static final Map<String, String> FIELD_FILTERS = with(COMMON_FILTERS, Map.of("withLabel", "withLabel",
             "withCaption", "withLabel", "withPlaceholder", "withPlaceholder"));
     private static final Map<String, String> FIELD_GETTERS = Map.of("getValue", "getValue", "getLabel", "getLabel",
@@ -124,7 +126,7 @@ final class Browserless {
                     Map.of("getText", "getText"), Map.of("isOpened", "isOpen")),
             "com.vaadin.flow.component.checkbox.Checkbox", new Wrapper("com.vaadin.testing.unified.component.UnifiedCheckbox",
                     with(COMMON_FILTERS, Map.of("withLabel", "withLabel", "withCaption", "withLabel")),
-                    Map.of("check", "check", "uncheck", "uncheck", "isChecked", "isChecked"),
+                    Map.of("check", "check", "uncheck", "uncheck", "click", "click", "isChecked", "isChecked"),
                     Map.of("getValue", "isChecked", "getLabel", "getLabel", "isEnabled", "isEnabled")),
             "com.vaadin.flow.component.dialog.Dialog", new Wrapper("com.vaadin.testing.unified.component.UnifiedDialog",
                     COMMON_FILTERS, Map.of(), Map.of("isOpened", "isOpen", "getHeaderTitle", "getHeaderTitle")));
@@ -139,7 +141,72 @@ final class Browserless {
     private static final Map<String, Wrapper> BY_COMPONENT = Stream.of(CORE, MORE, CHAT).flatMap(m -> m.entrySet().stream())
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
+    /**
+     * Every Wrapper in the Core Set (unified-test-api), by the Flow component it names in
+     * {@code @UnifiedComponent}: what a leftover's Migration Marker points at, where the recipe has no conversion
+     * for the component yet.
+     */
+    private static final Map<String, CoreSetWrapper> CORE_SET = Map.ofEntries(
+            Map.entry("com.vaadin.flow.component.button.Button", new CoreSetWrapper("UnifiedButton", "withText")),
+            Map.entry("com.vaadin.flow.component.checkbox.Checkbox", new CoreSetWrapper("UnifiedCheckbox", "withLabel")),
+            Map.entry("com.vaadin.flow.component.combobox.ComboBox", new CoreSetWrapper("UnifiedComboBox", "withLabel")),
+            Map.entry("com.vaadin.flow.component.combobox.MultiSelectComboBox", new CoreSetWrapper("UnifiedMultiSelectComboBox", "withLabel")),
+            Map.entry("com.vaadin.flow.component.datepicker.DatePicker", new CoreSetWrapper("UnifiedDatePicker", "withLabel")),
+            Map.entry("com.vaadin.flow.component.datetimepicker.DateTimePicker", new CoreSetWrapper("UnifiedDateTimePicker", "withLabel")),
+            Map.entry("com.vaadin.flow.component.details.Details", new CoreSetWrapper("UnifiedDetails", "withSummaryText")),
+            Map.entry("com.vaadin.flow.component.dialog.Dialog", new CoreSetWrapper("UnifiedDialog", "withHeaderTitle")),
+            Map.entry("com.vaadin.flow.component.grid.Grid", new CoreSetWrapper("UnifiedGrid", null)),
+            Map.entry("com.vaadin.flow.component.html.Article", new CoreSetWrapper("UnifiedArticle", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Aside", new CoreSetWrapper("UnifiedAside", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Div", new CoreSetWrapper("UnifiedDiv", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Footer", new CoreSetWrapper("UnifiedFooter", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Header", new CoreSetWrapper("UnifiedHeader", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Main", new CoreSetWrapper("UnifiedMain", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Nav", new CoreSetWrapper("UnifiedNav", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Paragraph", new CoreSetWrapper("UnifiedParagraph", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Section", new CoreSetWrapper("UnifiedSection", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Span", new CoreSetWrapper("UnifiedSpan", "withText")),
+            Map.entry("com.vaadin.flow.component.menubar.MenuBar", new CoreSetWrapper("UnifiedMenuBar", "withItem")),
+            Map.entry("com.vaadin.flow.component.messages.MessageInput", new CoreSetWrapper("UnifiedMessageInput", null)),
+            Map.entry("com.vaadin.flow.component.messages.MessageList", new CoreSetWrapper("UnifiedMessageList", null)),
+            Map.entry("com.vaadin.flow.component.notification.Notification", new CoreSetWrapper("UnifiedNotification", "withText")),
+            Map.entry("com.vaadin.flow.component.radiobutton.RadioButtonGroup", new CoreSetWrapper("UnifiedRadioButtonGroup", "withLabel")),
+            Map.entry("com.vaadin.flow.component.tabs.TabSheet", new CoreSetWrapper("UnifiedTabSheet", "withTab")),
+            Map.entry("com.vaadin.flow.component.tabs.Tabs", new CoreSetWrapper("UnifiedTabs", "withTab")),
+            Map.entry("com.vaadin.flow.component.textfield.BigDecimalField", new CoreSetWrapper("UnifiedBigDecimalField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.IntegerField", new CoreSetWrapper("UnifiedIntegerField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.NumberField", new CoreSetWrapper("UnifiedNumberField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.TextArea", new CoreSetWrapper("UnifiedTextArea", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.TextField", new CoreSetWrapper("UnifiedTextField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.upload.Upload", new CoreSetWrapper("UnifiedUpload", null)));
+
+    /**
+     * A Core Set Wrapper: its simple name, and the filter that best tells one of its components from another
+     * ({@code withHeaderTitle} on a dialog), or {@code null} when it has only the common ones.
+     */
+    record CoreSetWrapper(String name, String filter) {
+
+        /** The filters to name in a Migration Marker: its own, then the common ones. */
+        String filters() {
+            return (filter == null ? "" : filter + ", ") + "withClassName, ...";
+        }
+    }
+
     private Browserless() {
+    }
+
+    /**
+     * The Core Set Wrapper for a Flow component class or, failing that, for the nearest superclass that has one,
+     * and that class: the Wrapper finds a subclass's components too, with a filter. {@code null} when none has one.
+     */
+    static Map.Entry<JavaType.FullyQualified, CoreSetWrapper> coreSetWrapper(JavaType.FullyQualified component) {
+        for (JavaType.FullyQualified type = component; type != null; type = type.getSupertype()) {
+            CoreSetWrapper wrapper = CORE_SET.get(type.getFullyQualifiedName());
+            if (wrapper != null) {
+                return Map.entry(type, wrapper);
+            }
+        }
+        return null;
     }
 
     /**
@@ -225,11 +292,13 @@ final class Browserless {
     }
 
     /**
-     * A locator's start, {@code window.findTextField()}: a {@code find..()} on a handle returning a
-     * {@code ..Locator} of a component that has a Wrapper. Its Wrapper, else {@code null}.
+     * A locator's start, {@code window.findTextField()}: a {@code find..()} on a handle, or of the
+     * {@code Locators} mixin, returning a {@code ..Locator} of a component that has a Wrapper. Its Wrapper, else
+     * {@code null}.
      */
     static Wrapper ofLocatorStart(Expression e) {
-        if (!(e instanceof J.MethodInvocation call) || call.getSelect() == null || !isHandle(call.getSelect())
+        if (!(e instanceof J.MethodInvocation call)
+                || (call.getSelect() == null ? !isLocatorsMixinCall(call) : !isHandle(call.getSelect()))
                 || !call.getSimpleName().startsWith("find") || call.getMethodType() == null
                 || !(call.getMethodType().getReturnType() instanceof JavaType.FullyQualified locator)
                 || !locator.getFullyQualifiedName().endsWith("Locator")) {
@@ -237,6 +306,17 @@ final class Browserless {
         }
         String fqn = locator.getFullyQualifiedName();
         return forComponent(fqn.substring(0, fqn.length() - "Locator".length()));
+    }
+
+    /** The fluent locator mixin a test class implements: {@code findButton()} and friends without a receiver. */
+    static final String LOCATORS = "com.vaadin.browserless.locator.Locators";
+    private static final Set<String> LOCATORS_TYPES = Set.of(LOCATORS, "com.vaadin.browserless.locator.GeneratedLocators",
+            "com.vaadin.browserless.locator.CommercialLocators", "com.vaadin.browserless.locator.GeneratedCommercialLocators");
+
+    /** A call to a method of the {@code Locators} mixin, made without a receiver. */
+    static boolean isLocatorsMixinCall(J.MethodInvocation call) {
+        return call.getSelect() == null && call.getMethodType() != null
+                && LOCATORS_TYPES.contains(call.getMethodType().getDeclaringType().getFullyQualifiedName());
     }
 
     /** The Wrapper a whole locator expression converts to: its start, then only the Wrapper's filters. */

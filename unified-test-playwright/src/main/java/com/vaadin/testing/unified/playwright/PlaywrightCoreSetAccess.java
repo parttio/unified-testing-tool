@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.spi.MessageInputAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
+import java.time.LocalDate;
 import java.util.List;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.element.DateTimePickerElement;
@@ -192,6 +193,11 @@ final class PlaywrightCoreSetAccess {
         @Override
         public void typeText(String date, String time) {
             new DateTimePickerElement(locator).typeText(date, time); // waits for the round-trip
+        }
+
+        @Override
+        public String formatDate(LocalDate date) {
+            return (String) locator.evaluate(BrowserQueries.FORMAT_DATE, BrowserQueries.formatDateArgument(date));
         }
     }
 

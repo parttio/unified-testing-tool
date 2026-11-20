@@ -316,6 +316,51 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void anEscapeHatchMarkerCarriesOnlyTheCallNotTheCommentAboveIt() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void saves() {
+                        navigate(PeopleView.class);
+                        // the button has no text:
+                        // only its tag finds it
+                        this.page.locator("vaadin-button").click();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void saves(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PeopleView.class);
+                        // the button has no text:
+                        // only its tag finds it
+                        // TODO unified: Dramafinder Escape Hatch: playwright.locator("vaadin-button").click()
+                        playwright.locator("vaadin-button").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void rawPlaywrightAndPageObjectsGetThePageFromTheEscapeHatch() {
         rewriteRun(java(VIEW), java(
                 """

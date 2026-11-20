@@ -41,13 +41,22 @@ To check how the field handles text it can't parse, type it:
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:unparsableText"
 ```
 
+Text is typed as it is, and Browserless parses only ISO dates while a browser parses the field's locale format, so
+`"2026-07-01"` is bad input in a browser. For incomplete input, a date the field can parse with no time, give the
+date as a `LocalDate` *(unreleased)*: `typeText(LocalDate, String)` types it in the field's own format, on every
+Testing Tool and in every locale.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:typesADateWithoutATime"
+```
+
 ## Checkbox
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/PreferencesTest.java:savesTypedValues"
 ```
 
-`check()` and `uncheck()` do nothing when the checkbox is already in that state; `setChecked(boolean)` does either. Assertions: `isChecked()`, `isNotChecked()`, `isIndeterminate()`.
+`check()` and `uncheck()` do nothing when the checkbox is already in that state; `setChecked(boolean)` does either. `click()` toggles it, as a user's click does, on every Testing Tool; prefer it to `element().click()`, which in a browser misses a checkbox wider than its box and label. Assertions: `isChecked()`, `isNotChecked()`, `isIndeterminate()`.
 
 ## Selection: ComboBox, RadioButtonGroup, MultiSelectComboBox
 
@@ -78,7 +87,16 @@ A MenuBar opens its sub-menus as a user does: give the path of item names.
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:clicksNestedMenuItems"
 ```
 
-An icon-only item is named by its `aria-label`. `isItemEnabled("Actions for Hotel", "Delete")` reads whether an item can be clicked.
+An icon-only item is named by its `aria-label`. `assertThat(menu).hasItems(..)` checks the top-level items and
+`hasItems(List.of("File", "Export"), ..)` those of a sub-menu; `hasItem(..)`, `hasItemEnabled(..)` and
+`hasItemDisabled(..)` take a path like `clickItem(..)` and check that the user sees the item, and whether they can
+click it *(unreleased)*:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ItemNameTest.java:assertsWhetherAMenuItemIsEnabled"
+```
+
+`getItems(..)` and `isItemEnabled(..)` read the same now, without waiting.
 
 ## Tabs and Details
 

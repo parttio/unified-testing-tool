@@ -164,6 +164,22 @@ public final class BrowserQueries {
      * A message list's messages as {@code [userName, text]} pairs, from its {@code items}: the text the server gave
      * each one, as Browserless reads it, rather than the rendered Markdown.
      */
+    /**
+     * A DateTimePicker's date in the text its date half shows for it, from the date picker's own
+     * {@code i18n.formatDate}: the format of the field's locale. Takes {@code [year, month, day]}.
+     */
+    public static final String FORMAT_DATE = """
+            (e, [year, month, day]) => {
+              const datePicker = e.querySelector('[slot="date-picker"]');
+              const i18n = datePicker.__effectiveI18n || datePicker.i18n;
+              return i18n.formatDate({ year, month: month - 1, day });
+            }""";
+
+    /** The {@code [year, month, day]} argument of {@link #FORMAT_DATE}. */
+    public static java.util.List<Integer> formatDateArgument(java.time.LocalDate date) {
+        return java.util.List.of(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
+    }
+
     public static final String MESSAGES = """
             e => (e.items || []).map(i => [i.userName == null ? null : String(i.userName),
                 i.text == null ? '' : String(i.text)])""";

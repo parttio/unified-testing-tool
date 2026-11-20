@@ -71,9 +71,17 @@ class EditPersonTest {
   it inside the step and after it.
 - **Secrets**: type a password or token through `page.secret(..)`:
   `.setValue(page.secret(apiKey))`. The reports then show `••••`.
+- **Spring setup**: keep the suite on one Spring context. Every class with its own context setup (a
+  `@ServiceConnection` container field, `@MockitoBean`, `@Import`, properties, profiles) starts another, each with an
+  embedded server; share it through one base class. Test data is committed, not rolled back (the browser Testing
+  Tools refuse `@Transactional`): each test cleans up every table it writes to.
 - **Page objects** are optional and hold structure only: methods returning Wrappers
   (`UnifiedTextField name() { return page.find(UnifiedTextField.class).withLabel("Name"); }`). User work goes in
   User Tasks, checks in the test.
+- **One Spring context**: with Spring Boot, the test classes extend one shared base class that holds
+  `@UnifiedSpringBootTest`, the profile (`@ActiveProfiles`) and any `@ServiceConnection` container field. A class
+  with its own `@MockitoBean`, `@Import`, properties or container field gets a Spring context of its own, and each
+  context starts the application's server, on Browserless too. Add one only when the test needs that setup.
 
 ## Canonical forms
 
@@ -87,7 +95,11 @@ class EditPersonTest {
 | a key press | `page.pressKey("Enter")`, sent to the focused component |
 | a grid row | `grid.row().withCellText("Name", "Alan Turing")`; `grid.row(0)` by index; cell components: `row.cell("Actions").find(UnifiedButton.class)` |
 | a check | `assertThat(wrapper).hasText(..)`, `.hasValue(..)`, `.isOpen()`, `.isDisabled()`, `assertThat(row).hasCellText(..)`, `assertThat(page).isAt(View.class)` |
+| a menu's items | `assertThat(menu).hasItems("File", "Help")`, `.hasItems(List.of("File", "Export"), "PDF", "CSV")`, `.hasItem("File", "Print")`, `.hasItemEnabled(..)`, `.hasItemDisabled(..)` |
 | present, absent, how many | `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on grid rows |
+| gone from the user's view | `assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist()`: lookups and `getText()` include hidden components, on every Testing Tool |
+| a checkbox | `check()`, `uncheck()`, `setChecked(..)`: `element().click()` toggles it on Browserless only |
+| a route the user may not open | `page.navigate(AdminView.class)` doesn't throw; check where it lands: `assertThat(page).isAt(LoginView.class)` |
 | a condition no assertion states | `page.waitUntil(() -> ..)`: a last resort, it shows as a gap in the reports |
 | every match, to act on each | `for (UnifiedButton b : page.find(UnifiedButton.class).withText("Done").all()) { .. }` |
 

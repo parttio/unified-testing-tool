@@ -183,6 +183,12 @@ final class BrowserlessCoreSetAccess {
             });
         }
 
+        /** ISO: the only date text {@link #typeText} parses. */
+        @Override
+        public String formatDate(LocalDate date) {
+            return date.toString();
+        }
+
         /**
          * Sets the value as a user entering it does: both halves from the client, then the field. Browserless
          * Test's DateTimePickerTester sets the field only, so a half kept text it couldn't parse.
