@@ -380,7 +380,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                         browserless.test(name).setValue("Alice");
                         // TODO unified: filter runs Java on the component: test($(TextField.class).withCondition(f -> f.isRequired()).single()).setValue("x"): replace withCondition(..) with a locator
                         browserless.test(browserless.$(TextField.class).withCondition(f -> f.isRequired()).single()).setValue("x");
-                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), no Wrapper for Upload: write one (ADR 0003)
+                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), Upload has a Core Set Wrapper: use UnifiedUpload
                         Assertions.assertTrue(browserless.test(browserless.$(Upload.class).single()).isUsable());
                     }
                 }
@@ -425,7 +425,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
 
                     private boolean count(UnifiedPage page) {
                         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
-                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), no Wrapper for Upload: write one (ADR 0003)
+                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), Upload has a Core Set Wrapper: use UnifiedUpload
                         return browserless.test(browserless.$(Upload.class).single()).isUsable();
                     }
                 }
@@ -508,6 +508,122 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
                         // TODO unified: Browserless Escape Hatch: $(RowActionMenu.class).withId(rowLabel).single(), no Wrapper for RowActionMenu: write one (ADR 0003)
                         return browserless.$(RowActionMenu.class).withId(rowLabel).single();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLeftoverOnAComponentTheCoreSetWrapsNamesItsWrapperInsteadOfAskingForOne() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.menubar.MenuBar;
+                import org.junit.jupiter.api.Test;
+
+                class MenuTest extends BrowserlessTest {
+                    @Test
+                    void opensTheMenu() {
+                        test($(MenuBar.class).single()).isUsable();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.menubar.MenuBar;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class MenuTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void opensTheMenu(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: test($(MenuBar.class).single()).isUsable(), MenuBar has a Core Set Wrapper: use UnifiedMenuBar
+                        browserless.test(browserless.$(MenuBar.class).single()).isUsable();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLeftoverOnASubclassOfACoreSetComponentNamesTheSuperclassWrapperAndItsFilters() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.dialog.Dialog;
+
+                public class ErrorDialog extends Dialog {
+                }
+                """),
+                java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import org.junit.jupiter.api.Test;
+
+                class ErrorTest extends BrowserlessTest {
+                    @Test
+                    void showsTheError() {
+                        test($(ErrorDialog.class).single()).isUsable();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ErrorTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void showsTheError(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: test($(ErrorDialog.class).single()).isUsable(), ErrorDialog extends Dialog: use UnifiedDialog with a filter (withHeaderTitle, withClassName, ...)
+                        browserless.test(browserless.$(ErrorDialog.class).single()).isUsable();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLeftoverOnAComponentNoCoreSetWrapperCoversStillAsksForAWrapper() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.html.Image;
+                import org.junit.jupiter.api.Test;
+
+                class LogoTest extends BrowserlessTest {
+                    @Test
+                    void showsTheLogo() {
+                        test($(Image.class).single()).isUsable();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.html.Image;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LogoTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void showsTheLogo(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: test($(Image.class).single()).isUsable(), no Wrapper for Image: write one (ADR 0003)
+                        browserless.test(browserless.$(Image.class).single()).isUsable();
                     }
                 }
                 """));

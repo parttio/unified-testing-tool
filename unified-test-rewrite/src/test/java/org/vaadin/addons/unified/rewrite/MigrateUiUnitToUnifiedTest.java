@@ -167,7 +167,7 @@ class MigrateUiUnitToUnifiedTest implements RewriteTest {
                     @RequiresTestingTool(TestingTool.BROWSERLESS)
                     void clicks(UnifiedPage page) {
                         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
-                        // TODO unified: Browserless Escape Hatch: test($(Div.class).single()), no Wrapper for Div: write one (ADR 0003)
+                        // TODO unified: Browserless Escape Hatch: test($(Div.class).single()), Div has a Core Set Wrapper: use UnifiedDiv
                         DivTester card = browserless.test(browserless.$(Div.class).single());
                         card.click();
                     }

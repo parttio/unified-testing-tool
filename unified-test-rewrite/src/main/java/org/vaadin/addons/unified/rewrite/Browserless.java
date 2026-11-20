@@ -139,7 +139,72 @@ final class Browserless {
     private static final Map<String, Wrapper> BY_COMPONENT = Stream.of(CORE, MORE, CHAT).flatMap(m -> m.entrySet().stream())
             .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
+    /**
+     * Every Wrapper in the Core Set (unified-test-api), by the Flow component it names in
+     * {@code @UnifiedComponent}: what a leftover's Migration Marker points at, where the recipe has no conversion
+     * for the component yet.
+     */
+    private static final Map<String, CoreSetWrapper> CORE_SET = Map.ofEntries(
+            Map.entry("com.vaadin.flow.component.button.Button", new CoreSetWrapper("UnifiedButton", "withText")),
+            Map.entry("com.vaadin.flow.component.checkbox.Checkbox", new CoreSetWrapper("UnifiedCheckbox", "withLabel")),
+            Map.entry("com.vaadin.flow.component.combobox.ComboBox", new CoreSetWrapper("UnifiedComboBox", "withLabel")),
+            Map.entry("com.vaadin.flow.component.combobox.MultiSelectComboBox", new CoreSetWrapper("UnifiedMultiSelectComboBox", "withLabel")),
+            Map.entry("com.vaadin.flow.component.datepicker.DatePicker", new CoreSetWrapper("UnifiedDatePicker", "withLabel")),
+            Map.entry("com.vaadin.flow.component.datetimepicker.DateTimePicker", new CoreSetWrapper("UnifiedDateTimePicker", "withLabel")),
+            Map.entry("com.vaadin.flow.component.details.Details", new CoreSetWrapper("UnifiedDetails", "withSummaryText")),
+            Map.entry("com.vaadin.flow.component.dialog.Dialog", new CoreSetWrapper("UnifiedDialog", "withHeaderTitle")),
+            Map.entry("com.vaadin.flow.component.grid.Grid", new CoreSetWrapper("UnifiedGrid", null)),
+            Map.entry("com.vaadin.flow.component.html.Article", new CoreSetWrapper("UnifiedArticle", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Aside", new CoreSetWrapper("UnifiedAside", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Div", new CoreSetWrapper("UnifiedDiv", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Footer", new CoreSetWrapper("UnifiedFooter", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Header", new CoreSetWrapper("UnifiedHeader", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Main", new CoreSetWrapper("UnifiedMain", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Nav", new CoreSetWrapper("UnifiedNav", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Paragraph", new CoreSetWrapper("UnifiedParagraph", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Section", new CoreSetWrapper("UnifiedSection", "withText")),
+            Map.entry("com.vaadin.flow.component.html.Span", new CoreSetWrapper("UnifiedSpan", "withText")),
+            Map.entry("com.vaadin.flow.component.menubar.MenuBar", new CoreSetWrapper("UnifiedMenuBar", "withItem")),
+            Map.entry("com.vaadin.flow.component.messages.MessageInput", new CoreSetWrapper("UnifiedMessageInput", null)),
+            Map.entry("com.vaadin.flow.component.messages.MessageList", new CoreSetWrapper("UnifiedMessageList", null)),
+            Map.entry("com.vaadin.flow.component.notification.Notification", new CoreSetWrapper("UnifiedNotification", "withText")),
+            Map.entry("com.vaadin.flow.component.radiobutton.RadioButtonGroup", new CoreSetWrapper("UnifiedRadioButtonGroup", "withLabel")),
+            Map.entry("com.vaadin.flow.component.tabs.TabSheet", new CoreSetWrapper("UnifiedTabSheet", "withTab")),
+            Map.entry("com.vaadin.flow.component.tabs.Tabs", new CoreSetWrapper("UnifiedTabs", "withTab")),
+            Map.entry("com.vaadin.flow.component.textfield.BigDecimalField", new CoreSetWrapper("UnifiedBigDecimalField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.IntegerField", new CoreSetWrapper("UnifiedIntegerField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.NumberField", new CoreSetWrapper("UnifiedNumberField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.TextArea", new CoreSetWrapper("UnifiedTextArea", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.TextField", new CoreSetWrapper("UnifiedTextField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.upload.Upload", new CoreSetWrapper("UnifiedUpload", null)));
+
+    /**
+     * A Core Set Wrapper: its simple name, and the filter that best tells one of its components from another
+     * ({@code withHeaderTitle} on a dialog), or {@code null} when it has only the common ones.
+     */
+    record CoreSetWrapper(String name, String filter) {
+
+        /** The filters to name in a Migration Marker: its own, then the common ones. */
+        String filters() {
+            return (filter == null ? "" : filter + ", ") + "withClassName, ...";
+        }
+    }
+
     private Browserless() {
+    }
+
+    /**
+     * The Core Set Wrapper for a Flow component class or, failing that, for the nearest superclass that has one,
+     * and that class: the Wrapper finds a subclass's components too, with a filter. {@code null} when none has one.
+     */
+    static Map.Entry<JavaType.FullyQualified, CoreSetWrapper> coreSetWrapper(JavaType.FullyQualified component) {
+        for (JavaType.FullyQualified type = component; type != null; type = type.getSupertype()) {
+            CoreSetWrapper wrapper = CORE_SET.get(type.getFullyQualifiedName());
+            if (wrapper != null) {
+                return Map.entry(type, wrapper);
+            }
+        }
+        return null;
     }
 
     /**

@@ -215,8 +215,20 @@ public class BrowserlessLeftoversToEscapeHatch extends Recipe {
                                 + "(..) with a locator";
                     }
                     if (Browserless.ofLookupStart(start) == null && start.getArguments().get(0) instanceof J.FieldAccess literal) {
-                        return "Browserless Escape Hatch: " + printed + ", no Wrapper for " + literal.getTarget()
-                                .printTrimmed(getCursor()) + ": write one (ADR 0003)";
+                        String component = literal.getTarget().printTrimmed(getCursor());
+                        JavaType.FullyQualified type = TypeUtils.asFullyQualified(literal.getTarget().getType());
+                        var coreSet = type == null ? null : Browserless.coreSetWrapper(type);
+                        if (coreSet != null && TypeUtils.isOfClassType(type, coreSet.getKey().getFullyQualifiedName())) {
+                            return "Browserless Escape Hatch: " + printed + ", " + component
+                                    + " has a Core Set Wrapper: use " + coreSet.getValue().name();
+                        }
+                        if (coreSet != null) {
+                            return "Browserless Escape Hatch: " + printed + ", " + component + " extends "
+                                    + coreSet.getKey().getClassName() + ": use " + coreSet.getValue().name()
+                                    + " with a filter (" + coreSet.getValue().filters() + ")";
+                        }
+                        return "Browserless Escape Hatch: " + printed + ", no Wrapper for " + component
+                                + ": write one (ADR 0003)";
                     }
                 }
                 return "Browserless Escape Hatch: " + printed;

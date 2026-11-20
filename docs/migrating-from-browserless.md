@@ -192,6 +192,8 @@ In a context-API test, a call on the window that doesn't convert keeps the windo
 | Migration Marker | What to do |
 |---|---|
 | `Browserless Escape Hatch: <call>` | Rewrite the call with the Unified API if it can express it, then drop the Escape Hatch and `@RequiresTestingTool` |
+| `..., X has a Core Set Wrapper: use UnifiedX` | Find the component with that Wrapper and translate the call |
+| `..., X extends Y: use UnifiedY with a filter (...)` | Find the component with the superclass's Wrapper, plus a filter (`withClassName(..)`, ...) that picks it |
 | `..., no Wrapper for X: write one (ADR 0003)` | Write a [Wrapper](guide/custom-wrappers.md) for the component |
 | `Component Reference: <call>: replace it with a locator ...` | The test holds a component's Java object (a view field, `view.getChildren()...`): find the component with a locator instead |
 | `filter runs Java on the component: <call>: replace withCondition(..) with a locator` | `withCondition(..)` and `withPropertyValue(..)` run Java on each component: pick a label, text or test id that finds the same one |
