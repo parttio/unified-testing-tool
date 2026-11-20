@@ -190,6 +190,11 @@ Nothing was removed and no test needs changes, but a run behaves differently in 
   Wrapper's calls. So do `assertThat(locator)`'s `isVisible()`, `isEnabled()`, `isDisabled()`, `hasValue(..)` and
   `isChecked()`. An id no view sets becomes a `UnifiedContainer` lookup, which finds any component, with a Migration
   Marker. They used to stay behind the Escape Hatch, one marker each.
+- **`UnifiedDateTimePicker.typeText(LocalDate, String)`**
+  ([#329](https://github.com/parttio/unified-testing-tool/issues/329)): types the date in the field's own format,
+  which a browser takes from the field's locale, and the time as it is. A test of incomplete input, a date with no
+  time, no longer branches on the Testing Tool: `typeText("2026-07-01", "")` was incomplete input on Browserless
+  and bad input in a browser.
 
 ## New settings
 
