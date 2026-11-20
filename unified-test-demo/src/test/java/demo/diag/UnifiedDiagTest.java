@@ -62,6 +62,12 @@ class UnifiedDiagTest {
     @Test
     void cardRightAfterClick(UnifiedPage page) {
         for (int round = 0; round < 8; round++) {
+            if (round == 4) {
+                Object wrapped = ((com.vaadin.testbench.TestBenchDriverProxy) page.unwrap(WebDriver.class)).getWrappedDriver();
+                ((org.openqa.selenium.chromium.HasCdp) wrapped).executeCdpCommand("Emulation.setFocusEmulationEnabled",
+                        java.util.Map.of("enabled", true));
+                System.out.println("DIAG focus emulation on");
+            }
             page.navigate(ProfileView.class);
             page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
             page.find(UnifiedTextField.class).withLabel("Email").setValue("alice@example.com");

@@ -42,7 +42,12 @@ class TestBenchDiagTest extends BrowserTestBase {
 
     @BrowserTest
     void cardRightAfterClick() {
+        System.out.println("DIAG tb window " + getDriver().manage().window().getSize());
         for (int round = 0; round < 8; round++) {
+            if (round == 4) {
+                getDriver().manage().window().setSize(new org.openqa.selenium.Dimension(1280, 1024));
+                System.out.println("DIAG tb window now " + getDriver().manage().window().getSize());
+            }
             getDriver().get("http://localhost:" + port + "/profile");
             $(TextFieldElement.class).withLabel("Name").single().setValue("Alice");
             $(TextFieldElement.class).withLabel("Email").single().setValue("alice@example.com");
