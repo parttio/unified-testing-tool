@@ -266,6 +266,29 @@ function A(){
   return h;
 }
 
+
+const STEPS = {
+ edit:{same:[['1','navigate to Persons',1],['2','click row “Alan Turing” in grid'],['3','fill text field “Name” with “Alan M. Turing”'],['4','check the layout',2],['5','click button “Save”'],['6','see grid row “Alan M. Turing”']]},
+ plan:{same:[['1','navigate to Dashboard',1]],
+       parted:{'desktop, tablet':[['2','click side nav item “Plan”'],['3','click button “Next week”'],['4','see text “Week 48”']],
+               'phone':[['2','open the drawer'],['3','click button “Next week”','fail']]}},
+ login:{same:[['1','log in as “alice”'],['2','navigate to Dashboard',1],['3','see text “Welcome, Alice”']]},
+ drawer:{same:[['1','navigate to Persons'],['2','see the drawer as an overlay']]},
+};
+let showSteps = true;
+function stepsHtml(s, vk){
+  const st = STEPS[s.id], pt = n => s.points.find(p=>p.n===n);
+  const li = ([i,t,x]) => { let h = `<li class="step${x==='fail'?' failed':''}"><span class="idx">${i}</span><span class="text">${esc(t)}${x==='fail'?' <span class="mark">✘</span>':''}`;
+    if(typeof x==='number'){ const p = pt(x); h += ' ' + VPS.map(v=>{ const c=p[v.key]; const f=c.findings.length, l=c.lost.length;
+        const sel = v.key===vk ? 'outline:2px solid var(--accent);' : '';
+        return `<span class="pill ${f?'f':l?'l':'ok'}" style="${sel}" title="${v.key}">${v.key[0].toUpperCase()}${v.key.slice(1)} ${f?f+' ⚠':''}${l?' '+l+' lost':''}${!f&&!l?'✔':''}</span>`;}).join(''); }
+    return h + `</span><span class="meta">${typeof x==='number'?'<span class="dur">measured</span>':''}</span></li>`; };
+  let h = `<ol class="steps">${st.same.map(li).join('')}</ol>`;
+  if(st.parted){ h += `<p class="parted">⑂ the runs part here</p><div class="cols" style="grid-template-columns:repeat(2,minmax(0,1fr))">` +
+     Object.entries(st.parted).map(([k,list])=>`<div class="col"><h4><span class="vp">${k}</span></h4><ol class="steps">${list.map(li).join('')}</ol></div>`).join('') + `</div>`; }
+  return h;
+}
+
 // ---------- variant B: matrix first, detail on click ----------
 let bSel = {s:'edit', v:'phone'};
 function B(){
@@ -279,6 +302,8 @@ function B(){
   h += `</tbody></table>`;
   const s = S.find(x=>x.id===bSel.s), v = VPS.find(x=>x.key===bSel.v);
   h += `<div class="detail"><h3 style="margin:4px 0">${esc(s.name)} · ${vpLabel(v)} against ${vpLabel(VPS[0])}</h3>`;
+  h += `<label class="toggle" style="margin:4px 0 8px"><input type="checkbox" id="showsteps" ${showSteps?'checked':''}> show the User Steps: once, with each measured step's result per size</label>`;
+  if(showSteps) h += stepsHtml(s, v.key);
   if(s.fixed) h += `<p class="lead">Declares <code>@Viewport(375, 667)</code>: runs at that size in every run, so there is nothing to compare.</p>`;
   if(s.failure && bSel.v==='phone') h += `<dl class="failure"><dt>Fails</dt><dd>${esc(s.failure)}</dd></dl>`;
   s.points.forEach(p=>{
@@ -338,6 +363,7 @@ document.getElementById('next').onclick=()=>step(1);
 document.addEventListener('keydown',e=>{ if(e.target.closest('input,textarea,[contenteditable]')) return;
   if(e.key==='ArrowLeft') step(-1); if(e.key==='ArrowRight') step(1); if(e.key==='Escape') zoom.hidden=true; });
 document.getElementById('textonly').onchange=render;
+document.addEventListener('change',e=>{ if(e.target.id==='showsteps'){ showSteps=e.target.checked; render(); } });
 const zoom = document.getElementById('zoom');
 document.addEventListener('click',e=>{
   const z = e.target.closest('[data-zoom]');
