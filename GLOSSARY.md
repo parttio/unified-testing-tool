@@ -107,3 +107,7 @@ _Avoid_: Violation, layout error, responsive finding, warning
 **Viewport Comparison**:
 The comparison of runs of the same Unified UI Tests on one Testing Tool at different Viewports, User Step by User Step: which components the widest run shows and another lacks, which Layout Findings appear at which size, and where the runs part.
 _Avoid_: Responsive check, responsive diff, breakpoint test
+
+**Reach**:
+Whether a user can get to a component on a Unified Page at its current Viewport: visible (perhaps after scrolling), clipped out of reach, or behind another component; a hidden component has none.
+_Avoid_: Visibility, in view, accessible

@@ -19,6 +19,7 @@ button (no name; test id “close”)     page.find(UnifiedButton.class).withTes
 - **Each line carries a lookup when one is unique.** The lookup uses the Wrapper's own naming filters first (`withHeaderTitle`), then label, text, accessible name, placeholder and test id. A component that none of these singles out is shown with the container that does (an ancestor's test id or id, or a listed dialog), and that lookup is run before it is printed. A lookup is never printed unchecked.
 - **The view is a read for people and agents, not something to assert on.** `describe()` on the page or on any Scope returns it as a `String`. Nothing in it is a User Step, and its format may change between releases.
 - **It is written on failure by the core**, as `<test>.view.txt` next to the Testing Tool's own evidence, on every Testing Tool, with no change to the Adapter SPI.
+  _Amended 2026-11-21 by "Does the Findable View show each component's reach at the current Viewport?" (#487): in a browser, the view is headed by its Viewport and its lines gain the Reach words `(clipped)` and `(behind …)`, from one extra `AdapterSession.measureLayout(selectors)` round trip (the core's layout script, matched to each Wrapper type's matches by document order). The lines and their checked lookups are still built as above; Browserless shows no Reach._
 
 ## Considered Options
 
