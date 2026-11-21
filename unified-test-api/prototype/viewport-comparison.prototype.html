@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · Viewport Comparison</title>
+<!--
+  PROTOTYPE, throwaway. Question: how do report.html and user-steps.json show Layout Findings and a
+  Viewport Comparison ("How does the report show a Viewport Comparison?", map #399)?
+  Four variants of the comparison view, switchable with ?variant=A|B|C|D or the bottom bar (← → keys),
+  on the real report.html CSS (copied from RunReport.CSS). All data and screenshots are fake.
+  Open this file in a browser; nothing to build.
+-->
+<style>:root{--bg:#fbfbfa;--surface:#fff;--text:#1d1d1f;--muted:#5f6368;--line:#e3e3e0;--pass:#1a7f37;--fail:#c62828;--fail-bg:#fdecea;--accent:#1f5fbf;--badge:#eef3fb;--code:#f3f3f1}@media (prefers-color-scheme: dark){:root{--bg:#141416;--surface:#1c1c1f;--text:#e8e8ea;--muted:#a0a0a8;--line:#2e2e33;--pass:#57c470;--fail:#ff6b6b;--fail-bg:#3a1e1e;--accent:#7aa7ff;--badge:#22304a;--code:#26262b}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}main{max-width:1000px;margin:0 auto;padding:24px 16px 64px}h1{font-size:22px;margin:0 0 4px}h1 .tool{color:var(--muted);font-weight:500}h2{font-size:17px;margin:32px 0 8px}.counts{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0;color:var(--muted)}.count{font-weight:600}.count.passed{color:var(--pass)}.count.failed{color:var(--fail)}.controls{position:sticky;top:0;z-index:1;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:16px -16px 0;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line)}.controls input[type=search]{flex:1 1 220px;min-width:0;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:inherit}.lead,.none{color:var(--muted)}details.scenario{background:var(--surface);border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:0 14px}details.scenario.failed{border-left:4px solid var(--fail)}details.scenario>summary{cursor:pointer;padding:10px 0;font-weight:600;overflow-wrap:anywhere}.mark{font-weight:700}.passed .mark,.scenario.passed>summary .mark{color:var(--pass)}.failed>summary .mark,.step.failed .mark{color:var(--fail)}.class{color:var(--muted);font-weight:400;font-size:13px}.badge{display:inline-block;padding:0 8px;border-radius:10px;background:var(--badge);color:var(--accent);font-size:12px;font-weight:600}.dur,.site{color:var(--muted);font-weight:400;font-size:12px}.snap{font-size:12px;font-weight:400}img.snap-img{grid-column:2/-1;max-width:100%;margin:6px 0;border:1px solid var(--line);border-radius:6px}iframe.snap-tree,iframe.tree-frame{display:block;grid-column:2/-1;width:100%;height:60vh;min-height:240px;margin:6px 0;border:1px solid var(--line);border-radius:6px;background:var(--surface);resize:vertical}ol.steps,ol.steps ol{list-style:none;margin:0;padding:0}ol.steps ol{padding-left:22px;border-left:1px solid var(--line);margin-left:6px}ol.steps li{padding:3px 0}li.step,li.group>details>summary{display:grid;grid-template-columns:2.6em minmax(0,1fr) auto;column-gap:8px;align-items:baseline}li.group>details>summary{cursor:pointer;font-weight:600;list-style:none}li.group>details>summary::-webkit-details-marker{display:none}.idx{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:400}.text{min-width:0;overflow-wrap:anywhere}.meta{display:flex;gap:8px;justify-content:flex-end;white-space:nowrap}.dur{white-space:nowrap}.window{font-size:12px;padding:0 6px;margin-right:6px;border-radius:4px;background:var(--code);color:var(--muted);font-weight:400}li.gap{color:var(--muted);font-style:italic}li.step.failed{background:var(--fail-bg);border-radius:4px;padding:3px 6px;margin:0 -6px}.error{grid-column:2/-1;color:var(--fail);font-size:13px;overflow-wrap:anywhere}dl.failure{display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;margin:0 0 12px;padding:10px 12px;background:var(--fail-bg);border-radius:6px}dl.failure dt{color:var(--muted)}dl.failure dd{margin:0;min-width:0;overflow-wrap:anywhere}code{font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);padding:1px 4px;border-radius:4px}.evidence a{overflow-wrap:anywhere}.evidence img{max-width:100%;border:1px solid var(--line);border-radius:6px;margin:4px 0 12px}.shot{position:relative;display:inline-block;max-width:100%;line-height:0;overflow:hidden;border:1px solid var(--line);border-radius:6px;background:var(--surface)}.evidence a.shot{margin:4px 0 12px}.shot img,.evidence .shot img{display:block;max-width:100%;height:auto;margin:0;border:0;border-radius:0}.spot{position:absolute;pointer-events:none;border:2px solid var(--accent);border-radius:3px;box-shadow:0 0 0 1px #fff,0 0 0 9999px rgba(0,0,0,.38)}body.no-highlight .spot{display:none}.viewer{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;background:var(--bg)}.viewer[hidden]{display:none}.viewer header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;padding:10px 16px;border-bottom:1px solid var(--line)}.viewer .v-title{flex:1 1 240px;min-width:0;font-weight:600;overflow-wrap:anywhere}.viewer .v-title .idx{margin-right:6px}.viewer .v-title .mark{color:var(--fail)}.viewer button{font:inherit;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}.viewer .stage{flex:1;overflow:auto;padding:16px;text-align:center}.viewer .stage .shot{max-width:min(100%,1200px)}.viewer .note{color:var(--muted);font-size:13px;margin:8px 0 0}.viewer .strip{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;border-top:1px solid var(--line)}.viewer .strip button{flex:0 0 auto;padding:0;line-height:0;border:2px solid transparent;border-radius:4px;position:relative}.viewer .strip button[aria-current]{border-color:var(--accent)}.viewer .strip img{height:54px;border-radius:2px}.viewer .strip span{position:absolute;left:2px;top:2px;font:600 10px/1 system-ui,sans-serif;background:var(--bg);color:var(--text);padding:2px 3px;border-radius:3px}.files{font-size:13px;margin:8px 0 12px}.diffstat{color:var(--muted);font-weight:400;font-size:12px}.diffstat .add,pre.diff .add{color:var(--pass)}.diffstat .del,pre.diff .del{color:var(--fail)}.log{margin:2px 0 2px 28px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.log.error-line{color:var(--fail)}.difference{margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px}.difference p{margin:0 0 4px}.why{margin:0 0 8px;color:var(--muted);font-size:13px;overflow-wrap:anywhere}pre.diff{margin:0 0 8px;padding:8px 10px;background:var(--code);border-radius:6px;overflow-x:auto;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}pre.diff span{display:block}pre.diff .add{background:color-mix(in srgb,var(--pass) 12%,transparent)}pre.diff .del{background:color-mix(in srgb,var(--fail) 12%,transparent)}main:not(.full-steps) .has-diff>ol.steps{display:none}main.full-steps pre.diff{display:none}a{color:var(--accent)}@media (max-width:600px){dl.failure{grid-template-columns:1fr}dl.failure dd{margin-bottom:6px}li.step,li.group>details>summary{grid-template-columns:2.2em minmax(0,1fr)}.meta{grid-column:2;justify-content:flex-start;white-space:normal;flex-wrap:wrap;gap:0 8px}ol.steps ol{padding-left:10px;margin-left:2px}}</style>
+<style>
+:root{--warn:#9a6700;--warn-bg:#fff8e1;--lost:#8250df;--lost-bg:#f3edff;--ok-bg:#eaf6ec}
+@media (prefers-color-scheme: dark){:root{--warn:#e3b341;--warn-bg:#3a3117;--lost:#c297ff;--lost-bg:#2c2340;--ok-bg:#1d3324}}
+main{max-width:1180px}
+.proto-banner{background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:6px 10px;font-size:13px;margin:0 0 12px}
+.vp{display:inline-block;font-size:12px;padding:0 6px;border-radius:4px;background:var(--code);color:var(--muted);font-weight:500;white-space:nowrap}
+.vp.ref{background:var(--badge);color:var(--accent)}
+.finding{font-size:13px;margin:2px 0;padding:1px 6px;border-radius:4px;background:var(--warn-bg);color:var(--warn);overflow-wrap:anywhere}
+.lost{font-size:13px;margin:2px 0;padding:1px 6px;border-radius:4px;background:var(--lost-bg);color:var(--lost);overflow-wrap:anywhere}
+.lost.explained{background:transparent;color:var(--muted);padding-left:6px}
+.okline{font-size:13px;color:var(--pass)}
+.point-title{font-size:13px;color:var(--muted);margin:14px 0 6px}
+.point-title b{color:var(--text)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start;margin-bottom:8px}
+.col{min-width:0}
+.col h4{margin:0 0 4px;font-size:13px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.thumb{display:block;border:1px solid var(--line);border-radius:4px;background:var(--surface);cursor:zoom-in;max-width:100%;height:auto}
+.parted{font-size:13px;color:var(--muted);font-style:italic;border:1px dashed var(--line);border-radius:6px;padding:8px}
+.textview{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border-radius:6px;padding:6px 8px;white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0}
+.textview .f{color:var(--warn)}.textview .l{color:var(--lost)}
+.toggle{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+/* B: matrix */
+table.matrix{border-collapse:collapse;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:14px}
+table.matrix th,table.matrix td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.matrix th{font-size:13px;color:var(--muted);font-weight:600}
+table.matrix td.cell{cursor:pointer;white-space:nowrap}
+table.matrix td.cell:hover,table.matrix td.cell.sel{outline:2px solid var(--accent);outline-offset:-2px}
+.pill{display:inline-block;border-radius:10px;padding:0 8px;font-size:12px;font-weight:600;margin-right:4px}
+.pill.f{background:var(--warn-bg);color:var(--warn)}.pill.l{background:var(--lost-bg);color:var(--lost)}
+.pill.x{background:var(--fail-bg);color:var(--fail)}.pill.ok{background:var(--ok-bg);color:var(--pass)}
+.pill.n{background:var(--code);color:var(--muted)}
+.detail{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-top:12px}
+.detail .pair{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+/* C: stage */
+.stage-wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.stagebox .thumb{margin:0 auto}.stagebox{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;text-align:center;min-height:200px}
+.sizes{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.sizes button,.pts button{font:inherit;font-size:13px;padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer}
+.sizes button[aria-pressed=true],.pts button[aria-pressed=true]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.pts{display:flex;gap:6px;overflow-x:auto;padding:8px 0}
+.side{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px}
+.side h4{margin:8px 0 4px;font-size:13px;color:var(--muted)}
+/* D: markdown */
+.md{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 18px 14px}
+.md table{border-collapse:collapse;font-size:14px;margin:8px 0}
+.md th,.md td{border:1px solid var(--line);padding:4px 10px;text-align:left}
+.md h3{font-size:16px;margin:18px 0 6px}.md h4{font-size:14px;margin:12px 0 4px}
+pre.raw{background:var(--code);padding:10px;border-radius:6px;overflow:auto;font-size:12px}
+/* zoom */
+.zoom{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:flex;align-items:center;justify-content:center;padding:24px}
+.zoom[hidden]{display:none}.zoom svg{max-width:100%;max-height:100%;background:#fff;border-radius:4px}
+/* prototype switcher */
+#proto-bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:10px;
+background:#111;color:#fff;border-radius:999px;padding:6px 10px;box-shadow:0 4px 18px rgba(0,0,0,.35);font:600 13px system-ui,sans-serif}
+#proto-bar button{background:#333;color:#fff;border:0;border-radius:999px;width:28px;height:28px;cursor:pointer;font-size:15px}
+#proto-bar .lbl{min-width:220px;text-align:center}
+@media (max-width:760px){.cols{grid-template-columns:1fr}.stage-wrap{grid-template-columns:1fr}#proto-bar .lbl{min-width:0}}
+</style>
+</head>
+<body>
+<main>
+<p class="proto-banner">PROTOTYPE · fake data · comparison view varies with the bottom bar; the two sections under it are the same in every variant.</p>
+<header>
+<h1>Viewport Comparison <span class="tool">Playwright</span></h1>
+<p class="counts"><span class="vp ref">desktop 1280×720 · reference</span><span class="vp">tablet 768×1024</span><span class="vp">phone 375×667</span>
+<span class="when">weekly run, 2026-11-23 03:10 UTC · same code in all three runs (<code>9987d63</code>)</span></p>
+<p class="counts"><span class="count passed">4 scenarios compared</span><span class="count failed">1 fails on phone only</span>
+<span class="count" style="color:var(--warn)">5 Layout Findings</span><span class="count" style="color:var(--lost)">2 lost components need review</span><span class="count skipped">1 fixed Viewport, not compared</span></p>
+</header>
+<div class="controls"><input type="search" placeholder="Filter scenarios (prototype: not wired)">
+<label class="toggle"><input type="checkbox" id="textonly"> text only (run without screenshots)</label></div>
+<section id="variant"></section>
+
+<h2>One run's report: Layout Findings on a User Step <span class="vp">phone 375×667</span></h2>
+<p class="lead">The same in every variant: how a finding sits on its User Step in the phone run's own <code>report.html</code>, next to server log lines.</p>
+<details class="scenario passed" open><summary><span class="mark">✔</span> <span class="name">Edit Alan Turing's name</span> <span class="class">EditPersonTest</span> <span class="badge" style="background:var(--warn-bg);color:var(--warn)">2 Layout Findings</span> <span class="dur">3.1 s</span></summary>
+<ol class="steps">
+<li class="step"><span class="idx">1</span><span class="text">navigate to Persons</span><span class="meta"><a class="snap" href="#" data-zoom="edit:p1:phone">screenshot</a><span class="dur">640 ms</span><span class="site">EditPersonTest.java:14</span></span>
+<div class="error" style="color:var(--warn)">▭ clipped out of reach: button “Add person” (x 352–410, page 375 wide; cut by <code>overflow: hidden</code> on the toolbar)</div></li>
+<li class="step"><span class="idx">2</span><span class="text">click row “Alan Turing” in grid</span><span class="meta"><span class="dur">210 ms</span><span class="site">EditPersonTest.java:15</span></span></li>
+<li class="step"><span class="idx">3</span><span class="text">fill text field “Name” with “Alan M. Turing”</span><span class="meta"><span class="dur">120 ms</span><span class="site">EditPersonTest.java:16</span></span></li>
+<li class="step"><span class="idx">4</span><span class="text">check the layout</span><span class="meta"><a class="snap" href="#" data-zoom="edit:p2:phone">screenshot</a><span class="dur">35 ms</span><span class="site">EditPersonTest.java:17</span></span>
+<div class="error" style="color:var(--warn)">⇿ scrolls sideways: AppLayout content is 438 px wide in a 375 px Viewport</div></li>
+<li class="step"><span class="idx">5</span><span class="text">click button “Save”</span><span class="meta"><span class="dur">180 ms</span><span class="site">EditPersonTest.java:18</span></span></li>
+<li class="step"><span class="idx">6</span><span class="text">see grid row “Alan M. Turing”</span><span class="meta"><span class="dur">90 ms</span><span class="site">EditPersonTest.java:19</span></span></li>
+</ol></details>
+
+<h2>What an agent reads: <code>user-steps.json</code></h2>
+<p class="lead">The same in every variant. Per run: the Viewport on the test entry, a <code>layout</code> block on each measured step. <code>CompareRuns</code> writes <code>viewport-comparison.json</code> from those.</p>
+<details class="scenario"><summary>user-steps.json (phone run), excerpt</summary>
+<pre class="raw">{
+  "test": "EditPersonTest.editPerson", "status": "passed",
+  "viewport": { "name": "phone", "width": 375, "height": 667, "fixed": false },
+  "steps": [
+    { "index": "1", "type": "step", "text": "navigate to Persons", "status": "passed",
+      "layout": {
+        "point": 1,
+        "screenshot": "steps/1.png",
+        "findings": [
+          { "kind": "clipped", "component": "button “Add person”",
+            "box": [352, 64, 58, 36], "by": "overflow: hidden on vaadin-horizontal-layout.toolbar" } ],
+        "components": [
+          { "line": "button “Add person”",               "box": [352, 64, 58, 36], "reach": "clipped" },
+          { "line": "grid “Persons”, columns Name, Email", "box": [0, 112, 375, 555], "reach": "visible" },
+          { "line": "drawer toggle",                       "box": [8, 8, 40, 40],    "reach": "visible" },
+          { "line": "side nav item “Persons”",             "box": null, "reach": "behind", "behind": "AppLayout overlay drawer" } ] } },
+    { "index": "4", "type": "step", "text": "check the layout", "status": "passed",
+      "layout": { "point": 2, "screenshot": "steps/4.png",
+        "findings": [ { "kind": "scroll", "container": "vaadin-app-layout [part=content]", "scrollWidth": 438, "clientWidth": 375 } ],
+        "components": [ "…" ] } } ]
+}
+
+viewport-comparison.json (CompareRuns), excerpt
+{
+  "reference": "desktop",
+  "scenarios": [ { "test": "EditPersonTest.editPerson",
+    "runs": { "desktop": "passed", "tablet": "passed", "phone": "passed" },
+    "points": [ { "point": 1, "step": "navigate to Persons",
+      "phone": { "lost":     [ { "line": "grid column “Phone”", "review": true },
+                               { "line": "grid column “Role”",  "review": true } ],
+                 "explained":[ { "line": "side nav item “Persons”", "behind": "AppLayout overlay drawer" } ],
+                 "findings": 1, "screenshot": "phone/EditPersonTest/editPerson/steps/1.png" } } ] } ]
+}</pre></details>
+</main>
+<div class="zoom" id="zoom" hidden></div>
+<div id="proto-bar"><button id="prev" aria-label="previous variant">←</button><span class="lbl" id="lbl"></span><button id="next" aria-label="next variant">→</button></div>
+
+<script>
+// ---------- fake data ----------
+const VPS = [
+  {key:'desktop', w:1280, h:720, ref:true},
+  {key:'tablet',  w:768,  h:1024},
+  {key:'phone',   w:375,  h:667},
+];
+const S = [
+ {id:'edit', name:"Edit Alan Turing's name", cls:'EditPersonTest',
+  status:{desktop:'passed',tablet:'passed',phone:'passed'},
+  points:[
+   {n:1, step:'1 · navigate to Persons', screen:'grid',
+    desktop:{findings:[],lost:[],explained:[]},
+    tablet:{findings:[],lost:[],explained:['side nav “Persons”, “Plan”: behind the AppLayout overlay drawer']},
+    phone:{findings:[{k:'clipped',t:'button “Add person” clipped out of reach (x 352–410)',box:[352,64,58,36]}],
+           lost:['grid column “Phone”','grid column “Role”'],
+           explained:['side nav “Persons”, “Plan”: behind the AppLayout overlay drawer']}},
+   {n:2, step:'4 · check the layout (editor open)', screen:'editor',
+    desktop:{findings:[],lost:[],explained:[]},
+    tablet:{findings:[{k:'overlap',t:'text field “Email” overlaps button “Delete”',box:[420,470,300,60]}],lost:[],explained:[]},
+    phone:{findings:[{k:'scroll',t:'scrolls sideways: AppLayout content 438 px in 375',box:[0,48,375,619]}],lost:[],explained:[]}},
+  ]},
+ {id:'plan', name:'Plan a week', cls:'PlanTest',
+  status:{desktop:'passed',tablet:'passed',phone:'failed'},
+  failure:'phone, step 3: click button “Next week”: covered by vaadin-app-layout [part=drawer]',
+  parted:{after:1, text:'Runs part at step 2: “click side nav item ‘Plan’” on desktop and tablet, “open the drawer” on phone'},
+  points:[
+   {n:1, step:'1 · navigate to Dashboard', screen:'dash',
+    desktop:{findings:[],lost:[],explained:[]},
+    tablet:{findings:[{k:'scroll',t:'scrolls sideways: chart “Hours” 812 px in 768',box:[0,300,768,320]}],lost:[],explained:['side nav: behind the AppLayout overlay drawer']},
+    phone:{findings:[{k:'scroll',t:'scrolls sideways: chart “Hours” 812 px in 375',box:[0,300,375,320]},{k:'overlap',t:'button “Next week” under the drawer toggle',box:[4,4,60,44]}],lost:['button “Export”'],explained:['side nav: behind the AppLayout overlay drawer','menu items “Share”, “Print”: in the MenuBar overflow']}},
+  ]},
+ {id:'login', name:'Log in and see the dashboard', cls:'LoginTest',
+  status:{desktop:'passed',tablet:'passed',phone:'passed'}, same:true,
+  points:[{n:1, step:'2 · navigate to Dashboard', screen:'dash',
+    desktop:{findings:[],lost:[],explained:[]},tablet:{findings:[],lost:[],explained:['side nav: behind the AppLayout overlay drawer']},phone:{findings:[],lost:[],explained:['side nav: behind the AppLayout overlay drawer']}}]},
+ {id:'drawer', name:'Drawer is an overlay on phones', cls:'DrawerTest', fixed:'375×667',
+  status:{desktop:'passed',tablet:'passed',phone:'passed'}, points:[]},
+];
+
+// ---------- fake screenshots (SVG wireframes) ----------
+function shot(screen, vpKey, cell, scale, withBoxes=true){
+  const vp = VPS.find(v=>v.key===vpKey), W=vp.w, H=vp.h, overlay = W<1000;
+  const drawerW = overlay?0:220, top=48, x0=drawerW;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${Math.round(W*scale)}" height="${Math.round(H*scale)}" class="thumb" role="img" aria-label="${screen} at ${vpKey}">`;
+  s += `<rect width="${W}" height="${H}" fill="#fff"/><rect width="${W}" height="${top}" fill="#f1f3f6"/>`;
+  if(overlay) s += `<rect x="8" y="10" width="28" height="4" fill="#555"/><rect x="8" y="20" width="28" height="4" fill="#555"/><rect x="8" y="30" width="28" height="4" fill="#555"/>`;
+  s += `<text x="${overlay?48:16}" y="31" font-size="18" font-family="sans-serif" fill="#333">Planner</text>`;
+  if(!overlay){ s += `<rect x="0" y="${top}" width="${drawerW}" height="${H-top}" fill="#f7f7f8"/>`;
+    ['Dashboard','Persons','Plan'].forEach((t,i)=> s+=`<text x="20" y="${top+36+i*34}" font-size="15" font-family="sans-serif" fill="#1f5fbf">${t}</text>`);}
+  const cw = W-x0;
+  if(screen==='grid'||screen==='editor'){
+    s += `<rect x="${x0+16}" y="${top+16}" width="120" height="34" rx="4" fill="#1f5fbf"/><text x="${x0+28}" y="${top+38}" font-size="14" fill="#fff" font-family="sans-serif">Add person</text>`;
+    const cols = vpKey==='phone'?['Name','Email']:['Name','Email','Phone','Role'];
+    const gy = top+64, gw = screen==='editor'&&!overlay ? cw*0.55 : cw;
+    s += `<rect x="${x0}" y="${gy}" width="${gw}" height="${H-gy}" fill="#fff" stroke="#ddd"/>`;
+    cols.forEach((c,i)=>{ const cx=x0+12+i*(gw/cols.length); s+=`<text x="${cx}" y="${gy+22}" font-size="13" font-weight="bold" font-family="sans-serif" fill="#444">${c}</text>`;
+      for(let r=0;r<Math.min(12,Math.floor((H-gy-40)/34));r++) s+=`<rect x="${cx}" y="${gy+38+r*34}" width="${gw/cols.length-24}" height="10" rx="3" fill="#e6e8ec"/>`;});
+    if(screen==='editor'){
+      const ex = overlay? x0 : x0+gw, ew = overlay? cw : cw-gw, ey = overlay? top+120 : gy;
+      s += `<rect x="${ex}" y="${ey}" width="${vpKey==='phone'?438:ew}" height="${H-ey}" fill="#fbfbfd" stroke="#ccc"/>`;
+      ['Name','Email','Phone'].forEach((f,i)=>{ s+=`<text x="${ex+16}" y="${ey+34+i*70}" font-size="13" font-family="sans-serif" fill="#555">${f}</text><rect x="${ex+16}" y="${ey+42+i*70}" width="${(vpKey==='phone'?438:ew)-32}" height="30" rx="4" fill="#fff" stroke="#bbb"/>`;});
+      s += `<rect x="${ex+16}" y="${ey+250}" width="90" height="34" rx="4" fill="#1f5fbf"/><text x="${ex+40}" y="${ey+272}" font-size="14" fill="#fff" font-family="sans-serif">Save</text>`;
+      s += `<rect x="${ex+(vpKey==='tablet'?ew-150:120)}" y="${vpKey==='tablet'?ey+110:ey+250}" width="90" height="34" rx="4" fill="#c62828"/><text x="${ex+(vpKey==='tablet'?ew-138:134)}" y="${vpKey==='tablet'?ey+132:ey+272}" font-size="14" fill="#fff" font-family="sans-serif">Delete</text>`;
+    }
+  } else {
+    s += `<text x="${x0+16}" y="${top+40}" font-size="20" font-family="sans-serif" fill="#333">This week</text>`;
+    for(let i=0;i<3;i++) s+=`<rect x="${x0+16+i*((cw-32)/3)}" y="${top+60}" width="${(cw-32)/3-12}" height="150" rx="6" fill="#eef3fb"/>`;
+    s += `<rect x="${x0}" y="300" width="${Math.max(cw,812)}" height="320" fill="#f6f7f9" stroke="#ddd"/>`;
+    for(let i=0;i<14;i++) s+=`<rect x="${x0+30+i*55}" y="${600-((i*37)%200)-60}" width="30" height="${((i*37)%200)+60}" fill="#7aa7ff"/>`;
+  }
+  if(withBoxes && cell) cell.findings.forEach(f=>{ const [x,y,w,h]=f.box; s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(240,170,0,.12)" stroke="#d18b00" stroke-width="${3/scale>6?6:Math.max(2,3/scale/2)}"/>`;});
+  return s+'</svg>';
+}
+function textView(cell, vpKey){
+  const lines = [];
+  cell.findings.forEach(f=> lines.push(`<span class="f">▭ ${f.k.padEnd(8)} ${esc(f.t)}  [${f.box.join(', ')}]</span>`));
+  cell.lost.forEach(l=> lines.push(`<span class="l">− lost     ${esc(l)}  (needs review)</span>`));
+  cell.explained.forEach(l=> lines.push(`  behind   ${esc(l)}`));
+  if(!lines.length) lines.push('  same components as desktop, no Layout Findings');
+  return `<div class="textview">${lines.join('\n')}</div>`;
+}
+const esc = t => String(t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const vpLabel = v => `<span class="vp${v.ref?' ref':''}">${v.key} ${v.w}×${v.h}${v.ref?' · ref':''}</span>`;
+const textOnly = () => document.getElementById('textonly').checked;
+function cellLines(cell){
+  let h='';
+  cell.findings.forEach(f=> h+=`<div class="finding">${f.k==='scroll'?'⇿':f.k==='overlap'?'⧉':'▭'} ${esc(f.t)}</div>`);
+  cell.lost.forEach(l=> h+=`<div class="lost">− ${esc(l)} <small>needs review</small></div>`);
+  cell.explained.forEach(l=> h+=`<div class="lost explained">◌ ${esc(l)}</div>`);
+  if(!h) h = `<div class="okline">✔ nothing lost, no findings</div>`;
+  return h;
+}
+function counts(s, vk){
+  if(s.fixed) return `<span class="pill n">fixed ${s.fixed}</span>`;
+  let f=0,l=0; s.points.forEach(p=>{f+=p[vk].findings.length; l+=p[vk].lost.length;});
+  let h = s.status[vk]==='failed' ? `<span class="pill x">✘ fails</span>` : '';
+  if(f) h+=`<span class="pill f">${f} finding${f>1?'s':''}</span>`;
+  if(l) h+=`<span class="pill l">${l} lost</span>`;
+  if(!h) h=`<span class="pill ok">✔</span>`;
+  return h;
+}
+
+// ---------- variant A: columns, scenario by scenario ----------
+function A(){
+  let h = `<h2>Scenarios, side by side</h2><p class="lead">Each measurement point is a row; each Viewport a column at the same physical scale, so a phone looks like a phone next to a desktop.</p>`;
+  S.forEach(s=>{
+    const open = s.points.some(p=>VPS.some(v=>p[v.key].findings.length||p[v.key].lost.length)) || s.status.phone==='failed';
+    h += `<details class="scenario ${s.status.phone==='failed'?'failed':'passed'}" ${open?'open':''}><summary><span class="mark">${s.status.phone==='failed'?'✘':'✔'}</span> <span class="name">${esc(s.name)}</span> <span class="class">${s.cls}</span> `;
+    h += s.fixed ? `<span class="badge">fixed Viewport ${s.fixed}, not compared</span>` : s.same ? `<span class="badge">same at every size</span>` : VPS.filter(v=>!v.ref).map(v=>`<span class="vp">${v.key}</span> ${counts(s,v.key)}`).join(' ');
+    h += `</summary>`;
+    if(s.failure) h += `<dl class="failure"><dt>Fails</dt><dd>${esc(s.failure)}</dd></dl>`;
+    s.points.forEach(p=>{
+      h += `<p class="point-title">Point ${p.n} · <b>${esc(p.step)}</b></p><div class="cols">`;
+      VPS.forEach(v=>{ const c=p[v.key];
+        h += `<div class="col"><h4>${vpLabel(v)} ${v.key!=='desktop'&&s.status[v.key]==='failed'?'<span class="pill x">✘</span>':''}</h4>`;
+        h += textOnly()? textView(c,v.key) : `<a href="#" data-zoom="${s.id}:p${p.n}:${v.key}">${shot(p.screen,v.key,c,0.25)}</a>`;
+        h += v.ref ? `<div class="okline" style="color:var(--muted)">reference</div>` : cellLines(c);
+        h += `</div>`;});
+      h += `</div>`;
+    });
+    if(s.parted) h += `<p class="parted">⑂ ${esc(s.parted.text)}. Points after this are not compared.</p>`;
+    h += `<p class="files"><a href="#">desktop report</a> · <a href="#">tablet report</a> · <a href="#">phone report</a></p></details>`;
+  });
+  return h;
+}
+
+// ---------- variant B: matrix first, detail on click ----------
+let bSel = {s:'edit', v:'phone'};
+function B(){
+  let h = `<h2>At a glance</h2><p class="lead">One row per scenario, one column per Viewport. Click a cell to see that size against desktop.</p>`;
+  h += `<table class="matrix"><thead><tr><th>Scenario</th>${VPS.map(v=>`<th>${vpLabel(v)}</th>`).join('')}<th>Runs</th></tr></thead><tbody>`;
+  S.forEach(s=>{
+    h += `<tr><td><b>${esc(s.name)}</b> <span class="class">${s.cls}</span></td>`;
+    VPS.forEach(v=>{ h += `<td class="cell${bSel.s===s.id&&bSel.v===v.key?' sel':''}" data-s="${s.id}" data-v="${v.key}">${v.ref&&!s.fixed? (s.status[v.key]==='failed'?'<span class="pill x">✘</span>':'<span class="pill ok">✔ ref</span>') : counts(s,v.key)}</td>`;});
+    h += `<td>${s.parted?'<span class="pill n">⑂ part at step 2</span>':s.fixed?'':'<span class="pill n">same steps</span>'}</td></tr>`;
+  });
+  h += `</tbody></table>`;
+  const s = S.find(x=>x.id===bSel.s), v = VPS.find(x=>x.key===bSel.v);
+  h += `<div class="detail"><h3 style="margin:4px 0">${esc(s.name)} · ${vpLabel(v)} against ${vpLabel(VPS[0])}</h3>`;
+  if(s.fixed) h += `<p class="lead">Declares <code>@Viewport(375, 667)</code>: runs at that size in every run, so there is nothing to compare.</p>`;
+  if(s.failure && bSel.v==='phone') h += `<dl class="failure"><dt>Fails</dt><dd>${esc(s.failure)}</dd></dl>`;
+  s.points.forEach(p=>{
+    h += `<p class="point-title">Point ${p.n} · <b>${esc(p.step)}</b></p><div class="pair">`;
+    if(!textOnly()){ h += `<a href="#" data-zoom="${s.id}:p${p.n}:desktop">${shot(p.screen,'desktop',p.desktop,0.22)}</a><a href="#" data-zoom="${s.id}:p${p.n}:${v.key}">${shot(p.screen,v.key,p[v.key],0.22)}</a>`; }
+    h += `<div style="flex:1 1 260px;min-width:0">${v.ref?'<div class="okline">reference</div>':cellLines(p[v.key])}${textOnly()?textView(p[v.key],v.key):''}</div></div>`;
+  });
+  if(s.parted) h += `<p class="parted">⑂ ${esc(s.parted.text)}.</p>`;
+  return h + `</div>`;
+}
+
+// ---------- variant C: one point at a time, big stage ----------
+let cSel = {i:0, v:'phone'};
+function C(){
+  const pts = []; S.forEach(s=>s.points.forEach(p=>pts.push({s,p})));
+  const {s,p} = pts[cSel.i], v = VPS.find(x=>x.key===cSel.v), c = p[v.key];
+  let h = `<h2>Point by point</h2><p class="lead">Every measurement point of the run in one strip; the stage shows one at a time at real proportions, findings boxed on the screenshot.</p>`;
+  h += `<div class="pts">${pts.map((x,i)=>{ const n = VPS.reduce((a,vv)=>a+x.p[vv.key].findings.length+x.p[vv.key].lost.length,0);
+     return `<button data-pt="${i}" aria-pressed="${i===cSel.i}">${esc(x.s.name)} · ${x.p.n} ${n?`<span class="pill f">${n}</span>`:'✔'}</button>`;}).join('')}</div>`;
+  h += `<div class="stage-wrap"><div class="stagebox"><div class="sizes">${VPS.map(vv=>`<button data-size="${vv.key}" aria-pressed="${vv.key===cSel.v}">${vv.key} ${vv.w}×${vv.h} ${(p[vv.key].findings.length+p[vv.key].lost.length)?'●':''}</button>`).join('')}</div>`;
+  h += textOnly()? textView(c,v.key) : shot(p.screen, v.key, c, v.key==='desktop'?0.6:v.key==='tablet'?0.6:0.8);
+  h += `</div><aside class="side"><b>${esc(s.name)}</b> <span class="class">${s.cls}</span><br><span class="lead">Point ${p.n} · ${esc(p.step)}</span>`;
+  h += `<h4>Layout Findings at ${v.key}</h4>${c.findings.length? c.findings.map(f=>`<div class="finding">${esc(f.t)}</div>`).join('') : '<div class="okline">none</div>'}`;
+  h += `<h4>Against desktop</h4>${v.ref?'<div class="okline">this is the reference</div>': (c.lost.map(l=>`<div class="lost">− ${esc(l)} <small>needs review</small></div>`).join('') + c.explained.map(l=>`<div class="lost explained">◌ ${esc(l)}</div>`).join('')) || '<div class="okline">nothing lost</div>'}`;
+  h += `<h4>Runs</h4>${VPS.map(vv=>`${vv.key}: ${s.status[vv.key]==='failed'?'<span class="pill x">✘ fails</span>':'<span class="pill ok">✔</span>'}`).join(' ')}`;
+  if(s.parted) h += `<p class="parted" style="margin-top:8px">⑂ ${esc(s.parted.text)}.</p>`;
+  h += `</aside></div>`;
+  h += `<p class="lead" style="margin-top:12px">Not compared: <b>Drawer is an overlay on phones</b> (fixed Viewport 375×667). Same at every size: <b>Log in and see the dashboard</b>.</p>`;
+  return h;
+}
+
+// ---------- variant D: the Markdown summary only (GitHub job summary) ----------
+function D(){
+  return `<h2>As the GitHub job summary (CompareRuns Markdown)</h2><p class="lead">Text only, no page of its own: what <code>CompareRuns</code> prints. Screenshot links point at the evidence artifacts.</p>
+<div class="md"><h3>Viewport Comparison: Playwright, reference desktop 1280×720</h3>
+<p>Same code in all three runs (<code>9987d63</code>). 4 scenarios, 1 fails on phone only, 5 Layout Findings, 2 lost components need review.</p>
+<table><tr><th>Scenario</th><th>desktop</th><th>tablet 768×1024</th><th>phone 375×667</th></tr>
+${S.map(s=>`<tr><td>${esc(s.name)}</td>${VPS.map(v=> `<td>${s.fixed? (v.key==='phone'?'fixed 375×667':'') : (s.status[v.key]==='failed'?'✘ fails ':'✔ ') + (v.ref?'':(()=>{let f=0,l=0;s.points.forEach(p=>{f+=p[v.key].findings.length;l+=p[v.key].lost.length;});return (f?`${f} ⚠ `:'')+(l?`${l} lost`:'');})())}</td>`).join('')}</tr>`).join('')}
+</table>
+${S.filter(s=>!s.fixed && !s.same).map(s=>`<h4>${esc(s.name)}</h4><ul>${s.failure?`<li>✘ ${esc(s.failure)}</li>`:''}${s.points.map(p=>VPS.filter(v=>!v.ref).map(v=>{const c=p[v.key]; return [...c.findings.map(f=>`<li>${v.key}, point ${p.n} (${esc(p.step)}): ⚠ ${esc(f.t)} · <a href="#" data-zoom="${s.id}:p${p.n}:${v.key}">screenshot</a></li>`), ...c.lost.map(l=>`<li>${v.key}, point ${p.n}: lost ${esc(l)}, needs review</li>`)].join('');}).join('')).join('')}${s.parted?`<li>⑂ ${esc(s.parted.text)}</li>`:''}</ul>`).join('')}
+<p><i>Explained, not listed: side nav behind the AppLayout overlay drawer (tablet, phone); MenuBar overflow (phone).</i></p></div>`;
+}
+
+// ---------- switcher ----------
+const VARIANTS = [['A','Columns: scenario by scenario'],['B','Matrix first, detail on click'],['C','Point by point, big stage'],['D','Markdown summary only']];
+const params = new URLSearchParams(location.search);
+let cur = Math.max(0, VARIANTS.findIndex(v=>v[0]===(params.get('variant')||'A')));
+function render(){
+  const k = VARIANTS[cur][0];
+  document.getElementById('variant').innerHTML = {A,B,C,D}[k]();
+  document.getElementById('lbl').textContent = `${k} (${VARIANTS[cur][1]})`;
+  const u = new URL(location); u.searchParams.set('variant',k); history.replaceState(null,'',u);
+}
+function step(d){ cur = (cur + d + VARIANTS.length) % VARIANTS.length; render(); }
+document.getElementById('prev').onclick=()=>step(-1);
+document.getElementById('next').onclick=()=>step(1);
+document.addEventListener('keydown',e=>{ if(e.target.closest('input,textarea,[contenteditable]')) return;
+  if(e.key==='ArrowLeft') step(-1); if(e.key==='ArrowRight') step(1); if(e.key==='Escape') zoom.hidden=true; });
+document.getElementById('textonly').onchange=render;
+const zoom = document.getElementById('zoom');
+document.addEventListener('click',e=>{
+  const z = e.target.closest('[data-zoom]');
+  if(z){ e.preventDefault(); const [sid,pn,vk]=z.dataset.zoom.split(':'); const s=S.find(x=>x.id===sid), p=s.points.find(x=>'p'+x.n===pn);
+    zoom.innerHTML = shot(p.screen, vk, p[vk], 1).replace('class="thumb"',''); zoom.hidden=false; return; }
+  if(e.target.closest('#zoom')){ zoom.hidden=true; return; }
+  const cell = e.target.closest('td.cell'); if(cell){ bSel={s:cell.dataset.s,v:cell.dataset.v}; render(); return; }
+  const pt = e.target.closest('[data-pt]'); if(pt){ cSel.i=+pt.dataset.pt; render(); return; }
+  const sz = e.target.closest('[data-size]'); if(sz){ cSel.v=sz.dataset.size; render(); }
+});
+render();
+</script>
+</body>
+</html>
