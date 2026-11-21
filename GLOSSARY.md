@@ -99,3 +99,11 @@ _Avoid_: Snapshot, ARIA snapshot, component tree, page dump
 **Near Miss**:
 A component a failed lookup almost matched (the same kind with a similar name, or another kind with the exact name), listed in the failure so the reader can see what the test should have asked for.
 _Avoid_: Candidate, suggestion, fuzzy match
+
+**Layout Finding**:
+A layout problem seen on a Unified Page at its current Viewport (it scrolls sideways, a component is clipped out of reach, or interactive components overlap), reported on the User Step where it was seen.
+_Avoid_: Violation, layout error, responsive finding, warning
+
+**Viewport Comparison**:
+The comparison of runs of the same Unified UI Tests on one Testing Tool at different Viewports, User Step by User Step: which components the widest run shows and another lacks, which Layout Findings appear at which size, and where the runs part.
+_Avoid_: Responsive check, responsive diff, breakpoint test
