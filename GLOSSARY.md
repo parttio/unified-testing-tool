@@ -52,6 +52,10 @@ _Avoid_: Element, tester, locator, page object
 The Unified API's view of one browser tab or window showing the application: what a Unified UI Test receives, navigates and searches in.
 _Avoid_: UI, window, driver, browser
 
+**Viewport**:
+The visible area of a Unified Page, as width × height in CSS pixels, which the application lays itself out for; a test runs at one unless it changes it.
+_Avoid_: Window size, screen size, resolution, breakpoint
+
 **Unified Element**:
 The portable, low-level handle to one component (properties, attributes, text, user actions) that every Testing Tool supports and on which Wrappers are written.
 _Avoid_: Raw element, WebElement, locator
