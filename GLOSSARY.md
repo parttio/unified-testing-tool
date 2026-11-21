@@ -52,6 +52,10 @@ _Avoid_: Element, tester, locator, page object
 The Unified API's view of one browser tab or window showing the application: what a Unified UI Test receives, navigates and searches in.
 _Avoid_: UI, window, driver, browser
 
+**Viewport**:
+The visible area of a Unified Page, as width × height in CSS pixels, which the application lays itself out for; a test runs at one unless it changes it.
+_Avoid_: Window size, screen size, resolution, breakpoint
+
 **Unified Element**:
 The portable, low-level handle to one component (properties, attributes, text, user actions) that every Testing Tool supports and on which Wrappers are written.
 _Avoid_: Raw element, WebElement, locator
@@ -95,3 +99,11 @@ _Avoid_: Snapshot, ARIA snapshot, component tree, page dump
 **Near Miss**:
 A component a failed lookup almost matched (the same kind with a similar name, or another kind with the exact name), listed in the failure so the reader can see what the test should have asked for.
 _Avoid_: Candidate, suggestion, fuzzy match
+
+**Layout Finding**:
+A layout problem seen on a Unified Page at its current Viewport (it scrolls sideways, a component is clipped out of reach, or interactive components overlap), reported on the User Step where it was seen.
+_Avoid_: Violation, layout error, responsive finding, warning
+
+**Viewport Comparison**:
+The comparison of runs of the same Unified UI Tests on one Testing Tool at different Viewports, User Step by User Step: which components the widest run shows and another lacks, which Layout Findings appear at which size, and where the runs part.
+_Avoid_: Responsive check, responsive diff, breakpoint test
