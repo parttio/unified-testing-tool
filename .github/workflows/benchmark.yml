@@ -106,14 +106,15 @@ jobs:
       - name: Build without tests
         if: steps.licence.outputs.skip != 'true'
         run: mvn -B -ntp install -DskipTests
-      # SpringPlaywrightIT still launches Playwright's own Chromium before each class, outside the timed body
-      - name: Install the libraries Chromium needs
+      # SpringPlaywrightIT still launches Playwright's own Chromium in its @BeforeAll, outside the timed body, so it
+      # must be installed even though every test runs on --browser; the Unified adapter doesn't install it then
+      - name: Install Playwright's Chromium and the libraries it needs
         if: steps.licence.outputs.skip != 'true'
         run: >
           mvn -B -ntp -pl unified-test-demo exec:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
-          -Dexec.args="install-deps chromium"
+          -Dexec.args="install --with-deps chromium"
       - name: Compare the tools on the runner's Chrome
         if: steps.licence.outputs.skip != 'true'
         run: |
