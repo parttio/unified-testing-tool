@@ -1,0 +1,332 @@
+<title>Selenium or Playwright for Vaadin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the comparison table and the options grid break out wider. Same token family as web-framework-testing-landscape.html. */
+:root {
+  --bg: #f6f8f9;
+  --surface: #ffffff;
+  --fg: #16212a;
+  --muted: #586774;
+  --line: #d9e1e6;
+  --accent: #0b6e8a;
+  --accent-soft: #e3f1f5;
+  --sel: #3f7d20;
+  --sel-soft: #e9f3e3;
+  --pw: #b0461f;
+  --pw-soft: #f8e9e2;
+  --inf: #fbf5e6;
+  --inf-line: #e2cf9c;
+  --inf-fg: #6b5418;
+  --code-bg: #eef2f4;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1519; --surface: #151d23; --fg: #e3eaee; --muted: #93a3ae; --line: #26333c;
+    --accent: #5cc3dd; --accent-soft: #15303a; --sel: #8fcf6c; --sel-soft: #1a2a14;
+    --pw: #f0916b; --pw-soft: #33201a; --inf: #221d10; --inf-line: #5a4a22; --inf-fg: #e2c879;
+    --code-bg: #1c262d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1519; --surface: #151d23; --fg: #e3eaee; --muted: #93a3ae; --line: #26333c;
+  --accent: #5cc3dd; --accent-soft: #15303a; --sel: #8fcf6c; --sel-soft: #1a2a14;
+  --pw: #f0916b; --pw-soft: #33201a; --inf: #221d10; --inf-line: #5a4a22; --inf-fg: #e2c879;
+  --code-bg: #1c262d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 15px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 2.5rem 4rem;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 2.75rem; }
+.prose { max-width: 70ch; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(1.8rem, 4.5vw, 2.6rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.45rem; font-weight: 600; margin-bottom: 0.9rem; }
+h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem; }
+p { margin: 0 0 0.8rem; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.meta { color: var(--muted); font-size: 0.85rem; }
+header { display: flex; flex-direction: column; gap: 0.8rem; }
+.lede { font-size: 1.08rem; max-width: 68ch; }
+.op { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--inf-fg); background: var(--inf); border: 1px solid var(--inf-line); border-radius: 3px; padding: 0 0.35em; white-space: nowrap; }
+.tag { font-family: var(--font-mono); font-size: 0.72rem; border-radius: 3px; padding: 0.05em 0.45em; white-space: nowrap; font-weight: 500; }
+.tag.sel { color: var(--sel); background: var(--sel-soft); }
+.tag.pw { color: var(--pw); background: var(--pw-soft); }
+.tag.tie { color: var(--muted); background: var(--code-bg); }
+
+/* verdict band */
+.verdict { background: var(--accent-soft); border-left: 4px solid var(--accent); padding: 1.1rem 1.3rem; border-radius: 0 8px 8px 0; }
+.verdict p:last-child { margin: 0; }
+.verdict strong { font-family: var(--font-display); font-size: 1.1rem; }
+
+ol.short { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 0.7rem; max-width: 74ch; }
+
+/* two columns of wins */
+.sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.side { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 1.1rem 1.2rem; min-width: 0; }
+.side h3 { display: flex; gap: 0.5rem; align-items: center; }
+.side ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.45rem; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.dot.sel { background: var(--sel); } .dot.pw { background: var(--pw); }
+
+/* table */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+thead th { font-family: var(--font-display); font-weight: 600; background: var(--code-bg); }
+td:first-child { font-weight: 600; width: 17%; }
+td:last-child { width: 9%; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 0.82rem; width: auto; white-space: nowrap; }
+.legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); margin-top: 0.6rem; }
+
+/* vaadin specifics */
+.vaadin { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.4rem 2rem; }
+.vaadin > div { min-width: 0; }
+.vaadin p { margin: 0; }
+
+/* options */
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.opt { border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.1rem; background: var(--surface); display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.opt .k { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+.opt p { margin: 0; font-size: 0.92rem; }
+.opt .cost { font-size: 0.82rem; color: var(--muted); margin-top: auto; padding-top: 0.4rem; }
+.opt.pick { border: 2px solid var(--accent); }
+.opt.pick .k { color: var(--accent); font-weight: 500; }
+
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.step { border-top: 3px solid var(--accent); padding-top: 0.7rem; min-width: 0; }
+.step p { margin: 0; font-size: 0.93rem; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem 2.5rem; }
+.two > div { min-width: 0; }
+.two ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.repo { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 1.2rem 1.3rem; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.6rem 0 0.9rem; font-family: var(--font-mono); font-size: 0.8rem; }
+.flow span { border: 1px solid var(--line); border-radius: 4px; padding: 0.25rem 0.55rem; background: var(--bg); }
+.flow .api { border-color: var(--accent); color: var(--accent); }
+.flow i { color: var(--muted); font-style: normal; }
+
+details { border-top: 1px solid var(--line); padding-top: 0.8rem; }
+summary { cursor: pointer; font-family: var(--font-display); font-weight: 600; }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.src { font-size: 0.82rem; color: var(--muted); word-break: break-word; }
+.src ul { padding-left: 1.1rem; }
+footer { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1rem; }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Unified Testing Tool · research note · 22 Nov 2026</div>
+  <h1>Selenium or Playwright for Vaadin browser tests</h1>
+  <p class="lede">Vaadin has two Java browser-test libraries: the official <strong>TestBench</strong>, built on Selenium WebDriver, and the community <strong>Dramafinder</strong>, built on Playwright. This page compares the two foundations and asks whether Vaadin should ship an official Playwright wrapper.</p>
+  <p class="meta">Read against <code>vaadin/testbench@11908ed</code> (Selenium 4.53.0), <code>parttio/dramafinder@bce0654</code> (Playwright Java 1.63.0) and <code>unified-testing-tool@7916497</code>. Facts are cited in the <a href="selenium-vs-playwright-for-vaadin.md">full Markdown note</a> by ID (P1, T3…). <span class="op">opinion</span> marks reasoning.</p>
+</header>
+
+<section class="verdict">
+  <p><strong>Recommendation: yes, support Playwright officially, as a second backend under one Vaadin test API.</strong> <span class="op">opinion</span></p>
+  <p>Bring Dramafinder under Vaadin's support now, keep TestBench on Selenium fully supported, and converge later on one API with Selenium, Playwright and Browserless backends. Settle what stays in the paid tier before announcing anything.</p>
+</section>
+
+<section>
+  <h2>Answer in short</h2>
+  <ol class="short">
+    <li><strong>Playwright's general advantages are real and documented.</strong> Every action waits until the element is visible, stable, enabled and receives events. Locators reach into open shadow roots and are strict, so a double match fails instead of taking the first. It adds a trace viewer, Java codegen, network mocking and cheap isolated browser contexts. Apache-2.0.</li>
+    <li><strong>For Vaadin apps the gap is smaller than it looks.</strong> Playwright's waiting knows nothing about Vaadin's server round trip. Dramafinder (<code>AutoWait</code>) and TestBench (<code>waitForVaadin</code>) close it the same way, by polling <code>window.Vaadin.Flow.clients</code>. TestBench's query script also searches shadow DOM already.</li>
+    <li><strong>On speed, this repo's own benchmark favours Playwright.</strong> In three CI runs, TestBench was slower than Dramafinder on all four Vaadin scenarios, by ×1.2 to ×4.6 per test body. The runs were not designed to compare tools, so the size of the gap is indicative (<a href="https://github.com/parttio/unified-testing-tool/issues/497">#497</a>).</li>
+    <li><strong>Selenium wins on standards, reach and Vaadin's install base.</strong> W3C WebDriver Recommendation, WebDriver BiDi written with browser vendors, real branded Safari, Selenium Grid and cloud vendors, Appium for mobile, and TestBench's screenshot comparison.</li>
+    <li><strong>Playwright Java is a second-tier binding.</strong> Not thread safe; JUnit fixtures and the Selenium Grid connection are both marked experimental.</li>
+    <li><strong>Licensing is the business question.</strong> TestBench's browser testing needs a Pro subscription; Dramafinder is free. A free official Playwright option changes what Pro buys.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Where each one wins</h2>
+  <div class="sides">
+    <div class="side">
+      <h3><span class="dot pw"></span>Playwright / Dramafinder</h3>
+      <ul>
+        <li>Actionability auto-wait before every action (P1)</li>
+        <li>Shadow-piercing, strict locators; no silent <code>first()</code> (P2, D3)</li>
+        <li>Trace viewer: DOM, network and source per action (P3)</li>
+        <li>Codegen that writes Java with role and label locators (P4)</li>
+        <li>Network routing, mocking and HAR replay (P5)</li>
+        <li>Browser contexts that are cheap and fully isolated (P6)</li>
+        <li>Apache-2.0 at both layers; browser builds pinned per release (P9, P12, D1)</li>
+        <li>Default E2E tool for most modern web frameworks (landscape)</li>
+      </ul>
+    </div>
+    <div class="side">
+      <h3><span class="dot sel"></span>Selenium / TestBench</h3>
+      <ul>
+        <li>W3C standard since 2018; BiDi is the vendors' shared successor (S1–S3)</li>
+        <li>Real branded browsers, Safari included (S7, P9)</li>
+        <li>Selenium Grid; TestBench <code>@RunOnHub</code> and Sauce Labs (S4, T5)</li>
+        <li>Real mobile devices through Appium (S8)</li>
+        <li>Screenshot comparison built in (T4, V3)</li>
+        <li>Reference Java binding, mature and thread-friendly</li>
+        <li>Backed by Vaadin, several maintained release lines (T7)</li>
+        <li>The existing customer suites</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Side by side</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Dimension</th><th>Selenium / TestBench</th><th>Playwright / Dramafinder</th><th>Edge</th></tr></thead>
+      <tbody>
+        <tr><td>Standard</td><td>W3C WebDriver Recommendation (2018); BiDi Working Draft</td><td>Own protocol; release notes 1.60–1.65 don't mention BiDi</td><td><span class="tag sel">Selenium</span></td></tr>
+        <tr><td>Waiting for elements</td><td>Implicit wait defaults to 0; explicit waits opt-in; TestBench <code>waitForFirst()</code></td><td>Auto-waits on actionability before every action</td><td><span class="tag pw">Playwright</span></td></tr>
+        <tr><td>Waiting for Vaadin round trip</td><td><code>waitForVaadin</code> after each element action</td><td><code>AutoWait.afterAction</code> after each element action</td><td><span class="tag tie">Tie</span></td></tr>
+        <tr><td>Shadow DOM</td><td>Plain Selenium: <code>getShadowRoot()</code>; TestBench queries search it</td><td>Locators pierce open shadow roots (not XPath)</td><td><span class="tag tie">Tie in wrapper</span></td></tr>
+        <tr><td>Ambiguous match</td><td>Test picks <code>first()</code> or <code>single()</code></td><td>Strict: more than one match throws</td><td><span class="tag pw">Playwright</span></td></tr>
+        <tr><td>Debugging</td><td>Screenshots and screenshot comparison</td><td>Trace viewer with snapshots, network, source</td><td><span class="tag pw">Playwright</span></td></tr>
+        <tr><td>Recording</td><td>Selenium IDE</td><td>Codegen for Java</td><td><span class="tag pw">Playwright</span></td></tr>
+        <tr><td>Network interception</td><td>BiDi network module, still rolling out</td><td><code>route</code>, <code>fulfill</code>, <code>abort</code>, HAR</td><td><span class="tag pw">Playwright</span></td></tr>
+        <tr><td>Isolation, parallelism</td><td>New driver per session; Grid to spread out</td><td>Cheap contexts; Java not thread safe; JUnit fixtures experimental</td><td><span class="tag tie">Mixed</span></td></tr>
+        <tr><td>Browsers</td><td>Real branded browsers incl. Safari</td><td>Own Chromium/Firefox/WebKit builds; branded Chrome, Edge; no Safari</td><td><span class="tag sel">Selenium</span></td></tr>
+        <tr><td>Grid and cloud</td><td>Selenium Grid; TestBench hub and Sauce Labs</td><td>Grid connection experimental, Chrome and Edge only</td><td><span class="tag sel">Selenium</span></td></tr>
+        <tr><td>Mobile</td><td>Appium</td><td>Device emulation only</td><td><span class="tag sel">Selenium</span></td></tr>
+        <tr><td>Speed (this repo's runs)</td><td>×1.2–×4.6 slower per test body, every scenario and run</td><td>Faster; not yet a controlled comparison</td><td><span class="tag pw">Playwright</span></td></tr>
+        <tr><td>Licence</td><td>Selenium Apache-2.0; TestBench commercial, Pro and above</td><td>Playwright and Dramafinder Apache-2.0</td><td><span class="tag pw">Playwright</span></td></tr>
+        <tr><td>Vendor support</td><td>Vaadin, several release lines</td><td>One main maintainer (260 of ~270 commits)</td><td><span class="tag sel">Selenium</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="legend"><span>Edge column is this note's reading of the facts <span class="op">opinion</span></span><span>Speed comes from this repo's benchmark runs only; nothing measures flakiness yet.</span></div>
+</section>
+
+<section>
+  <h2>What it means for a Vaadin app <span class="op">opinion</span></h2>
+  <div class="vaadin">
+    <div><h3>Shadow DOM</h3><p>Both wrappers already hide it for Vaadin components. Playwright helps when a test drops below the wrapper, for example a raw <code>getByRole(..)</code> against a third-party web component.</p></div>
+    <div><h3>Flakiness</h3><p>The Vaadin-specific kind, acting before the server answers, is handled the same way in both. Playwright adds general actionability waits and strict matching, so fewer flaky tests is a fair expectation but unmeasured.</p></div>
+    <div><h3>Speed</h3><p>Faster on Playwright in every scenario of every benchmark run, most on the 30-action form, which fits a cost per action. One in-page wait script vs polling from Java is a plausible reason.</p></div>
+    <div><h3>Debugging</h3><p>The trace viewer is the clearest gain for a developer staring at a red CI run. TestBench has no equivalent.</p></div>
+    <div><h3>Infrastructure</h3><p>Teams on Selenium Grid, a cloud grid, real Safari or real mobile devices stay best served by Selenium.</p></div>
+    <div><h3>Long-term stability</h3><p>WebDriver is implemented by browser vendors. Playwright depends on patched browsers and one vendor's release train: reproducible, but frequent upgrades.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Speed: what this repo's benchmark runs show</h2>
+  <p class="prose">The benchmark times each scenario's Direct Test (<code>DramafinderPerfTest</code>, <code>TestBenchPerfTest</code>) and the same Unified UI Test on each tool: median test-body time over 30 rounds. Latest run, <a href="https://github.com/parttio/unified-testing-tool/actions/runs/44702862629">#9</a> (20 Nov 2026):</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Scenario</th><th>Dramafinder</th><th>TestBench</th><th>TestBench ÷ Dramafinder<br><span class="meta">runs 1 / 4 / 9</span></th><th>Unified Selenium ÷ Playwright<br><span class="meta">runs 1 / 4 / 9</span></th></tr></thead>
+      <tbody>
+        <tr><td>smallForm · 3 actions</td><td class="num">691 ms</td><td class="num">1,039 ms</td><td class="num">1.96 / 1.72 / 1.50</td><td class="num">2.04 / 1.48 / 1.62</td></tr>
+        <tr><td>longForm · 30 actions</td><td class="num">1,714 ms</td><td class="num">7,066 ms</td><td class="num">4.57 / 3.57 / 4.12</td><td class="num">2.05 / 1.71 / 2.57</td></tr>
+        <tr><td>largeGrid · 500 rows</td><td class="num">2,389 ms</td><td class="num">3,772 ms</td><td class="num">1.65 / 1.57 / 1.58</td><td class="num">1.30 / 1.23 / 3.03</td></tr>
+        <tr><td>comboBox · 1,000 items</td><td class="num">1,162 ms</td><td class="num">1,423 ms</td><td class="num">1.33 / 1.17 / 1.22</td><td class="num">0.72 / 0.66 / 1.20</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="two" style="margin-top:1.2rem">
+    <div><h3>What it shows <span class="op">opinion</span></h3><ul><li>The Direct Tests are the cleaner tool comparison: TestBench was slower in all 12 cells.</li><li>The Unified columns also measure this repo's adapters, which got performance fixes between runs (#445, #446, #447). That is why comboBox flips in run 9.</li></ul></div>
+    <div><h3>Why it isn't controlled yet</h3><ul><li>Each tool ran on a different runner, in parallel jobs.</li><li>Different browser builds: Playwright's Chromium vs the runner's Chrome.</li><li>Browser launch isn't timed, which is where Playwright's cheap contexts would show.</li><li>Three runs over two days. A controlled mode is tracked in <a href="https://github.com/parttio/unified-testing-tool/issues/497">#497</a>.</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>Should Vaadin ship an official Playwright wrapper?</h2>
+  <div class="opts">
+    <div class="opt"><div class="k">A · Keep Selenium only</div><p>TestBench stays the only official tool; Dramafinder stays community.</p><div class="cost">Cheapest. Leaves Vaadin out of step with where other frameworks point users.</div></div>
+    <div class="opt"><div class="k">B · Wrapper beside TestBench</div><p>"TestBench for Playwright": a second element library with its own API.</p><div class="cost">Two libraries to keep in step with every component, for good (~24k lines in Dramafinder).</div></div>
+    <div class="opt"><div class="k">C · Backend under a common API</div><p>One Vaadin test API, Selenium or Playwright chosen per run.</p><div class="cost">Playwright-only features (trace, routing) need deciding what to lift into the API.</div></div>
+    <div class="opt pick"><div class="k">B → C · Recommended</div><p>Adopt Dramafinder now; converge it and TestBench towards one API with two backends.</p><div class="cost">Fast to start, avoids a permanent second API.</div></div>
+  </div>
+</section>
+
+<section class="two">
+  <div>
+    <h2>Benefits</h2>
+    <ul>
+      <li>Meets users where the field is going: Playwright is the first-listed or default E2E tool in Angular, Vue, Svelte, Next.js, Blazor and Laravel, and has the most agent tooling.</li>
+      <li>Trace viewer, codegen and network mocking on Vaadin apps, with Vaadin-aware waiting.</li>
+      <li>Turns a single-maintainer add-on into something companies can depend on.</li>
+      <li>Some know-how is in-house: TestBench's load-test kit already uses Playwright 1.65, and Vaadin's docs mention it.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Costs and risks</h2>
+    <ul>
+      <li><strong>Licensing and revenue:</strong> commercial competes with free Dramafinder; free removes a reason to buy Pro.</li>
+      <li><strong>Microsoft's release train:</strong> new browsers every release; Java binding partly experimental.</li>
+      <li><strong>Gaps for current users:</strong> grid and cloud, real Safari, mobile, screenshot comparison.</li>
+      <li><strong>Migration cost</strong> for existing suites if Selenium is ever de-emphasised. Recipes help but leave Migration Markers.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="repo">
+  <h2>This repo is a working prototype of option C</h2>
+  <div class="flow">
+    <span class="api">Unified UI Test</span><i>→</i><span>Browserless</span><span>Playwright · Dramafinder 2.2.1</span><span>Selenium · TestBench 25.3</span>
+  </div>
+  <p class="prose">One test runs on any of the three, chosen per run with <code>vaadin.testing.tool</code>. Each browser adapter is only about 2,200–2,500 lines because it sits on the tool's own element library. Auto-Wait is a guarantee of the API: the Selenium adapter calls <code>waitForVaadin</code>, the Playwright adapter calls Dramafinder's <code>AutoWait</code>. Tool-only features go through an Escape Hatch and a declared Capability, so network interception and tracing stay Playwright-only today.</p>
+</section>
+
+<section>
+  <h2>Recommended path <span class="op">opinion</span></h2>
+  <div class="steps">
+    <div class="step"><h3>Now</h3><p>Keep TestBench Selenium fully supported. Co-maintain Dramafinder, run it in Vaadin's component CI and promise compatibility with each Vaadin release.</p></div>
+    <div class="step"><h3>Next</h3><p>Converge on one Vaadin test API with Selenium, Playwright and Browserless backends. Choose between TestBench's <code>$(..)</code> style and the Unified API's <code>find(..)</code> style.</p></div>
+    <div class="step"><h3>Before announcing</h3><p>Decide what stays in Pro: screenshot comparison, grid and cloud, load testing, migration tooling.</p></div>
+    <div class="step"><h3>Throughout</h3><p>Do not drop Selenium. The standard track, real branded browsers and existing customer suites keep it relevant.</p></div>
+  </div>
+</section>
+
+<section class="two">
+  <div>
+    <h2>Open questions</h2>
+    <ul>
+      <li>Will Playwright's Firefox move to WebDriver BiDi?</li>
+      <li>How large is the speed gap on the same runner and browser build, launch included (<a href="https://github.com/parttio/unified-testing-tool/issues/497">#497</a>)? And how do the tools compare on flakiness?</li>
+      <li>Governance, namespace (<code>org.vaadin.addons</code> vs <code>com.vaadin</code>) and release cadence for an adopted Dramafinder.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Not checked</h2>
+    <ul>
+      <li>Cloud vendors' Playwright offerings.</li>
+      <li>Vaadin licence terms beyond the pricing and docs pages.</li>
+      <li>External benchmarks or blog comparisons; speed comes only from this repo's runs.</li>
+      <li>Long spec pages were read only partly.</li>
+    </ul>
+  </div>
+</section>
+
+<details>
+  <summary>Primary sources</summary>
+  <div class="src">
+    <ul>
+      <li>Playwright Java docs: <a href="https://playwright.dev/java/docs/actionability">actionability</a>, <a href="https://playwright.dev/java/docs/locators">locators</a>, <a href="https://playwright.dev/java/docs/trace-viewer-intro">trace viewer</a>, <a href="https://playwright.dev/java/docs/codegen">codegen</a>, <a href="https://playwright.dev/java/docs/network">network</a>, <a href="https://playwright.dev/java/docs/browser-contexts">browser contexts</a>, <a href="https://playwright.dev/java/docs/multithreading">multithreading</a>, <a href="https://playwright.dev/java/docs/junit">JUnit</a>, <a href="https://playwright.dev/java/docs/browsers">browsers</a>, <a href="https://playwright.dev/java/docs/selenium-grid">Selenium Grid</a>, <a href="https://playwright.dev/java/docs/release-notes">release notes</a></li>
+      <li>Selenium: <a href="https://www.selenium.dev/documentation/webdriver/bidi/">BiDi</a>, <a href="https://www.selenium.dev/documentation/webdriver/waits/">waits</a>, <a href="https://www.selenium.dev/documentation/webdriver/elements/finders/">finders</a>, <a href="https://www.selenium.dev/documentation/grid/">Grid</a>, <a href="https://www.selenium.dev/documentation/selenium_manager/">Selenium Manager</a>; <a href="https://appium.io/docs/en/latest/intro/">Appium</a></li>
+      <li>W3C: <a href="https://www.w3.org/TR/webdriver1/">WebDriver</a>, <a href="https://www.w3.org/TR/webdriver2/">WebDriver Level 2</a>, <a href="https://www.w3.org/TR/webdriver-bidi/">WebDriver BiDi</a></li>
+      <li>Vaadin: <a href="https://vaadin.com/docs/latest/flow/testing">Testing</a>, <a href="https://vaadin.com/docs/latest/flow/testing/end-to-end">End-to-end testing</a>, <a href="https://vaadin.com/pricing">Pricing</a></li>
+      <li>Source: <code>TestBenchCommandExecutor.java</code>, <code>ElementQuery.java</code>, <code>TestBenchElement.java</code> (testbench); <code>AutoWait.java</code>, <code>TextFieldElement.java</code> (dramafinder); <code>SeleniumSession.java</code>, <code>PlaywrightSession.java</code>, <code>docs/spec/09-capabilities.md</code> (this repo)</li>
+    </ul>
+  </div>
+</details>
+
+<footer>Full note with every fact and line reference: <code>docs/research/selenium-vs-playwright-for-vaadin.md</code> in <code>parttio/unified-testing-tool</code>.</footer>
+</div>
