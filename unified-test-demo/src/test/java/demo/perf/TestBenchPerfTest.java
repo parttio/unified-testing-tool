@@ -98,13 +98,12 @@ class TestBenchPerfTest extends BrowserTestBase {
 
     // Below the tests, so that their source lines, which key the committed round-trip counts, stay where they are.
 
-    private com.vaadin.testbench.TestBenchDriverProxy ownDriver;
-
     /**
      * With {@code vaadin.testing.selenium.executable} set, runs in the Chrome at that path, with the arguments
      * TestBench's own local Chrome gets, instead of the one Selenium Manager finds. The tool comparison (#497) sets
-     * it, so that every side of the comparison runs the same browser binary. TestBench's own driver stays open
-     * unused and TestBench closes it; neither is part of the timed body.
+     * it, so that every side of the comparison runs the same browser binary. TestBench's own driver is closed here,
+     * and TestBench closes the one that replaces it after the test (it closes whichever driver the test holds);
+     * neither is part of the timed body.
      */
     @org.junit.jupiter.api.BeforeEach
     void useExecutable() {
@@ -118,15 +117,7 @@ class TestBenchPerfTest extends BrowserTestBase {
         if (com.vaadin.testbench.Parameters.isHeadless()) {
             options.addArguments("--headless=new");
         }
-        ownDriver = com.vaadin.testbench.TestBench.createDriver(new org.openqa.selenium.chrome.ChromeDriver(options));
-        setDriver(ownDriver);
-    }
-
-    @org.junit.jupiter.api.AfterEach
-    void closeOwnDriver() {
-        if (ownDriver != null) {
-            ownDriver.quit();
-            ownDriver = null;
-        }
+        getDriver().quit();
+        setDriver(com.vaadin.testbench.TestBench.createDriver(new org.openqa.selenium.chrome.ChromeDriver(options)));
     }
 }
