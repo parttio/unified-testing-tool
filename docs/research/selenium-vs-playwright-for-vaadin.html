@@ -90,6 +90,7 @@ tr:last-child td { border-bottom: 0; }
 thead th { font-family: var(--font-display); font-weight: 600; background: var(--code-bg); }
 td:first-child { font-weight: 600; width: 17%; }
 td:last-child { width: 9%; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); font-size: 0.82rem; width: auto; white-space: nowrap; }
 .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); margin-top: 0.6rem; }
 
 /* vaadin specifics */
@@ -147,6 +148,7 @@ footer { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--li
   <ol class="short">
     <li><strong>Playwright's general advantages are real and documented.</strong> Every action waits until the element is visible, stable, enabled and receives events. Locators reach into open shadow roots and are strict, so a double match fails instead of taking the first. It adds a trace viewer, Java codegen, network mocking and cheap isolated browser contexts. Apache-2.0.</li>
     <li><strong>For Vaadin apps the gap is smaller than it looks.</strong> Playwright's waiting knows nothing about Vaadin's server round trip. Dramafinder (<code>AutoWait</code>) and TestBench (<code>waitForVaadin</code>) close it the same way, by polling <code>window.Vaadin.Flow.clients</code>. TestBench's query script also searches shadow DOM already.</li>
+    <li><strong>On speed, this repo's own benchmark favours Playwright.</strong> In three CI runs, TestBench was slower than Dramafinder on all four Vaadin scenarios, by ×1.2 to ×4.6 per test body. The runs were not designed to compare tools, so the size of the gap is indicative (<a href="https://github.com/parttio/unified-testing-tool/issues/497">#497</a>).</li>
     <li><strong>Selenium wins on standards, reach and Vaadin's install base.</strong> W3C WebDriver Recommendation, WebDriver BiDi written with browser vendors, real branded Safari, Selenium Grid and cloud vendors, Appium for mobile, and TestBench's screenshot comparison.</li>
     <li><strong>Playwright Java is a second-tier binding.</strong> Not thread safe; JUnit fixtures and the Selenium Grid connection are both marked experimental.</li>
     <li><strong>Licensing is the business question.</strong> TestBench's browser testing needs a Pro subscription; Dramafinder is free. A free official Playwright option changes what Pro buys.</li>
@@ -203,12 +205,13 @@ footer { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--li
         <tr><td>Browsers</td><td>Real branded browsers incl. Safari</td><td>Own Chromium/Firefox/WebKit builds; branded Chrome, Edge; no Safari</td><td><span class="tag sel">Selenium</span></td></tr>
         <tr><td>Grid and cloud</td><td>Selenium Grid; TestBench hub and Sauce Labs</td><td>Grid connection experimental, Chrome and Edge only</td><td><span class="tag sel">Selenium</span></td></tr>
         <tr><td>Mobile</td><td>Appium</td><td>Device emulation only</td><td><span class="tag sel">Selenium</span></td></tr>
+        <tr><td>Speed (this repo's runs)</td><td>×1.2–×4.6 slower per test body, every scenario and run</td><td>Faster; not yet a controlled comparison</td><td><span class="tag pw">Playwright</span></td></tr>
         <tr><td>Licence</td><td>Selenium Apache-2.0; TestBench commercial, Pro and above</td><td>Playwright and Dramafinder Apache-2.0</td><td><span class="tag pw">Playwright</span></td></tr>
         <tr><td>Vendor support</td><td>Vaadin, several release lines</td><td>One main maintainer (260 of ~270 commits)</td><td><span class="tag sel">Selenium</span></td></tr>
       </tbody>
     </table>
   </div>
-  <div class="legend"><span>Edge column is this note's reading of the facts <span class="op">opinion</span></span><span>No primary source compares speed or flakiness on a Vaadin app.</span></div>
+  <div class="legend"><span>Edge column is this note's reading of the facts <span class="op">opinion</span></span><span>Speed comes from this repo's benchmark runs only; nothing measures flakiness yet.</span></div>
 </section>
 
 <section>
@@ -216,10 +219,30 @@ footer { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--li
   <div class="vaadin">
     <div><h3>Shadow DOM</h3><p>Both wrappers already hide it for Vaadin components. Playwright helps when a test drops below the wrapper, for example a raw <code>getByRole(..)</code> against a third-party web component.</p></div>
     <div><h3>Flakiness</h3><p>The Vaadin-specific kind, acting before the server answers, is handled the same way in both. Playwright adds general actionability waits and strict matching, so fewer flaky tests is a fair expectation but unmeasured.</p></div>
-    <div><h3>Speed</h3><p>Unproven here. Cheap contexts and one in-page wait script (vs polling from Java) make Playwright likely faster per test.</p></div>
+    <div><h3>Speed</h3><p>Faster on Playwright in every scenario of every benchmark run, most on the 30-action form, which fits a cost per action. One in-page wait script vs polling from Java is a plausible reason.</p></div>
     <div><h3>Debugging</h3><p>The trace viewer is the clearest gain for a developer staring at a red CI run. TestBench has no equivalent.</p></div>
     <div><h3>Infrastructure</h3><p>Teams on Selenium Grid, a cloud grid, real Safari or real mobile devices stay best served by Selenium.</p></div>
     <div><h3>Long-term stability</h3><p>WebDriver is implemented by browser vendors. Playwright depends on patched browsers and one vendor's release train: reproducible, but frequent upgrades.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Speed: what this repo's benchmark runs show</h2>
+  <p class="prose">The benchmark times each scenario's Direct Test (<code>DramafinderPerfTest</code>, <code>TestBenchPerfTest</code>) and the same Unified UI Test on each tool: median test-body time over 30 rounds. Latest run, <a href="https://github.com/parttio/unified-testing-tool/actions/runs/44702862629">#9</a> (20 Nov 2026):</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Scenario</th><th>Dramafinder</th><th>TestBench</th><th>TestBench ÷ Dramafinder<br><span class="meta">runs 1 / 4 / 9</span></th><th>Unified Selenium ÷ Playwright<br><span class="meta">runs 1 / 4 / 9</span></th></tr></thead>
+      <tbody>
+        <tr><td>smallForm · 3 actions</td><td class="num">691 ms</td><td class="num">1,039 ms</td><td class="num">1.96 / 1.72 / 1.50</td><td class="num">2.04 / 1.48 / 1.62</td></tr>
+        <tr><td>longForm · 30 actions</td><td class="num">1,714 ms</td><td class="num">7,066 ms</td><td class="num">4.57 / 3.57 / 4.12</td><td class="num">2.05 / 1.71 / 2.57</td></tr>
+        <tr><td>largeGrid · 500 rows</td><td class="num">2,389 ms</td><td class="num">3,772 ms</td><td class="num">1.65 / 1.57 / 1.58</td><td class="num">1.30 / 1.23 / 3.03</td></tr>
+        <tr><td>comboBox · 1,000 items</td><td class="num">1,162 ms</td><td class="num">1,423 ms</td><td class="num">1.33 / 1.17 / 1.22</td><td class="num">0.72 / 0.66 / 1.20</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="two" style="margin-top:1.2rem">
+    <div><h3>What it shows <span class="op">opinion</span></h3><ul><li>The Direct Tests are the cleaner tool comparison: TestBench was slower in all 12 cells.</li><li>The Unified columns also measure this repo's adapters, which got performance fixes between runs (#445, #446, #447). That is why comboBox flips in run 9.</li></ul></div>
+    <div><h3>Why it isn't controlled yet</h3><ul><li>Each tool ran on a different runner, in parallel jobs.</li><li>Different browser builds: Playwright's Chromium vs the runner's Chrome.</li><li>Browser launch isn't timed, which is where Playwright's cheap contexts would show.</li><li>Three runs over two days. A controlled mode is tracked in <a href="https://github.com/parttio/unified-testing-tool/issues/497">#497</a>.</li></ul></div>
   </div>
 </section>
 
@@ -277,7 +300,7 @@ footer { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--li
     <h2>Open questions</h2>
     <ul>
       <li>Will Playwright's Firefox move to WebDriver BiDi?</li>
-      <li>How do both tools compare in time and flakiness on the same Vaadin suite? This repo's benchmark could measure it.</li>
+      <li>How large is the speed gap on the same runner and browser build, launch included (<a href="https://github.com/parttio/unified-testing-tool/issues/497">#497</a>)? And how do the tools compare on flakiness?</li>
       <li>Governance, namespace (<code>org.vaadin.addons</code> vs <code>com.vaadin</code>) and release cadence for an adopted Dramafinder.</li>
     </ul>
   </div>
@@ -286,7 +309,7 @@ footer { font-size: 0.82rem; color: var(--muted); border-top: 1px solid var(--li
     <ul>
       <li>Cloud vendors' Playwright offerings.</li>
       <li>Vaadin licence terms beyond the pricing and docs pages.</li>
-      <li>Benchmarks or blog comparisons; performance stays opinion.</li>
+      <li>External benchmarks or blog comparisons; speed comes only from this repo's runs.</li>
       <li>Long spec pages were read only partly.</li>
     </ul>
   </div>
