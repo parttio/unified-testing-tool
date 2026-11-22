@@ -95,4 +95,29 @@ class TestBenchPerfTest extends BrowserTestBase {
 
         Assertions.assertEquals(PerfData.PICKED, $("p").id("picked").getText());
     }
+
+    // Below the tests, so that their source lines, which key the committed round-trip counts, stay where they are.
+
+    /**
+     * With {@code vaadin.testing.selenium.executable} set, runs in the Chrome at that path, with the arguments
+     * TestBench's own local Chrome gets, instead of the one Selenium Manager finds. The tool comparison (#497) sets
+     * it, so that every side of the comparison runs the same browser binary. TestBench's own driver is closed here,
+     * and TestBench closes the one that replaces it after the test (it closes whichever driver the test holds);
+     * neither is part of the timed body.
+     */
+    @org.junit.jupiter.api.BeforeEach
+    void useExecutable() {
+        String executable = System.getProperty("vaadin.testing.selenium.executable", "");
+        if (executable.isBlank()) {
+            return;
+        }
+        org.openqa.selenium.chrome.ChromeOptions options = new org.openqa.selenium.chrome.ChromeOptions()
+                .setBinary(executable);
+        options.addArguments("--test-type", "--disable-search-engine-choice-screen", "--no-sandbox");
+        if (com.vaadin.testbench.Parameters.isHeadless()) {
+            options.addArguments("--headless=new");
+        }
+        getDriver().quit();
+        setDriver(com.vaadin.testbench.TestBench.createDriver(new org.openqa.selenium.chrome.ChromeDriver(options)));
+    }
 }

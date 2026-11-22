@@ -7,7 +7,7 @@ Two checks compare each **Performance Pair**, a Unified UI Test and a Direct Tes
 - **Round trips per user action**, checked on every pull request that touches the API or an adapter. They are exact, so any increase fails.
 - **Time**, against a budget, run on request and once a week. Time on shared runners is noisy, so this check is never required.
 
-Both run through one script, `scripts/bench-unified.sh`, on one Testing Tool at a time.
+Both run through one script, `scripts/bench-unified.sh`, on one Testing Tool at a time. A third, informational run compares two Testing Tools with each other: see [Comparing two Testing Tools](#comparing-two-testing-tools).
 
 ## Running the checks locally
 
@@ -22,6 +22,8 @@ scripts/bench-unified.sh --tool browserless --time       # time against the budg
 | `--counts` | count the round trips per user action and compare them with the committed counts (the default) |
 | `--update-counts` | count them 3 times (`--runs N`) and write them as the committed counts |
 | `--time` | time each pair: 5 warm-up rounds (`--warmup N`), then 30 measured rounds (`--rounds N`) |
+| `--compare FIRST,SECOND` | instead of `--tool`: time both tools in one JVM, see [below](#comparing-two-testing-tools) |
+| `--browser PATH` | with `--compare`: the browser binary every side runs |
 | `--scenario NAME` | only `smallForm`, `longForm`, `largeGrid` or `comboBox` |
 | `--skip-build` | don't install the modules first; use it when they are installed |
 | `-- ARGS` | extra Maven arguments, such as `-- -Dvaadin.testing.playwright.executable=/path/to/chromium` |
@@ -91,3 +93,42 @@ The times are written to `unified-test-demo/target/benchmark/<tool>.csv`, one li
 | Nothing | it runs every Monday on `main`: the record over time |
 
 Each Testing Tool has its own job, in parallel, of at most 30 minutes. A failing scenario fails that job, which is not a required check. Look at its table, and when the result holds on a second run, open an issue for the overhead.
+
+## Comparing two Testing Tools
+
+The time benchmark compares a Unified UI Test with the Direct Test on **one** Testing Tool. Its jobs run on different runners, so their times can't be compared across tools. To compare the tools themselves, for example Playwright with Selenium ([#497](https://github.com/parttio/unified-testing-tool/issues/497)), run both in one JVM:
+
+```
+scripts/bench-unified.sh --compare playwright,selenium --browser "$(command -v google-chrome)"
+```
+
+- **What runs:** each round runs four test classes: the Unified UI Test and the Direct Test on each tool. They share one application server and one machine. The order of the tools alternates round by round (ABBA), and so does the order of the two tests on a tool.
+- **`--browser`:** every side runs that binary. That covers both Unified adapters (`vaadin.testing.playwright.executable`, `vaadin.testing.selenium.executable`), `DramafinderPerfTest` and `TestBenchPerfTest`. Without it, each tool runs its own default browser, and the table says so.
+- **What is timed:** the test body only, as in the time benchmark. The browser's launch is not included.
+- **Result:** per scenario, two rows:
+  - the Unified UI Test on both tools;
+  - the Direct Tests, for example `DramafinderPerfTest` vs `TestBenchPerfTest`.
+
+  Each row gives both medians, the median of the paired ratios SECOND ÷ FIRST and its 95 % interval. Above 1 means the second tool is slower. There is no budget and no verdict.
+- **Output:** `unified-test-demo/target/benchmark/compare-FIRST-SECOND.csv` and `.md`. In CI the job summary has the table, and the `benchmark-compare` artifact has both files.
+
+For example, from a short local run of `--compare browserless,playwright`:
+
+```
+| Scenario | Tests | browserless (median) | playwright (median) | playwright ÷ browserless | 95 % interval |
+| longForm | Unified UI Test | 24.3 ms | 2400.5 ms | 99.675 | 91.603 to 145.563 |
+| longForm | BrowserlessPerfTest vs DramafinderPerfTest | 23.8 ms | 2748.6 ms | 111.712 | 109.276 to 176.044 |
+```
+
+**Reading it:**
+- The **Direct Tests** row compares the tools as their own users write tests.
+- The **Unified UI Test** row also includes this repo's adapters, so it changes when an adapter gets faster.
+- Selenium needs the TestBench licence.
+
+**In CI:** the **Benchmark** workflow's job *Compare Playwright and Selenium* runs it on the runner's Google Chrome:
+- every Monday;
+- on request;
+- on a pull request labelled `benchmark`.
+
+It takes up to 60 minutes, and it is never a required check.
+
