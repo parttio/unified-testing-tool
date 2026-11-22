@@ -136,7 +136,7 @@ public final class TimeBenchmark {
     }
 
     /** Runs one test class (or one of its methods), as the demo's Surefire configuration would; exits 2 on a failure. */
-    private static void run(Launcher launcher, String testClass, String method, String tool) {
+    static void run(Launcher launcher, String testClass, String method, String tool) {
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
                 .selectors(method == null ? selectClass(testClass)
                         : selectMethod(testClass, method, parameterTypes(testClass, method)))
@@ -228,7 +228,7 @@ public final class TimeBenchmark {
         return md.toString();
     }
 
-    private static Map<String, String> options(String[] args) {
+    static Map<String, String> options(String[] args) {
         Map<String, String> options = new HashMap<>();
         for (int i = 0; i < args.length; i++) {
             if (!args[i].startsWith("--") || i + 1 >= args.length) {

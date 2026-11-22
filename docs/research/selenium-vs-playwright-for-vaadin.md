@@ -142,7 +142,7 @@ All of this subsection is **[opinion]**.
   - Browser launch and context creation are not timed (B4). That is where Playwright's cheap contexts (P6) would show.
   - There are three runs over two days.
   - A Direct Test also carries its library's own choices: before #447, TestBench waited 500 ms per notification read.
-- **Conclusion:** on these Vaadin scenarios, Playwright with Dramafinder was consistently faster than Selenium with TestBench, by roughly ×1.2 to ×4.6 per test body. A controlled cross-tool run is tracked in [#497](https://github.com/parttio/unified-testing-tool/issues/497).
+- **Conclusion:** on these Vaadin scenarios, Playwright with Dramafinder was consistently faster than Selenium with TestBench, by roughly ×1.2 to ×4.6 per test body. A controlled cross-tool run now exists: `scripts/bench-unified.sh --compare playwright,selenium`, run weekly by the Benchmark workflow on the runner's Chrome ([#497](https://github.com/parttio/unified-testing-tool/issues/497)). Its first results should replace these figures.
 
 ## Should Vaadin ship an official Playwright wrapper?
 

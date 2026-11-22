@@ -35,7 +35,7 @@ class DramafinderPerfTest extends SpringPlaywrightIT {
     @BeforeEach
     public void setupTest() throws Exception {
         super.setupTest();
-        Page fresh = getBrowser().newPage();
+        Page fresh = browser().newPage();
         prepareBrowserContext(fresh.context());
         // the base class's timeouts
         fresh.setDefaultNavigationTimeout(4000);
@@ -95,5 +95,39 @@ class DramafinderPerfTest extends SpringPlaywrightIT {
         ComboBoxElement.getByLabel(page, "Product").selectItem(PerfData.ITEM);
 
         assertThat(page.locator("#picked")).hasText(PerfData.PICKED);
+    }
+
+    // Below the tests, so that their source lines, which key the committed round-trip counts, stay where they are.
+
+    /** The browser at {@code vaadin.testing.playwright.executable}, when it is set; launched once per class. */
+    private static com.microsoft.playwright.Playwright ownPlaywright;
+    private static com.microsoft.playwright.Browser ownBrowser;
+
+    /**
+     * The browser the test runs in: SpringPlaywrightIT's own Chromium, or the one at
+     * {@code vaadin.testing.playwright.executable}, launched as the Unified adapter launches it. The tool
+     * comparison (#497) sets it, so that every side of the comparison runs the same browser binary.
+     */
+    private com.microsoft.playwright.Browser browser() {
+        String executable = System.getProperty("vaadin.testing.playwright.executable", "");
+        if (executable.isBlank()) {
+            return getBrowser();
+        }
+        if (ownBrowser == null) {
+            ownPlaywright = com.microsoft.playwright.Playwright.create();
+            ownBrowser = ownPlaywright.chromium().launch(new com.microsoft.playwright.BrowserType.LaunchOptions()
+                    .setHeadless(isHeadless()).setExecutablePath(java.nio.file.Path.of(executable))
+                    .setArgs(java.util.List.of("--no-sandbox")));
+        }
+        return ownBrowser;
+    }
+
+    @org.junit.jupiter.api.AfterAll
+    static void closeOwnBrowser() {
+        if (ownPlaywright != null) {
+            ownPlaywright.close();
+            ownPlaywright = null;
+            ownBrowser = null;
+        }
     }
 }

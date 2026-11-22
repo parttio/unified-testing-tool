@@ -4,6 +4,9 @@ name: Benchmark
 # Test against its Direct Test, on each Testing Tool, in ABBA rounds; the median ratio against the budget (10 % or
 # 2 ms per user action, whichever is larger). Never a required check: time on shared runners is noisy, so it runs
 # on request and once a week. See scripts/bench-unified.sh --time.
+#
+# The job "Compare Playwright and Selenium" times the same Performance Pairs on both tools in one JVM, on the
+# runner's Google Chrome, to compare the tools with each other (#497): scripts/bench-unified.sh --compare.
 on:
   workflow_dispatch:
     inputs:
@@ -73,5 +76,54 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: benchmark-${{ matrix.tool }}
+          path: unified-test-demo/target/benchmark/
+          if-no-files-found: ignore
+
+  compare:
+    name: Compare Playwright and Selenium
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'benchmark')
+    runs-on: ubuntu-latest
+    # four test classes per round instead of two: about twice a single tool's time
+    timeout-minutes: 60
+    env:
+      VAADIN_OFFLINE_KEY: ${{ secrets.VAADIN_OFFLINE_KEY }}
+    steps:
+      - name: Skip without the TestBench licence
+        id: licence
+        if: env.VAADIN_OFFLINE_KEY == ''
+        run: |
+          echo "Tools not compared: no TestBench licence in this run (a pull request from a fork)." \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        if: steps.licence.outputs.skip != 'true'
+      - uses: actions/setup-java@v6
+        if: steps.licence.outputs.skip != 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build without tests
+        if: steps.licence.outputs.skip != 'true'
+        run: mvn -B -ntp install -DskipTests
+      # SpringPlaywrightIT still launches Playwright's own Chromium before each class, outside the timed body
+      - name: Install the libraries Chromium needs
+        if: steps.licence.outputs.skip != 'true'
+        run: >
+          mvn -B -ntp -pl unified-test-demo exec:java
+          -Dexec.mainClass=com.microsoft.playwright.CLI
+          -Dexec.classpathScope=test
+          -Dexec.args="install-deps chromium"
+      - name: Compare the tools on the runner's Chrome
+        if: steps.licence.outputs.skip != 'true'
+        run: |
+          google-chrome --version | tee -a "$GITHUB_STEP_SUMMARY"
+          scripts/bench-unified.sh --compare playwright,selenium --browser "$(command -v google-chrome)" \
+            --rounds "${{ inputs.rounds || '30' }}" --skip-build
+      - name: Upload the times
+        if: always() && steps.licence.outputs.skip != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-compare
           path: unified-test-demo/target/benchmark/
           if-no-files-found: ignore
