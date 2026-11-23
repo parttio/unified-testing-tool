@@ -56,8 +56,13 @@ final class Wrappers {
     static final Map<String, String> BUTTON_FILTER_RENAMES = Map.of("withLabel", "withText", "withCaption", "withText");
     static final String BUTTON_ELEMENT = "com.vaadin.flow.component.button.testbench.ButtonElement";
 
-    /** TestBench query terminals; the conversion drops them, as the Wrapper is the lookup (ADR 0007). */
-    static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst");
+    /**
+     * TestBench query terminals; the conversion drops them, as the Wrapper is the lookup (ADR 0007), and turns
+     * {@code id("x")} into the filter {@code withId("x")}.
+     */
+    static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst", "id");
+
+    static final String UNIFIED_TEMPLATE = "com.vaadin.testing.unified.component.UnifiedTemplate";
 
     private static final Set<String> COMMON_FILTERS = Set.of("withId", "withClassName", "withTheme");
 
@@ -177,9 +182,44 @@ final class Wrappers {
                 && size.getSimpleName().equals("size") && size.getSelect() == call;
     }
 
-    /** The Wrapper for the element, or {@code null} when it has none yet. */
+    /**
+     * What a Template's element converts to (spec 04, "Templates"): {@code findTemplate(SearchBar.class)}, a Scope
+     * whose {@code find(..)} is what a {@code $(..)} on the element becomes.
+     */
+    static final Wrapper TEMPLATE = new Wrapper(UNIFIED_TEMPLATE, COMMON_FILTERS, Set.of("find"),
+            Chains::scopedLookupConverts);
+
+    /**
+     * The Wrapper for the element, or {@code null} when it has none yet: {@link #TEMPLATE} for a page object whose
+     * {@code @Element} tag is a {@code LitTemplate}'s, while a visit that reads them runs ({@link LitTemplates}).
+     */
     static Wrapper forElement(String elementFqn) {
-        return BY_ELEMENT.get(elementFqn);
+        Wrapper wrapper = BY_ELEMENT.get(elementFqn);
+        return wrapper != null ? wrapper : LitTemplates.ofElement(elementFqn) != null ? TEMPLATE : null;
+    }
+
+    /** The {@code LitTemplate} class a {@code $(..)} finds the element of, or {@code null}. */
+    static String templateOf(J.MethodInvocation dollar) {
+        if (!dollar.getSimpleName().equals("$") || dollar.getArguments().size() != 1) {
+            return null;
+        }
+        Expression arg = dollar.getArguments().get(0);
+        if (arg instanceof J.Literal literal && literal.getValue() instanceof String tag) {
+            return LitTemplates.ofTag(tag);
+        }
+        return arg instanceof J.FieldAccess classLiteral
+                && classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element
+                ? LitTemplates.ofElement(element.getFullyQualifiedName()) : null;
+    }
+
+    /**
+     * The lookup without its terminal, as the Wrapper is the lookup (ADR 0007): {@code id("x")} stays as the filter
+     * {@code withId("x")}.
+     */
+    static J.MethodInvocation withoutTerminal(J.MethodInvocation terminal, J.MethodInvocation lookup) {
+        return terminal.getSimpleName().equals("id")
+                ? terminal.withSelect(lookup).withName(terminal.getName().withSimpleName("withId"))
+                : lookup.withPrefix(terminal.getPrefix());
     }
 
     /**
@@ -196,8 +236,13 @@ final class Wrappers {
             filters.add(call.getSimpleName());
             e = call.getSelect();
         }
-        if (!(e instanceof J.MethodInvocation dollar) || dollar.getSelect() != null
-                || !(dollar.getArguments().get(0) instanceof J.FieldAccess classLiteral)
+        if (!(e instanceof J.MethodInvocation dollar) || dollar.getSelect() != null) {
+            return null;
+        }
+        if (templateOf(dollar) != null) {
+            return TEMPLATE.filters().containsAll(filters) ? TEMPLATE : null;
+        }
+        if (!(dollar.getArguments().get(0) instanceof J.FieldAccess classLiteral)
                 || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified type)) {
             return null;
         }

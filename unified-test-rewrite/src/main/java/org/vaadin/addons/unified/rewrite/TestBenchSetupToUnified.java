@@ -82,6 +82,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                     scanned.helpersByClass().put(classDecl.getType().getFullyQualifiedName(), helpers);
                     scanned.beforeEachByClass().put(classDecl.getType().getFullyQualifiedName(), beforeEachOf(classDecl, helpers));
                 }
+                LitTemplates.collect(classDecl, ctx);
                 if (classDecl.getType() != null) {
                     for (J.Annotation a : classDecl.getLeadingAnnotations()) {
                         String path = routePath(a);

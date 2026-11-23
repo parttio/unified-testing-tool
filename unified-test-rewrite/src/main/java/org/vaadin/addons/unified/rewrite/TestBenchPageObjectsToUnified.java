@@ -162,10 +162,10 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
-                if (inPageObject() && method.getSimpleName().equals("single") && lookupOnContext(method.getSelect())
-                        && m.getSelect() instanceof J.MethodInvocation lookup) {
-                    // the Wrapper is the lookup: no terminal (ADR 0007)
-                    return lookup.withPrefix(m.getPrefix());
+                if (inPageObject() && (method.getSimpleName().equals("single") || method.getSimpleName().equals("id"))
+                        && lookupOnContext(method.getSelect()) && m.getSelect() instanceof J.MethodInvocation lookup) {
+                    // the Wrapper is the lookup: no terminal (ADR 0007); id("x") stays as withId("x")
+                    return Wrappers.withoutTerminal(m, lookup);
                 }
                 if (!inPageObject() || !method.getSimpleName().equals("$") || !(method.getSelect() instanceof J.Identifier context)
                         || !isContext(context.getType())) {
@@ -265,7 +265,7 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
         boolean terminal = false;
         while (c.getParentTreeCursor().getValue() instanceof J.MethodInvocation call && call.getSelect() == c.getValue()) {
             if (!terminal && Wrappers.TERMINALS.contains(call.getSimpleName())) {
-                terminal = call.getSimpleName().equals("single");
+                terminal = call.getSimpleName().equals("single") || call.getSimpleName().equals("id");
             } else if (terminal || !w.filters().contains(call.getSimpleName())) {
                 return false;
             }

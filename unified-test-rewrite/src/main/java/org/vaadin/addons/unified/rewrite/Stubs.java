@@ -24,6 +24,7 @@ final class Stubs {
                 void navigate(Class<?> view);
                 void navigate(Class<?> view, Object parameter);
                 Object find(Class<?> type);
+                com.vaadin.testing.unified.component.UnifiedTemplate findTemplate(Class<?> type);
                 void pressKey(String key);
                 <T> T unwrap(Class<T> type);
             }
@@ -51,12 +52,21 @@ final class Stubs {
             package com.vaadin.testing.unified.component;
             public interface UnifiedDialog {
                 Object find(Class<?> type);
+                UnifiedTemplate findTemplate(Class<?> type);
+            }
+            """,
+            """
+            package com.vaadin.testing.unified.component;
+            public interface UnifiedTemplate {
+                Object find(Class<?> type);
+                UnifiedTemplate findTemplate(Class<?> type);
             }
             """,
             """
             package com.vaadin.testing.unified;
             public interface Scope {
                 Object find(Class<?> type);
+                com.vaadin.testing.unified.component.UnifiedTemplate findTemplate(Class<?> type);
             }
             """,
             """
