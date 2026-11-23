@@ -92,6 +92,7 @@ class EditPersonTest {
 | by what the user can't see | `withTestId(..)`, `withId(..)`: only when no visible name tells it apart |
 | inside a container or dialog | `dialog.find(UnifiedTextField.class).withLabel("Email")`, `page.find(UnifiedContainer.class).withTestId("billing").find(..)` |
 | a component without a Wrapper | `page.findComponent(MyComponent.class)` |
+| inside a `LitTemplate` (its `@Id` fields) | `page.findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new")`: no lookup enters a template by itself; enter one at a time, find by the `@Id` value, as text the template's HTML writes is empty on Browserless |
 | a key press | `page.pressKey("Enter")`, sent to the focused component |
 | a grid row | `grid.row().withCellText("Name", "Alan Turing")`; `grid.row(0)` by index; cell components: `row.cell("Actions").find(UnifiedButton.class)` |
 | a check | `assertThat(wrapper).hasText(..)`, `.hasValue(..)`, `.isOpen()`, `.isDisabled()`, `assertThat(row).hasCellText(..)`, `assertThat(page).isAt(View.class)` |

@@ -148,6 +148,8 @@ Dramafinder 1.x and 2.x share their class and method names, but not what a looku
 
 In a 1.x project, `getByLabel(page, s)` becomes `withAccessibleNameContaining(s)` and `getByText(page, s)` `withTextContaining(s)`, each with a Migration Marker to tighten it to `withLabel`/`withText` once the test passes. A 1.x `getByHeaderText` stays behind the Escape Hatch: the Unified API has no substring header filter.
 
+*(unreleased)* Before 2.1, a Dramafinder lookup also searched the shadow roots of the application's own templates, so a test could find a `LitTemplate`'s button without saying it was in one. The converted lookup doesn't: no Unified lookup enters a Template by itself ([Templates](guide/finding-components.md#templates)). Nothing in the test shows which lookups did this, so the recipe can't mark them. Run the migrated tests: such a lookup fails with `Found none`, and its `Nearby` line names the Template and the lookup that enters it.
+
 1.x projects copied `SpringPlaywrightIT` from Dramafinder's template into their own package. The recipe recognises such a copy (an abstract class extending `AbstractBasePlaywrightIT` with `@SpringBootTest`), migrates the tests that extend it as if they extended Dramafinder's, gives each of them the copy's class annotations (`@ActiveProfiles`, `@Import`, `@SpringBootTest`'s `properties`, ...) and the copy's members it needs as its own (the fields and helpers it uses, the copy's `@BeforeEach`, `@AfterEach` and `@RegisterExtension` members), and deletes the copy once nothing extends it any more. When the copy isn't among the migrated sources (another module, a jar), the recipe can't read those annotations' arguments: it leaves a Migration Marker on each test naming them instead.
 
 === "Before (Dramafinder 1.x)"
