@@ -293,6 +293,21 @@ public final class BrowserQueries {
     }
 
     /**
+     * Browser function {@code (host, selector) => elements}: where a lookup inside a Template searches (spec 04,
+     * "Templates"). First the matches in the Template's shadow root that have an {@code id} or are under an element
+     * that has one, as the {@code @Id} components the server knows are; {@code closest} stays in the shadow root,
+     * and {@code querySelectorAll} doesn't enter the shadow roots of Templates nested in it. Then the matches in its
+     * light DOM.
+     */
+    public static final String IN_TEMPLATE = """
+            (host, selector) => {
+              const shadow = host.shadowRoot
+                  ? Array.from(host.shadowRoot.querySelectorAll(selector)).filter(e => e.closest('[id]'))
+                  : [];
+              return shadow.concat(Array.from(host.querySelectorAll(selector)));
+            }""";
+
+    /**
      * Whether an element is the app's content: false inside the shadow root of Vaadin's own components and dev
      * tools (Copilot), at any depth. Lookups don't enter shadow roots by themselves; a test enters a Template
      * explicitly (ADR 0012).
@@ -341,4 +356,21 @@ public final class BrowserQueries {
               elements.forEach((e, i) => { if (appContent(e) && filters.every(f => check(e, f))) found.push(i); });
               return found;
             }""".formatted(TEXT, ACCESSIBLE_NAME, FORM_ITEM_LABEL, APP_CONTENT);
+
+    /**
+     * Browser function {@code (elements, {host, filters}) => indices}: {@link #MATCH} for candidates a query found
+     * under a Template with CSS that enters every shadow root (Playwright's), keeping first only those
+     * {@link #IN_TEMPLATE} would find: in the Template's own shadow root with an {@code id} on them or an ancestor
+     * there, or in its light DOM.
+     */
+    public static final String MATCH_IN_TEMPLATE = """
+            (elements, arg) => {
+              const host = arg.host;
+              const inside = e => e !== host && (host.shadowRoot && e.getRootNode() === host.shadowRoot
+                  ? e.closest('[id]') !== null : host.contains(e));
+              const kept = [];
+              elements.forEach((e, i) => { if (inside(e)) kept.push(i); });
+              const match = %s;
+              return match(kept.map(i => elements[i]), arg.filters).map(j => kept[j]);
+            }""".formatted(MATCH);
 }

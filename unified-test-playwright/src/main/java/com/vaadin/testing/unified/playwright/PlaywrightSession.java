@@ -163,6 +163,9 @@ final class PlaywrightSession implements AdapterSession {
     public List<UnifiedElement> find(QuerySpec spec) {
         PlaywrightComponents.Support support = PlaywrightComponents.of(spec.componentType());
         Locator scope = spec.parent() == null ? null : ((PlaywrightElement) spec.parent()).locator();
+        if (spec.inTemplate()) {
+            return findInTemplate(support, scope, spec);
+        }
         if (support.dramafinderElement() != null) {
             return findWithDramafinder(support, scope, spec.filters());
         }
@@ -202,6 +205,49 @@ final class PlaywrightSession implements AdapterSession {
             }
         }
         return result;
+    }
+
+    /**
+     * A lookup inside a Template the test entered (spec 04, "Templates"). Playwright's CSS enters every shadow root
+     * under the Template, so the candidates are filtered in the page, in one round trip with the other filters
+     * ({@link BrowserQueries#MATCH_IN_TEMPLATE}), down to what Selenium's query finds there.
+     */
+    private List<UnifiedElement> findInTemplate(PlaywrightComponents.Support support, Locator template,
+            QuerySpec spec) {
+        if (spec.tag() == null) {
+            throw new IllegalArgumentException(spec.componentType().getName()
+                    + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
+        }
+        Locator candidates = template.locator(BrowserQueries.selector(spec.tag(), spec.filters()));
+        com.microsoft.playwright.ElementHandle host = template.elementHandle();
+        List<UnifiedElement> result = new ArrayList<>();
+        try {
+            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH_IN_TEMPLATE,
+                    Map.of("host", host, "filters", BrowserQueries.remaining(spec.filters())))) {
+                int index = ((Number) i).intValue();
+                Locator locator = candidates.nth(index);
+                if (support.include(locator)) {
+                    result.add(new PlaywrightElement(this, locator, dramafinderElement(support, locator), support,
+                            candidates, index));
+                }
+            }
+        } finally {
+            host.dispose();
+        }
+        return result;
+    }
+
+    /** Dramafinder's element of the component's type over {@code locator}, for the actions it offers; or null. */
+    private static VaadinElement dramafinderElement(PlaywrightComponents.Support support, Locator locator) {
+        Class<? extends VaadinElement> type = support.dramafinderElement();
+        if (type == null) {
+            return null;
+        }
+        try {
+            return type.getConstructor(Locator.class).newInstance(locator);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(type.getName() + " has no constructor taking a Locator", e);
+        }
     }
 
     /**

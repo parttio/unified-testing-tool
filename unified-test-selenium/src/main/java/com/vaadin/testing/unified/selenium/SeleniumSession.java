@@ -207,12 +207,14 @@ final class SeleniumSession implements AdapterSession {
         String selector = BrowserQueries.selector(tag, spec.filters());
         List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
         List<SearchContext> roots = spec.parent() == null ? List.of(driver())
+                : spec.inTemplate() ? List.of(((SeleniumElement) spec.parent()).webElement())
                 : new ArrayList<>(((SeleniumElement) spec.parent()).roots());
         List<UnifiedElement> result = new ArrayList<>();
         try {
             for (SearchContext root : roots) {
                 List<WebElement> candidates = new ArrayList<>();
-                for (WebElement candidate : root.findElements(By.cssSelector(selector))) {
+                for (WebElement candidate : spec.inTemplate() ? inTemplate((WebElement) root, selector)
+                        : root.findElements(By.cssSelector(selector))) {
                     if (support.include(candidate, this)) {
                         candidates.add(candidate);
                     }
@@ -237,6 +239,13 @@ final class SeleniumSession implements AdapterSession {
             throw new StaleElementException("An element went stale while finding " + selector, e);
         }
         return result;
+    }
+
+    /** The candidates inside a Template the test entered, in one round trip ({@link BrowserQueries#IN_TEMPLATE}). */
+    @SuppressWarnings("unchecked")
+    private List<WebElement> inTemplate(WebElement host, String selector) {
+        return (List<WebElement>) js("return (" + BrowserQueries.IN_TEMPLATE + ")(arguments[0], arguments[1]);",
+                host, selector);
     }
 
     // ---------------------------------------------------------------- navigation

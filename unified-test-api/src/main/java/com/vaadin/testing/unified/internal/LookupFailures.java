@@ -209,8 +209,9 @@ final class LookupFailures {
         }
         TestRun run = source.run();
         UnifiedElement parent = scope.orElse(null);
+        boolean inTemplate = parent != null && ElementSource.entersTemplate(source.parent());
         List<UnifiedElement> found = run.session().find(new QuerySpec(source.componentType(), source.tag(),
-                source.filters().subList(0, source.selectorFilters()), parent));
+                source.filters().subList(0, source.selectorFilters()), parent, inTemplate));
         found = found.subList(0, Math.min(found.size(), MAX_CANDIDATES));
         List<String> values = values(source, probe, found);
         String kind = StepTarget.kindOf(source);
@@ -219,7 +220,8 @@ final class LookupFailures {
             same.add(new Candidate<>(kind, values.get(i), false, new Ref(null, found.get(i))));
         }
         List<Candidate<Ref>> other = probe.kind() == Filter.Kind.LABEL || probe.kind() == Filter.Kind.TEXT
-                || probe.kind() == Filter.Kind.ACCESSIBLE_NAME ? otherKinds(source, probe.wanted(), parent) : List.of();
+                || probe.kind() == Filter.Kind.ACCESSIBLE_NAME ? otherKinds(source, probe.wanted(), parent, inTemplate)
+                : List.of();
         NearMisses.Result<Ref> result = NearMisses.rank(probe.wanted(), same, other);
         parts.nearMisses(result.shown().stream()
                 .map(c -> new Candidate<>(c.kind(), c.value(), hidden(c.payload().element()), c.payload()).render())
@@ -300,7 +302,8 @@ final class LookupFailures {
                 f.ancestorTestId(), null, f.internalPart());
     }
 
-    private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent) {
+    private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent,
+            boolean inTemplate) {
         List<Candidate<Ref>> found = new ArrayList<>();
         for (Class<?> type : OTHER_KINDS) {
             UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
@@ -313,7 +316,7 @@ final class LookupFailures {
             filters.add(new Filter(namingKind(type), null, wanted, true));
             try {
                 for (UnifiedElement e : source.run().session().find(new QuerySpec(annotation.value(), tag,
-                        List.copyOf(filters), parent))) {
+                        List.copyOf(filters), parent, inTemplate))) {
                     found.add(new Candidate<>(StepTarget.kindOf(type), wanted, false, new Ref(type, e)));
                 }
             } catch (RuntimeException e) {

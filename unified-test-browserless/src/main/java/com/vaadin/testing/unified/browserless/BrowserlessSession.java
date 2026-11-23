@@ -143,7 +143,9 @@ final class BrowserlessSession implements AdapterSession {
     public List<UnifiedElement> find(QuerySpec spec) {
         target = null; // a new lookup: a new step, or one that has not acted yet
         BrowserlessElement parent = (BrowserlessElement) spec.parent();
-        List<Component> roots = parent == null ? List.of(window().getUI()) : parent.scopeRoots();
+        List<Component> roots = parent == null ? List.of(window().getUI())
+                : spec.inTemplate() ? templateRoots(parent.component()) : parent.scopeRoots();
+        boolean rootsIncluded = spec.inTemplate() || parent != null && parent.rootsIncluded();
         // as Browserless Test does before a lookup: run the UI's pending access() tasks (one round trip)
         com.vaadin.browserless.internal.TestingLifecycleHook hook =
                 com.vaadin.browserless.internal.TestingLifecycleHookKt.getTestingLifecycleHook();
@@ -152,7 +154,7 @@ final class BrowserlessSession implements AdapterSession {
         java.util.Set<com.vaadin.flow.component.grid.Grid<?>> grids = new java.util.LinkedHashSet<>();
         // one walk per root finds the matches and the Grids under it (#401)
         for (Component root : roots) {
-            found.addAll(findIn(root, spec, parent != null && parent.rootsIncluded(), grids));
+            found.addAll(findIn(root, spec, rootsIncluded, grids));
         }
         // a Grid's cell components are not in the component tree: add those the grid rendered for the client,
         // as a browser has them in the page, and those of Grids inside them
@@ -162,6 +164,49 @@ final class BrowserlessSession implements AdapterSession {
         }
         hook.awaitAfterLookup();
         return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
+    }
+
+    /**
+     * Where a lookup inside a Template searches (spec 04, "Templates"): the components bound to its template with
+     * {@code @Id}, which Flow keeps as virtual children and Browserless Test's own walk leaves out, then its light
+     * DOM children. Each is searched with what is under it, but not inside a Template nested in it.
+     */
+    static List<Component> templateRoots(Component template) {
+        List<Component> roots = new ArrayList<>();
+        com.vaadin.flow.internal.StateNode node = template.getElement().getNode();
+        if (node.hasFeature(com.vaadin.flow.internal.nodefeature.VirtualChildrenList.class)) {
+            var virtual = node.getFeature(com.vaadin.flow.internal.nodefeature.VirtualChildrenList.class);
+            for (int i = 0; i < virtual.size(); i++) {
+                com.vaadin.flow.dom.Element child = com.vaadin.flow.dom.Element.get(virtual.get(i));
+                if (injectedId(child) != null) {
+                    child.getComponent().ifPresent(roots::add);
+                }
+            }
+        }
+        template.getChildren().forEach(roots::add);
+        return roots;
+    }
+
+    /**
+     * The id a browser reads on the element: its {@code id} attribute, or the id of the template element it is bound
+     * to with {@code @Id}, which Flow keeps in the binding and doesn't set as an attribute on the server.
+     */
+    static String idOf(com.vaadin.flow.dom.Element element) {
+        String id = element.getAttribute("id");
+        return id != null ? id : injectedId(element);
+    }
+
+    /** The id an {@code @Id} binding gave the element in its template, or null when it has none. */
+    private static String injectedId(com.vaadin.flow.dom.Element element) {
+        if (!element.isVirtualChild()) {
+            return null;
+        }
+        com.vaadin.flow.internal.StateNode node = element.getNode();
+        var payload = node.hasFeature(com.vaadin.flow.internal.nodefeature.ElementData.class)
+                ? node.getFeature(com.vaadin.flow.internal.nodefeature.ElementData.class).getPayload() : null;
+        return payload != null && com.vaadin.flow.internal.nodefeature.NodeProperties.INJECT_BY_ID.equals(
+                payload.path(com.vaadin.flow.internal.nodefeature.NodeProperties.TYPE).asString(null))
+                ? payload.path(com.vaadin.flow.internal.nodefeature.NodeProperties.PAYLOAD).asString(null) : null;
     }
 
     /**
@@ -177,7 +222,7 @@ final class BrowserlessSession implements AdapterSession {
             if (e instanceof BrowserlessElement b) {
                 for (Component c = b.component().getParent().orElse(null); c != null; c = c.getParent().orElse(null)) {
                     testId = c.getElement().getAttribute("data-testid");
-                    id = c.getElement().getAttribute("id");
+                    id = idOf(c.getElement());
                     if (testId != null || id != null) {
                         break;
                     }
@@ -234,7 +279,7 @@ final class BrowserlessSession implements AdapterSession {
             case TEXT -> f.matches(new BrowserlessElement(this, c).getText());
             case PLACEHOLDER -> f.matches(e.getProperty("placeholder"));
             case TEST_ID -> f.value().equals(e.getAttribute("data-testid"));
-            case ID -> f.value().equals(e.getAttribute("id"));
+            case ID -> f.value().equals(idOf(e));
             case CLASS_NAME -> e.getClassList().contains(f.value());
             case THEME -> {
                 String theme = e.getAttribute("theme");

@@ -4,6 +4,9 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.Scope;
+import com.vaadin.testing.unified.TemplateScope;
+import com.vaadin.testing.unified.component.UnifiedTemplate;
+import com.vaadin.flow.component.littemplate.LitTemplate;
 import com.vaadin.testing.unified.ToolImplementation;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedElement;
@@ -59,11 +62,13 @@ public final class Wrappers {
             }
         }
         String tag = requireTag(annotation.value(), annotation.tag(), wrapperType.getSimpleName());
+        requireBrowserInside(run, parent);
         run.steps().wrapperUsed(wrapperType);
         List<Filter> filters = annotation.selector().isBlank() ? List.of()
                 : WrapperSelector.filters(annotation.selector(), wrapperType.getName());
         ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), wrapperType, annotation.value(),
-                tag, filters, filters.size(), List.of(), List.of(), parent);
+                tag, filters, filters.size(), List.of(), List.of(), parent,
+                TemplateScope.class.isAssignableFrom(wrapperType));
         return wrapperType.cast(newWrapper(wrapperType, new LazyElement(source, -1, run)));
     }
 
@@ -71,9 +76,33 @@ public final class Wrappers {
     public static UnifiedGenericComponent newComponent(TestRun run, Class<? extends Component> componentType,
             LazyElement parent) {
         String name = "findComponent(" + componentType.getSimpleName() + ")";
+        requireBrowserInside(run, parent);
         ElementSource source = new ElementSource(run, name, null, componentType,
-                requireTag(componentType, "", name), List.of(), 0, List.of(), List.of(), parent);
+                requireTag(componentType, "", name), List.of(), 0, List.of(), List.of(), parent, false);
         return (UnifiedGenericComponent) newWrapper(UnifiedGenericComponent.class, new LazyElement(source, -1, run));
+    }
+
+    /** {@code findTemplate(templateType)}: a lazy {@link UnifiedTemplate}, whose lookups search inside it. */
+    public static UnifiedTemplate newTemplate(TestRun run, Class<? extends Component> templateType,
+            LazyElement parent) {
+        String name = "findTemplate(" + templateType.getSimpleName() + ")";
+        String tag = requireTag(templateType, "", name);
+        requireBrowserInside(run, parent);
+        ElementSource source = new ElementSource(run, name, null, templateType, tag, List.of(), 0, List.of(),
+                List.of(), parent, true);
+        return (UnifiedTemplate) newWrapper(UnifiedTemplate.class, new LazyElement(source, -1, run));
+    }
+
+    /**
+     * A lookup inside a Template that is not a {@code LitTemplate}: that Template renders its content in the browser
+     * only, so Browserless has nothing to find inside it, and the lookup needs a real browser (spec 09).
+     */
+    private static void requireBrowserInside(TestRun run, LazyElement parent) {
+        if (ElementSource.entersTemplate(parent) && parent.source() instanceof ElementSource template
+                && !LitTemplate.class.isAssignableFrom(template.componentType())) {
+            run.requireBrowser("A lookup inside " + template.describe() + ", a Template that renders its content in"
+                    + " the browser,");
+        }
     }
 
     /** The lazy element behind a wrapper created by this class. */
@@ -165,6 +194,13 @@ public final class Wrappers {
                         @SuppressWarnings("unchecked")
                         Class<? extends Component> componentType = (Class<? extends Component>) type;
                         return newComponent(element.run(), componentType, element);
+                    }
+                    break;
+                case "findTemplate":
+                    if (args != null && args.length == 1 && args[0] instanceof Class<?> type) {
+                        @SuppressWarnings("unchecked")
+                        Class<? extends Component> templateType = (Class<? extends Component>) type;
+                        return newTemplate(element.run(), templateType, element);
                     }
                     break;
                 case "describe":
