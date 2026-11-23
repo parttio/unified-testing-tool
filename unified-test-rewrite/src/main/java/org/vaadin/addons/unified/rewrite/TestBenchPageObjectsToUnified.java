@@ -192,7 +192,7 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
                 }
                 return n.withArguments(org.openrewrite.internal.ListUtils.map(n.getArguments(),
                         a -> a instanceof J.Identifier id && id.getSimpleName().equals("this")
-                                ? Stubs.page().withPrefix(a.getPrefix()) : a));
+                                ? Pages.page(getCursor()).withPrefix(a.getPrefix()) : a));
             }
         };
     }

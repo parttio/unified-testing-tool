@@ -2667,4 +2667,227 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         }
                         """));
     }
+
+    @Test
+    void aSuiteOnAnAbstractGenericBaseClassMigratesToCodeThatCompiles() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import com.vaadin.testbench.TestBenchDriverProxy;
+                        import com.vaadin.testbench.TestBenchElement;
+                        import org.junit.jupiter.api.BeforeEach;
+                        import org.openqa.selenium.Dimension;
+                        import org.openqa.selenium.WebDriver;
+
+                        public abstract class AbstractIT<E extends TestBenchElement> extends BrowserTestBase {
+
+                            @BeforeEach
+                            void setup() throws Exception {
+                                getDriver().manage().window().setSize(new Dimension(1024, 800));
+                            }
+
+                            @Override
+                            public TestBenchDriverProxy getDriver() {
+                                return (TestBenchDriverProxy) super.getDriver();
+                            }
+
+                            protected TestBenchElement openLoginView(WebDriver driver, String url) {
+                                driver.get(url);
+                                return $("login-view").first();
+                            }
+
+                            protected abstract E openView();
+                        }
+                        """,
+                        """
+                        import com.vaadin.testbench.TestBenchDriverProxy;
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.openqa.selenium.Dimension;
+                        import org.openqa.selenium.WebDriver;
+
+                        @UnifiedUITest
+                        public abstract class AbstractIT<E extends TestBenchElement> {
+
+                            void setup(UnifiedPage page) throws Exception {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: getDriver()
+                                testBench.getDriver().manage().window().setSize(new Dimension(1024, 800));
+                            }
+
+                            public TestBenchDriverProxy getDriver(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: super.getDriver()
+                                return (TestBenchDriverProxy) testBench.getDriver();
+                            }
+
+                            protected TestBenchElement openLoginView(UnifiedPage page, WebDriver driver, String url) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                driver.get(url);
+                                // TODO unified: TestBench Escape Hatch: $("login-view")
+                                return testBench.$("login-view").first();
+                            }
+
+                            protected abstract E openView(UnifiedPage page);
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class UsersViewIT extends AbstractIT<TextFieldElement> {
+
+                            @Override
+                            protected TextFieldElement openView() {
+                                return $(TextFieldElement.class).id("users");
+                            }
+
+                            @BrowserTest
+                            void editsUser() {
+                                TextFieldElement page = openView();
+                                page.setValue("Alan");
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        class UsersViewIT extends AbstractIT<TextFieldElement> {
+
+                            @Override
+                            protected TextFieldElement openView(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: $(TextFieldElement.class)
+                                return testBench.$(TextFieldElement.class).id("users");
+                            }
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void editsUser(UnifiedPage unifiedPage) throws Exception {
+                                setup(unifiedPage);
+                                TextFieldElement page = openView(unifiedPage);
+                                page.setValue("Alan");
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.TestBenchElement;
+
+                        class LoginIT extends AbstractIT<TestBenchElement> {
+
+                            @Override
+                            protected TestBenchElement openView() {
+                                return openLoginView(getDriver(), "http://localhost:8080/");
+                            }
+
+                            @BrowserTest
+                            void loginToNotDefaultUrl() {
+                                openLoginView(getDriver(), "http://localhost:8080/users");
+                            }
+
+                            @BrowserTest
+                            void openLoginAfterLoggedIn() {
+                                loginToNotDefaultUrl();
+                                openView();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        class LoginIT extends AbstractIT<TestBenchElement> {
+
+                            @Override
+                            protected TestBenchElement openView(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: getDriver()
+                                return openLoginView(page, testBench.getDriver(), "http://localhost:8080/");
+                            }
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void loginToNotDefaultUrl(UnifiedPage page) throws Exception {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                setup(page);
+                                // TODO unified: TestBench Escape Hatch: getDriver()
+                                openLoginView(page, testBench.getDriver(), "http://localhost:8080/users");
+                            }
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void openLoginAfterLoggedIn(UnifiedPage page) throws Exception {
+                                setup(page);
+                                loginToNotDefaultUrl(page);
+                                openView(page);
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void aCellRowIsReadThroughTheUnifiedRowOnlyWhereTheGridConverts() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.Assertions;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void findsRows() {
+                        GridElement people = $(GridElement.class).single();
+                        int alan = people.getCell("Alan Turing").getRow();
+                        Assertions.assertNotNull(people);
+                        GridElement pets = $(GridElement.class).id("pets");
+                        int rex = pets.getCell("Rex").getRow();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.grid.testbench.GridElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void findsRows(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: TestBench Escape Hatch: $(GridElement.class)
+                        GridElement people = testBench.$(GridElement.class).single();
+                        int alan = people.getCell("Alan Turing").getRow();
+                        Assertions.assertNotNull(people);
+                        UnifiedGrid pets = page.find(UnifiedGrid.class).withId("pets");
+                        // TODO unified: was getCell("Rex"); the row lookup fails when several rows match
+                        int rex = pets.row().withCellText("Rex").getIndex();
+                    }
+                }
+                """));
+    }
 }

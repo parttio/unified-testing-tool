@@ -17,6 +17,7 @@ import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JRightPadded;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Space;
+import org.openrewrite.java.tree.TypeUtils;
 import org.openrewrite.marker.Markers;
 
 /**
@@ -80,7 +81,8 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                         .imports(ESCAPE_HATCH)
                         .javaParser(Stubs.parser())
                         .build()
-                        .apply(updateCursor(m), m.getBody().getStatements().get(0).getCoordinates().before(), Stubs.page());
+                        .apply(updateCursor(m), m.getBody().getStatements().get(0).getCoordinates().before(),
+                                Stubs.page(Pages.parameterName(m)));
                 if (!Helpers.isBrowserTest(m)) {
                     return m;
                 }
@@ -141,7 +143,7 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
-                if (escapes == null || m.getSelect() != null || !isTestBaseCall(m)
+                if (escapes == null || m.getSelect() != null && !Helpers.isSuper(m.getSelect()) || !isTestBaseCall(m)
                         || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + MigrationMarkers.code(method, getCursor().getParentTreeCursor())
                                 + (isCustomElementLookup(method) ? ", a custom element: write a Wrapper for it (ADR 0003)" : ""))) {
                     return m;
@@ -165,7 +167,16 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
     }
 
     static boolean isTestBaseCall(J.MethodInvocation m) {
-        JavaType.Method type = m.getMethodType();
-        return type != null && TEST_BASE_TYPES.contains(type.getDeclaringType().getFullyQualifiedName());
+        return isTestBaseMethod(m.getMethodType());
+    }
+
+    /** A method of TestBench's test base, or a test class's override of one ({@code getDriver()}). */
+    static boolean isTestBaseMethod(JavaType.Method type) {
+        for (JavaType.Method t = type; t != null; t = TypeUtils.findOverriddenMethod(t).orElse(null)) {
+            if (TEST_BASE_TYPES.contains(t.getDeclaringType().getFullyQualifiedName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

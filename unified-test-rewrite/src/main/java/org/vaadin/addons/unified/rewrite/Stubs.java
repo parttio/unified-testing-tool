@@ -159,7 +159,11 @@ final class Stubs {
 
     /** The {@code page} parameter the setup recipe adds to every test method. */
     static J.Identifier page() {
-        return new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), "page",
+        return page("page");
+    }
+
+    static J.Identifier page(String name) {
+        return new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), name,
                 JavaType.ShallowClass.build(TestBenchSetupToUnified.UNIFIED_PAGE), null);
     }
 

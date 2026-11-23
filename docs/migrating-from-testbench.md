@@ -116,8 +116,9 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `$(SearchBarElement.class)` or `$("search-bar")`, when a `LitTemplate` in the sources has `@Tag("search-bar")` *(unreleased)* | `page.findTemplate(SearchBar.class)`, and `bar.$(ButtonElement.class).id("new")` on it `bar.find(UnifiedButton.class).withId("new")` ([Templates](guide/finding-components.md#templates)); a text or label filter there gets a Migration Marker |
 | `Assertions.assertEquals(x, el.getValue())`, `getText()`, `assertTrue(cb.isChecked())`, ... | retrying `assertThat(el).hasValue(x)`, `hasText(x)`, `isChecked()`, ... |
 | a local `TextFieldElement name = ...` | `UnifiedTextField name = ...` |
-| `@BeforeEach` and helper methods that use TestBench | helpers taking `UnifiedPage page`; a `@BeforeEach` becomes a call at the start of each test |
-| a project base class extending `BrowserTestBase` | a plain base class with `@UnifiedSpringBootTest`; its tests and helpers convert as above |
+| `@BeforeEach` and helper methods that use TestBench | helpers taking `UnifiedPage page` (`unifiedPage` when the method has a `page` already), passed by every call, a test's call to another test too; a `@BeforeEach` becomes a call at the start of each test, which declares its `throws` |
+| a project base class extending `BrowserTestBase` | a plain base class with `@UnifiedSpringBootTest`; its tests and helpers convert as above, an abstract helper along with its overrides *(unreleased)* |
+| an override of `getDriver()`, or another TestBench base method, and calls to it *(unreleased)* | the override without `@Override`, taking the page; it and the calls go through the TestBench Escape Hatch, with a Migration Marker |
 | Grid `getCell("text")`, `getCell(row, col).getText()` | `row().withCellText("text")`, `row(row).getCellText(col)` |
 | ComboBox / RadioButtonGroup / MultiSelectComboBox `selectByText`, `getSelectedText`, ... | `selectItem`, `getSelectedItem`, ... |
 | DatePicker `setDate`, `getDate` | `setValue`, `getValue` |
