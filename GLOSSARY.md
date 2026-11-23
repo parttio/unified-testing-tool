@@ -52,6 +52,10 @@ _Avoid_: Element, tester, locator, page object
 The Unified API's view of one browser tab or window showing the application: what a Unified UI Test receives, navigates and searches in.
 _Avoid_: UI, window, driver, browser
 
+**Template**:
+A component whose own content a test reaches only by entering it, one Template at a time: an app's LitTemplate on every Testing Tool, or a client-rendered web component on browser Testing Tools only.
+_Avoid_: Shadow host, web component, LitTemplate, app template
+
 **Unified Element**:
 The portable, low-level handle to one component (properties, attributes, text, user actions) that every Testing Tool supports and on which Wrappers are written.
 _Avoid_: Raw element, WebElement, locator
