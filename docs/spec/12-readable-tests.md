@@ -373,7 +373,7 @@ class UnifiedStyleTest {
 | Rule | Fails when |
 |---|---|
 | Scenario sentence | a `@Test` in a Unified UI Test has no `@DisplayName` and its class no `@DisplayNameGeneration` |
-| No raw waits | `Thread.sleep(..)` or a Testing Tool's own wait API is called |
+| No raw waits | `Thread.sleep(..)` or a Testing Tool's own wait API is called, except that Testing Tool's waits in code that declares it with `@RequiresTestingTool` (Escape Hatch code gets no automatic waiting) |
 | Testing Tool code needs its Capability | a Unified UI Test class calls an Escape Hatch or depends on Playwright, TestBench or Browserless packages, directly or through its own helpers, without `@RequiresTestingTool` on the class or test method |
 
 Suites with existing violations can wrap the rules in ArchUnit's `FreezingArchRule`. Everything bytecode can't check reliably stays in the guide: `all()` only in loops, no plain JUnit assertions on what the user sees, shared User Tasks rather than copies.

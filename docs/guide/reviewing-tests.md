@@ -83,7 +83,7 @@ An agent can do the same review: ask one that has the `write-unified-ui-tests` s
 | Checked for you | By |
 |---|---|
 | a `@DisplayName` of more than one word | the style rule `SCENARIO_SENTENCE` |
-| no `Thread.sleep(..)` or Testing Tool waits in a test class | the style rule `NO_RAW_WAITS` |
+| no `Thread.sleep(..)`, and Testing Tool waits only in code that declares that Testing Tool | the style rule `NO_RAW_WAITS` |
 | Testing Tool code in a test class only with `@RequiresTestingTool` | the style rule `TOOL_CODE_NEEDS_CAPABILITY` |
 | scenarios that end without a check | the run summary |
 | scenarios that behave differently on two Testing Tools | the run summary, with a compared run |

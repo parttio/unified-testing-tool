@@ -13,9 +13,12 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
-/** Breaks the no raw waits rule in every way it knows; declares its Playwright and Selenium code. */
+/**
+ * Breaks the no raw waits rule in every way it knows. Declares Browserless, so its Playwright and Selenium code
+ * passes the Capability rule and every Testing Tool wait in it is another Testing Tool's.
+ */
 @UnifiedUITest
-@RequiresTestingTool({ TestingTool.PLAYWRIGHT, TestingTool.SELENIUM })
+@RequiresTestingTool(TestingTool.BROWSERLESS)
 public class RawWaitsFixture {
 
     @Test

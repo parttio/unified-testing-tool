@@ -90,7 +90,7 @@ A skip is not a failure: the test needs something this Testing Tool doesn't have
 | Rule | Fix |
 |---|---|
 | Scenario sentence | `@DisplayName("<what the user does>")` on the test method, or `@DisplayNameGeneration` on the class. |
-| No raw waits | Remove the sleep or the Testing Tool's wait: `assertThat(..)` retries, `page.waitUntil(..)` waits for anything else. |
+| No raw waits | Remove the sleep or the Testing Tool's wait: `assertThat(..)` retries, `page.waitUntil(..)` waits for anything else. In Escape Hatch code, a Testing Tool's own wait passes under `@RequiresTestingTool` for that Testing Tool. |
 | Testing Tool code needs its Capability | `@RequiresTestingTool(..)` on the test or its class, `tryUnwrap(..)` for an extra check, or the Unified API. |
 
 Each failure names the test, its line and the fix. For a suite with many existing violations, freeze the rules and fix them over time ([Checking the style](style-rules.md#suites-with-existing-violations)).
