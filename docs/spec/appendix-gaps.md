@@ -69,6 +69,7 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/parttio/unified-testing-tool/issues/61) |
 | `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/parttio/unified-testing-tool/issues/64) |
 | No public reload, key press on a component, DOM event, focused component, component tree dump or redirect-tolerant navigate | [#66](https://github.com/parttio/unified-testing-tool/issues/66) |
+| `Page.setLocation(..)` doesn't navigate: the UI stays on the view; no adapter workaround, a test that relies on it declares `@RequiresBrowser` | [#554](https://github.com/parttio/unified-testing-tool/issues/554) |
 | Plain Elements can't be found or clicked; the generic tester's click skips DOM listeners | [#70](https://github.com/parttio/unified-testing-tool/issues/70) |
 
 ## Outside the Testing Tools

@@ -10,6 +10,7 @@ import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.MessageInputAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
+import com.vaadin.testing.unified.spi.StaleElementException;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.time.LocalDate;
@@ -48,7 +49,14 @@ final class PlaywrightCoreSetAccess {
     static final class Tabs {
         private Tabs() {}
 
+        /**
+         * Dramafinder's read waits Playwright's timeout (10 s) for the bar: tabs gone from the page, e.g. after a tab
+         * that sent the user to another page, are stale at once (#554), as a replaced selection field (#377).
+         */
         static String selected(TabsElement bar) {
+            if (bar.getLocator().count() == 0) {
+                throw new StaleElementException("The tabs are gone (the page changed?)", null);
+            }
             int index = bar.getSelectedIndex();
             return index < 0 ? null : bar.getTab(index).getLabel();
         }
