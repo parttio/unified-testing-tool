@@ -61,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-browserless
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 
   playwright:
@@ -118,7 +118,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-playwright
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 
   selenium:
@@ -170,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-selenium
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 
   # after the three: where the same scenarios end differently, or take different User Steps, on two Testing Tools

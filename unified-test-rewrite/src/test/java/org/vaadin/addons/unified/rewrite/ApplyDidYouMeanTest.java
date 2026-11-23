@@ -88,6 +88,19 @@ class ApplyDidYouMeanTest implements RewriteTest {
     }
 
     @Test
+    void aFailureFailsafeWroteIsFoundToo() throws IOException {
+        failed("demo.ProfileTest", "savesTheEmail", "find(UnifiedTextField.class).withLabel(\"Email\")",
+                "find(UnifiedTextField.class).withLabel(\"E-mail\")", "demo.ProfileTest");
+        // where the build recipes put Failsafe's evidence (#512): every user-steps.json under the directory is read
+        Path surefire = evidence.resolve("app/target/surefire-reports");
+        Path failsafe = evidence.resolve("app/target/failsafe-reports");
+        Files.move(surefire, failsafe);
+
+        rewriteRun(java(TEST.formatted("\"Email\"", "\"Email\""), TEST.formatted("\"E-mail\"", "\"E-mail\""),
+                source -> source.path("src/test/java/demo/ProfileTest.java")));
+    }
+
+    @Test
     void onlyFilesOnTheFailuresCodePathAreChanged() throws IOException {
         failed("demo.ProfileTest", "savesTheEmail", "find(UnifiedTextField.class).withLabel(\"Email\")",
                 "find(UnifiedTextField.class).withLabel(\"E-mail\")", "demo.tasks.ProfileTasks");

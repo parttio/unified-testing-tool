@@ -66,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unified-evidence-browserless
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 
   playwright:
@@ -114,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unified-evidence-playwright
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 ```
 
@@ -155,6 +155,23 @@ With a job per Testing Tool, the jobs run side by side and none has another's ev
 It needs `actions: read`, and the evidence artifacts named as above (`unified-evidence-<tool>`). The job's summary page then says, for each Testing Tool against Browserless, which scenarios pass on one and fail on the other, which take different User Steps and where they part, and whether both runs tested the same commit ([what it says](reports-and-failures.md#compared-with-another-testing-tool)). It reports and fails nothing: exit code 2 means fewer than two Testing Tools left evidence, which the jobs before it already show.
 
 On another CI server the command is the same: give it the evidence directories the jobs kept.
+
+### Surefire and Failsafe in one build
+
+*(unreleased)* The evidence directory is `target/surefire-reports/unified-evidence` whichever plugin runs the tests. A build that runs its Browserless tests with Surefire and its ITs with Failsafe would put both phases in it: one `summary.md` with the counts of both runs, Failsafe's over Surefire's. The migration recipes give every `maven-failsafe-plugin` in `<build><plugins>` and in each profile its own directory, unless it sets one already ([#512](https://github.com/parttio/unified-testing-tool/issues/512)):
+
+```xml
+<plugin>
+    <artifactId>maven-failsafe-plugin</artifactId>
+    <configuration>
+        <systemPropertyVariables>
+            <vaadin.testing.evidence-dir>${project.build.directory}/failsafe-reports/unified-evidence</vaadin.testing.evidence-dir>
+        </systemPropertyVariables>
+    </configuration>
+</plugin>
+```
+
+Without the recipe, add it by hand. The upload above takes both directories (`*-reports`), and `ApplyDidYouMean` reads both. On Gradle, a second test task (`integrationTest`) sets `systemProperty("vaadin.testing.evidence-dir", layout.buildDirectory.dir("integration-test-reports/unified-evidence").get().asFile.path)`.
 
 ### Both Testing Tools in one build
 
@@ -235,7 +252,7 @@ The reports are written the same way on any CI server: only the GitHub job summa
 
 - **The base for Changed in this PR.** Pass the base branch as `-Dvaadin.testing.user-steps.changed-since=origin/<branch>`, and make sure the checkout has the history and that branch. Any git ref works; outside a merge request, leave it unset.
 - **The base branch's User Steps.** Keep the evidence directory of the base branch's builds, and pass a copy of the last one as `-Dvaadin.testing.user-steps.baseline-dir=<directory>` to show how each changed scenario's User Steps differ.
-- **Publishing.** Keep `target/surefire-reports/unified-evidence/` as a build artifact, also when the build passes, so `summary.md` and every test's User Steps can be read after the build.
+- **Publishing.** Keep `target/*-reports/unified-evidence/` (Surefire's, and Failsafe's when the build has it) as a build artifact, also when the build passes, so `summary.md` and every test's User Steps can be read after the build.
 
 Settings are read from JUnit configuration parameters, which fall back to system properties, so `-D` on the Maven command line reaches the tests.
 
@@ -258,12 +275,12 @@ ui-tests:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports/unified-evidence/
+      - target/*-reports/unified-evidence/
 ```
 
 ### Jenkins
 
-In a multibranch pipeline building a pull request, Jenkins sets `CHANGE_TARGET` to the base branch: pass `-Dvaadin.testing.user-steps.changed-since=origin/$CHANGE_TARGET` when it is set, and archive the evidence directory with `archiveArtifacts artifacts: '**/target/surefire-reports/unified-evidence/**', allowEmptyArchive: true` in a `post { always { … } }` block.
+In a multibranch pipeline building a pull request, Jenkins sets `CHANGE_TARGET` to the base branch: pass `-Dvaadin.testing.user-steps.changed-since=origin/$CHANGE_TARGET` when it is set, and archive the evidence directory with `archiveArtifacts artifacts: '**/target/*-reports/unified-evidence/**', allowEmptyArchive: true` in a `post { always { … } }` block.
 
 ## Settings
 

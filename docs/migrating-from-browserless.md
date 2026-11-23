@@ -173,7 +173,7 @@ Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIU
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless, without a version of its own when the project's Vaadin BOM manages it. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left.
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless, without a version of its own when the project's Vaadin BOM manages it. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left. *(unreleased)* It also gives each `maven-failsafe-plugin` its own evidence directory, `target/failsafe-reports/unified-evidence`, so Failsafe's run doesn't write over Surefire's ([Surefire and Failsafe in one build](guide/ci-setup.md#surefire-and-failsafe-in-one-build)).
 
 ## What it leaves for you
 

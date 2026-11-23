@@ -6,6 +6,12 @@ page becomes the notes of the next alpha.
 
 ## New
 
+- **The migration recipes give Failsafe its own evidence directory**
+  ([#512](https://github.com/parttio/unified-testing-tool/issues/512)): every `maven-failsafe-plugin` in
+  `<build><plugins>` and in each profile gets `vaadin.testing.evidence-dir` =
+  `${project.build.directory}/failsafe-reports/unified-evidence`, unless it sets one already, so a build with
+  Surefire and Failsafe no longer mixes both runs in one `summary.md`. The guide's CI examples upload
+  `**/target/*-reports/unified-evidence/`.
 - **The Migration Recipes enter Templates** ([#543](https://github.com/parttio/unified-testing-tool/issues/543)): the
   TestBench recipe turns `$(SearchBarElement.class)`, or `$("search-bar")`, into `page.findTemplate(SearchBar.class)`
   when a `LitTemplate` in the sources has that `@Tag`, and the lookups on its element into lookups inside it, with a
