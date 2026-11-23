@@ -30,7 +30,7 @@ import org.openrewrite.marker.Markers;
  * local. Waits Auto-Wait makes unnecessary ({@code AutoWait.waitForVaadinIdle}, {@code waitForLoadState}) go.
  * A raw Playwright locator on an id or test id ({@code page.locator("#x")}, {@code getByTestId("x")}) becomes a
  * lookup of the Wrapper of the component the application's sources give that id ({@link DramafinderIds}), and its
- * {@code assertThat(locator)} checks retrying assertions.
+ * {@code assertThat(locator)} checks retrying assertions ({@link DramafinderWrappers#rawCheck}).
  */
 public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
 
@@ -206,36 +206,50 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
 
             /**
              * A Playwright check on a raw locator that became a Wrapper, {@code assertThat(page.locator("#x")).isVisible()}
-             * or on a local holding one, as the retrying Unified assertion (#356); {@code null} for any other call.
+             * or on a local holding one, as the retrying Unified assertion (#356, #510), with the filter it adds to
+             * the lookup; {@code null} for any other call.
              */
             private J playwrightCheck(J.MethodInvocation original, J.MethodInvocation m,
                     Map<String, DramafinderWrappers.Wrapper> locals, boolean statement, ExecutionContext ctx) {
-                if (!statement || !(original.getSelect() instanceof J.MethodInvocation assertThat)
-                        || !DramafinderWrappers.isPlaywrightAssertThat(assertThat)) {
+                J.MethodInvocation assertThat = DramafinderWrappers.playwrightAssertThatOf(original);
+                J.MethodInvocation convertedAssertThat = DramafinderWrappers.playwrightAssertThatOf(m);
+                if (!statement || assertThat == null || convertedAssertThat == null) {
                     return null;
                 }
                 Expression target = assertThat.getArguments().get(0);
-                Expression converted = ((J.MethodInvocation) m.getSelect()).getArguments().get(0);
+                List<Object> parameters = new ArrayList<>();
+                DramafinderWrappers.Wrapper wrapper;
+                DramafinderWrappers.RawCheck check;
+                String code;
                 if (target instanceof J.Identifier local && locals.containsKey(local.getSimpleName())) {
-                    DramafinderWrappers.Wrapper wrapper = locals.get(local.getSimpleName());
-                    if (!DramafinderWrappers.hasRawAssertion(wrapper, original.getSimpleName())) {
+                    wrapper = locals.get(local.getSimpleName());
+                    check = DramafinderWrappers.rawCheck(wrapper, m);
+                    code = "#{any()}";
+                    parameters.add(convertedAssertThat.getArguments().get(0));
+                } else {
+                    DramafinderWrappers.Lookup lookup = DramafinderWrappers.ofLookup(target, version2, ctx);
+                    wrapper = lookup == null ? null : lookup.wrapper();
+                    check = lookup == null ? null : DramafinderWrappers.rawCheck(wrapper, m);
+                    if (check == null) {
                         return null;
                     }
-                    maybeRemoveImport("com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat");
-                    return typed(assertion(m, "#{any()}", original.getSimpleName(), List.of(converted), wrapper), wrapper);
+                    maybeAddImport(wrapper.fqn());
+                    if (lookup.marker() != null) {
+                        MigrationMarkers.add(getCursor(), lookup.marker());
+                    }
+                    code = DramafinderWrappers.code(lookup, parameters);
                 }
-                DramafinderWrappers.Lookup lookup = DramafinderWrappers.ofLookup(target, version2, ctx);
-                if (lookup == null || !DramafinderWrappers.hasRawAssertion(lookup.wrapper(), original.getSimpleName())) {
+                if (check == null) {
                     return null;
                 }
-                maybeAddImport(lookup.wrapper().fqn());
                 maybeRemoveImport("com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat");
-                if (lookup.marker() != null) {
-                    MigrationMarkers.add(getCursor(), lookup.marker());
+                maybeRemoveImport("java.util.regex.Pattern");
+                if (check.filter() != null) {
+                    code += "." + check.filter().name() + "("
+                            + String.join(", ", java.util.Collections.nCopies(check.filter().arguments().size(), "#{any()}")) + ")";
+                    parameters.addAll(check.filter().arguments());
                 }
-                List<Object> parameters = new ArrayList<>();
-                String code = DramafinderWrappers.code(lookup, parameters);
-                return typed(assertion(m, code, original.getSimpleName(), parameters, lookup.wrapper()), lookup.wrapper());
+                return typed(assertion(m, code, check.assertion(), parameters, check.arguments(), wrapper), wrapper);
             }
 
             /** The grid and row patterns of {@link DramafinderGrids}, converted; {@code null} for any other call. */
@@ -289,9 +303,14 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
             /** {@code assertThat(<wrapper code>).<assertion>(..)} with the element assertion's arguments. */
             private J assertion(J.MethodInvocation m, String wrapperCode, String assertion, List<Object> parameters,
                     DramafinderWrappers.Wrapper wrapper) {
+                return assertion(m, wrapperCode, assertion, parameters, arguments(m), wrapper);
+            }
+
+            /** {@code assertThat(<wrapper code>).<assertion>(<arguments>)}. */
+            private J assertion(J.MethodInvocation m, String wrapperCode, String assertion, List<Object> parameters,
+                    List<Expression> arguments, DramafinderWrappers.Wrapper wrapper) {
                 maybeAddImport(TestBenchAssertionsToUnified.UNIFIED_ASSERTIONS, "assertThat", false);
                 List<Object> all = new ArrayList<>(parameters);
-                List<Expression> arguments = arguments(m);
                 all.addAll(arguments);
                 return JavaTemplate.builder("assertThat(" + wrapperCode + ")." + assertion + "("
                                 + String.join(", ", java.util.Collections.nCopies(arguments.size(), "#{any()}")) + ")")
@@ -397,15 +416,23 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
         return !other.get();
     }
 
-    /** {@code assertThat(identifier).<check>()} as a statement, a Playwright check the Wrapper has. */
+    /**
+     * {@code assertThat(identifier).<check>(..)} or {@code assertThat(identifier).not().<check>(..)} as a statement,
+     * a Playwright check the Wrapper has.
+     */
     private static boolean isPlaywrightCheck(Cursor parentCursor, J.Identifier identifier, DramafinderWrappers.Wrapper wrapper) {
         if (!(parentCursor.getValue() instanceof J.MethodInvocation assertThat) || !DramafinderWrappers.isPlaywrightAssertThat(assertThat)
                 || assertThat.getArguments().get(0) != identifier) {
             return false;
         }
         Cursor checkCursor = parentCursor.getParentTreeCursor();
-        return checkCursor.getValue() instanceof J.MethodInvocation check && check.getSelect() == assertThat
-                && DramafinderWrappers.hasRawAssertion(wrapper, check.getSimpleName())
+        if (checkCursor.getValue() instanceof J.MethodInvocation not && not.getSelect() == assertThat
+                && not.getSimpleName().equals("not")) {
+            checkCursor = checkCursor.getParentTreeCursor();
+        }
+        return checkCursor.getValue() instanceof J.MethodInvocation check
+                && DramafinderWrappers.playwrightAssertThatOf(check) == assertThat
+                && DramafinderWrappers.rawCheck(wrapper, check) != null
                 && checkCursor.getParentTreeCursor().getValue() instanceof J.Block;
     }
 

@@ -64,6 +64,8 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s)` + Migration Marker |
 | query `first()` / `get(i)` | the plain lookup + `was first()` Migration Marker / `all().get(i)` |
 | `page.locator("#x")` / `locator("[data-testid=x]")` / `getByTestId("x")` | `page.find(W.class).withId("x")` / `withTestId("x")`, `W` the Wrapper of the component the sources give that id, else `UnifiedContainer` + Migration Marker; `fill(s)` / `inputValue()` are `setValue(s)` / `getValue()` |
+| on such a raw locator, `assertThat(l).containsText(s)` / `hasText(s)` / `hasAttribute("disabled", "")` / `not().hasAttribute("disabled", ..)` or `not().hasAttribute("aria-disabled", "true")` / `isAttached()` *(unreleased)* | `assertThat(w).hasTextContaining(s)` / `hasText(s)` / `isDisabled()` / `isEnabled()` / `exists()` |
+| on such a raw locator, `assertThat(l).hasClass("c")` or `hasClass(Pattern.compile(".*c.*"))` / `not().isVisible()` *(unreleased)* | `assertThat(w.withClassName("c")).exists()` / `assertThat(w.visible()).doesNotExist()` |
 | `assertVisible` / `assertHidden` / `assertEnabled` / `assertDisabled` | `assertThat(w).isVisible()` / `isHidden()` / `isEnabled()` / `isDisabled()` |
 | `assertValue` / `assertLabel` / `assertValid` / `assertInvalid` / `assertErrorMessage` | `hasValue` / `hasLabel` / `isValid` / `isInvalid` / `hasErrorMessage` |
 | `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |

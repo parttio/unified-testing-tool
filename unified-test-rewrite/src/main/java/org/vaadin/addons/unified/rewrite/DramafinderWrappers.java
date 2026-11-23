@@ -122,7 +122,7 @@ final class DramafinderWrappers {
      * The Wrappers a raw Playwright locator on an id or test id becomes (#356), by the class of the component the
      * application's sources give that id, with the {@code Locator} methods each has (Playwright's name to the
      * Wrapper's). Their {@code assertions} are empty: a Playwright check is {@code assertThat(locator).x()}, in
-     * {@link #RAW_ASSERTIONS}.
+     * {@link #rawCheck}.
      */
     private static final Map<String, Wrapper> RAW_BY_COMPONENT = Map.of(
             "com.vaadin.flow.component.button.Button", new Wrapper(COMPONENT + "UnifiedButton", COMMON_FILTERS,
@@ -139,8 +139,9 @@ final class DramafinderWrappers {
             same("click", "isVisible", "isEnabled"), Map.of());
 
     /**
-     * The Playwright checks, {@code assertThat(locator).x(..)}, each raw Wrapper has as a retrying assertion of the
-     * same name. Not {@code isHidden()}: Playwright passes it when nothing matches, a Unified check fails.
+     * The Playwright checks, {@code assertThat(locator).x()}, each raw Wrapper has as a retrying assertion of the
+     * same name, besides the ones every raw Wrapper has ({@link #rawCheck}). Not {@code isHidden()}: Playwright
+     * passes it when nothing matches, a Unified check fails.
      */
     private static final Map<String, Set<String>> RAW_ASSERTIONS = Map.of(
             COMPONENT + "UnifiedButton", Set.of("isVisible", "isEnabled", "isDisabled"),
@@ -148,6 +149,22 @@ final class DramafinderWrappers {
             COMPONENT + "UnifiedTextArea", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
             COMPONENT + "UnifiedCheckbox", Set.of("isVisible", "isEnabled", "isDisabled", "isChecked"),
             COMPONENT + "UnifiedContainer", Set.of("isVisible", "isEnabled", "isDisabled"));
+
+    /** Playwright text checks with a string, and the Unified check of each (#510). */
+    private static final Map<String, String> RAW_TEXT_CHECKS = Map.of("containsText", "hasTextContaining",
+            "hasText", "hasText");
+
+    /** One class name, as {@code hasClass("x")} or {@code hasClass(Pattern.compile(".*x.*"))} names it. */
+    private static final java.util.regex.Pattern CLASS_NAME = java.util.regex.Pattern.compile("-?[_a-zA-Z][\\w-]*");
+    private static final java.util.regex.Pattern CONTAINS_CLASS_NAME = java.util.regex.Pattern.compile(
+            "\\.\\*(-?[_a-zA-Z][\\w-]*)\\.\\*");
+
+    /**
+     * A Playwright check on a raw locator as a Unified one: {@code assertThat(<lookup>.<filter>).<assertion>(..)}.
+     * {@code filter}, added to the lookup, is {@code null} when the check needs none.
+     */
+    record RawCheck(String assertion, List<Expression> arguments, Filter filter) {
+    }
 
     private static final java.util.regex.Pattern ID_SELECTOR = java.util.regex.Pattern.compile("#([A-Za-z][\\w-]*)");
     private static final java.util.regex.Pattern TEST_ID_SELECTOR = java.util.regex.Pattern.compile(
@@ -165,9 +182,81 @@ final class DramafinderWrappers {
                 .orElse(type.getFullyQualifiedName());
     }
 
-    /** Whether the Wrapper a raw locator became has the Playwright check {@code assertThat(locator).<name>(..)}. */
-    static boolean hasRawAssertion(Wrapper wrapper, String name) {
-        return RAW_ASSERTIONS.getOrDefault(wrapper.fqn(), Set.of()).contains(name);
+    /**
+     * The Unified check the Playwright check {@code assertThat(locator).x(..)} or {@code assertThat(locator).not().x(..)}
+     * is, on the Wrapper the raw locator became (#356, #510); {@code null} when it has none, as for a text or class
+     * {@code Pattern}, or another {@code not()} check.
+     */
+    static RawCheck rawCheck(Wrapper wrapper, J.MethodInvocation check) {
+        J.MethodInvocation assertThat = playwrightAssertThatOf(check);
+        Set<String> same = RAW_ASSERTIONS.get(wrapper.fqn());
+        if (assertThat == null || same == null) {
+            return null;
+        }
+        String name = check.getSimpleName();
+        List<Expression> arguments = check.getArguments().stream().filter(a -> !(a instanceof J.Empty)).toList();
+        if (check.getSelect() != assertThat) { // not()
+            if (name.equals("isVisible") && arguments.isEmpty()) {
+                return new RawCheck("doesNotExist", List.of(), new Filter("visible", List.of()));
+            }
+            boolean enabled = name.equals("hasAttribute") && arguments.size() == 2
+                    && TypeUtils.isString(arguments.get(1).getType())
+                    && ("disabled".equals(literal(arguments.get(0)))
+                            || "aria-disabled".equals(literal(arguments.get(0))) && "true".equals(literal(arguments.get(1))));
+            return enabled ? new RawCheck("isEnabled", List.of(), null) : null;
+        }
+        if (arguments.isEmpty()) {
+            return same.contains(name) && !name.equals("hasValue") ? new RawCheck(name, List.of(), null)
+                    : name.equals("isAttached") ? new RawCheck("exists", List.of(), null) : null;
+        }
+        if (arguments.size() == 1 && TypeUtils.isString(arguments.get(0).getType())) {
+            if (RAW_TEXT_CHECKS.containsKey(name)) {
+                return new RawCheck(RAW_TEXT_CHECKS.get(name), arguments, null);
+            }
+            if (name.equals("hasValue") && same.contains(name)) {
+                return new RawCheck(name, arguments, null);
+            }
+        }
+        if (name.equals("hasAttribute") && arguments.size() == 2 && "disabled".equals(literal(arguments.get(0)))
+                && "".equals(literal(arguments.get(1)))) {
+            return new RawCheck("isDisabled", List.of(), null);
+        }
+        String className = name.equals("hasClass") && arguments.size() == 1 ? className(arguments.get(0)) : null;
+        return className == null ? null
+                : new RawCheck("exists", List.of(), new Filter("withClassName", List.of(Stubs.literal(className))));
+    }
+
+    /** {@code "x"} or {@code Pattern.compile(".*x.*")}: the one class name {@code hasClass(..)} matches, else {@code null}. */
+    private static String className(Expression argument) {
+        String literal = literal(argument);
+        if (literal != null) {
+            return CLASS_NAME.matcher(literal).matches() ? literal : null;
+        }
+        if (argument instanceof J.MethodInvocation compile && compile.getSimpleName().equals("compile")
+                && compile.getArguments().size() == 1 && compile.getMethodType() != null
+                && TypeUtils.isOfClassType(compile.getMethodType().getDeclaringType(), "java.util.regex.Pattern")
+                && literal(compile.getArguments().get(0)) instanceof String regex) {
+            java.util.regex.Matcher contains = CONTAINS_CLASS_NAME.matcher(regex);
+            return contains.matches() ? contains.group(1) : null;
+        }
+        return null;
+    }
+
+    private static String literal(Expression e) {
+        return e instanceof J.Literal l && l.getValue() instanceof String s ? s : null;
+    }
+
+    /**
+     * The Playwright {@code assertThat(locator)} a check is made on, directly or through {@code not()};
+     * {@code null} for any other call.
+     */
+    static J.MethodInvocation playwrightAssertThatOf(J.MethodInvocation check) {
+        Expression select = check.getSelect();
+        if (select instanceof J.MethodInvocation not && not.getSimpleName().equals("not")
+                && not.getArguments().stream().allMatch(a -> a instanceof J.Empty)) {
+            select = not.getSelect();
+        }
+        return select instanceof J.MethodInvocation assertThat && isPlaywrightAssertThat(assertThat) ? assertThat : null;
     }
 
     /** {@code PlaywrightAssertions.assertThat(locator)} with one argument. */

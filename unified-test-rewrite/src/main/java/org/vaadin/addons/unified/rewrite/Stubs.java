@@ -114,6 +114,8 @@ final class Stubs {
                     Assert isSelected();
                     Assert hasRowCount(int count);
                     Assert hasQueryParameter(String name, String value);
+                    Assert exists();
+                    Assert doesNotExist();
                 }
             }
             """

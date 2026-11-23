@@ -594,6 +594,132 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void textAttributeClassVisibilityAndAttachedChecksOnRawLocatorsBecomeUnifiedChecks() {
+        // issue #510: the Playwright checks a real suite makes most, on the raw locators #356 converts
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Locator;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                import java.util.regex.Pattern;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void plans() {
+                        navigate(PlanView.class);
+                        assertThat(page.locator("#recipe-card")).containsText("Pancakes");
+                        assertThat(page.locator("#recipe-card")).hasText("Pancakes on Friday");
+                        assertThat(page.locator("#week-next")).hasAttribute("disabled", "");
+                        assertThat(page.locator("#week-next")).not().hasAttribute("disabled", "");
+                        assertThat(page.locator("#week-next")).not().hasAttribute("aria-disabled", "true");
+                        assertThat(page.locator("#recipe-card")).hasClass("recipe-card--future");
+                        assertThat(page.locator("#recipe-card")).hasClass(Pattern.compile(".*recipe-card--past.*"));
+                        assertThat(page.getByTestId("cooked")).not().isVisible();
+                        assertThat(page.locator("#recipe-card")).isAttached();
+                        Locator meal = page.locator("#meal-friday");
+                        assertThat(meal).not().hasAttribute("disabled", "");
+                        assertThat(meal).hasClass("filled");
+                        assertThat(meal).not().isVisible();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    void plans(UnifiedPage page) {
+                        page.navigate(PlanView.class);
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card")).hasTextContaining("Pancakes");
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card")).hasText("Pancakes on Friday");
+                        assertThat(page.find(UnifiedButton.class).withId("week-next")).isDisabled();
+                        assertThat(page.find(UnifiedButton.class).withId("week-next")).isEnabled();
+                        assertThat(page.find(UnifiedButton.class).withId("week-next")).isEnabled();
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card").withClassName("recipe-card--future")).exists();
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card").withClassName("recipe-card--past")).exists();
+                        assertThat(page.find(UnifiedCheckbox.class).withTestId("cooked").visible()).doesNotExist();
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card")).exists();
+                        UnifiedTextField meal = page.find(UnifiedTextField.class).withId("meal-friday");
+                        assertThat(meal).isEnabled();
+                        assertThat(meal.withClassName("filled")).exists();
+                        assertThat(meal.visible()).doesNotExist();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aTextOrClassCheckOnARawLocatorWithAPatternKeepsItsMarker() {
+        // issue #510: a pattern is not a literal text, and only ".*x.*" is one class name
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import java.util.regex.Pattern;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void plans() {
+                        navigate(PlanView.class);
+                        assertThat(page.locator("#recipe-card")).hasText(Pattern.compile("Pan.*"));
+                        assertThat(page.locator("#recipe-card")).containsText(Pattern.compile("Pan"));
+                        assertThat(page.locator("#recipe-card")).hasClass(Pattern.compile("^a|b$"));
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import java.util.regex.Pattern;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void plans(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PlanView.class);
+                        // TODO unified: Dramafinder Escape Hatch: assertThat(playwright.locator("#recipe-card")).hasText(Pattern.compile("Pan.*"))
+                        assertThat(playwright.locator("#recipe-card")).hasText(Pattern.compile("Pan.*"));
+                        // TODO unified: Dramafinder Escape Hatch: assertThat(playwright.locator("#recipe-card")).containsText(Pattern.compile("Pan"))
+                        assertThat(playwright.locator("#recipe-card")).containsText(Pattern.compile("Pan"));
+                        // TODO unified: Dramafinder Escape Hatch: assertThat(playwright.locator("#recipe-card")).hasClass(Pattern.compile("^a|b$"))
+                        assertThat(playwright.locator("#recipe-card")).hasClass(Pattern.compile("^a|b$"));
+                    }
+                }
+                """));
+    }
+
+    @Test
     void queryApiLookupsLocalsAndElementAssertionsBecomeWrappersAndUnifiedAssertions() {
         rewriteRun(java(VIEW), java(
                 """
