@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.ScanningRecipe;
 import org.openrewrite.TreeVisitor;
@@ -26,7 +27,8 @@ import org.openrewrite.java.tree.TypeUtils;
  * The parts of a TestBench test's setup that need more than a type change: drops
  * {@code extends BrowserTestBase} and the {@code @LocalServerPort} field, gives every
  * {@code @BrowserTest} method a {@code UnifiedPage page} parameter, and turns
- * {@code getDriver().get(url)} into {@code page.navigate(path)}.
+ * {@code getDriver().get(url)} (or {@code get(url)} on any {@code WebDriver}) into {@code page.navigate(path)} when
+ * the URL is one to the local application, removing a URL constant only navigation read.
  */
 public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnified.Scanned> {
 
@@ -48,7 +50,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
             "@org.junit.jupiter.api.condition.EnabledIfSystemProperty(named = \"vaadin.testing.tool\")");
     static final String UNIFIED_PAGE = "com.vaadin.testing.unified.UnifiedPage";
 
-    private static final MethodMatcher DRIVER_GET = new MethodMatcher("org.openqa.selenium.WebDriver get(String)");
+    private static final MethodMatcher DRIVER_GET = new MethodMatcher("org.openqa.selenium.WebDriver get(String)", true);
     private static final MethodMatcher GET_DRIVER = new MethodMatcher("com.vaadin.testbench.HasDriver getDriver()", true);
 
     @Override
@@ -59,7 +61,8 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     @Override
     public String getDescription() {
         return "Drops `extends BrowserTestBase` and the server port, gives each `@BrowserTest` a `UnifiedPage page` "
-                + "parameter and turns `getDriver().get(url)` into `page.navigate(path)`.";
+                + "parameter and turns `getDriver().get(url)`, or `driver.get(APP_URL + \"path\")` on any `WebDriver`, into "
+                + "`page.navigate(path)`.";
     }
 
     /**
@@ -72,7 +75,50 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
         private final Map<String, Set<String>> helpersByClass = new HashMap<>();
         private final Map<String, List<String>> beforeEachByClass = new HashMap<>();
         private final Map<String, Set<String>> testsByClass = new HashMap<>();
+        /** The constant string fields' values, by {@code declaringClass#name}. */
+        private final Map<String, String> constants = new HashMap<>();
+        /** The places reading each field, by {@code declaringClass#name}. */
+        private final Map<String, List<FieldRead>> fieldReads = new HashMap<>();
         private boolean resolved;
+
+        /** The value of the constant string field the expression reads, else {@code null}. */
+        String constant(Expression e) {
+            JavaType.Variable field = Urls.field(e);
+            return field == null ? null : constants.get(Urls.key(field));
+        }
+
+        /**
+         * Whether the field is a local application URL constant that only navigation the recipe rewrites reads, so
+         * nothing reads it once migrated.
+         */
+        boolean onlyReadByRewrittenNavigation(String key) {
+            String value = constants.get(key);
+            List<FieldRead> reads = fieldReads.getOrDefault(key, List.of());
+            return value != null && Urls.localPath(value) != null && !reads.isEmpty()
+                    && reads.stream().allMatch(this::rewritten);
+        }
+
+        /**
+         * The class's own helpers using TestBench, counting calls to the given inherited helpers, and a navigation the
+         * recipe turns into {@code page.navigate(..)} ({@code driver.get(APP_URL + "users")}), as such use.
+         */
+        Set<String> usingTestBench(J.ClassDeclaration c, Set<String> inherited) {
+            return Helpers.using(c, inherited, call -> (call.getSelect() == null || Helpers.isSuper(call.getSelect()))
+                    && TestBenchLeftoversToEscapeHatch.isTestBaseCall(call) || isNavigation(call));
+        }
+
+        /** A {@code get(url)} on a {@code WebDriver} to a URL the recipe reads a path from. */
+        boolean isNavigation(J.MethodInvocation call) {
+            return DRIVER_GET.matches(call) && call.getSelect() != null
+                    && (Urls.pathOf(call.getArguments().get(0), this::constant) != null
+                            || Urls.pathExpression(call.getArguments().get(0)) != null);
+        }
+
+        /** Whether the read is the base of a navigation the recipe turns into {@code page.navigate(..)}. */
+        private boolean rewritten(FieldRead read) {
+            return read.navigationBase() && (read.testBenchDriver() || classes.containsKey(read.classFqn())
+                    && (read.browserTest() || helpersByClass().getOrDefault(read.classFqn(), Set.of()).contains(read.method())));
+        }
 
         Map<String, Set<String>> routes() {
             return routes;
@@ -113,7 +159,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                     J.ClassDeclaration c = e.getValue();
                     Set<String> callable = new java.util.HashSet<>(inheritedHelpers(c.getType(), helpersByClass));
                     callable.addAll(forced.getOrDefault(fqn, Set.of()));
-                    Set<String> helpers = new java.util.HashSet<>(Helpers.usingTestBench(c, callable));
+                    Set<String> helpers = new java.util.HashSet<>(usingTestBench(c, callable));
                     helpers.addAll(forced.getOrDefault(fqn, Set.of()));
                     for (Statement st : c.getBody().getStatements()) {
                         if (!(st instanceof J.MethodDeclaration m) || Helpers.isBrowserTest(m)
@@ -164,6 +210,14 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
         }
     }
 
+    /**
+     * A read of a field: in which class and method, and whether it is the base of a navigation, as in
+     * {@code driver.get(APP_URL + "users")}, on {@code getDriver()} or another {@code WebDriver}.
+     */
+    record FieldRead(String classFqn, String method, boolean browserTest, boolean navigationBase,
+            boolean testBenchDriver) {
+    }
+
     @Override
     public Scanned getInitialValue(ExecutionContext ctx) {
         return new Scanned();
@@ -190,6 +244,54 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                     }
                 }
                 return super.visitClassDeclaration(classDecl, ctx);
+            }
+
+            @Override
+            public J.VariableDeclarations visitVariableDeclarations(J.VariableDeclarations multiVariable,
+                    ExecutionContext ctx) {
+                if (multiVariable.hasModifier(J.Modifier.Type.Final)) {
+                    for (J.VariableDeclarations.NamedVariable v : multiVariable.getVariables()) {
+                        JavaType.Variable field = v.getVariableType();
+                        if (field != null && field.getOwner() instanceof JavaType.FullyQualified
+                                && v.getInitializer() instanceof J.Literal literal && literal.getValue() instanceof String value) {
+                            scanned.constants.put(Urls.key(field), value);
+                        }
+                    }
+                }
+                return super.visitVariableDeclarations(multiVariable, ctx);
+            }
+
+            @Override
+            public J.Identifier visitIdentifier(J.Identifier identifier, ExecutionContext ctx) {
+                Cursor parent = getCursor().getParentTreeCursor();
+                Expression read = parent.getValue() instanceof J.FieldAccess fa && fa.getName() == identifier ? fa : identifier;
+                JavaType.Variable field = Urls.field(read);
+                if (field != null && !(parent.getValue() instanceof J.VariableDeclarations.NamedVariable)
+                        && !(read == identifier && parent.getValue() instanceof J.FieldAccess)) {
+                    Cursor readCursor = read == identifier ? getCursor() : parent;
+                    J.MethodInvocation navigation = navigationWithBase(readCursor);
+                    J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                    J.MethodDeclaration m = getCursor().firstEnclosing(J.MethodDeclaration.class);
+                    scanned.fieldReads.computeIfAbsent(Urls.key(field), k -> new ArrayList<>()).add(new FieldRead(
+                            c == null || c.getType() == null ? "" : c.getType().getFullyQualifiedName(),
+                            m == null ? "" : m.getSimpleName(), m != null && Helpers.isBrowserTest(m),
+                            navigation != null, navigation != null && navigation.getSelect() instanceof J.MethodInvocation s
+                                    && GET_DRIVER.matches(s)));
+                }
+                return super.visitIdentifier(identifier, ctx);
+            }
+
+            /** The {@code get(..)} call the read at the cursor is the base URL of, alone or before a literal path. */
+            private J.MethodInvocation navigationWithBase(Cursor read) {
+                Cursor up = read.getParentTreeCursor();
+                Object arg = read.getValue();
+                if (up.getValue() instanceof J.Binary b && b.getLeft() == arg && b.getOperator() == J.Binary.Type.Addition
+                        && b.getRight() instanceof J.Literal) {
+                    arg = b;
+                    up = up.getParentTreeCursor();
+                }
+                return up.getValue() instanceof J.MethodInvocation call && DRIVER_GET.matches(call) && call.getSelect() != null
+                        && call.getArguments().get(0) == arg ? call : null;
             }
         };
     }
@@ -224,7 +326,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                 Set<String> own = scanned.helpersByClass().getOrDefault(fqn, Set.of());
                 Set<String> callable = new java.util.HashSet<>(inherited);
                 callable.addAll(own);
-                Set<String> helpers = new java.util.HashSet<>(Helpers.usingTestBench(classDecl, callable));
+                Set<String> helpers = new java.util.HashSet<>(scanned.usingTestBench(classDecl, callable));
                 helpers.addAll(callable);
                 getCursor().putMessage(HELPERS, helpers);
                 Set<String> tests = new java.util.HashSet<>(scanned.testsByClass().getOrDefault(fqn, Set.of()));
@@ -239,7 +341,8 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                     List<String> beforeEach = new ArrayList<>(inheritedBeforeEach(classDecl.getType(), scanned.beforeEachByClass()));
                     beforeEach.addAll(beforeEachOf(classDecl, helpers));
                     importThrown(classDecl, beforeEach);
-                    return sub.withBody(sub.getBody().withStatements(Helpers.callBeforeEachFirst(sub, beforeEach)));
+                    sub = sub.withBody(sub.getBody().withStatements(Helpers.callBeforeEachFirst(sub, beforeEach)));
+                    return sub.withBody(sub.getBody().withStatements(withoutUnusedUrlConstants(sub, scanned)));
                 }
                 J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
                 importThrown(classDecl, beforeEachOf(classDecl, helpers));
@@ -247,6 +350,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                 c = c.withExtends(null);
                 doAfterVisit(new RemoveAnnotationVisitor(TESTING_TOOL_GATE));
                 c = c.withBody(c.getBody().withStatements(withoutUnusedPortFields(c)));
+                c = c.withBody(c.getBody().withStatements(withoutUnusedUrlConstants(c, scanned)));
                 maybeRemoveImport(BROWSER_TEST_BASE);
                 maybeRemoveImport(TEST_BENCH_TEST_CASE);
                 maybeRemoveImport(PARALLEL_TEST);
@@ -276,7 +380,8 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                 String page = Pages.parameterName(method);
                 String name = page != null ? page : Pages.freeName(method);
                 getCursor().putMessage(PAGE_NAME, name);
-                J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
+                var markers = MigrationMarkers.collect(getCursor());
+                J.MethodDeclaration m = MigrationMarkers.write(super.visitMethodDeclaration(method, ctx), markers);
                 Set<String> helpers = getCursor().getNearestMessage(HELPERS, Set.of());
                 boolean browserTest = Helpers.isBrowserTest(m)
                         && getCursor().firstEnclosing(J.ClassDeclaration.class) != null
@@ -324,18 +429,25 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                     }
                     return m.withArguments(arguments);
                 }
-                if (!DRIVER_GET.matches(m) || !(m.getSelect() instanceof J.MethodInvocation select)
-                        || !GET_DRIVER.matches(select)) {
+                if (!DRIVER_GET.matches(m) || m.getSelect() == null
+                        || !(m.getSelect() instanceof J.MethodInvocation select && GET_DRIVER.matches(select)) && !bearsPage()) {
                     return m;
                 }
-                String path = Urls.pathOf(m.getArguments().get(0));
+                Expression url = m.getArguments().get(0);
+                String path = Urls.pathOf(url, scanned::constant);
                 if (path == null) {
-                    Expression pathExpression = Urls.pathExpression(m.getArguments().get(0));
-                    return pathExpression == null ? m
-                            : JavaTemplate.builder("#{any(" + UNIFIED_PAGE + ")}.navigate(#{any(String)})")
-                                    .javaParser(Stubs.parser())
-                                    .build()
-                                    .apply(getCursor(), m.getCoordinates().replace(), page(), pathExpression);
+                    Expression pathExpression = Urls.pathExpression(url);
+                    if (pathExpression != null) {
+                        return JavaTemplate.builder("#{any(" + UNIFIED_PAGE + ")}.navigate(#{any(String)})")
+                                .javaParser(Stubs.parser())
+                                .build()
+                                .apply(getCursor(), m.getCoordinates().replace(), page(), pathExpression);
+                    }
+                    if (Urls.hasBase(url)) {
+                        MigrationMarkers.add(getCursor(), "navigation to " + MigrationMarkers.code(url, getCursor())
+                                + ": not a local application URL the recipe can read; use page.navigate(\"<path>\")");
+                    }
+                    return m;
                 }
                 Set<String> views = routes.getOrDefault(path, Set.of());
                 if (views.size() == 1) {
@@ -351,6 +463,17 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                         .javaParser(Stubs.parser())
                         .build()
                         .apply(getCursor(), m.getCoordinates().replace(), page(), Stubs.literal(path));
+            }
+
+            /** Whether the method the cursor is in has or gains the Unified Page: a test or a helper of a TestBench class. */
+            private boolean bearsPage() {
+                J.MethodDeclaration method = getCursor().firstEnclosing(J.MethodDeclaration.class);
+                J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                if (method == null || c == null || !isTestBenchClass(c)) {
+                    return false;
+                }
+                return Pages.hasPageParameter(method) || Helpers.isBrowserTest(method)
+                        || getCursor().getNearestMessage(HELPERS, Set.<String>of()).contains(method.getSimpleName());
             }
 
             /** The Unified Page of the method being visited, under the name it has or gains. */
@@ -424,6 +547,22 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
             if (s instanceof J.VariableDeclarations v
                     && v.getLeadingAnnotations().stream().anyMatch(a -> TypeUtils.isOfClassType(a.getType(), LOCAL_SERVER_PORT))
                     && v.getVariables().stream().noneMatch(var -> isRead(c, var.getSimpleName()))) {
+                continue;
+            }
+            kept.add(s);
+        }
+        return kept;
+    }
+
+    /** The class's statements without the URL constants only rewritten navigation read, which nothing reads now. */
+    private static List<Statement> withoutUnusedUrlConstants(J.ClassDeclaration c, Scanned scanned) {
+        List<Statement> kept = new ArrayList<>();
+        for (Statement s : c.getBody().getStatements()) {
+            if (s instanceof J.VariableDeclarations v && v.getVariables().size() == 1
+                    && v.getVariables().get(0).getVariableType() != null
+                    && v.getVariables().get(0).getVariableType().getOwner() instanceof JavaType.FullyQualified
+                    && scanned.onlyReadByRewrittenNavigation(Urls.key(v.getVariables().get(0).getVariableType()))
+                    && !isRead(c, v.getVariables().get(0).getSimpleName())) {
                 continue;
             }
             kept.add(s);
