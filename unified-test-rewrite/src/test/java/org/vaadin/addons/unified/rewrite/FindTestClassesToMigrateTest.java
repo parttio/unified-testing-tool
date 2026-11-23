@@ -112,6 +112,59 @@ class FindTestClassesToMigrateTest implements RewriteTest {
     }
 
     @Test
+    void aScreenshotExtensionOfACopiedBaseIsListedWithAdviceToRemoveIt() {
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactly(new FindTestClassesToMigrate.TestClasses.Row("com/example/PeopleTest.java",
+                                "com.example.PeopleTest", "Dramafinder", "skipped",
+                                "uses screenshots of SpringPlaywrightIT, which uses the test base; the Unified API writes failure evidence itself: remove it"))),
+                java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.extension.ExtensionContext;
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import org.junit.jupiter.api.extension.TestWatcher;
+                import org.springframework.boot.test.context.SpringBootTest;
+                import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                @SpringBootTest
+                public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                    @RegisterExtension
+                    TestWatcher screenshots = new TestWatcher() {
+                        @Override
+                        public void testFailed(ExtensionContext context, Throwable cause) {
+                            page.screenshot();
+                        }
+                    };
+                }
+                """), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        navigate(PeopleView.class);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+
+                /*~~(skipped: uses screenshots of SpringPlaywrightIT, which uses the test base; the Unified API writes failure evidence itself: remove it)~~>*/class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        navigate(PeopleView.class);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aBrowserlessClassPassingItselfToAPageObjectIsListedAsSkipped() {
         rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
                         .containsExactly(new FindTestClassesToMigrate.TestClasses.Row("LoginTest.java", "LoginTest",

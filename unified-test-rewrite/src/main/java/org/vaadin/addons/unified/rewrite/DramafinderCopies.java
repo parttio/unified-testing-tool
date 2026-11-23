@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.J;
@@ -106,7 +107,8 @@ final class DramafinderCopies {
                 blockers.add("overrides " + label(s, name) + " of " + base + " in " + copySimpleName);
             } else if (s instanceof J.VariableDeclarations v && v.getVariables().stream()
                     .anyMatch(var -> var.getInitializer() != null && usesTestBase(var.getInitializer()))) {
-                blockers.add("uses " + label + ", which uses the test base");
+                blockers.add("uses " + label + ", which uses the test base" + (onlyWritesEvidence(v)
+                        ? "; the Unified API writes failure evidence itself: remove it" : ""));
             } else {
                 inlined.putIfAbsent(s.getId(), label);
                 needed.addAll(references(s, copyName, members.keySet()));
@@ -207,6 +209,52 @@ final class DramafinderCopies {
             }
         }.visit(tree, 0);
         return uses.get();
+    }
+
+    /**
+     * Whether the field is a registered extension that uses the test base only for failure evidence: its page's
+     * {@code screenshot(..)} and {@code context().tracing()}, which the Unified API writes itself.
+     */
+    private static boolean onlyWritesEvidence(J.VariableDeclarations v) {
+        if (v.getLeadingAnnotations().stream().noneMatch(a -> TypeUtils.isOfClassType(a.getType(), REGISTER_EXTENSION))) {
+            return false;
+        }
+        AtomicBoolean other = new AtomicBoolean();
+        JavaIsoVisitor<Integer> visitor = new JavaIsoVisitor<>() {
+            @Override
+            public J.Identifier visitIdentifier(J.Identifier id, Integer p) {
+                if (id.getFieldType() != null && Dramafinder.isBaseType(id.getFieldType().getOwner())
+                        && !(id.getSimpleName().equals("page") && evidence(getCursor()))) {
+                    other.set(true);
+                }
+                return id;
+            }
+
+            @Override
+            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, Integer p) {
+                if (m.getMethodType() != null && Dramafinder.isBaseType(m.getMethodType().getDeclaringType())) {
+                    other.set(true);
+                }
+                return super.visitMethodInvocation(m, p);
+            }
+        };
+        for (J.VariableDeclarations.NamedVariable var : v.getVariables()) {
+            visitor.visit(var.getInitializer(), 0);
+        }
+        return !other.get();
+    }
+
+    /** Whether the page at the cursor is the target of {@code screenshot(..)} or {@code context().tracing()}. */
+    private static boolean evidence(Cursor page) {
+        Cursor parent = page.getParentTreeCursor();
+        if (!(parent.getValue() instanceof J.MethodInvocation m) || m.getSelect() != page.getValue()) {
+            return false;
+        }
+        if (m.getSimpleName().equals("screenshot")) {
+            return true;
+        }
+        return m.getSimpleName().equals("context") && parent.getParentTreeCursor().getValue() instanceof J.MethodInvocation t
+                && t.getSelect() == m && t.getSimpleName().equals("tracing");
     }
 
     /** The class with the taken members, and every use of them, typed as the test's own. */

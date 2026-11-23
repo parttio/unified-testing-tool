@@ -13,6 +13,11 @@ page becomes the notes of the next alpha.
   for a reply that comes later and are User Steps:
   `see last message from “Assistant” with text containing “Pancakes” in message list`.
 - **The Findable View counts a message list's messages**: `message list, 3 messages`, as it counts a grid's rows.
+- **A screenshot `TestWatcher` that blocks a Dramafinder class says to remove it**
+  ([#509](https://github.com/parttio/unified-testing-tool/issues/509)): when a copied base class keeps a class from
+  migrating only through a `@RegisterExtension` field that calls `page.screenshot(..)` or `page.context().tracing()`,
+  `FindTestClassesToMigrate` and the skip Migration Marker add
+  `the Unified API writes failure evidence itself: remove it` to the reason.
 - **The Dramafinder recipe converts more Playwright checks on raw locators**
   ([#510](https://github.com/parttio/unified-testing-tool/issues/510)): on a `locator("#x")` or `getByTestId("x")`
   it already turns into a lookup, `assertThat(locator)`'s `containsText(s)` becomes `hasTextContaining(s)`,
@@ -26,6 +31,13 @@ page becomes the notes of the next alpha.
   `page.find(UnifiedMessageList.class).withId(..)`, `input.focus()` `input.element().focus()`, and
   `assertThat(list.getMessage(i)).containsText(s)` / `hasText(s)` `assertThat(list.message(i)).hasTextContaining(s)`
   / `hasText(s)`. A message list read by index no longer keeps `assertMessageCount(n)` on it from converting.
+- **The Dramafinder recipe opens a view by its route class after `getUrl()` too**
+  ([#513](https://github.com/parttio/unified-testing-tool/issues/513)): `page.navigate(getUrl() + "/plan")` becomes
+  `page.navigate(PlanView.class)`, and `page.navigate(getUrl() + "/plan?week=" + monday)` becomes
+  `page.navigate(PlanView.class, QueryParameters.of("week", String.valueOf(monday)))`, when exactly one `@Route`
+  among the migrated sources has the path, as `getView()` does since 0.1.0-alpha4. A renamed route then breaks at
+  compile time, and the User Step reads `open Plan` instead of `open “plan”`. Any other URL, such as one with two
+  query parameters, still becomes the path after the base URL.
 
 ## Changed behaviour
 
@@ -34,3 +46,10 @@ page becomes the notes of the next alpha.
   `Did you mean  find(UnifiedButton.class).withAccessibleName("Previous Week")`. The CI log prints the same text.
   `Nearby` stays in the message, `user-steps.json` and the reports; the JSON is unchanged. *Reading reports and
   failures* now states exactly when a failure gets a `Did you mean`; the rules themselves are unchanged.
+
+## Fixed
+
+- **The Findable View lists the same components on every Testing Tool**
+  ([#517](https://github.com/parttio/unified-testing-tool/issues/517)): in a browser it no longer lists a
+  component's internal parts, which the component renders itself and the application did not create, such as the
+  text area inside a message input. Adapters report this as `ElementFacts.internalPart()`.

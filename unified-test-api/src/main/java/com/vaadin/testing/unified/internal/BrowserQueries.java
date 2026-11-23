@@ -240,32 +240,56 @@ public final class BrowserQueries {
             }""".formatted(FORM_ITEM_LABEL);
 
     /**
-     * Browser function {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId]}:
+     * Browser function {@code e => internalPart}: whether the element is an internal part of another component,
+     * one that component rendered itself rather than the application: Flow's client has bound no server-side
+     * element to it, but has bound one of its ancestors in the same DOM tree (the {@code <vaadin-text-area>} a
+     * {@code <vaadin-message-input>} puts in its light DOM). An element in an application's own template, whose
+     * shadow root holds no bound element above it, is not one; without Flow's client, nothing is.
+     */
+    public static final String INTERNAL_PART = """
+            e => {
+              const clients = window.Vaadin && window.Vaadin.Flow && window.Vaadin.Flow.clients;
+              const bound = n => Object.values(clients || {}).some(c => c && typeof c.getNodeId === 'function'
+                  && c.getNodeId(n) >= 0);
+              if (!clients || bound(e)) return false;
+              for (let a = e.parentElement; a; a = a.parentElement) {
+                if (bound(a)) return true;
+              }
+              return false;
+            }""";
+
+    /**
+     * Browser function
+     * {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId, internalPart]}:
      * what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages; the text is
      * {@link #TEXT}'s, without a tooltip. The ancestor is the
-     * nearest one with a {@code data-testid} or an {@code id}, crossing shadow roots to their hosts.
+     * nearest one with a {@code data-testid} or an {@code id}, crossing shadow roots to their hosts. Whether it is
+     * an internal part is {@link #INTERNAL_PART}'s.
      */
     public static final String FACTS = """
             e => {
               const text = %s;
               const accessibleName = %s;
               const label = %s;
+              const internalPart = %s;
               const str = v => v == null ? null : String(v);
               const up = n => n.parentElement || (n.getRootNode() instanceof ShadowRoot ? n.getRootNode().host : null);
               let a = up(e);
               while (a && !a.getAttribute('data-testid') && !a.getAttribute('id')) a = up(a);
               return [str(label(e)), text(e), str(e.placeholder), e.getAttribute('data-testid'), accessibleName(e),
-                  a ? a.getAttribute('data-testid') : null, a && !a.getAttribute('data-testid') ? a.getAttribute('id') : null];
-            }""".formatted(TEXT, ACCESSIBLE_NAME, LABEL);
+                  a ? a.getAttribute('data-testid') : null, a && !a.getAttribute('data-testid') ? a.getAttribute('id') : null,
+                  internalPart(e)];
+            }""".formatted(TEXT, ACCESSIBLE_NAME, LABEL, INTERNAL_PART);
 
     /** {@link #FACTS}' result as {@link com.vaadin.testing.unified.spi.ElementFacts}. */
     public static com.vaadin.testing.unified.spi.ElementFacts facts(Object result) {
         List<?> values = (List<?>) result;
-        String[] s = new String[7];
+        String[] s = new String[8];
         for (int i = 0; i < s.length && i < values.size(); i++) {
             s[i] = values.get(i) == null ? null : String.valueOf(values.get(i));
         }
-        return new com.vaadin.testing.unified.spi.ElementFacts(s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
+        return new com.vaadin.testing.unified.spi.ElementFacts(s[0], s[1], s[2], s[3], s[4], s[5], s[6],
+                Boolean.parseBoolean(s[7]));
     }
 
     /**
