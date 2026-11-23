@@ -69,6 +69,24 @@ public class UserStepsReportTest {
     }
 
     @Test
+    void aFailureWithASuggestionShowsItsDidYouMeanButNotItsNearMisses() {
+        UnifiedPage page = fake.page;
+        AssertionError failure = assertThrows(AssertionError.class,
+                () -> page.find(UnifiedTextField.class).withLabel("Nmae").setValue("Alan"));
+
+        String text = report(failure).text();
+        List<String> lines = text.lines().toList();
+
+        assertEquals(List.of(
+                "   1  fill text field “Nmae” with “Alan”   ✘",
+                "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Nmae”, found none",
+                "     Did you mean  find(UnifiedTextField.class).withLabel(\"Name\")"), lines.subList(1, 4), text);
+        assertTrue(lines.get(4).startsWith("     at UserStepsReportTest.java:"), lines.get(4));
+        assertEquals(5, lines.size(), text);
+        assertFalse(text.contains("Nearby"), text);
+    }
+
+    @Test
     void valuesReadBetweenUserStepsAreCountedAndListedNowhere() throws Exception {
         UnifiedPage page = fake.page;
         UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");

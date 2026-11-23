@@ -55,6 +55,21 @@ class NearMissesTest {
     }
 
     @Test
+    void theGuidesExamplesOfTheThreshold() {
+        // docs/guide/reports-and-failures.md, "Did you mean": 13 characters, so at most 3 edits
+        assertEquals("Previous Week", NearMisses.rank("Previous week", fields("Previous Week"), List.of())
+                .suggestion().value());
+        assertEquals("Previus week", NearMisses.rank("Previous week", fields("Previus week"), List.of())
+                .suggestion().value());
+        assertEquals(6, NearMisses.distance("Previous week", "Go to previous week"));
+        // containing the wanted name ranks it first in Nearby, but is no suggestion
+        NearMisses.Result<String> contains = NearMisses.rank("Previous week", fields("Next week",
+                "Go to previous week"), List.of());
+        assertEquals("text field “Go to previous week”", contains.rendered().get(0));
+        assertNull(contains.suggestion());
+    }
+
+    @Test
     void suggestsTheOnlyOneOfAnotherKindWithTheExactName() {
         Candidate<String> best = NearMisses.rank("Role", fields("Name"), comboBoxes("Role")).suggestion();
         assertEquals("combo Role", best.payload());
