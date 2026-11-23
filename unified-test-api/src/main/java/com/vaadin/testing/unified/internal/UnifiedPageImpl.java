@@ -3,7 +3,9 @@ package com.vaadin.testing.unified.internal;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.QueryParameters;
+import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteParameters;
+import com.vaadin.testing.unified.internal.failures.FailureParts;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
@@ -55,7 +57,26 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public void navigate(Class<? extends Component> view) {
-        record(() -> Phrases.open(view, null), () -> run.session().navigate(view));
+        record(() -> Phrases.open(view, null), () -> {
+            requireNoRouteParameters(view);
+            run.session().navigate(view);
+        });
+    }
+
+    /** A route template with a required {@code :x} can't be opened without parameters: say so, not the server. */
+    private void requireNoRouteParameters(Class<? extends Component> view) {
+        if (view.getAnnotation(Route.class) == null) {
+            return;
+        }
+        List<String> required = RoutePaths.requiredParameters(view);
+        if (!required.isEmpty()) {
+            String names = String.join(", ", required.stream().map(n -> "“" + n + "”").toList());
+            throw run.failure(FailureParts.of("route parameter" + (required.size() == 1 ? " " : "s ") + names
+                            + " to open " + view.getSimpleName() + " (route “" + RoutePaths.pathOf(view) + "”)",
+                            "navigate(" + view.getSimpleName() + ".class) without parameters")
+                    .suggestion("navigate(" + view.getSimpleName() + ".class, new RouteParameters(\"" + required.get(0)
+                            + "\", ..))"), null);
+        }
     }
 
     @Override

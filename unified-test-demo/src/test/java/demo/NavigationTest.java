@@ -62,6 +62,53 @@ class NavigationTest {
         assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("Plan of ada for 2026-11-02");
     }
 
+    // issue #530: a route template with an optional parameter, and its aliases
+
+    @Test
+    @DisplayName("Opening the week view without an owner shows everyone's plan")
+    void navigatesByClassToARouteWithAnOptionalParameter(UnifiedPage page) {
+        page.navigate(WeekView.class);
+
+        assertThat(page).isAt(WeekView.class).hasPath("week");
+        assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("Plan of everyone for this week");
+    }
+
+    @Test
+    @DisplayName("Opening the shipments without a number shows all shipments")
+    void navigatesByClassWithoutTheOptionalParameter(UnifiedPage page) {
+        page.navigate(ShipmentView.class);
+
+        assertThat(page).isAt(ShipmentView.class).hasPath("shipment");
+        assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("All shipments");
+    }
+
+    @Test
+    @DisplayName("Opening shipment 42 shows that shipment")
+    void navigatesByClassWithTheOptionalParameter(UnifiedPage page) {
+        page.navigate(ShipmentView.class, new RouteParameters("shipmentID", "42"));
+
+        assertThat(page).isAt(ShipmentView.class).hasPath("shipment/42");
+        assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("Shipment 42");
+    }
+
+    @Test
+    @DisplayName("Opening the edit alias of shipment 42 shows the shipments view")
+    void isAtTheViewOnAnAliasWithAParameter(UnifiedPage page) {
+        page.navigate("shipment/42/edit");
+
+        assertThat(page).isAt(ShipmentView.class).hasPath("shipment/42/edit");
+        assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("Shipment 42");
+    }
+
+    @Test
+    @DisplayName("Opening the parcels alias shows the shipments view")
+    void isAtTheViewOnARootLevelAlias(UnifiedPage page) {
+        page.navigate("parcels");
+
+        assertThat(page).isAt(ShipmentView.class).hasPath("parcels");
+        assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("All shipments");
+    }
+
     /** The title comes from the view's @PageTitle; the page's title is read on every Testing Tool. */
     @Test
     @DisplayName("The profile has its title once the user goes there from the home view")
