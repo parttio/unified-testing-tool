@@ -162,12 +162,49 @@ UnifiedAssertionError: Renaming a person in the editor updates the grid
 waiting. `Evidence` holds a screenshot (browser) or the component tree (Browserless), and on every Testing Tool
 `<test>.view.txt`: each component the page held at the failure, with the lookup that finds it.
 
+By default that is all a run keeps beyond `user-steps.txt`. Two opt-in settings keep more, for passing tests too
+(see Configuration):
+- `-Dvaadin.testing.user-steps.snapshots=true`: after every User Step, a screenshot (Playwright, Selenium) or the
+  component tree (Browserless) in the test's evidence directory, under `steps/`, linked from each step in the HTML
+  report.
+- `-Dvaadin.testing.playwright.trace=on-failure` (or `on`): Playwright's trace, grouped by User Step, as
+  `trace.zip` in the test's evidence directory. Open it at https://trace.playwright.dev.
+
 Decide who is wrong before changing anything:
 - **The test is wrong** when the view's code shows what the Near Miss shows (the label is "Email", the test guessed
   "E-mail"): apply `Did you mean`, or write the lookup from the view.
 - **The application is wrong** when the scenario you were given says the user should see something else (the
   notification, a saved value, a row): stop and report the failure's `Expected` and `Found` to the person who asked,
   with the view code involved. Change the expectation only when they confirm the new behaviour is intended.
+
+## Configuration
+
+Every setting is a JUnit configuration parameter (`src/test/resources/junit-platform.properties`, or Surefire's
+`configurationParameters`) or a system property (`-D`). Unset means the default.
+
+| Setting | Default |
+|---|---|
+| `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
+| `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
+| `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits (`500ms`, `1m`) |
+| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
+| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a screenshot or component tree after every User Step, in `steps/` |
+| `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step that logged them; `error` or `off` |
+| `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
+| `vaadin.testing.user-steps.changed-since` | in a GitHub pull request, `origin/$GITHUB_BASE_REF`; else unset. The git ref "Changed in this PR" compares with |
+| `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory: changed scenarios show a diff of their User Steps against it |
+| `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run on another Testing Tool: the run summary says which scenarios differ |
+| `vaadin.testing.browserless.view-packages` | with Spring, the `@SpringBootApplication`'s packages and the test's; else the test's package |
+| `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends a listener's exception to the session's `ErrorHandler`, as in a browser |
+| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
+| `vaadin.testing.playwright.headless` | `true` |
+| `vaadin.testing.playwright.executable` | Playwright's own browser; a path to a browser skips its download |
+| `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace as `trace.zip` |
+| `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
+| `vaadin.testing.selenium.headless` | `true` |
+| `vaadin.testing.selenium.executable` | the installed browser |
+| `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
 ## Review a test
 
