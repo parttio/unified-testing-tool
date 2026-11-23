@@ -132,6 +132,20 @@ public interface UnifiedBadgeBrowserless extends UnifiedBadge {
 
 Implemented; demo: `demo.addon` (component) and `demo.addon.testing` (wrappers, in the main jar).
 
+### Templates
+
+*(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* A Wrapper for a [Template](04-locating.md#templates) extends the `TemplateScope` mixin. It is then a Scope whose lookups search the Template's shadow root and light DOM:
+
+```java
+@UnifiedComponent(SearchBar.class)                  // SearchBar extends LitTemplate, @Tag("search-bar")
+public interface UnifiedSearchBar extends UnifiedWrapper, CommonFilters<UnifiedSearchBar>, TemplateScope {
+}
+
+page.find(UnifiedSearchBar.class).find(UnifiedButton.class).withId("new").click();
+```
+
+Without a Wrapper, `findTemplate(SearchBar.class)` on any Scope does the same.
+
 ### Custom filters
 
 Default methods on the Wrapper, returning the Wrapper, built from `withProperty`, `withAttribute` or `where(Predicate<UnifiedElement>)`:

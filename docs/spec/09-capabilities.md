@@ -36,6 +36,8 @@ void looksRight(UnifiedPage page) {
 
 Network interception, tracing and browser contexts: Escape Hatch only.
 
+*(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* Entering a [Template](04-locating.md#templates) that renders its content in the browser (a web component, not a `LitTemplate`'s `@Id` components) needs `@RequiresBrowser`: Browserless has no such content.
+
 ### Browser-only steps in a test for every Testing Tool
 
 A test that runs on every Testing Tool but has a browser-only step asks `page.hasRealBrowser()` instead of declaring `@RequiresBrowser`. False on Browserless, true on Playwright and Selenium:
@@ -82,6 +84,7 @@ Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 | Before the first `navigate(..)` | a blank page | a blank page | the view of the `""` route |
 | `navigate(..)` to the view already shown | a new page, new view instances | a new page, new view instances | the same view instance; `beforeEnter` and `setParameter` run again |
 | Back / forward history | Escape Hatch | Escape Hatch | ✗ |
+| Inside a Template: text, labels and attributes written in the template's HTML *(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* | ✓ | ✓ | ✗ (empty on the server; `withId(..)` works everywhere) |
 
 Differences in meaning are documented, not banned. Tests that depend on the browser meaning declare `@RequiresBrowser`.
 

@@ -293,9 +293,9 @@ public final class BrowserQueries {
     }
 
     /**
-     * Whether an element is the app's content. CSS in Playwright enters shadow roots: this leaves out what
-     * Vaadin's own components and dev tools (Copilot) render there. An app's own template keeps its shadow DOM
-     * searchable.
+     * Whether an element is the app's content: false inside the shadow root of Vaadin's own components and dev
+     * tools (Copilot), at any depth. Lookups don't enter shadow roots by themselves; a test enters a Template
+     * explicitly (ADR 0012).
      */
     public static final String APP_CONTENT = """
             e => {

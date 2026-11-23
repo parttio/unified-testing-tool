@@ -60,6 +60,11 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 
 | Gap | Issue |
 |---|---|
+| A lookup's walk leaves out a `LitTemplate`'s `@Id` components (its virtual children), unless a global setting exposes every template's; the adapter walks them itself for a Template the test entered *(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
+| Text, labels and attributes written in a `LitTemplate`'s HTML are empty on the server, so filters on them don't match on Browserless: a limit of Flow, which no Testing Tool can close; inside a Template, `withId(..)` is the portable lookup | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
+
+| Gap | Issue |
+|---|---|
 | `CheckboxTester` and `SwitchTester` have no `setValue` | [#59](https://github.com/parttio/unified-testing-tool/issues/59) |
 | `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/parttio/unified-testing-tool/issues/61) |
 | `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/parttio/unified-testing-tool/issues/64) |
