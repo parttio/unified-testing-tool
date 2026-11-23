@@ -47,6 +47,7 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
     private static final String SPRING_BOOT_TEST = "org.springframework.boot.test.context.SpringBootTest";
     private static final String UNIFIED_SPRING_BOOT_TEST = "com.vaadin.testing.unified.spring.UnifiedSpringBootTest";
     private static final String ENABLED_IF_SYSTEM_PROPERTY = "org.junit.jupiter.api.condition.EnabledIfSystemProperty";
+    private static final String QUERY_PARAMETERS = "com.vaadin.flow.router.QueryParameters";
     private static final Set<String> TEST_ANNOTATIONS = Set.of(SPRING_BOOT_TEST, UNIFIED_SPRING_BOOT_TEST,
             TestBenchSetupToUnified.UNIFIED_UI_TEST);
 
@@ -317,6 +318,10 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                     }
                     return m.withArguments(arguments);
                 }
+                Dramafinder.RouteNavigation route = Dramafinder.routeNavigation(m, ctx);
+                if (route != null) { // page.navigate(getUrl() + "/plan"): the route class, as for getView()
+                    return toRoute(m, route);
+                }
                 Expression path = Dramafinder.baseUrlNavigationPath(m);
                 if (path != null) { // page.navigate(getUrl() + "/plan?week=" + monday): the base URL is configuration
                     return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.navigate(#{any(String)})")
@@ -336,6 +341,33 @@ public class DramafinderSetupToUnified extends ScanningRecipe<Map<String, List<J
                     case "assertQueryParameter" -> pageAssertion(m, "hasQueryParameter", "java.lang.String", arguments);
                     default -> m; // getPage(): the Escape Hatch's page
                 };
+            }
+
+            /**
+             * {@code page.navigate(PlanView.class)}, or {@code page.navigate(PlanView.class,
+             * QueryParameters.of("week", String.valueOf(monday)))} for a URL with one query parameter.
+             */
+            private J.MethodInvocation toRoute(J.MethodInvocation m, Dramafinder.RouteNavigation route) {
+                maybeAddImport(route.viewClass());
+                if (route.queryName() == null) {
+                    return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.navigate(#{any()})")
+                            .javaParser(Stubs.parser())
+                            .build()
+                            .<J.MethodInvocation>apply(getCursor(), m.getCoordinates().replace(), Stubs.page(),
+                                    classLiteral(route.viewClass()))
+                            .withPrefix(m.getPrefix());
+                }
+                maybeAddImport(QUERY_PARAMETERS);
+                String value = TypeUtils.isString(route.queryValue().getType()) ? "#{any(String)}" : "String.valueOf(#{any()})";
+                return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.navigate(#{any()}, "
+                                + "QueryParameters.of(#{any(String)}, " + value + "))")
+                        .imports(QUERY_PARAMETERS)
+                        .javaParser(Stubs.parser("package com.vaadin.flow.router; public class QueryParameters {"
+                                + " public static QueryParameters of(String name, String value) { return null; } }"))
+                        .build()
+                        .<J.MethodInvocation>apply(getCursor(), m.getCoordinates().replace(), Stubs.page(),
+                                classLiteral(route.viewClass()), Stubs.literal(route.queryName()), route.queryValue())
+                        .withPrefix(m.getPrefix());
             }
 
             /** {@code page.<name>(..)} with the call's arguments. */

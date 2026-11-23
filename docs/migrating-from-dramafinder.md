@@ -114,7 +114,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `@EnabledIfSystemProperty(named = "vaadin.testing.tool", ..)` | removed: the run's Testing Tool decides |
 | test methods, `@BeforeEach` and helper methods that use the base class | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test |
 | `navigate(View.class)`, `assertAt(View.class)`, `assertPath(..)`, `assertQueryParameter(..)` | `page.navigate(View.class)`, `assertThat(page).isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)` |
-| `page.navigate(getUrl() + "/plan?week=" + monday)` | `page.navigate("plan?week=" + monday)`: the path after the base URL |
+| `page.navigate(getUrl() + "/plan")`, `page.navigate(getUrl() + "/plan?week=" + monday)` | `page.navigate(PlanView.class)`, `page.navigate(PlanView.class, QueryParameters.of("week", String.valueOf(monday)))` (no `String.valueOf` for a `String`), when exactly one `@Route("plan")` is among the migrated sources, as for `getView()`; else, with no such view, several, a path computed at run time, or more than one query parameter, the path after the base URL: `page.navigate("plan?week=" + monday)` |
 | `TextFieldElement.getByLabel(page, "Name")`, `getByText`, `getById`, `getByTestId`, `…Containing` | `page.find(UnifiedTextField.class).withLabel("Name")`, `withText`, `withId`, `withTestId`, `…Containing` |
 | `find(page, TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | query `first()` / `get(i)` | the same lookup, with a `was first()` Migration Marker / `all().get(i)` |
