@@ -97,6 +97,8 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 
 **`TestBench page object: new X(this)`.** Convert the page object when every call in it has a Unified form: its TestBench field and constructor parameter become `UnifiedPage`, its `$(XElement.class)` lookups become `find(UnifiedX.class)`, its element return types become Wrappers. Then pass `page` instead of `testBench`. Keep it otherwise.
 
+**`TestBench page object: X (custom element extending Y): write a Wrapper or convert the page object`.** `X` is the project's own `TestBenchElement` subclass, and the statement calls it as it is, on Selenium. Write a Wrapper for the component `X` finds (see the custom element kind above), with a `default` method for each method of `X` the tests call, or, when `X` is a view's page object rather than a component, turn it into a plain class taking the `UnifiedPage` whose methods use Wrappers. Then replace the lookup that gives `X` and the calls, delete `@RequiresTestingTool(SELENIUM)` when nothing else in the test needs it, and delete `X` when nothing uses it. Keep it, `// Escape Hatch kept: <reason>`, when its methods need a real browser driver.
+
 **`browser setup removed (...)`.** The Unified API's Selenium adapter chooses the browser. Move what the removed setup did to the `vaadin.testing.*` settings (`junit-platform.properties`, or system properties) when one covers it; otherwise there is nothing to carry over. Delete the marker either way and name the removed setup in your report.
 
 ## Reference: marker kinds of the Browserless recipe

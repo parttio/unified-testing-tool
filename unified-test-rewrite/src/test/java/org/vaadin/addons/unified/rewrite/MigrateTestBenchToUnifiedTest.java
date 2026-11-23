@@ -1925,6 +1925,187 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         """));
     }
 
+    private static final String LOGIN_VIEW_ELEMENT = """
+            import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+            import com.vaadin.testbench.elementsbase.Element;
+
+            @Element("login-view")
+            public class LoginViewElement extends LoginOverlayElement {
+                public String getUsernameLabel() {
+                    return "";
+                }
+
+                public void login(String user, String password) {
+                }
+            }
+            """;
+
+    @Test
+    void aCallOnACustomPageObjectFromAHelperGetsAMarkerAndRequiresSelenium() {
+        rewriteRun(
+                java(LOGIN_VIEW_ELEMENT),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import org.junit.jupiter.api.Assertions;
+
+                        class LoginIT extends BrowserTestBase {
+
+                            @BrowserTest
+                            void loginWorks() {
+                                LoginViewElement loginView = openLoginView();
+                                Assertions.assertEquals("Email", loginView.getUsernameLabel());
+                                loginView.login("barista@vaadin.com", "barista");
+                            }
+
+                            private LoginViewElement openLoginView() {
+                                return $(LoginViewElement.class).waitForFirst();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Assertions;
+                        import org.junit.jupiter.api.Test;
+
+                        @UnifiedUITest
+                        class LoginIT {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void loginWorks(UnifiedPage page) {
+                                LoginViewElement loginView = openLoginView(page);
+                                // TODO unified: TestBench page object: LoginViewElement (custom element extending LoginOverlayElement): write a Wrapper or convert the page object
+                                Assertions.assertEquals("Email", loginView.getUsernameLabel());
+                                // TODO unified: TestBench page object: LoginViewElement (custom element extending LoginOverlayElement): write a Wrapper or convert the page object
+                                loginView.login("barista@vaadin.com", "barista");
+                            }
+
+                            private LoginViewElement openLoginView(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: $(LoginViewElement.class), a custom element: write a Wrapper for it (ADR 0003)
+                                return testBench.$(LoginViewElement.class).waitForFirst();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void aTestCallingOnlyAnInheritedHelperThatStaysTestBenchRequiresSelenium() {
+        rewriteRun(
+                java(LOGIN_VIEW_ELEMENT),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.flow.component.upload.testbench.UploadElement;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        abstract class AbstractIT extends BrowserTestBase {
+
+                            protected LoginViewElement openLoginView() {
+                                return $(LoginViewElement.class).waitForFirst();
+                            }
+
+                            protected void loginAsBarista() {
+                                openLoginView().login("barista@vaadin.com", "barista");
+                            }
+
+                            protected String uploadText() {
+                                return $(UploadElement.class).first().getText();
+                            }
+
+                            protected void save() {
+                                $(ButtonElement.class).withText("Save").single().click();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.flow.component.upload.testbench.UploadElement;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+
+                        @UnifiedUITest
+                        abstract class AbstractIT {
+
+                            protected LoginViewElement openLoginView(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: $(LoginViewElement.class), a custom element: write a Wrapper for it (ADR 0003)
+                                return testBench.$(LoginViewElement.class).waitForFirst();
+                            }
+
+                            protected void loginAsBarista(UnifiedPage page) {
+                                // TODO unified: TestBench page object: LoginViewElement (custom element extending LoginOverlayElement): write a Wrapper or convert the page object
+                                openLoginView(page).login("barista@vaadin.com", "barista");
+                            }
+
+                            protected String uploadText(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: $(UploadElement.class)
+                                return testBench.$(UploadElement.class).first().getText();
+                            }
+
+                            protected void save(UnifiedPage page) {
+                                page.find(UnifiedButton.class).withText("Save").click();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class LoginIT extends AbstractIT {
+
+                            @BrowserTest
+                            void logsIn() {
+                                loginAsBarista();
+                            }
+
+                            @BrowserTest
+                            void uploads() {
+                                uploadText();
+                            }
+
+                            @BrowserTest
+                            void saves() {
+                                save();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import org.junit.jupiter.api.Test;
+
+                        class LoginIT extends AbstractIT {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void logsIn(UnifiedPage page) {
+                                loginAsBarista(page);
+                            }
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void uploads(UnifiedPage page) {
+                                uploadText(page);
+                            }
+
+                            @Test
+                            void saves(UnifiedPage page) {
+                                save(page);
+                            }
+                        }
+                        """));
+    }
+
     @Test
     void aJUnit4TestBenchTestCaseMigratesToJUnit6() {
         rewriteRun(java(
