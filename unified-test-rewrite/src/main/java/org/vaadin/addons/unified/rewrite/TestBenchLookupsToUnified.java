@@ -96,7 +96,7 @@ public class TestBenchLookupsToUnified extends Recipe {
                 }
                 // $(..) on the page, or on a container that becomes a Unified Scope
                 String scope = TestBenchSetupToUnified.UNIFIED_PAGE;
-                Object receiver = Stubs.page();
+                Object receiver = Pages.page(getCursor());
                 if (method.getSelect() instanceof J.MethodInvocation content && content.getSimpleName().equals("content")
                         && content.getSelect() != null && isTabSheet(content.getSelect())) {
                     scope = "com.vaadin.testing.unified.Scope"; // a TabSheet's content()

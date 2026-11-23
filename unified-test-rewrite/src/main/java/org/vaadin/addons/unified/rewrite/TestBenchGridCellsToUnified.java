@@ -98,9 +98,12 @@ public class TestBenchGridCellsToUnified extends Recipe {
                     return template("#{any(" + UNIFIED_GRID + ")}.row().withCellText(#{any(String)})",
                             m.getSelect(), m.getArguments().get(0));
                 }
-                // getCell(text).getRow() / .click() inline
+                // getCell(text).getRow() / .click() inline, where the cell became a Unified row: a cell of a Grid
+                // that stays TestBench keeps its TestBench method
                 if (method.getSelect() instanceof J.MethodInvocation cell && GridCells.isGetCell(cell)
-                        && !GridCells.byIndex(cell) && GridCells.ROW_METHODS.containsKey(m.getSimpleName())) {
+                        && !GridCells.byIndex(cell) && GridCells.ROW_METHODS.containsKey(m.getSimpleName())
+                        && m.getSelect() instanceof J.MethodInvocation row && row != cell
+                        && row.getSimpleName().equals("withCellText")) {
                     return m.withName(m.getName().withSimpleName(GridCells.ROW_METHODS.get(m.getSimpleName())));
                 }
                 return m;
