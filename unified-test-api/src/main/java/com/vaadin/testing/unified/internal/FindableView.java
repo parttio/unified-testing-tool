@@ -464,7 +464,8 @@ public final class FindableView {
     /**
      * For a component nothing of its own singles out: the lookup through its nearest container with a test id or
      * an id, or through a listed container (a dialog), once run and found to match exactly one; else how many
-     * are alike.
+     * are alike, and how many of them its container holds when that container is the only one with its test id
+     * or id (a container every row shares tells nothing apart, #522).
      */
     private static String apart(TestRun run, OfType t, Read r, UnifiedElement scope, boolean inTemplate, String prefix,
             List<Container> containers) {
@@ -488,29 +489,32 @@ public final class FindableView {
             Filter filter = new Filter(kind, null, value, true);
             Optional<UnifiedElement> container = safely(() -> single(run.session().find(
                     new QuerySpec(Component.class, "*", List.of(filter), scope, inTemplate))), Optional.empty());
-            if (container.isPresent() && singlesOut(run, t, best, r, container.get())) {
+            int inside = container.isPresent() ? countIn(run, t, best, r, container.get()) : 0;
+            if (inside == 1) {
                 return prefix + "find(" + UnifiedContainer.class.getSimpleName() + ".class)."
                         + new Namer(kind, null, null).code(value) + inner;
             }
-            return notUnique + "; this one in container (" + StepTarget.words(filter) + ")";
+            if (inside > 1) {
+                return notUnique + "; " + inside + " in container (" + StepTarget.words(filter) + ")";
+            }
         }
         for (Container container : containers) {
-            if (container.element() != r.element() && singlesOut(run, t, best, r, container.element())) {
+            if (container.element() != r.element() && countIn(run, t, best, r, container.element()) == 1) {
                 return notUnique + "; one in " + container.words() + ": " + container.lookup() + inner;
             }
         }
         return notUnique;
     }
 
-    /** Whether the lookup by {@code namer} finds exactly one component inside {@code container}. */
-    private static boolean singlesOut(TestRun run, OfType t, Namer namer, Read r, UnifiedElement container) {
+    /** How many components the lookup by {@code namer} finds inside {@code container}; 0 when it can't be run. */
+    private static int countIn(TestRun run, OfType t, Namer namer, Read r, UnifiedElement container) {
         if (namer.kind() == null) {
-            return false; // a Wrapper's own filter runs in the core: not checked here
+            return 0; // a Wrapper's own filter runs in the core: not checked here
         }
         List<Filter> filters = new ArrayList<>(t.selector());
         filters.add(new Filter(namer.kind(), null, r.valueOf(namer), true));
         return safely(() -> run.session().find(new QuerySpec(t.annotation().value(), t.tag(), List.copyOf(filters),
-                container)).size() == 1, false);
+                container)).size(), 0);
     }
 
     private static Optional<UnifiedElement> single(List<UnifiedElement> found) {
