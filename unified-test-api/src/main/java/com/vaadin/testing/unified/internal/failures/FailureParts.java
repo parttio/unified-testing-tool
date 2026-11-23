@@ -29,6 +29,7 @@ public final class FailureParts {
     private volatile String tool;
     private volatile List<String> codePath = List.of();
     private volatile String evidenceDir;
+    private volatile List<String> evidenceFiles = List.of();
     private volatile UnaryOperator<String> mask = UnaryOperator.identity();
 
     /** {@code Expected …} and {@code Found …}: what was wanted, and what there was instead (null to leave out). */
@@ -105,6 +106,11 @@ public final class FailureParts {
         this.evidenceDir = newEvidenceDir;
     }
 
+    /** The failure evidence written into the evidence directory: {@code failure.png}, {@code failure.view.txt}. */
+    public void evidenceFiles(List<String> names) {
+        this.evidenceFiles = List.copyOf(names);
+    }
+
     /** Hides secret values ({@code page.secret(..)}, password fields) wherever the parts are shown. */
     public void mask(UnaryOperator<String> newMask) {
         this.mask = newMask == null ? UnaryOperator.identity() : newMask;
@@ -132,6 +138,7 @@ public final class FailureParts {
     public String tool() { return tool; }
     public List<String> codePath() { return codePath; }
     public String evidenceDir() { return evidenceDir; }
+    public List<String> evidenceFiles() { return evidenceFiles; }
 
     /** Whether the recording already added the failed User Step. */
     public boolean hasFailedStep() {

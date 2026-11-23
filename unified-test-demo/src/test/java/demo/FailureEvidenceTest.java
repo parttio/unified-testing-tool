@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -60,23 +61,32 @@ class FailureEvidenceTest {
         assertEquals(1, summary.getTotalFailureCount());
         Throwable failure = summary.getFailures().get(0).getException();
         assertEquals("failing on purpose", failure.getMessage());
-        String name = Failing.class.getName() + ".fails";
-        assertTrue(Arrays.stream(failure.getSuppressed()).anyMatch(s -> s.getMessage().contains(name)),
+        Path stepsDir = dir.resolve("FailureEvidenceTest$Failing").resolve("fails");
+        String evidence = tool.hasRealBrowser() ? "failure.png" : "failure.tree.txt";
+        assertTrue(Arrays.stream(failure.getSuppressed()).anyMatch(s -> s.getMessage().startsWith("Failure evidence: ")
+                        && s.getMessage().contains(stepsDir.resolve(evidence).toAbsolutePath().toString())),
                 "the failure names its evidence: " + Arrays.toString(failure.getSuppressed()));
 
         String steps = "   1  open Profile\n   2  fill text field “Name” with “Evidence”\n"
                 + "   ✘ AssertionError: failing on purpose\n";
         assertTrue(Arrays.stream(failure.getSuppressed()).anyMatch(s -> s.getMessage().contains(steps)),
                 "the failure shows the User Steps: " + Arrays.toString(failure.getSuppressed()));
-        Path stepsDir = dir.resolve("FailureEvidenceTest$Failing").resolve("fails");
         assertTrue(Files.readString(stepsDir.resolve("user-steps.txt")).contains(steps));
-        assertTrue(Files.readString(stepsDir.resolve("user-steps.json")).contains("\"schemaVersion\": 1"));
+        String json = Files.readString(stepsDir.resolve("user-steps.json"));
+        assertTrue(json.contains("\"schemaVersion\": 1"));
+        // the failure evidence is in the test's own directory, named in user-steps.json, and nothing is at the root
+        assertTrue(json.contains("\"evidence\": [\n      \"" + evidence + "\",\n      \"failure.view.txt\"\n    ]"), json);
+        assertTrue(Files.readString(stepsDir.resolve("failure.view.txt")).startsWith("Findable view of “/profile”"));
+        try (var root = Files.list(dir)) {
+            assertEquals(List.of(), root.filter(Files::isRegularFile).map(f -> f.getFileName().toString())
+                    .filter(f -> f.startsWith(Failing.class.getName())).toList());
+        }
 
         if (tool.hasRealBrowser()) {
-            byte[] png = Files.readAllBytes(dir.resolve(name + ".png"));
+            byte[] png = Files.readAllBytes(stepsDir.resolve("failure.png"));
             assertArrayEquals(new byte[] { (byte) 0x89, 'P', 'N', 'G' }, Arrays.copyOf(png, 4));
         } else {
-            String tree = Files.readString(dir.resolve(name + ".tree.txt"));
+            String tree = Files.readString(stepsDir.resolve("failure.tree.txt"));
             assertTrue(tree.startsWith("Location: /profile"), tree);
             assertTrue(tree.contains("TextField") && tree.contains("Evidence"), tree);
         }

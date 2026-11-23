@@ -22,7 +22,7 @@ import java.util.Optional;
  *   Waited        10 s (vaadin.testing.timeout)
  *   Tool          playwright (chromium)
  *   Code          EditPersonTest.java:13 (editsAPersonInTheDialog) ← EditPersonTest.java:24 (editPerson)
- *   Evidence      target/surefire-reports/unified-evidence/EditPersonTest/editsAPersonInTheDialog/
+ *   Evidence      target/surefire-reports/unified-evidence/EditPersonTest/editsAPersonInTheDialog/  (failure.png, failure.view.txt)
  * </pre>
  *
  * The parts are also available as getters. Some are known only after the failure was thrown: the failed User Step
@@ -120,5 +120,13 @@ public final class UnifiedAssertionError extends AssertionError {
     /** The test's evidence directory, where its User Steps and failure evidence are written. */
     public Optional<String> getEvidenceDir() {
         return Optional.ofNullable(parts.evidenceDir());
+    }
+
+    /**
+     * The failure evidence in the evidence directory, once the test has ended: {@code failure.png} (browsers) or
+     * {@code failure.tree.txt} (Browserless), and {@code failure.view.txt}. Empty before.
+     */
+    public List<String> getEvidenceFiles() {
+        return parts.evidenceFiles();
     }
 }

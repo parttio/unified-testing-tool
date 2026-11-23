@@ -41,6 +41,14 @@ page becomes the notes of the next alpha.
 
 ## Changed behaviour
 
+- **Failure evidence is in the test's own evidence directory** ([#514](https://github.com/parttio/unified-testing-tool/issues/514)):
+  `<evidence dir>/<test class>/<test method>/failure.png` (browsers) or `failure.tree.txt` (Browserless), and
+  `failure.view.txt`, next to `user-steps.txt`, instead of `<fully qualified class>.<method>.*` at the evidence
+  directory's root. The failure's `Evidence` line names the directory and the files,
+  `…/EditPersonTest/editsAPerson/  (failure.png, failure.view.txt)`, `user-steps.json`'s `failure` lists them as
+  `evidence`, and `summary.json`'s per-scenario `evidence` paths become `EditPersonTest/editsAPerson/failure.png`.
+  `UnifiedAssertionError.getEvidenceFiles()` returns the names. A script that read the root files reads the test's
+  directory instead; a passing test leaves no `failure.*` there.
 - **`user-steps.txt` shows the `Did you mean`** ([#518](https://github.com/parttio/unified-testing-tool/issues/518)):
   a failure with a suggestion gets one more line under its `✘` line, in the failure message's wording,
   `Did you mean  find(UnifiedButton.class).withAccessibleName("Previous Week")`. The CI log prints the same text.

@@ -33,7 +33,7 @@ Changing a person's email updates the grid
   Waited        10 s (vaadin.testing.timeout)
   Tool          browserless
   Code          EditEmailTest.java:31 (changeEmail) ← EditEmailTest.java:33 (changeEmail)
-  Evidence      target/surefire-reports/unified-evidence/EditEmailTest/changesTheEmail/
+  Evidence      target/surefire-reports/unified-evidence/EditEmailTest/changesTheEmail/  (failure.tree.txt, failure.view.txt)
 ```
 
 | Line | Says |
@@ -130,7 +130,7 @@ A component that is there but can't be used:
 
 ### The Findable View
 
-Next to the screenshot or the component tree, a failed test writes `<test class>.<method>.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Failure evidence` line names it.
+Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it.
 
 ```
 Findable view of “/checkout” on playwright (chromium): 6 components
@@ -185,7 +185,7 @@ Every test that injects a `UnifiedPage` writes two files to `<evidence dir>/<tes
 }
 ```
 
-Next to them, a failed test leaves its failure evidence: a screenshot on Playwright and Selenium, the component tree as text on Browserless (`<test class>.<method>.tree.txt` in the evidence directory). The evidence directory is `target/surefire-reports/unified-evidence` by default, so CI can upload it with the test reports.
+Next to them, a failed test leaves its failure evidence *(unreleased)*: `failure.png`, a screenshot, on Playwright and Selenium, or `failure.tree.txt`, the component tree as text, on Browserless; and `failure.view.txt` on every Testing Tool. The failure's `Evidence` line names the directory and these files, and `user-steps.json` lists them as `failure.evidence`. The evidence directory is `target/surefire-reports/unified-evidence` by default, so CI can upload it with the test reports.
 
 ### Reading a User Step
 
@@ -400,7 +400,7 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the 
       "change": "new",
       "failedStep": "fill text field “E-mail” with “alan@bletchley.uk”",
       "failure": { "type": "com.vaadin.testing.unified.UnifiedAssertionError", "…": "…" },
-      "evidence": ["com.vaadin.testing.unified.demo.EditEmailTest.changesTheEmail.tree.txt"]
+      "evidence": ["EditEmailTest/changesTheEmail/failure.tree.txt", "EditEmailTest/changesTheEmail/failure.view.txt"]
     }
   ]
 }

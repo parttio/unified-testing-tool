@@ -96,9 +96,8 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         Path file = evidenceDir.resolve(RunSummary.FILE);
         Files.createDirectories(evidenceDir);
         Files.writeString(file, markdown, StandardCharsets.UTF_8);
-        List<String> rootFiles = rootFiles(evidenceDir);
-        scenarios.forEach(s -> treePages(evidenceDir, rootFiles, s));
-        Function<ScenarioResult, List<String>> evidence = s -> evidence(evidenceDir, rootFiles, s);
+        scenarios.forEach(s -> treePages(evidenceDir, s));
+        Function<ScenarioResult, List<String>> evidence = s -> evidence(evidenceDir, s);
         Files.writeString(evidenceDir.resolve(RunReport.FILE), new RunReport(summary, evidence).html(),
                 StandardCharsets.UTF_8);
         Files.writeString(evidenceDir.resolve(RunSummaryJson.FILE), new RunSummaryJson(summary, evidence).json(),
@@ -218,9 +217,9 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
      * A readable page beside each of the scenario's component trees ({@code .tree.txt}: Browserless's snapshots and
      * failure evidence), for the report to show; a tree whose page can't be written keeps its text only.
      */
-    private void treePages(Path evidenceDir, List<String> rootFiles, ScenarioResult scenario) {
+    private void treePages(Path evidenceDir, ScenarioResult scenario) {
         List<Path> trees = new ArrayList<>();
-        failureEvidence(rootFiles, scenario).stream().filter(TreePage::isTree).map(evidenceDir::resolve)
+        failureEvidence(evidenceDir, scenario).stream().filter(TreePage::isTree).map(evidenceDir::resolve)
                 .forEach(trees::add);
         Path scenarioDir = Path.of(scenario.evidencePath());
         snapshots(scenario.steps()).stream().filter(TreePage::isTree).map(scenarioDir::resolve).forEach(trees::add);
@@ -254,16 +253,9 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
         return files;
     }
 
-    /** The file names at the evidence directory's root, sorted: where failure evidence is written. */
-    private static List<String> rootFiles(Path evidenceDir) throws IOException {
-        try (Stream<Path> files = Files.list(evidenceDir)) {
-            return files.filter(Files::isRegularFile).map(p -> p.getFileName().toString()).sorted().toList();
-        }
-    }
-
     /** A scenario's failure evidence, then its Playwright trace if this run kept one. */
-    private List<String> evidence(Path evidenceDir, List<String> rootFiles, ScenarioResult scenario) {
-        List<String> files = new ArrayList<>(failureEvidence(rootFiles, scenario));
+    private List<String> evidence(Path evidenceDir, ScenarioResult scenario) {
+        List<String> files = new ArrayList<>(failureEvidence(evidenceDir, scenario));
         Path scenarioDir = Path.of(scenario.evidencePath());
         Path trace = scenarioDir.resolve("trace.zip");
         if (Files.isRegularFile(trace) && isFromThisRun(trace)) {
@@ -273,15 +265,20 @@ public record RunSummaryWriter(Settings settings, Path workDir, Instant runStart
     }
 
     /**
-     * A scenario's failure evidence: the files named {@code <test class>.<test method>.*} at the root
-     * ({@code AdapterSession.writeFailureEvidence}), for a failed scenario only.
+     * A failed scenario's failure evidence, as its {@code user-steps.json} names it ({@code failure.evidence}, in
+     * the test's evidence directory), as paths relative to the evidence directory; files that are gone are left out.
      */
-    static List<String> failureEvidence(List<String> rootFiles, ScenarioResult scenario) {
-        if (!scenario.failed()) {
+    static List<String> failureEvidence(Path evidenceDir, ScenarioResult scenario) {
+        if (!scenario.failed() || scenario.failure() == null
+                || !(scenario.failure().get("evidence") instanceof List<?> names)) {
             return List.of();
         }
-        String prefix = scenario.testClass() + "." + scenario.testMethod() + ".";
-        return rootFiles.stream().filter(f -> f.startsWith(prefix)).toList();
+        Path scenarioDir = Path.of(scenario.evidencePath());
+        return names.stream().filter(String.class::isInstance).map(String.class::cast).map(scenarioDir::resolve)
+                .filter(Files::isRegularFile)
+                .map(f -> evidenceDir.toAbsolutePath().normalize().relativize(f.toAbsolutePath().normalize())
+                        .toString().replace('\\', '/'))
+                .toList();
     }
 
     /** The tests skipped without running, listed by this run's processes. */

@@ -151,7 +151,7 @@ How `summary.md` is made:
 1. **Header:** Testing Tool, counts, the run's start (UTC) and duration.
 2. **Controls:** show passing (off), changed only (with a base ref), diff against base run (on; with a Base Run that has this run's Testing Tool), and a search over scenario names, classes and step texts.
 3. **Changed in this PR:** as in `summary.md`, marked new or changed, with the diff's counts or `same User Steps as the base run` / `not in the base run` next to the badge, and the why line; failed scenarios unfolded, passing ones folded. A scenario whose steps differ shows the diff instead of its step tree; unticking *diff against base run* shows the tree instead. The failed and passing sections show the tree only.
-4. **Failed scenarios:** Failed at, Expected and Found (or the error line), Nearby, Did you mean, the code path, the failure evidence (`<test class>.<test method>.*` at the evidence directory's root: a screenshot shown inline with its Step Target spotlighted, a component tree shown inline as its readable page with its text linked, other files linked), then the User Steps tree with the failed step marked.
+4. **Failed scenarios:** Failed at, Expected and Found (or the error line), Nearby, Did you mean, the code path, the failure evidence (the files its `user-steps.json` names in `failure.evidence`, in the test's evidence directory *(unreleased)*: a screenshot shown inline with its Step Target spotlighted, a component tree shown inline as its readable page with its text linked, other files linked), then the User Steps tree with the failed step marked.
 5. **Compared with `<Testing Tool>`:** as in `summary.md`, every scenario that differs.
 6. **Scenarios without a check:** as in `summary.md`, every one of them, folded; left out when there is none. Such a scenario carries a `no check` badge wherever it is listed.
 7. **Passing scenarios:** hidden until the reader shows them or searches; one folded line each.
@@ -218,6 +218,7 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `nearMisses` | array of strings, optional | its Near Misses, closest first: `text field “E-mail”`, `dialog “Help” (hidden)`; left out when there are none |
 | `suggestion` | string, optional | its `Did you mean`: `find(UnifiedTextField.class).withLabel("E-mail")` |
 | `highlight` | object, optional | where the failure's screenshot shows the failed step's Step Target, as a step's `highlight`; left out when no step singled out a component, and on Browserless |
+| `evidence` | array of strings, optional | *(unreleased)* the failure evidence, relative to the test's evidence directory: `failure.png` (browsers) or `failure.tree.txt` (Browserless), and `failure.view.txt`; left out when none was written |
 | `lookup` | string, optional | with `suggestion`: the failed lookup or call in the same form, as the test asked for it: `find(UnifiedTextField.class).withLabel("Email")`. The two differ in what to change; the `ApplyDidYouMean` recipe reads both |
 
 **Entries** (`type` tells them apart)
@@ -290,7 +291,7 @@ One file per run, at `<vaadin.testing.evidence-dir>/summary.json`, next to `summ
 | `uncheckedSteps` | array of strings, optional | with `unchecked`: the texts of the User Steps nothing checks, in order |
 | `failedStep` | string, optional | for a failure in a User Step: the step's text |
 | `failure` | object, optional | for a failed scenario: the `failure` object of its `user-steps.json`, unchanged |
-| `evidence` | array of strings, optional | for a failed scenario: its failure evidence at the evidence directory's root, and the Playwright trace this run kept for it |
+| `evidence` | array of strings, optional | for a failed scenario: its failure evidence (`EditPersonTest/editsAPerson/failure.png`) *(unreleased)*, and the Playwright trace this run kept for it |
 
 The steps themselves are not repeated: they are in each scenario's `user-steps.json`. A reader ignores fields it doesn't know.
 
@@ -309,7 +310,7 @@ UnifiedAssertionError: Editing a person in the dialog updates the grid
   Waited        10 s (vaadin.testing.timeout)
   Tool          playwright (chromium)
   Code          EditPersonTest.java:13 (editsAPersonInTheDialog) ← EditPersonTest.java:24 (editPerson)
-  Evidence      target/surefire-reports/unified-evidence/EditPersonTest/editsAPersonInTheDialog/
+  Evidence      target/surefire-reports/unified-evidence/EditPersonTest/editsAPersonInTheDialog/  (failure.png, failure.view.txt)
 ```
 
 - **Near Misses** are computed on failure only:
@@ -346,7 +347,7 @@ button “Save”                           not unique: 2 alike; one in dialog �
 …
 ```
 
-- **Where.** `describe()` on the page or on any Scope (a dialog, a container) returns it; a container's lookups are on the container. On failure it is written next to the evidence, as `<test class>.<method>.view.txt`, on every Testing Tool ([09. Capabilities](09-capabilities.md#failure-evidence)).
+- **Where.** `describe()` on the page or on any Scope (a dialog, a container) returns it; a container's lookups are on the container. On failure it is written into the test's evidence directory, as `failure.view.txt` *(unreleased)*, on every Testing Tool ([09. Capabilities](09-capabilities.md#failure-evidence)).
 - **What is listed.** The components `find(Type.class)` finds in the scope, hidden ones included, for the Wrappers of the Unified API that name a component (fields, buttons, checkbox, radio button group, grid, tabs, tab sheet, menu bar, details, dialog, notification, upload), then the custom Wrappers the test has looked up. A custom Wrapper of the same tag and selector as one listed already is left out. Plain HTML Wrappers and `UnifiedContainer` are not listed. *(unreleased)* A component's internal parts, which it renders itself and the application did not create, are not listed: in a browser, the text area inside a message input is not, while a text area the application adds next to it is. A browser tells them apart by Flow's client: an internal part has no server-side element bound to it, but an ancestor in the same DOM tree does. Lines come grouped by Wrapper type, at most 100 of them.
 - **The name** is the first value the component has among the Wrapper's own naming filters (`withHeaderTitle`, as for the User Steps), its label, text and accessible name. An accessible name that is only the component's text doesn't count. A field, button or checkbox without one says `(no name; placeholder …)` or `(no name; test id …)`: an accessibility finding.
 - **The state.** The value of a text, number, date or date-time field (`= “Alan Turing”`), `(checked)`, `(disabled)` and `(hidden)`. A grid shows its row count and column headers; *(unreleased)* a message list its message count (`message list, 3 messages`).
@@ -399,7 +400,7 @@ A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `script
 ### What an agent reads
 
 - **The skill**, above, installed in the project.
-- **The [Findable View](#findable-view)**: `page.describe()` while writing a test, and `<test>.view.txt` after a failure, for lookups that match what is on the page.
+- **The [Findable View](#findable-view)**: `page.describe()` while writing a test, and `failure.view.txt` after a failure, for lookups that match what is on the page.
 - **The API reference**: `META-INF/unified/api-reference.md` in the `unified-test-api` jar, so it is of the version the project uses and needs no network. Every Wrapper with its filters, actions, reads and checks, and the page's. Generated from the Wrapper interfaces and `UnifiedAssertions`; a test of the build fails when the file is not what the code says. The docs site has the same page.
 - **The docs site** for agents: `llms.txt` at its root (one link per page, to the page as Markdown with its code examples included; the specification and the ADRs under *Optional*), and `llms-full.txt` (the home page, the API reference, the developer guide and the glossary in one file). Written by the site's build from its navigation.
 

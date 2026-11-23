@@ -42,7 +42,8 @@ class TestLifecycleTest {
     /** Records what the lifecycle asks of the session. */
     static final class FakeSession {
         final List<String> calls = new ArrayList<>();
-        List<Path> evidence = List.of(Path.of("evidence", "page.png"));
+        /** The Testing Tool's evidence files; null for a screenshot named as asked, in the directory asked. */
+        List<Path> evidence;
         IOException evidenceFailure;
         boolean traces;
 
@@ -55,7 +56,8 @@ class TestLifecycleTest {
                                 if (evidenceFailure != null) {
                                     throw evidenceFailure;
                                 }
-                                yield com.vaadin.testing.unified.spi.Evidence.of(evidence);
+                                yield com.vaadin.testing.unified.spi.Evidence.of(evidence != null ? evidence
+                                        : List.of(((Path) args[0]).resolve(args[1] + ".png")));
                             }
                             case "writeStepSnapshot" -> com.vaadin.testing.unified.spi.Evidence.of(
                                     List.of(((Path) args[0]).resolve(args[1] + ".png")));
@@ -203,24 +205,49 @@ class TestLifecycleTest {
         TestLifecycle.OpenTest test = lifecycle("playwright").open(new PlainContext(Plain.class, null), new StepRecorder());
         AssertionError failure = new AssertionError("expected 'Saved'");
 
+        Path saves = evidenceDir.resolve("ProfileTest").resolve("saves");
+        Files.createDirectories(saves);
+        Files.writeString(saves.resolve("failure.tree.txt"), "an earlier run's, on Browserless");
+
         List<Path> evidence = test.close(failure, SAVES);
 
-        Path view = evidenceDir.resolve("demo.ProfileTest.saves.view.txt");
-        assertEquals(List.of(Path.of("evidence", "page.png"), view), evidence);
+        // all of it in the test's own evidence directory, next to its User Steps
+        Path view = saves.resolve("failure.view.txt");
+        assertEquals(List.of(saves.resolve("failure.png"), view), evidence);
+        assertFalse(Files.exists(saves.resolve("failure.tree.txt")), "an earlier run's evidence is gone");
         // the Findable View, on every Testing Tool; this fake page has nothing to find
         assertEquals("Findable view of “/” on playwright: no component a Unified UI Test can find\n",
                 Files.readString(view));
-        assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + evidenceDir + ", demo.ProfileTest.saves, null]",
+        assertTrue(Files.readString(saves.resolve("user-steps.json"))
+                .contains("\"evidence\": [\n      \"failure.png\",\n      \"failure.view.txt\"\n    ]"),
+                Files.readString(saves.resolve("user-steps.json")));
+        assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + saves + ", failure, null]",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"),
                 session.calls.stream().filter(call -> !call.startsWith("find[") && !call.equals("currentPath")
                         && !call.equals("browserName")).toList()); // the Findable View's reads
         Throwable[] suppressed = failure.getSuppressed();
         assertEquals(2, suppressed.length);
-        assertTrue(suppressed[0].getMessage().startsWith("User Steps ("
-                + evidenceDir.resolve("ProfileTest").resolve("saves").toAbsolutePath() + "):\n"), suppressed[0].getMessage());
-        assertEquals("Failure evidence: " + Path.of("evidence", "page.png").toAbsolutePath() + ", "
-                + view.toAbsolutePath(), suppressed[1].getMessage());
-        assertEquals(0, suppressed[1].getStackTrace().length);
+        assertEquals("Failure evidence: " + saves.resolve("failure.png").toAbsolutePath() + ", "
+                + view.toAbsolutePath(), suppressed[0].getMessage());
+        assertEquals(0, suppressed[0].getStackTrace().length);
+        assertTrue(suppressed[1].getMessage().startsWith("User Steps (" + saves.toAbsolutePath() + "):\n"),
+                suppressed[1].getMessage());
+    }
+
+    @Test
+    void aUnifiedFailureNamesItsEvidenceDirectoryAndFiles() {
+        TestLifecycle.OpenTest test = lifecycle("playwright").open(new PlainContext(Plain.class, null),
+                new StepRecorder(), SAVES);
+        com.vaadin.testing.unified.UnifiedAssertionError failure = new com.vaadin.testing.unified.UnifiedAssertionError(
+                com.vaadin.testing.unified.internal.failures.FailureParts.of("exactly one button “Save”", "none"),
+                null);
+
+        test.close(failure, SAVES);
+
+        String directory = evidenceDir.resolve("ProfileTest").resolve("saves").toString().replace('\\', '/') + "/";
+        assertEquals(List.of("failure.png", "failure.view.txt"), failure.getEvidenceFiles());
+        assertTrue(failure.getMessage().endsWith("  Evidence      " + directory + "  (failure.png, failure.view.txt)"),
+                failure.getMessage());
     }
 
     @Test
@@ -230,11 +257,12 @@ class TestLifecycleTest {
         AssertionError failure = new AssertionError("expected 'Saved'");
 
         // the Findable View is written all the same
-        assertEquals(List.of(evidenceDir.resolve("demo.ProfileTest.saves.view.txt")), test.close(failure, SAVES));
+        assertEquals(List.of(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("failure.view.txt")),
+                test.close(failure, SAVES));
 
         assertEquals("expected 'Saved'", failure.getMessage());
         assertEquals("Failure evidence could not be written: java.io.IOException: disk full",
-                failure.getSuppressed()[1].getMessage());
+                failure.getSuppressed()[0].getMessage());
         assertTrue(session.calls.contains("close"));
     }
 
