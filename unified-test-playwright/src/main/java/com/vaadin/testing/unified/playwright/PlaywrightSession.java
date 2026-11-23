@@ -10,6 +10,7 @@ import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.internal.CurrentView;
+import com.vaadin.testing.unified.internal.RoutePaths;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
@@ -455,7 +456,8 @@ final class PlaywrightSession implements AdapterSession {
         if (!CurrentView.hasRoute(view)) {
             return CurrentView.shows(currentViews(), view);
         }
-        return RouteNavigation.isAt(page, baseUrl, view);
+        // Dramafinder matches the @Route only: an @RouteAlias of the view counts too (#530)
+        return RouteNavigation.isAt(page, baseUrl, view) || RoutePaths.matches(view, currentPath());
     }
 
     /** The current-view endpoint's answer for the page's UI, or null (no Vaadin UI, or no endpoint). */

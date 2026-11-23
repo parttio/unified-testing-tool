@@ -4,6 +4,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.ParentLayout;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.flow.router.RoutePrefix;
 import java.util.ArrayList;
@@ -34,6 +35,90 @@ public final class RoutePaths {
         return join(parts);
     }
 
+    /**
+     * The names of the route template's required parameters ({@code :id}, not {@code :id?} or {@code :id*}):
+     * the view can't be opened without them.
+     */
+    public static List<String> requiredParameters(Class<? extends Component> view) {
+        List<String> required = new ArrayList<>();
+        for (String segment : segments(pathOf(view))) {
+            if (segment.startsWith(":") && kind(segment) == ':') {
+                required.add(parameterName(segment));
+            }
+        }
+        return required;
+    }
+
+    /**
+     * Whether {@code path} (without leading slash or query) is one the view's route or one of its
+     * {@code @RouteAlias}es opens, with the parent layouts' prefixes: a required {@code :x} matches one segment, an
+     * optional {@code :x?} zero or one, a wildcard {@code :x*} the remaining ones; a regex constraint is not checked.
+     */
+    public static boolean matches(Class<? extends Component> view, String path) {
+        List<String> actual = segments(strip(path));
+        for (String template : templates(view)) {
+            if (matches(segments(template), 0, actual, 0)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The route's path template and its aliases', with the layouts' prefixes. */
+    private static List<String> templates(Class<? extends Component> view) {
+        List<String> templates = new ArrayList<>();
+        templates.add(pathOf(view));
+        for (RouteAlias alias : view.getAnnotationsByType(RouteAlias.class)) {
+            List<String> parts = new ArrayList<>();
+            if (!alias.absolute()) {
+                parts.addAll(prefixes(alias.layout()));
+            }
+            parts.add(alias.value());
+            templates.add(join(parts));
+        }
+        return templates;
+    }
+
+    private static boolean matches(List<String> template, int t, List<String> actual, int a) {
+        if (t == template.size()) {
+            return a == actual.size();
+        }
+        String segment = template.get(t);
+        if (!segment.startsWith(":")) {
+            return a < actual.size() && segment.equals(actual.get(a)) && matches(template, t + 1, actual, a + 1);
+        }
+        return switch (kind(segment)) {
+            case '?' -> matches(template, t + 1, actual, a)
+                    || a < actual.size() && matches(template, t + 1, actual, a + 1);
+            case '*' -> {
+                for (int rest = a; rest <= actual.size(); rest++) {
+                    if (matches(template, t + 1, actual, rest)) {
+                        yield true;
+                    }
+                }
+                yield false;
+            }
+            default -> a < actual.size() && matches(template, t + 1, actual, a + 1);
+        };
+    }
+
+    /** {@code '?'} for an optional parameter segment, {@code '*'} for a wildcard, {@code ':'} for a required one. */
+    private static char kind(String segment) {
+        String head = segment.replaceAll("\\(.*\\)$", "");
+        if (head.endsWith("?")) {
+            return '?';
+        }
+        return head.endsWith("*") ? '*' : ':';
+    }
+
+    private static String parameterName(String segment) {
+        return segment.substring(1).replaceAll("[?*]?(\\(.*\\))?$", "").replaceAll("[?*]$", "");
+    }
+
+    private static List<String> segments(String path) {
+        return path.isEmpty() ? List.of() : List.of(path.split("/"));
+    }
+
     public static String pathOf(Class<? extends Component> view, Object urlParameter) {
         String path = pathOf(view);
         return urlParameter == null ? path : join(List.of(path, String.valueOf(urlParameter)));
@@ -47,8 +132,7 @@ public final class RoutePaths {
                 segments.add(segment);
                 continue;
             }
-            String name = segment.substring(1).replaceAll("[?*]?(\\(.*\\))?$", "").replaceAll("[?*]$", "");
-            parameters.get(name).ifPresent(segments::add);
+            parameters.get(parameterName(segment)).ifPresent(segments::add);
         }
         return join(segments);
     }

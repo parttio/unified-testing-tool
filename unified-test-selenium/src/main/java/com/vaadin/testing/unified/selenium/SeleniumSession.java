@@ -261,7 +261,7 @@ final class SeleniumSession implements AdapterSession {
 
     @Override
     public void navigate(Class<? extends Component> view) {
-        open(RoutePaths.pathOf(view));
+        open(RoutePaths.pathOf(view, RouteParameters.empty()));
     }
 
     @Override
@@ -310,7 +310,7 @@ final class SeleniumSession implements AdapterSession {
                     baseUrl + CurrentView.PATH);
             return CurrentView.shows((String) answer, view);
         }
-        return currentPath().equals(RoutePaths.pathOf(view));
+        return RoutePaths.matches(view, currentPath());
     }
 
     @Override

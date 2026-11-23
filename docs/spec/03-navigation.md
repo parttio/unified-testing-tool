@@ -25,7 +25,7 @@ assertThat(page).hasTitle("Profile");
 | Flow types | Route classes, `RouteParameters`, `QueryParameters` from `flow-server`. |
 | Reload | `page.reload()` on every Testing Tool (Browserless simulates it, `@PreserveOnRefresh` respected). |
 | Back / forward | Escape Hatch only. |
-| `isAt(view)` | Browsers compare the page's current location (read in the page, so a RouterLink or `history.pushState` navigation counts) with the view's route. A view with no route (an error view) is matched by the view the page's UI shows: `@UnifiedSpringBootTest` serves a test-only endpoint (`/__unified/current-view`) that answers for the caller's own Vaadin session. Browserless checks the current view's class. |
+| `isAt(view)` | Browsers match the page's current location (read in the page, so a RouterLink or `history.pushState` navigation counts) against the view's route template and each of its `@RouteAlias`es, with the layouts' prefixes: a required `:x` matches one segment, an optional `:x?` zero or one, a wildcard `:x*` the remaining ones; a regex constraint is not checked, nor are query parameters. A view with no route (an error view) is matched by the view the page's UI shows: `@UnifiedSpringBootTest` serves a test-only endpoint (`/__unified/current-view`) that answers for the caller's own Vaadin session. Browserless checks the current view's class. |
 | `hasTitle(title)` | The page's title, exactly, on every Testing Tool: what a view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)` set. Browsers read `document.title`; Browserless reads the title the UI last sent (`UI.getInternals().getTitle()`), which Flow keeps on the server. A title set by the page's own script or the HTML template, not through Flow, is seen in a browser only. |
 
 ## Route class to URL (browser Testing Tools)
@@ -37,6 +37,11 @@ flowchart LR
     V["@Route(&quot;profile&quot;)<br/>ProfileView"] --> L["layout chain<br/>@RoutePrefix(&quot;app&quot;)"]
     L --> U["base URL + /app/profile"]
 ```
+
+Route parameters are filled into the template; without them, optional (`:x?`) and wildcard (`:x*`) segments are
+dropped: `navigate(StorefrontView.class)` on `storefront/:orderID?` opens `storefront`. A route with a required
+parameter (`:x`) can't be opened without it: `navigate(view)` fails with a `UnifiedAssertionError` naming the
+parameter, on every Testing Tool.
 
 Routes registered at runtime (`RouteConfiguration`) use the path form.
 
