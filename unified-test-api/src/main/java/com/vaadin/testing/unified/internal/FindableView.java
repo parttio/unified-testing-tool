@@ -67,7 +67,9 @@ import java.util.Set;
  *
  * For each Wrapper type, {@code find(Type.class)} runs once in the scope, and the naming values of its matches are
  * read at once, as for Near Misses ({@link com.vaadin.testing.unified.spi.AdapterSession#facts}). A lookup is
- * printed when its filter's value is that of exactly one match, compared as the exact filters compare. A component
+ * printed when its filter's value is that of exactly one match, compared as the exact filters compare. A match that
+ * is an internal part of another component ({@link ElementFacts#internalPart()}), such as the text area inside a
+ * message input in a browser, is left out, so the view lists the same components on every Testing Tool. A component
  * no filter of its own tells apart is printed with the container that does, and that lookup is run before it is
  * printed. Reads only: nothing is recorded as a User Step, a read that fails leaves its part out, and the test's
  * secrets are masked, as in the reports.
@@ -253,7 +255,13 @@ public final class FindableView {
         TestRun quick = run.withTimeout(Duration.ZERO);
         List<Read> reads = new ArrayList<>();
         for (int i = 0; i < found.size(); i++) {
+            if (facts.get(i) != null && facts.get(i).internalPart()) {
+                continue; // another component's own part, which the application didn't create: not listed (#517)
+            }
             reads.add(read(quick, type, namers, found.get(i), facts.get(i)));
+        }
+        if (reads.isEmpty()) {
+            return null;
         }
         return new OfType(type, annotation, tag, selector, namers, reads);
     }
