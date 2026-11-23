@@ -8,7 +8,8 @@ import org.openrewrite.java.tree.JavaType;
 final class Chains {
 
     /** Wrappers that are a Scope: {@code container.$(X.class)} becomes {@code container.find(UnifiedX.class)}. */
-    static final java.util.Set<String> SCOPES = java.util.Set.of("com.vaadin.testing.unified.component.UnifiedDialog");
+    static final java.util.Set<String> SCOPES = java.util.Set.of("com.vaadin.testing.unified.component.UnifiedDialog",
+            Wrappers.UNIFIED_TEMPLATE);
 
     private Chains() {
     }
@@ -43,12 +44,26 @@ final class Chains {
 
     /** The Wrapper for the element class of a {@code $(XElement.class)} call, or {@code null}. */
     static Wrappers.Wrapper ofDollar(J.MethodInvocation dollar) {
+        if (Wrappers.templateOf(dollar) != null) {
+            return Wrappers.TEMPLATE; // $(SearchBarElement.class) or $("search-bar") of a LitTemplate's tag
+        }
         if (!dollar.getSimpleName().equals("$") || dollar.getArguments().size() != 1
                 || !(dollar.getArguments().get(0) instanceof J.FieldAccess classLiteral)
                 || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
             return null;
         }
         return Wrappers.forElement(element.getFullyQualifiedName());
+    }
+
+    /** The names of the calls chained on the call at the cursor, in order: its filters and terminal, and on. */
+    static java.util.List<String> chainedNames(Cursor start) {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        Cursor c = start;
+        while (c.getParentTreeCursor().getValue() instanceof J.MethodInvocation call && call.getSelect() == c.getValue()) {
+            names.add(call.getSimpleName());
+            c = c.getParentTreeCursor();
+        }
+        return names;
     }
 
     /** A Scope container's {@code $(X.class)} converts when the lookup it starts does. */

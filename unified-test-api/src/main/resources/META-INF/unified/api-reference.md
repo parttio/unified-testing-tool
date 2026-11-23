@@ -15,7 +15,7 @@ Guide: [Navigation, users and windows](https://parttio.github.io/unified-testing
 
 - **Actions:** `navigate(Class<? extends Component>)`, `navigate(Class<? extends Component>, QueryParameters)`, `navigate(Class<? extends Component>, RouteParameters)`, `navigate(Class<? extends Component>, RouteParameters, QueryParameters)`, `navigate(Class<C>, T)`, `navigate(String)`, `pressKey(String)`, `reload()`, `screenshot(Path)`, `step(String, Runnable)`, `waitUntil(BooleanSupplier)`
 - **Reads:** `hasRealBrowser() → boolean`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `openAsUser(String, String...) → UnifiedPage`, `openWindow() → UnifiedPage`, `secret(String) → String`, `tryUnwrap(Class<T>) → Optional<T>`, `unwrap(Class<T>) → T`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`, `openAsUser(String, String...) → UnifiedPage`, `openWindow() → UnifiedPage`, `secret(String) → String`, `tryUnwrap(Class<T>) → Optional<T>`, `unwrap(Class<T>) → T`
 - **Checks, `assertThat(UnifiedPage)`:** `hasNoErrors()`, `hasPath(String)`, `hasQueryParameter(String, String)`, `hasTitle(String)`, `isAt(Class<? extends Component>)`
 
 ## Every Wrapper
@@ -34,7 +34,7 @@ Article, Flow's `Article`. Guide: [Working with components, Plain HTML and text]
 - **Actions**, each with the User Step it reports:
   - `click()`: click article “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedAside`
@@ -45,7 +45,7 @@ Aside, Flow's `Aside`. Guide: [Working with components, Plain HTML and text](htt
 - **Actions**, each with the User Step it reports:
   - `click()`: click aside “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedBigDecimalField`
@@ -99,7 +99,7 @@ Container, Flow's `Component`. Guide: [Finding components, Scopes](https://partt
 
 - **Actions**, each with the User Step it reports:
   - `click()`: click container “…”
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedDatePicker`
@@ -137,7 +137,7 @@ Details, Flow's `Details`. Guide: [Working with components, Tabs and Details](ht
   - `open()`: expand details “…”
   - `toggle()`: toggle details “…”
 - **Reads:** `getSummaryText() → String`, `isOpen() → boolean`
-- **Also:** `content() → Scope`, `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `content() → Scope`, `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper, and `hasSummaryText(String)`, `isClosed()`, `isOpen()`
 
 ### `UnifiedDialog`
@@ -148,7 +148,7 @@ Dialog, Flow's `Dialog`. Guide: [Working with components, Dialogs and notificati
 - **Actions**, each with the User Step it reports:
   - `close()`: close dialog “…”
 - **Reads:** `getHeaderTitle() → String`, `isOpen() → boolean`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper, and `hasHeaderTitle(String)`, `isClosed()`, `isOpen()`
 
 ### `UnifiedDiv`
@@ -159,7 +159,7 @@ Div, Flow's `Div`. Guide: [Working with components, Plain HTML and text](https:/
 - **Actions**, each with the User Step it reports:
   - `click()`: click div “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedFooter`
@@ -170,7 +170,7 @@ Footer, Flow's `Footer`. Guide: [Working with components, Plain HTML and text](h
 - **Actions**, each with the User Step it reports:
   - `click()`: click footer “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedGrid`
@@ -207,7 +207,7 @@ Header, Flow's `Header`. Guide: [Working with components, Plain HTML and text](h
 - **Actions**, each with the User Step it reports:
   - `click()`: click header “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedIntegerField`
@@ -229,7 +229,7 @@ Main, Flow's `Main`. Guide: [Working with components, Plain HTML and text](https
 - **Actions**, each with the User Step it reports:
   - `click()`: click main “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedMenuBar`
@@ -285,7 +285,7 @@ Nav, Flow's `Nav`. Guide: [Working with components, Plain HTML and text](https:/
 - **Actions**, each with the User Step it reports:
   - `click()`: click nav “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedNotification`
@@ -315,7 +315,7 @@ Paragraph, Flow's `Paragraph`. Guide: [Working with components, Plain HTML and t
 - **Actions**, each with the User Step it reports:
   - `click()`: click paragraph “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedRadioButtonGroup`
@@ -336,7 +336,7 @@ Section, Flow's `Section`. Guide: [Working with components, Plain HTML and text]
 - **Actions**, each with the User Step it reports:
   - `click()`: click section “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedSpan`
@@ -347,7 +347,7 @@ Span, Flow's `Span`. Guide: [Working with components, Plain HTML and text](https
 - **Actions**, each with the User Step it reports:
   - `click()`: click span “…”
 - **Reads:** `getText() → String`
-- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
 ### `UnifiedTabSheet`

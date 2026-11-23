@@ -18,6 +18,17 @@ public interface AdapterSession extends AutoCloseable {
     /** The components matching the spec right now, in document order. No waiting. */
     List<UnifiedElement> find(QuerySpec spec);
 
+    /**
+     * The Templates in a scope right now, not entering them (spec 04, "Templates"), for failure messages and the
+     * Findable View: elements with a shadow root of the application's own, not Vaadin's components or dev tools
+     * ({@code vaadin-*}, {@code copilot-*}); on Browserless, the {@code LitTemplate}s. Those inside another
+     * Template are not in it. {@code parent} and {@code inTemplate} are as in {@link QuerySpec}. The default finds
+     * none, so that an adapter outside this repository keeps compiling.
+     */
+    default List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        return List.of();
+    }
+
     void navigate(Class<? extends Component> view);
     void navigate(Class<? extends Component> view, Object urlParameter);
     void navigate(Class<? extends Component> view, RouteParameters parameters);

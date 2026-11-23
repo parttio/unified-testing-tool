@@ -163,7 +163,8 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public String getAttribute(String name) {
-        return element().getAttribute(name);
+        // an @Id component's id is in its binding, not an attribute on the server; a browser reads it as one
+        return "id".equals(name) ? BrowserlessSession.idOf(element()) : element().getAttribute(name);
     }
 
     @Override

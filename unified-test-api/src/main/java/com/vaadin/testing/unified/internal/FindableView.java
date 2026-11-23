@@ -120,7 +120,7 @@ public final class FindableView {
             where = "the page";
         }
         return run.steps().mask(render("Findable view of " + where + " on " + run.toolName(),
-                components(run, null, "page.")));
+                components(run, null, false, "page.")));
     }
 
     /**
@@ -130,7 +130,7 @@ public final class FindableView {
     public static String ofScope(LazyElement container) {
         UnifiedElement scope = container.concrete();
         return container.run().steps().mask(render("Findable view inside " + StepTarget.scopeOf(container) + " on "
-                + container.run().toolName() + "; lookups are on it", components(container.run(), scope, "")));
+                + container.run().toolName() + "; lookups are on it", components(container.run(), scope, ElementSource.entersTemplate(container), "")));
     }
 
     /**
@@ -192,7 +192,7 @@ public final class FindableView {
 
     // ---------------------------------------------------------------- reading
 
-    static List<Line> components(TestRun run, UnifiedElement scope, String prefix) {
+    static List<Line> components(TestRun run, UnifiedElement scope, boolean inTemplate, String prefix) {
         return run.steps().unrecorded(() -> {
             List<OfType> all = new ArrayList<>();
             Set<String> listed = new HashSet<>();
@@ -205,7 +205,7 @@ public final class FindableView {
                     continue; // a custom Wrapper of the same components as one listed already
                 }
                 try {
-                    OfType found = ofType(run, type, annotation, scope);
+                    OfType found = ofType(run, type, annotation, scope, inTemplate);
                     if (found != null) {
                         all.add(found);
                     }
@@ -231,21 +231,42 @@ public final class FindableView {
                 for (Read r : t.reads()) {
                     String lookup = lookups.get(r);
                     lines.add(new Line(description(t, r), lookup != null ? lookup
-                            : apart(run, t, r, scope, prefix, containers)));
+                            : apart(run, t, r, scope, inTemplate, prefix, containers)));
                 }
             }
+            lines.addAll(templates(run, scope, inTemplate, prefix, listed));
             return lines;
         });
     }
 
-    private static OfType ofType(TestRun run, Class<?> type, UnifiedComponent annotation, UnifiedElement scope) {
+    /**
+     * The Templates in the scope, one line each with the lookup that enters it (spec 12, "Findable View"); what is
+     * inside them is listed by {@code describe()} on the Template. A Template the test's own Wrapper lists already
+     * is left out.
+     */
+    private static List<Line> templates(TestRun run, UnifiedElement scope, boolean inTemplate, String prefix,
+            Set<String> listed) {
+        List<Templates.Found> found = Templates.in(run, scope, inTemplate).stream()
+                .filter(t -> listed.stream().noneMatch(key -> key.startsWith(t.tag() + " "))).toList();
+        List<Line> lines = new ArrayList<>();
+        for (Templates.Found t : found) {
+            long alike = found.stream().filter(o -> o.tag().equals(t.tag())).count();
+            lines.add(new Line("Template <" + t.tag() + ">", alike == 1 ? prefix + t.enter()
+                    : "not unique: " + alike + " alike"));
+        }
+        return lines;
+    }
+
+    private static OfType ofType(TestRun run, Class<?> type, UnifiedComponent annotation, UnifiedElement scope,
+            boolean inTemplate) {
         String tag = Wrappers.tagOf(annotation.value(), annotation.tag());
         if (tag == null || tag.equals("*")) {
             return null;
         }
         List<Filter> selector = annotation.selector().isBlank() ? List.of()
                 : WrapperSelector.filters(annotation.selector(), type.getName());
-        List<UnifiedElement> found = run.session().find(new QuerySpec(annotation.value(), tag, selector, scope));
+        List<UnifiedElement> found = run.session().find(new QuerySpec(annotation.value(), tag, selector, scope,
+                inTemplate));
         if (found.isEmpty()) {
             return null;
         }
@@ -446,7 +467,7 @@ public final class FindableView {
      * are alike, and how many of them its container holds when that container is the only one with its test id
      * or id (a container every row shares tells nothing apart, #522).
      */
-    private static String apart(TestRun run, OfType t, Read r, UnifiedElement scope, String prefix,
+    private static String apart(TestRun run, OfType t, Read r, UnifiedElement scope, boolean inTemplate, String prefix,
             List<Container> containers) {
         Namer best = null;
         for (Namer namer : t.namers()) {
@@ -467,7 +488,7 @@ public final class FindableView {
             String value = kind == Filter.Kind.TEST_ID ? r.facts().ancestorTestId() : r.facts().ancestorId();
             Filter filter = new Filter(kind, null, value, true);
             Optional<UnifiedElement> container = safely(() -> single(run.session().find(
-                    new QuerySpec(Component.class, "*", List.of(filter), scope))), Optional.empty());
+                    new QuerySpec(Component.class, "*", List.of(filter), scope, inTemplate))), Optional.empty());
             int inside = container.isPresent() ? countIn(run, t, best, r, container.get()) : 0;
             if (inside == 1) {
                 return prefix + "find(" + UnifiedContainer.class.getSimpleName() + ".class)."

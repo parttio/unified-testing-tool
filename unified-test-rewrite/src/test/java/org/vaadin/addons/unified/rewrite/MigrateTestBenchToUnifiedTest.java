@@ -2339,4 +2339,168 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 spec -> spec.recipe(new MigrateTestBenchToUnified(null, null, true)),
                 text(null, skill, source -> source.path(".claude/skills/resolve-migration-markers/SKILL.md")));
     }
+
+    @Test
+    void idBecomesWithId() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void saves() {
+                        $(ButtonElement.class).id("save").click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ProfileTest {
+
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withId("save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void lookupsInsideALitTemplateEnterIt() {
+        rewriteRun(
+                // the application's template, and the test's page object for its element: the same tag
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.Tag;
+                        import com.vaadin.flow.component.button.Button;
+                        import com.vaadin.flow.component.littemplate.LitTemplate;
+                        import com.vaadin.flow.component.template.Id;
+
+                        @Tag("search-bar")
+                        public class SearchBar extends LitTemplate {
+                            @Id("new")
+                            Button newOrder;
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("search-bar")
+                        public class SearchBarElement extends TestBenchElement {
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.flow.component.textfield.testbench.TextFieldElement;
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class OrdersTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void createsAnOrder() {
+                                SearchBarElement bar = $(SearchBarElement.class).single();
+                                bar.$(ButtonElement.class).id("new").click();
+                                $(SearchBarElement.class).single().$(TextFieldElement.class).id("filter").setValue("open");
+                                $("search-bar").single().$(ButtonElement.class).withText("New order").single().click();
+                            }
+                        }
+                        """,
+                        """
+                        package demo;
+
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.component.UnifiedTemplate;
+                        import com.vaadin.testing.unified.component.UnifiedTextField;
+                        import org.junit.jupiter.api.Test;
+
+                        @UnifiedUITest
+                        class OrdersTest {
+
+                            @Test
+                            void createsAnOrder(UnifiedPage page) {
+                                UnifiedTemplate bar = page.findTemplate(SearchBar.class);
+                                bar.find(UnifiedButton.class).withId("new").click();
+                                page.findTemplate(SearchBar.class).find(UnifiedTextField.class).withId("filter").setValue("open");
+                                // TODO unified: inside a Template, text written in its HTML is empty on Browserless: find it by id to run on every Testing Tool
+                                page.findTemplate(SearchBar.class).find(UnifiedButton.class).withText("New order").click();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void aCustomElementWithoutATemplateKeepsItsMarker() {
+        // no LitTemplate in the sources has the tag: a third-party web component, through the Escape Hatch as before
+        rewriteRun(
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("map-view")
+                        public class MapElement extends TestBenchElement {
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class MapTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void zooms() {
+                                $(MapElement.class).single().$(ButtonElement.class).id("zoom").click();
+                            }
+                        }
+                        """,
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        @UnifiedUITest
+                        class MapTest {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void zooms(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: $(MapElement.class), a custom element: write a Wrapper for it (ADR 0003)
+                                testBench.$(MapElement.class).single().$(ButtonElement.class).id("zoom").click();
+                            }
+                        }
+                        """));
+    }
 }
