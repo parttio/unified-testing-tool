@@ -115,6 +115,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `$(TextField.class).withCaption("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | `withClassName("a", "b")`, or one name with a space | `withClassNames("a", "b")`: the Unified `withClassName` takes one class name, as Flow's `addClassName` does |
 | `test(component).setValue("x")`, `.click()`, `.check()` | `component.setValue("x")`, `.click()`, `.check()` |
+| `test(view.panel.search.newOrder).click()`, a getter on such a chain: a `LitTemplate`'s `@Id` field *(unreleased)* | `page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new").click()`: the id from the field's `@Id`, each Template bound with `@Id` entered from the one holding it ([Templates](guide/finding-components.md#templates)); `OrdersView view = navigate(..)` becomes `page.navigate(..)` when the view only starts such chains |
 | component getters: `getValue()`, `getText()`, `isEnabled()`, Checkbox `getValue()`, Dialog `isOpened()` | Wrapper getters: `getValue()`, `getText()`, `isEnabled()`, `isChecked()`, `isOpen()` |
 | a local `TextField name = $(..)...` | `UnifiedTextField name = page.find(..)...` |
 | `first()`, `last()`, `atIndex(n)` | the same lookup, with a `was first()` Migration Marker: the lookup fails when several components match |

@@ -112,6 +112,8 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `$(TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | `withClassName("a", "b")`, or one name with a space | `withClassNames("a", "b")`: the Unified `withClassName` takes one class name, as Flow's `addClassName` does |
 | `first()`, `waitForFirst()` | the same lookup, with a `was first()` Migration Marker: the lookup fails when several components match |
+| `id("save")` *(unreleased)* | `withId("save")` |
+| `$(SearchBarElement.class)` or `$("search-bar")`, when a `LitTemplate` in the sources has `@Tag("search-bar")` *(unreleased)* | `page.findTemplate(SearchBar.class)`, and `bar.$(ButtonElement.class).id("new")` on it `bar.find(UnifiedButton.class).withId("new")` ([Templates](guide/finding-components.md#templates)); a text or label filter there gets a Migration Marker |
 | `Assertions.assertEquals(x, el.getValue())`, `getText()`, `assertTrue(cb.isChecked())`, ... | retrying `assertThat(el).hasValue(x)`, `hasText(x)`, `isChecked()`, ... |
 | a local `TextFieldElement name = ...` | `UnifiedTextField name = ...` |
 | `@BeforeEach` and helper methods that use TestBench | helpers taking `UnifiedPage page`; a `@BeforeEach` becomes a call at the start of each test |
@@ -157,6 +159,7 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 |---|---|
 | `TestBench Escape Hatch: <call>` | Rewrite the call with the Unified API if it can express it, then drop the Escape Hatch and `@RequiresTestingTool` |
 | `..., a custom element: write a Wrapper for it (ADR 0003)` | Write a [Wrapper](spec/06-wrappers.md) for the component |
+| `inside a Template, text written in its HTML is empty on Browserless: find it by id to run on every Testing Tool` *(unreleased)* | If the text is set from Java, keep the filter. If the template's HTML writes it, find the component by its `@Id` with `withId(..)` instead, or keep the filter and declare `@RequiresBrowser` |
 | `was first(); the lookup fails when several components match` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `TestBench page object: new LoginPage(this)` | Convert the page object by hand, or rerun with `includePageObjects` |
