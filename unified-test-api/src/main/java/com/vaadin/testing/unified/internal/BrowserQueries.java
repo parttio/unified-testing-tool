@@ -48,8 +48,9 @@ public final class BrowserQueries {
                     : "[class~=" + quote(f.value()) + "]";
             case THEME -> f.value().isBlank() || f.value().matches(".*\\s.*") ? null
                     : "[theme~=" + quote(f.value()) + "]";
-            case ATTRIBUTE -> ATTRIBUTE_NAME.matcher(f.name()).matches() ? "[" + f.name() + "=" + quote(f.value()) + "]"
-                    : null;
+            // without a value, "has the attribute": checked in the page (MATCH), as Dramafinder's queries take a value
+            case ATTRIBUTE -> f.value() != null && ATTRIBUTE_NAME.matcher(f.name()).matches()
+                    ? "[" + f.name() + "=" + quote(f.value()) + "]" : null;
             default -> null;
         };
     }
@@ -347,7 +348,7 @@ public final class BrowserQueries {
                   case 'ID': return e.getAttribute('id') === f.value;
                   case 'CLASS_NAME': return e.classList.contains(f.value);
                   case 'THEME': return (e.getAttribute('theme') || '').split(/\\s+/).includes(f.value);
-                  case 'ATTRIBUTE': return e.getAttribute(f.name) === f.value;
+                  case 'ATTRIBUTE': return f.value == null ? e.hasAttribute(f.name) : e.getAttribute(f.name) === f.value;
                   default: return false;
                 }
               };

@@ -303,7 +303,7 @@ final class BrowserlessSession implements AdapterSession {
                 String theme = e.getAttribute("theme");
                 yield theme != null && java.util.Arrays.asList(theme.split("\\s+")).contains(f.value());
             }
-            case ATTRIBUTE -> f.value().equals(e.getAttribute(f.name()));
+            case ATTRIBUTE -> f.value() == null ? e.hasAttribute(f.name()) : f.value().equals(e.getAttribute(f.name()));
             case ACCESSIBLE_NAME -> f.matches(BrowserlessElement.accessibleName(c));
         };
     }

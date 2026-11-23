@@ -79,7 +79,8 @@ final class FakePage {
                 .filter(c -> spec.tag().equals("*") || spec.tag().equals(c.get("tag")))
                 .filter(c -> spec.parent() == null || spec.parent().getProperty("testId") == null
                         || spec.parent().getProperty("testId").equals(c.get("in")))
-                .filter(c -> spec.filters().stream().allMatch(f -> f.matches(c.get(property(f)))))
+                .filter(c -> spec.filters().stream().allMatch(f -> f.kind() == Filter.Kind.ATTRIBUTE && f.value() == null
+                        ? c.containsKey(f.name()) : f.matches(c.get(property(f)))))
                 .map(this::element)
                 .toList();
     }

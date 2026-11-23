@@ -4,7 +4,8 @@ import java.util.regex.Pattern;
 
 /**
  * One filter of a query, as the adapter receives it. {@code exact} is false for the {@code ...Containing}
- * variants, which match case-insensitively (as in Dramafinder). {@code name} is used by {@link Kind#ATTRIBUTE}.
+ * variants, which match case-insensitively (as in Dramafinder). {@code name} is used by {@link Kind#ATTRIBUTE}; an
+ * {@code ATTRIBUTE} filter whose {@code value} is null matches an element that has the attribute, whatever its value.
  */
 public record Filter(Kind kind, String name, String value, boolean exact) {
 
