@@ -59,9 +59,9 @@ page becomes the notes of the next alpha.
 
 - **`UnifiedDatePicker.setValue(..)` sets a picker whose calendar is open, though its field is hidden**
   ([#516](https://github.com/parttio/unified-testing-tool/issues/516)): such as a week picker an application opens
-  from a badge of its own. Auto-Wait waits for the field to be visible and enabled, or for the calendar to be open;
-  the date is set as a pick in the calendar sets it, and an open calendar closes afterwards, on every Testing Tool.
-  A hidden picker whose calendar is closed still fails as hidden.
+  from a badge of its own. Auto-Wait waits for the field to be visible and enabled, or for the calendar to be open.
+  With the field hidden, the date is set as a pick in the calendar sets it and the calendar closes; a visible field
+  is set as before, in as many round trips. A hidden picker whose calendar is closed still fails as hidden.
 - **Failure evidence is in the test's own evidence directory** ([#514](https://github.com/parttio/unified-testing-tool/issues/514)):
   `<evidence dir>/<test class>/<test method>/failure.png` (browsers) or `failure.tree.txt` (Browserless), and
   `failure.view.txt`, next to `user-steps.txt`, instead of `<fully qualified class>.<method>.*` at the evidence
