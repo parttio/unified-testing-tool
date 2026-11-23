@@ -24,6 +24,13 @@ import org.openrewrite.java.tree.JavaType;
 public class TestBenchLookupsToUnified extends Recipe {
 
     private static final MethodMatcher DOLLAR = new MethodMatcher("com.vaadin.testbench.HasElementQuery $(java.lang.Class)", true);
+    /** {@code $("search-bar")}: converted when the tag is a {@code LitTemplate}'s. */
+    private static final MethodMatcher DOLLAR_TAG = new MethodMatcher("com.vaadin.testbench.HasElementQuery $(java.lang.String)", true);
+
+    /** On the inner lookup of a Template: what it may not find on Browserless (spec 04, "Templates"). */
+    static final String TEXT_IN_TEMPLATE = "inside a Template, text written in its HTML is empty on Browserless: find it"
+            + " by id to run on every Testing Tool";
+    private static final Set<String> TEXT_FILTERS = Set.of("withText", "withLabel", "withCaption");
 
     private static final Set<String> FIRST = Set.of("first", "waitForFirst");
 
@@ -40,6 +47,12 @@ public class TestBenchLookupsToUnified extends Recipe {
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
+            @Override
+            public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext ctx) {
+                // the LitTemplates the scanners found, for the helpers that tell a Template's element
+                return LitTemplates.with(ctx, () -> super.visitCompilationUnit(cu, ctx));
+            }
+
             @Override
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 var markers = MigrationMarkers.collect(getCursor());
@@ -69,11 +82,12 @@ public class TestBenchLookupsToUnified extends Recipe {
                             && (!FIRST.contains(m.getSimpleName()) || MigrationMarkers.add(getCursor(),
                                     "was " + m.getSimpleName() + "(); the lookup fails when several components match"))) {
                         // the Wrapper is the lookup: no terminal (ADR 0007); several class names: withClassNames
-                        return Wrappers.withClassNames(lookup).withPrefix(m.getPrefix());
+                        return Wrappers.withoutTerminal(m, Wrappers.withClassNames(lookup));
                     }
                     return m;
                 }
-                if (!DOLLAR.matches(method) || !hasPageParameter()) {
+                boolean template = Wrappers.templateOf(method) != null;
+                if (!(DOLLAR.matches(method) || template && DOLLAR_TAG.matches(method)) || !hasPageParameter()) {
                     return m;
                 }
                 Wrappers.Wrapper wrapper = Chains.ofDollar(method);
@@ -97,10 +111,27 @@ public class TestBenchLookupsToUnified extends Recipe {
                     scope = container.fqn();
                     receiver = m.getSelect();
                 }
-                String element = ((J.FieldAccess) method.getArguments().get(0)).getTarget().getType() instanceof JavaType.FullyQualified t
-                        ? t.getFullyQualifiedName() : null;
+                if (scope.equals(Wrappers.UNIFIED_TEMPLATE)
+                        && Chains.chainedNames(getCursor()).stream().anyMatch(TEXT_FILTERS::contains)) {
+                    MigrationMarkers.add(getCursor(), TEXT_IN_TEMPLATE);
+                }
+                String element = method.getArguments().get(0) instanceof J.FieldAccess literal
+                        && literal.getTarget().getType() instanceof JavaType.FullyQualified t ? t.getFullyQualifiedName() : null;
+                if (element != null) {
+                    maybeRemoveImport(element);
+                }
+                if (template) {
+                    // the Template's element: enter the Template (spec 04, "Templates")
+                    String templateFqn = Wrappers.templateOf(method);
+                    maybeAddImport(templateFqn);
+                    return JavaTemplate.builder("#{any(" + scope + ")}.findTemplate("
+                                    + templateFqn.substring(templateFqn.lastIndexOf('.') + 1) + ".class)")
+                            .imports(templateFqn)
+                            .javaParser(Stubs.parser(Stubs.classStub(templateFqn)))
+                            .build()
+                            .apply(getCursor(), m.getCoordinates().replace(), receiver);
+                }
                 maybeAddImport(wrapper.fqn());
-                maybeRemoveImport(element);
                 return JavaTemplate.builder("#{any(" + scope + ")}.find(" + wrapper.simpleName() + ".class)")
                         .imports(wrapper.fqn())
                         .javaParser(Stubs.parser(Stubs.interfaceStub(wrapper.fqn())))
@@ -117,7 +148,8 @@ public class TestBenchLookupsToUnified extends Recipe {
                 org.openrewrite.java.tree.Expression c = converted.getSelect();
                 while (o instanceof J.MethodInvocation oc && c instanceof J.MethodInvocation cc) {
                     if (oc.getSimpleName().equals("$")) {
-                        return DOLLAR.matches(oc) && cc.getSimpleName().equals("find");
+                        return DOLLAR.matches(oc) && cc.getSimpleName().equals("find")
+                                || cc.getSimpleName().equals("findTemplate");
                     }
                     o = oc.getSelect();
                     c = cc.getSelect();

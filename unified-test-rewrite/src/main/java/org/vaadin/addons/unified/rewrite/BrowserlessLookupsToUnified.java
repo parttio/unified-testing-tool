@@ -43,6 +43,12 @@ public class BrowserlessLookupsToUnified extends Recipe {
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
             @Override
+            public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext ctx) {
+                // the LitTemplates the scanners found, for Component References to a Template's @Id fields
+                return LitTemplates.with(ctx, () -> super.visitCompilationUnit(cu, ctx));
+            }
+
+            @Override
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 if (!Pages.hasPageParameter(method) && getCursor().getNearestMessage(Browserless.PAGE_OBJECT) == null) {
                     return method;
@@ -117,6 +123,17 @@ public class BrowserlessLookupsToUnified extends Recipe {
                         // no Browserless types left behind, so their imports go
                         return operation(m, component, wrapper, method, unified);
                     }
+                    // test(view.panel.search.newOrder) → the lookup inside the Templates (spec 04, "Templates")
+                    Cursor argument = new Cursor(new Cursor(getCursor(), test), test.getArguments().get(0));
+                    if (wrapper == null && TemplateFields.converts(argument)) {
+                        TemplateFields.Chain chain = TemplateFields.of(test.getArguments().get(0));
+                        Expression component = chain.apply(new Cursor(new Cursor(getCursor(), convertedTest),
+                                convertedTest.getArguments().get(0)));
+                        chain.templates().forEach(this::maybeAddImport);
+                        maybeAddImport(chain.wrapper().fqn());
+                        return operation(m, component.withPrefix(convertedTest.getPrefix()), chain.wrapper(), method,
+                                Browserless.operation(chain.wrapper(), method));
+                    }
                     return m;
                 }
                 // a tester or locator local: t.size() → t.getRowCount(), t.clickRow(i) → t.row(i).click()
@@ -131,8 +148,23 @@ public class BrowserlessLookupsToUnified extends Recipe {
                 if (method.getSelect() != null && Browserless.noArguments(method)) {
                     Browserless.Wrapper wrapper = Browserless.convertibleElement(getCursor(), method.getSelect());
                     String unified = wrapper == null ? null : wrapper.getters().get(method.getSimpleName());
+                    if (unified != null && unified.equals(m.getSimpleName()) && m.getMethodType() != null
+                            && TypeUtils.isOfClassType(m.getMethodType().getDeclaringType(), wrapper.fqn())) {
+                        return m; // already the Wrapper's getter: a later cycle changes nothing
+                    }
                     if (unified != null) {
                         return unifiedCall(m, wrapper.fqn(), unified,
+                                m.getMethodType() == null ? null : m.getMethodType().getReturnType());
+                    }
+                    // view.panel.search.filter.getValue() → the lookup inside the Templates, and its getter
+                    Cursor select = new Cursor(getCursor(), method.getSelect());
+                    if (wrapper == null && TemplateFields.converts(select)) {
+                        TemplateFields.Chain chain = TemplateFields.of(method.getSelect());
+                        Expression component = chain.apply(new Cursor(getCursor(), m.getSelect()));
+                        chain.templates().forEach(this::maybeAddImport);
+                        maybeAddImport(chain.wrapper().fqn());
+                        return unifiedCall(m.withSelect(component.withPrefix(m.getSelect().getPrefix())),
+                                chain.wrapper().fqn(), chain.wrapper().getters().get(method.getSimpleName()),
                                 m.getMethodType() == null ? null : m.getMethodType().getReturnType());
                     }
                 }
