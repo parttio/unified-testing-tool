@@ -4,14 +4,17 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaAccess;
+import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaCall;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
+import com.tngtech.archunit.core.domain.JavaEnumConstant;
 import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.domain.PackageMatcher;
 import com.tngtech.archunit.core.domain.properties.CanBeAnnotated;
+import com.tngtech.archunit.core.domain.properties.HasAnnotations;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.CompositeArchRule;
@@ -24,12 +27,14 @@ import com.vaadin.testing.unified.UnifiedUITest;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -121,6 +126,14 @@ public final class UnifiedStyleRules {
      * {@code waitForTimeout}, {@code waitForSelector}, {@code Locator.waitFor}; TestBench's {@code waitUntil},
      * {@code waitForFirst}; Selenium's {@code WebDriverWait} and {@code FluentWait}), no Awaitility. The Unified
      * API waits by itself, and {@code page.waitUntil(..)} covers the rest.
+     * <p>
+     * Except in Escape Hatch code, which gets none of the Unified API's waiting: a Testing Tool's own wait API is
+     * allowed in code that declares {@code @RequiresTestingTool} for that Testing Tool (TestBench and Selenium:
+     * {@code SELENIUM}; Playwright: {@code PLAYWRIGHT}). That is a test method with the annotation, or on its class
+     * or an enclosing class, and a method of the class that only such tests reach, directly or through the class's
+     * own methods, as for {@link #TOOL_CODE_NEEDS_CAPABILITY}. Lifecycle methods and constructors run for every
+     * test, so they need the annotation on the class. {@code Thread.sleep(..)} and Awaitility fail anywhere, and
+     * so does a wait in a helper that a test without the annotation also reaches.
      */
     public static final ArchRule NO_RAW_WAITS = classes().that(UNIFIED_UI_TESTS)
             .should(new ArchCondition<JavaClass>("not wait with Thread.sleep or a Testing Tool's wait API") {
@@ -228,36 +241,129 @@ public final class UnifiedStyleRules {
 
     // ---------------------------------------------------------------- No raw waits
 
+    /** A raw wait, and the Testing Tool whose wait API it is ({@code null} for a sleep or Awaitility). */
+    private record Wait(String what, String tool) {}
+
     private static void checkRawWaits(JavaClass testClass, ConditionEvents events) {
+        Map<JavaCodeUnit, List<Set<String>>> declared = null;
         Set<String> reported = new HashSet<>();
         for (JavaAccess<?> access : testClass.getAccessesFromSelf()) {
-            Optional<String> wait = rawWait(access);
-            String message = "No raw waits: " + name(access.getOrigin()) + " waits with " + wait.orElse("") + " "
-                    + access.getSourceCodeLocation() + "; let the Unified API wait: assertThat(..) retries until "
-                    + "the timeout, page.waitUntil(..) waits for anything else";
+            Optional<Wait> wait = rawWait(access);
+            if (wait.isEmpty()) {
+                continue;
+            }
+            String tool = wait.get().tool();
+            List<Set<String>> reachedFrom = List.of();
+            if (tool != null) {
+                if (declared == null) {
+                    declared = declaredTools(testClass);
+                }
+                reachedFrom = declared.getOrDefault(access.getOrigin(), List.of());
+                if (!reachedFrom.isEmpty() && reachedFrom.stream().allMatch(tools -> tools.contains(tool))) {
+                    continue; // Escape Hatch code that declares its Testing Tool
+                }
+            }
+            Set<String> others = new TreeSet<>();
+            reachedFrom.stream().filter(tools -> !tools.contains(tool)).forEach(others::addAll);
+            String another = others.isEmpty() ? ""
+                    : ", a " + tool + " wait in code that declares @RequiresTestingTool(" + String.join(", ", others)
+                            + ")";
+            String message = "No raw waits: " + name(access.getOrigin()) + " waits with " + wait.get().what() + " "
+                    + access.getSourceCodeLocation() + another + "; let the Unified API wait: assertThat(..) retries "
+                    + "until the timeout, page.waitUntil(..) waits for anything else";
             // new WebDriverWait(..).until(..) is one wait
-            if (wait.isPresent() && reported.add(message)) {
+            if (reported.add(message)) {
                 events.add(SimpleConditionEvent.violated(access, message));
             }
         }
     }
 
-    private static Optional<String> rawWait(JavaAccess<?> access) {
+    private static Optional<Wait> rawWait(JavaAccess<?> access) {
         JavaClass owner = access.getTargetOwner();
         String name = access.getTarget().getName();
         if (AWAITILITY.matches(owner.getPackageName())) {
-            return Optional.of("Awaitility (" + owner.getSimpleName() + "." + name + ")");
+            return Optional.of(new Wait("Awaitility (" + owner.getSimpleName() + "." + name + ")", null));
         }
         for (JavaClass type : typeHierarchy(owner)) {
             if (WAIT_CLASSES.contains(type.getName())) {
-                return Optional.of(type.getSimpleName());
+                return Optional.of(new Wait(type.getSimpleName(), toolOf(type)));
             }
             Predicate<String> waits = TOOL_WAITS.get(type.getName());
             if (access instanceof JavaCall<?> && waits != null && waits.test(name)) {
-                return Optional.of(type.getSimpleName() + "." + name + "(..)");
+                return Optional.of(new Wait(type.getSimpleName() + "." + name + "(..)", toolOf(type)));
             }
         }
         return Optional.empty();
+    }
+
+    /** The Testing Tool that has {@code type}: from its package, or from the name of an Escape Hatch. */
+    private static String toolOf(JavaClass type) {
+        return toolType(type, "", null, "").map(ToolUse::tool)
+                .orElseGet(() -> type.getSimpleName().endsWith("EscapeHatch")
+                        ? toolOfEscapeHatch(type.getSimpleName())
+                        : null);
+    }
+
+    /**
+     * For each code unit of the test class (or, for an anonymous or local class, of the class it is in), the
+     * Testing Tools declared by each test, lifecycle method or constructor that reaches it, directly or through the
+     * class's own code units. A code unit no test reaches has no entry.
+     */
+    private static Map<JavaCodeUnit, List<Set<String>>> declaredTools(JavaClass testClass) {
+        JavaClass home = testClass;
+        while ((home.isAnonymousClass() || home.isLocalClass()) && home.getEnclosingClass().isPresent()) {
+            home = home.getEnclosingClass().get();
+        }
+        Set<String> classTools = classTools(home);
+        Map<JavaCodeUnit, Set<String>> starts = new HashMap<>();
+        home.getConstructors().forEach(constructor -> starts.put(constructor, classTools));
+        home.getStaticInitializer().ifPresent(initializer -> starts.put(initializer, classTools));
+        for (JavaMethod method : home.getMethods()) {
+            if (isTestMethod(method)) {
+                Set<String> tools = new HashSet<>(classTools);
+                tools.addAll(tools(method));
+                starts.put(method, tools);
+            } else if (isLifecycleMethod(method)) {
+                starts.put(method, classTools);
+            }
+        }
+        Map<JavaCodeUnit, List<Set<String>>> declared = new HashMap<>();
+        for (Map.Entry<JavaCodeUnit, Set<String>> start : starts.entrySet()) {
+            for (Reach reach : reachable(start.getKey(), home)) {
+                declared.computeIfAbsent(reach.codeUnit(), codeUnit -> new ArrayList<>()).add(start.getValue());
+            }
+        }
+        return declared;
+    }
+
+    /** The Testing Tools in {@code @RequiresTestingTool} on the class, as {@link #carries} finds it. */
+    private static Set<String> classTools(JavaClass javaClass) {
+        Set<String> tools = new HashSet<>();
+        selfAndEnclosing(javaClass).stream()
+                .flatMap(c -> Stream.concat(Stream.concat(Stream.of(c), c.getAllRawSuperclasses().stream()),
+                        c.getAllRawInterfaces().stream()))
+                .forEach(c -> tools.addAll(tools(c)));
+        return tools;
+    }
+
+    /** The Testing Tools in {@code @RequiresTestingTool} on {@code element}, directly or as meta-annotation. */
+    private static Set<String> tools(HasAnnotations<?> element) {
+        Set<String> tools = new HashSet<>();
+        Deque<JavaAnnotation<?>> annotations = new ArrayDeque<>(element.getAnnotations());
+        Set<String> seen = new HashSet<>();
+        while (!annotations.isEmpty()) {
+            JavaAnnotation<?> annotation = annotations.removeFirst();
+            JavaClass type = annotation.getRawType();
+            if (type.getName().equals(REQUIRES_TESTING_TOOL)) {
+                annotation.get("value").filter(Object[].class::isInstance).map(Object[].class::cast).stream()
+                        .flatMap(Stream::of)
+                        .filter(JavaEnumConstant.class::isInstance)
+                        .forEach(tool -> tools.add(((JavaEnumConstant) tool).name()));
+            } else if (seen.add(type.getName())) {
+                annotations.addAll(type.getAnnotations());
+            }
+        }
+        return tools;
     }
 
     private static List<JavaClass> typeHierarchy(JavaClass javaClass) {
@@ -313,7 +419,15 @@ public final class UnifiedStyleRules {
 
     /** The first Testing Tool code {@code start} reaches through the test class's own code units. */
     private static Optional<ToolUse> reachedToolUse(JavaCodeUnit start, JavaClass testClass) {
-        Set<Reach> seen = new HashSet<>();
+        return reachable(start, testClass).stream()
+                .map(reach -> toolUse(reach.codeUnit(), reach.inOptionalCheck()))
+                .flatMap(Optional::stream)
+                .findFirst();
+    }
+
+    /** What {@code start} reaches through the test class's own code units, {@code start} first, nearest first. */
+    private static Set<Reach> reachable(JavaCodeUnit start, JavaClass testClass) {
+        Set<Reach> seen = new LinkedHashSet<>();
         Deque<Reach> queue = new ArrayDeque<>(List.of(new Reach(start, false)));
         while (!queue.isEmpty()) {
             Reach reach = queue.removeFirst();
@@ -321,10 +435,6 @@ public final class UnifiedStyleRules {
                 continue;
             }
             JavaCodeUnit codeUnit = reach.codeUnit();
-            Optional<ToolUse> use = toolUse(codeUnit, reach.inOptionalCheck());
-            if (use.isPresent()) {
-                return use;
-            }
             // what an optional check calls is part of it
             boolean inOptionalCheck = reach.inOptionalCheck() || callsTryUnwrap(codeUnit);
             Set<JavaAccess<?>> calls = new LinkedHashSet<>(codeUnit.getCallsFromSelf());
@@ -343,7 +453,7 @@ public final class UnifiedStyleRules {
                 }
             }
         }
-        return Optional.empty();
+        return seen;
     }
 
     /** A code unit the walk reached, and whether it got there through an optional check ({@code tryUnwrap}). */

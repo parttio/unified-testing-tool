@@ -222,8 +222,8 @@ change nothing unless asked. A test you wrote yourself gets the same review befo
    - a lookup by test id, id, class name or CSS where the user reads a label, a text or a name;
    - `all().get(..)`, or any pick by position;
    - a getter with `assertEquals`, `assertTrue` or AssertJ where `assertThat(wrapper)` has the check;
-   - `Thread.sleep(..)`, a Testing Tool's own wait, or a `withTimeout(..)` or run timeout raised without a comment
-     that says what is slow;
+   - `Thread.sleep(..)`, a Testing Tool's own wait outside code that declares that Testing Tool, or a
+     `withTimeout(..)` or run timeout raised without a comment that says what is slow;
    - an Escape Hatch without `@RequiresTestingTool` and a comment saying why, including one in a `…Tasks` class or
      a page object, which the style rules don't follow;
    - the same user work copied into several tests instead of one User Task.
@@ -254,6 +254,11 @@ void showsTheRetryBanner(UnifiedPage page) {
     ...
 }
 ```
+
+Escape Hatch code gets none of the Unified API's waiting, so it waits with its Testing Tool's own API
+(`waitForFirst()`, `waitUntil(..)`, `Locator.waitFor()`). The style rules accept that wait where the test, its class,
+or every test reaching the helper declares that Testing Tool; `Thread.sleep(..)` and another Testing Tool's waits
+still fail.
 
 For an extra check that only some Testing Tools can make, use `tryUnwrap(..)`; the test keeps running everywhere:
 `name.tryUnwrap(TextField.class).ifPresent(field -> assertEquals("Name", field.getLabel()));`.

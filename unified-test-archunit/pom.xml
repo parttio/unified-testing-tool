@@ -39,6 +39,12 @@
             <artifactId>dramafinder</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- TestBenchEscapeHatch and TestBench's ElementQuery: the waits Escape Hatch code keeps -->
+        <dependency>
+            <groupId>org.vaadin.addons</groupId>
+            <artifactId>unified-test-selenium</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-support</artifactId>

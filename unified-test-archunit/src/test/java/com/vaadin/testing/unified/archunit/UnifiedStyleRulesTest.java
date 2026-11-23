@@ -10,6 +10,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.lang.ArchRule;
+import com.vaadin.testing.unified.archunit.fixtures.DeclaredToolWaitsFixture;
 import com.vaadin.testing.unified.archunit.fixtures.GeneratedNamesFixture;
 import com.vaadin.testing.unified.archunit.fixtures.LifecycleToolCodeFixture;
 import com.vaadin.testing.unified.archunit.fixtures.MissingSentenceFixture;
@@ -20,6 +21,7 @@ import com.vaadin.testing.unified.archunit.fixtures.RawWaitsFixture;
 import com.vaadin.testing.unified.archunit.fixtures.SentencesFixture;
 import com.vaadin.testing.unified.archunit.fixtures.ToolCodeDeclaredFixture;
 import com.vaadin.testing.unified.archunit.fixtures.ToolCodeFixture;
+import com.vaadin.testing.unified.archunit.fixtures.UndeclaredToolWaitsFixture;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +47,7 @@ class UnifiedStyleRulesTest {
         UnifiedStyleRules.ALL.check(fixture(SentencesFixture.class));
         UnifiedStyleRules.ALL.check(fixture(GeneratedNamesFixture.class));
         UnifiedStyleRules.ALL.check(fixture(ToolCodeDeclaredFixture.class));
+        UnifiedStyleRules.ALL.check(fixture(DeclaredToolWaitsFixture.class));
     }
 
     @Test
@@ -96,6 +99,39 @@ class UnifiedStyleRulesTest {
             assertTrue(all.contains(wait), wait + " in\n" + all);
         }
         assertEquals(0, violations(UnifiedStyleRules.TOOL_CODE_NEEDS_CAPABILITY, RawWaitsFixture.class).size());
+    }
+
+    @Test
+    @DisplayName("A Testing Tool's own waits pass in code that declares that Testing Tool")
+    void declaredToolWaits() {
+        List<String> violations = violations(UnifiedStyleRules.NO_RAW_WAITS, DeclaredToolWaitsFixture.class);
+
+        assertEquals(List.of(), violations);
+        UnifiedStyleRules.ALL.check(fixture(DeclaredToolWaitsFixture.class));
+    }
+
+    @Test
+    @DisplayName("A Testing Tool's waits fail where the code declares another Testing Tool or none, and sleeps fail anywhere")
+    void undeclaredToolWaits() {
+        List<String> violations = violations(UnifiedStyleRules.NO_RAW_WAITS, UndeclaredToolWaitsFixture.class);
+        String all = String.join("\n", violations);
+
+        assertEquals(6, violations.size(), all);
+        // no @RequiresTestingTool: the message stays as it is
+        String fixture = UndeclaredToolWaitsFixture.class.getName();
+        for (String wait : List.of(".waitsUndeclared(UnifiedPage) waits with TestBenchEscapeHatch.waitUntil(..) (",
+                ".waitsUndeclared(UnifiedPage) waits with ElementQuery.waitForFirst(..) (",
+                ".waitForTheButton(UnifiedPage) waits with ElementQuery.waitForFirst(..) (")) {
+            assertTrue(violations.stream().anyMatch(v -> v.startsWith("No raw waits: " + fixture + wait)
+                    && v.contains("); let the Unified API wait")), wait + " in\n" + all);
+        }
+        // another Testing Tool declared: the message names the one the wait belongs to
+        assertTrue(violations.stream().anyMatch(v -> v.contains(".waitsInAnotherTestingTool(UnifiedPage) waits with "
+                + "TestBenchEscapeHatch.waitUntil(..)") && v.contains("a SELENIUM wait in code that declares "
+                        + "@RequiresTestingTool(PLAYWRIGHT)")), all);
+        assertTrue(all.contains(".sleepsInTestBench(UnifiedPage) waits with Thread.sleep(..)"), all);
+        // a helper reached from a SELENIUM test and an undeclared one
+        assertTrue(all.contains(".waitUntilSaved(UnifiedPage) waits with TestBenchEscapeHatch.waitUntil(..)"), all);
     }
 
     @Test
