@@ -7,6 +7,7 @@ Every Wrapper of the Unified API with its filters, actions, reads and checks, an
 - **Reads** return what is there right now, without waiting. Assert with a check instead when you can.
 - **Checks** are `assertThat(wrapper).…` from `UnifiedAssertions`; they retry until the timeout and are User Steps (`see …`).
 - A component without a Wrapper: `page.findComponent(FlowClass.class)`, with the filters of every Wrapper.
+- **Evidence**: a failed test leaves a screenshot (browser) or the component tree (Browserless) under `target/surefire-reports/unified-evidence/`. For every User Step, failed or not, set `vaadin.testing.user-steps.snapshots=true`; for Playwright's trace (`trace.zip`), set `vaadin.testing.playwright.trace=on` or `on-failure`. Every `vaadin.testing.*` setting, with its default: the [configuration guide](https://parttio.github.io/unified-testing-tool/guide/configuration/).
 
 ## The page: `UnifiedPage`
 
