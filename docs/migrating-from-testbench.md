@@ -194,7 +194,7 @@ Each Spring context a run starts also starts the application's server. Keep the 
 
 ## The agent skill
 
-`resolve-migration-markers` is a [Claude Code](https://claude.com/claude-code) skill that works through the Migration Markers: it resolves each one into Unified API code, or keeps the Escape Hatch and replaces the marker with `// Escape Hatch kept: <reason>`. It runs the tests it changed on Browserless and Playwright, and reports what it did.
+`resolve-migration-markers` is a [Claude Code](https://claude.com/claude-code) skill that works through the Migration Markers: it resolves each one into Unified API code, or keeps the Escape Hatch and replaces the marker with `// Escape Hatch kept: <reason>`. It proves each change on Browserless and Playwright, and on Selenium while a test still declares `@RequiresTestingTool(SELENIUM)` or uses a `TestBenchEscapeHatch`, then runs the whole suite on the same Testing Tools and the style rules (`UnifiedStyleRules.ALL`), and reports what it did. *(unreleased)* It runs the `*IT` classes the way the project does, through Failsafe: `mvn verify -Pit -Dit.test=<Class>` for one class, `mvn verify -Pit` for the suite (without `-Pit` when no profile binds Failsafe), each with `-Dvaadin.testing.tool=playwright` or `selenium` for those Testing Tools. A run that counted 0 UI tests fails the proof: `mvn test` alone runs none of the `*IT` classes.
 
 Add `addAgentSkill: true` to the recipe's options (see **Run it**): the migration then also writes `.claude/skills/resolve-migration-markers/SKILL.md`, the version matching your recipe's markers. In Claude Code, in the migrated project:
 

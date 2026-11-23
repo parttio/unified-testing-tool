@@ -17,11 +17,15 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
 
 1. **List the markers.** Search the test sources for `TODO unified:`. Write the list down: file, line, marker text. Done when the search and your list agree.
 2. **Resolve or keep each marker,** using the reference below for its kind. Work one test class at a time, and run that class's tests (step 3) before the next. Done when no `TODO unified:` is left.
-3. **Prove it.** For every test class you changed, run it on Browserless and on Playwright:
-   `mvn test -Dtest=<Class>` and `mvn test -Dtest=<Class> -Dvaadin.testing.tool=playwright`.
-   A test passes, or is skipped because it still declares `@RequiresTestingTool`. When one fails, fix it or put the Escape Hatch back with an explanation. Remove a `@RequiresTestingTool(TestingTool.PLAYWRIGHT)` only once the test passes on both. Done when every changed class passes on both.
-   Last, run the whole test suite on both: `mvn test` and `mvn test -Dvaadin.testing.tool=playwright`. A per-class run can't show test data one class leaves behind for the next. Done when both pass.
-4. **Report** a table: marker, outcome (resolved or kept), what you changed.
+3. **Prove it.** First find how the project runs its UI tests, and use that runner for every run below:
+   - **Failsafe**, when the classes are named `*IT` or the pom binds `maven-failsafe-plugin`, often in a profile (Vaadin's starters: `-Pit`). One class: `mvn verify -P<profile> -Dit.test=<Class>`; the whole suite: `mvn verify -P<profile>`. Leave out `-P<profile>` when the plugin is bound outside a profile.
+   - **Surefire** otherwise. One class: `mvn test -Dtest=<Class>`; the whole suite: `mvn test`.
+
+   Run each command on Browserless (the default) and again with `-Dvaadin.testing.tool=playwright`. While a class in scope still declares `@RequiresTestingTool(TestingTool.SELENIUM)` or uses `TestBenchEscapeHatch`, run it a third time with `-Dvaadin.testing.tool=selenium`: the other two runs skip those tests. Read each run's `Tests run:` summary: a run that counted 0 of the UI tests in scope used the wrong runner or profile, and is a failed proof.
+
+   For every test class you changed: a test passes, or is skipped because it still declares `@RequiresTestingTool` for another Testing Tool. When one fails, fix it or put the Escape Hatch back with an explanation. Remove a `@RequiresTestingTool(TestingTool.PLAYWRIGHT)` only once the test passes on Browserless and Playwright. Done when every changed class passes on each Testing Tool it runs on.
+   Last, run the whole suite on each of those Testing Tools: a per-class run can't show test data one class leaves behind for the next. Then run the style rules (`UnifiedStyleRules.ALL`) the way the `write-unified-ui-tests` skill says, adding its `UnifiedStyleTest` when the project has none. Fix the violations in code you changed, and keep the rules and classes the check covers as they are. Done when every suite run passes and counts the UI tests, and the style rules ran.
+4. **Report** a table: marker, outcome (resolved or kept), what you changed. Under it, the command and `Tests run:` count of each suite run, and each style rule violation left, with its class and rule.
 
 ## Reference: the Unified API
 
@@ -119,7 +123,7 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 - Clean every table the test writes to, through the view and through services the test or its fixtures call. A missed table passes per class and breaks later classes, and with a reused Testcontainers database, later runs too.
 - A fixture that loads an entity and calls a method on it relied on the test's open session: run it in a transaction of its own (`TransactionTemplate`).
 - For a base class whose subclasses all write to the same tables, snapshot those tables once and restore them after each test, instead of each test cleaning up its own rows.
-- Step 3's full-suite run on both Testing Tools proves the cleanup.
+- Step 3's full-suite runs prove the cleanup.
 
 **`Browserless-only pattern: a Spring context without @SpringBootTest ...`.** A narrow `@ContextConfiguration` has no web server for the browser Testing Tools. To run everywhere: replace `@UnifiedUITest`, `@ContextConfiguration` and `@ExtendWith(SpringExtension.class)` with `@UnifiedSpringBootTest`, mock the beans the narrow context left out with `@MockitoBean`, and remove `@RequiresTestingTool(TestingTool.BROWSERLESS)`. Keep it when the full application context can't start in the test.
 
