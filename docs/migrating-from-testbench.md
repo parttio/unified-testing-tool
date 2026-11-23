@@ -101,6 +101,8 @@ mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
 
 `target/rewrite/rewrite.patch` (one per module) marks every TestBench, Browserless and Dramafinder test class `/*~~(migrates)~~>*/`, and with `exportDatatables` the file `FindTestClassesToMigrate$TestClasses.csv`, in `target/rewrite/datatables/<date-time>/` under the directory you ran Maven in, lists them one row per class. A project with Browserless or Dramafinder tests too sees which of those their migrations would skip.
 
+*(unreleased)* A TestBench class also lists the application's page objects and custom elements it uses, each `converts with includePageObjects` or `stays TestBench (Escape Hatch)` with the reason, such as `LoginViewElement: stays TestBench (Escape Hatch), a custom element extending LoginOverlayElement: write a Wrapper (ADR 0003)`. A class that uses one staying TestBench is `migrates partly`: its tests that reach it run on Selenium only.
+
 On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch is `build/reports/rewrite/rewrite.patch`.
 
 ## What it converts
@@ -136,6 +138,8 @@ The full mapping is in [Appendix: mapping](spec/appendix-mapping.md).
 
 With `includePageObjects`, a page object that holds the TestBench test (`HasElementQuery`, `TestBenchTestCase`, ...) takes the `UnifiedPage` instead: its lookups become `find(..)`, its methods return Wrappers, and tests pass `page` where they passed `this`. It converts only when every lookup in it, and every use its callers make of what it returns, converts. Otherwise, and without the option, `new LoginPage(this)` becomes `new LoginPage(testBench)` behind the Escape Hatch.
 
+A custom element, an application's own `TestBenchElement` subclass such as `@Element("order-card") OrderCardElement extends DivElement` or `LoginViewElement extends LoginOverlayElement`, stays TestBench, with or without the option. *(unreleased)* Each statement calling one gets a Migration Marker, and a test that reaches one, itself or through a helper of its class hierarchy, gets `@RequiresTestingTool(SELENIUM)`. So does a test whose only TestBench code is in an inherited helper going through the Escape Hatch.
+
 ### The build
 
 With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the project's Vaadin BOM manages its version, and the recipe removes a version the project already gave it), and removes direct `vaadin-testbench*` dependencies once no test source uses TestBench after the migration (the Selenium adapter brings TestBench core and some element jars). *(unreleased)* While one still does (a page object left on TestBench, an element class such as `DivElement`, a `TestBenchEscapeHatch`), it keeps them, and `vaadin-testbench-junit5` becomes `vaadin-testbench-junit6`, which brings every element jar. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine. *(unreleased)* It also gives each `maven-failsafe-plugin` its own evidence directory, `target/failsafe-reports/unified-evidence`, so Failsafe's run doesn't write over Surefire's ([Surefire and Failsafe in one build](guide/ci-setup.md#surefire-and-failsafe-in-one-build)).
@@ -164,6 +168,7 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 | `was first(); the lookup fails when several components match` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `TestBench page object: new LoginPage(this)` | Convert the page object by hand, or rerun with `includePageObjects` |
+| `TestBench page object: LoginViewElement (custom element extending LoginOverlayElement): write a Wrapper or convert the page object` *(unreleased)* | Write a [Wrapper](spec/06-wrappers.md) for the component, or turn the page object into a plain class on the `UnifiedPage` |
 | `browser setup removed (@RunLocally, ...)` | Configure the Selenium adapter with `vaadin.testing.*` settings |
 | `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` | Move the application to Vaadin 25.3, then delete the marker |
 

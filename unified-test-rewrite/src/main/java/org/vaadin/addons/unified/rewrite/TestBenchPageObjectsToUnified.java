@@ -32,10 +32,14 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
             "com.vaadin.testbench.TestBenchTestCase", "com.vaadin.testbench.BrowserTestBase",
             "com.vaadin.testbench.AbstractBrowserTestBase");
 
-    /** Candidate page objects; those that can't convert are removed while scanning. */
-    public record Found(Map<String, Map<String, Wrappers.Wrapper>> returnsByPageObject, Set<String> blocked) {
+    /** Candidate page objects; those that can't convert are blocked while scanning, with the first reason found. */
+    public record Found(Map<String, Map<String, Wrappers.Wrapper>> returnsByPageObject, Map<String, String> blocked) {
         boolean converts(String fqn) {
-            return returnsByPageObject.containsKey(fqn) && !blocked.contains(fqn);
+            return returnsByPageObject.containsKey(fqn) && !blocked.containsKey(fqn);
+        }
+
+        void block(String fqn, String reason) {
+            blocked.putIfAbsent(fqn, reason);
         }
     }
 
@@ -52,7 +56,7 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
 
     @Override
     public Found getInitialValue(ExecutionContext ctx) {
-        return new Found(new HashMap<>(), new HashSet<>());
+        return new Found(new HashMap<>(), new HashMap<>());
     }
 
     @Override
@@ -81,7 +85,7 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
                     }
                 }
                 if (!usesContextOnlyForLookups(classDecl, fields)) {
-                    found.blocked().add(fqn);
+                    found.block(fqn, "uses the TestBench test for more than lookups a Wrapper expresses");
                 }
                 return c;
             }
@@ -94,7 +98,7 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
                         && id.getSimpleName().equals("this"))) {
                     J.MethodDeclaration m = getCursor().firstEnclosing(J.MethodDeclaration.class);
                     if (m == null || !Helpers.isBrowserTest(m)) {
-                        found.blocked().add(type.getFullyQualifiedName());
+                        found.block(type.getFullyQualifiedName(), "is created with this outside a test method");
                     }
                 }
                 return n;
@@ -115,7 +119,8 @@ public class TestBenchPageObjectsToUnified extends ScanningRecipe<TestBenchPageO
                     boolean ok = parent instanceof J.Block || parent instanceof J.Return
                             || parent instanceof J.MethodInvocation next && next.getSelect() == method && w.has(next.getSimpleName());
                     if (!ok) {
-                        found.blocked().add(owner);
+                        found.block(owner, "a caller uses what " + method.getSimpleName()
+                                + "() returns for more than its Wrapper does");
                     }
                 }
                 return m;

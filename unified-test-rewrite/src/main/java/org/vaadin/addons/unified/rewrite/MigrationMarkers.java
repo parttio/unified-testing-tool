@@ -47,6 +47,18 @@ final class MigrationMarkers {
         return true;
     }
 
+    /** Whether the method-body statement the cursor is in has a marker already, collected or written. */
+    static boolean marked(Cursor cursor) {
+        Map<UUID, List<String>> markers = cursor.getNearestMessage(KEY);
+        Cursor statement = statementInMethodBody(cursor);
+        if (markers == null || statement == null) {
+            return false;
+        }
+        Statement s = (Statement) statement.getValue();
+        return markers.containsKey(s.getId()) || s.getPrefix().getComments().stream()
+                .anyMatch(c -> c instanceof TextComment t && t.getText().startsWith(" TODO unified:"));
+    }
+
     /** The code a marker quotes: the tree printed without its prefix, so without the comments above its statement. */
     static String code(J tree, Cursor parent) {
         return tree.withPrefix(Space.EMPTY).printTrimmed(parent);
