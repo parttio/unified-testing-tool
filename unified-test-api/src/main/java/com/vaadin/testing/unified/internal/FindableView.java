@@ -14,6 +14,16 @@ import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDetails;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
+import com.vaadin.testing.unified.component.UnifiedNav;
+import com.vaadin.testing.unified.component.UnifiedMain;
+import com.vaadin.testing.unified.component.UnifiedFooter;
+import com.vaadin.testing.unified.component.UnifiedHeader;
+import com.vaadin.testing.unified.component.UnifiedAside;
+import com.vaadin.testing.unified.component.UnifiedArticle;
+import com.vaadin.testing.unified.component.UnifiedSection;
+import com.vaadin.testing.unified.component.UnifiedParagraph;
+import com.vaadin.testing.unified.component.UnifiedSpan;
+import com.vaadin.testing.unified.component.UnifiedDiv;
 import com.vaadin.testing.unified.component.UnifiedIntegerField;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
 import com.vaadin.testing.unified.component.UnifiedMessageInput;
@@ -85,6 +95,19 @@ public final class FindableView {
             UnifiedCheckbox.class, UnifiedButton.class, UnifiedGrid.class, UnifiedTabs.class, UnifiedTabSheet.class,
             UnifiedMenuBar.class, UnifiedDetails.class, UnifiedUpload.class, UnifiedMessageList.class,
             UnifiedMessageInput.class);
+
+    /**
+     * Plain HTML Wrappers listed only for the components that say they are clickable (#523): a role a user
+     * activates, or a {@code tabindex} of 0 or more. A click listener alone can't be seen the same way on every
+     * Testing Tool, so it doesn't count; a type the test has looked up is listed in full.
+     */
+    static final List<Class<?>> CLICKABLE_PLAIN = List.of(UnifiedDiv.class, UnifiedSpan.class,
+            UnifiedParagraph.class, UnifiedSection.class, UnifiedArticle.class, UnifiedAside.class,
+            UnifiedHeader.class, UnifiedFooter.class, UnifiedMain.class, UnifiedNav.class);
+
+    /** The ARIA roles a user activates by clicking. */
+    static final Set<String> CLICKABLE_ROLES = Set.of("button", "link", "tab", "menuitem", "menuitemcheckbox",
+            "menuitemradio", "checkbox", "radio", "switch", "option");
 
     /**
      * The fields whose {@code value} property is what a user sees. A combo box's or a radio button group's is an
@@ -177,15 +200,24 @@ public final class FindableView {
 
     /** One component as read. {@code values} are its namers' values, normalized, null when it has none. */
     private record Read(UnifiedElement element, ElementFacts facts, Map<Namer, String> values, String value,
-            boolean hidden, boolean disabled, String summary) {
+            boolean hidden, boolean disabled, String summary, String clickable) {
         String valueOf(Namer namer) {
             return values.get(namer);
+        }
+
+        /** This read, listed because it says it is clickable: {@code role button}, {@code focusable}. */
+        Read clickable(String why) {
+            return new Read(element, facts, values, value, hidden, disabled, summary, why);
         }
     }
 
     /** The components of one Wrapper type in the scope. */
+    /**
+     * The components of one Wrapper type in the scope; {@code partial} when only the clickable ones of a plain
+     * HTML type were read, so that a value unique among them may not be unique in the scope.
+     */
     private record OfType(Class<?> type, UnifiedComponent annotation, String tag, List<Filter> selector,
-            List<Namer> namers, List<Read> reads) {}
+            List<Namer> namers, List<Read> reads, boolean partial) {}
 
     /** A container listed with a unique lookup, through which an ambiguous component may be singled out. */
     private record Container(String words, String lookup, UnifiedElement element) {}
@@ -213,11 +245,27 @@ public final class FindableView {
                     // this kind can't be listed on this Testing Tool
                 }
             }
+            for (Class<?> type : CLICKABLE_PLAIN) {
+                UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
+                if (types.contains(type) || !listed.add(Wrappers.tagOf(annotation.value(), annotation.tag()) + " "
+                        + annotation.selector().strip())) {
+                    continue; // the test looked this type up: listed in full above
+                }
+                try {
+                    OfType found = clickable(run, type, annotation, scope, inTemplate);
+                    if (found != null) {
+                        all.add(found);
+                    }
+                } catch (RuntimeException | AssertionError e) {
+                    // this kind can't be listed on this Testing Tool
+                }
+            }
             List<Container> containers = new ArrayList<>();
             Map<Read, String> lookups = new IdentityHashMap<>();
             for (OfType t : all) {
                 for (Read r : t.reads()) {
-                    String lookup = uniqueLookup(t, r, prefix);
+                    String lookup = t.partial() ? checkedLookup(run, t, r, scope, inTemplate, prefix)
+                            : uniqueLookup(t, r, prefix);
                     if (lookup != null) {
                         lookups.put(r, lookup);
                         if (Scope.class.isAssignableFrom(t.type())) {
@@ -284,7 +332,7 @@ public final class FindableView {
         if (reads.isEmpty()) {
             return null;
         }
-        return new OfType(type, annotation, tag, selector, namers, reads);
+        return new OfType(type, annotation, tag, selector, namers, reads, false);
     }
 
     private static Read read(TestRun quick, Class<?> type, List<Namer> namers, UnifiedElement e,
@@ -319,7 +367,7 @@ public final class FindableView {
         }
         String summary = UnifiedGrid.class.isAssignableFrom(type) ? safely(() -> grid(e), null)
                 : UnifiedMessageList.class.isAssignableFrom(type) ? safely(() -> messageList(e), null) : null;
-        return new Read(e, f, values, value, hidden, disabled, summary);
+        return new Read(e, f, values, value, hidden, disabled, summary, null);
     }
 
     /** {@code 3 messages}, from the Testing Tool's message list access. */
@@ -420,6 +468,9 @@ public final class FindableView {
         if (r.disabled()) {
             state.add("disabled");
         }
+        if (r.clickable() != null) {
+            state.add(r.clickable());
+        }
         if (r.hidden()) {
             state.add("hidden");
         }
@@ -441,6 +492,87 @@ public final class FindableView {
         for (Namer namer : t.namers()) {
             if (namer.names() && r.valueOf(namer) != null) {
                 return r.valueOf(namer);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The components of a plain HTML type that say they are clickable: those with a role ({@code [role]}) a user
+     * activates, then those with a {@code tabindex} ({@code [tabindex]}) of 0 or more and no such role.
+     */
+    private static OfType clickable(TestRun run, Class<?> type, UnifiedComponent annotation, UnifiedElement scope,
+            boolean inTemplate) {
+        String tag = Wrappers.tagOf(annotation.value(), annotation.tag());
+        List<UnifiedElement> found = new ArrayList<>();
+        List<String> why = new ArrayList<>();
+        for (UnifiedElement e : run.session().find(new QuerySpec(annotation.value(), tag,
+                List.of(new Filter(Filter.Kind.ATTRIBUTE, "role", null, true)), scope, inTemplate))) {
+            String role = role(e);
+            if (isClickable(role)) {
+                found.add(e);
+                why.add("role " + role);
+            }
+        }
+        for (UnifiedElement e : run.session().find(new QuerySpec(annotation.value(), tag,
+                List.of(new Filter(Filter.Kind.ATTRIBUTE, "tabindex", null, true)), scope, inTemplate))) {
+            if (!isClickable(role(e)) && tabIndex(e) >= 0) {
+                found.add(e);
+                why.add("focusable");
+            }
+        }
+        if (found.isEmpty()) {
+            return null;
+        }
+        found = found.subList(0, Math.min(found.size(), MAX_PER_TYPE));
+        List<ElementFacts> facts = LookupFailures.facts(run, found);
+        List<Namer> namers = namers(type);
+        TestRun quick = run.withTimeout(Duration.ZERO);
+        List<Read> reads = new ArrayList<>();
+        for (int i = 0; i < found.size(); i++) {
+            if (facts.get(i) != null && facts.get(i).internalPart()) {
+                continue;
+            }
+            reads.add(read(quick, type, namers, found.get(i), facts.get(i)).clickable(why.get(i)));
+        }
+        return reads.isEmpty() ? null : new OfType(type, annotation, tag, List.of(), namers, reads, true);
+    }
+
+    private static boolean isClickable(String role) {
+        return role != null && CLICKABLE_ROLES.contains(role);
+    }
+
+    /** The element's first role, lower case, or null. */
+    private static String role(UnifiedElement e) {
+        String role = safely(() -> e.getAttribute("role"), null);
+        return role == null || role.isBlank() ? null : role.strip().split("\\s+")[0].toLowerCase(Locale.ROOT);
+    }
+
+    private static int tabIndex(UnifiedElement e) {
+        String value = safely(() -> e.getAttribute("tabindex"), null);
+        try {
+            return value == null ? -1 : Integer.parseInt(value.strip());
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
+    /**
+     * For a clickable plain HTML component, whose type was read only in part: the best filter whose value only it
+     * has among the clickable ones and that, run, finds exactly one component of its type in the scope.
+     */
+    private static String checkedLookup(TestRun run, OfType t, Read r, UnifiedElement scope, boolean inTemplate,
+            String prefix) {
+        for (Namer namer : t.namers()) {
+            String value = r.valueOf(namer);
+            if (value == null || namer.kind() == null || count(t.reads(), namer, value) != 1) {
+                continue;
+            }
+            List<Filter> filters = List.of(new Filter(namer.kind(), null, value, true));
+            int matches = safely(() -> run.session().find(new QuerySpec(t.annotation().value(), t.tag(), filters,
+                    scope, inTemplate)).size(), 0);
+            if (matches == 1) {
+                return prefix + "find(" + t.type().getSimpleName() + ".class)." + namer.code(value);
             }
         }
         return null;
@@ -477,6 +609,12 @@ public final class FindableView {
             }
         }
         long alike = best == null ? t.reads().size() : count(t.reads(), best, r.valueOf(best));
+        if (t.partial() && best != null && best.kind() != null) {
+            // only the clickable ones were read: count every component of the type with this value (#523)
+            List<Filter> same = List.of(new Filter(best.kind(), null, r.valueOf(best), true));
+            alike = Math.max(alike, safely(() -> run.session().find(new QuerySpec(t.annotation().value(), t.tag(),
+                    same, scope, inTemplate)).size(), 0));
+        }
         String notUnique = "not unique: " + alike + " alike";
         if (best == null) {
             return notUnique;

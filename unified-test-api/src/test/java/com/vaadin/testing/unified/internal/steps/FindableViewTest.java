@@ -105,6 +105,36 @@ public class FindableViewTest {
     }
 
     @Test
+    void plainHtmlThatSaysItIsClickableIsListedWithWhy() {
+        fake.add("span", "text", "Week of 2026-11-16", "role", "button")
+                .add("div", "text", "Mon", "role", "tab")
+                .add("div", "text", "Tue", "role", "Tab ")
+                .add("article", "text", "Pancakes", "tabindex", "0")
+                // not listed: focusable by script only, a role nobody clicks, and plain ones
+                .add("span", "text", "Skip", "tabindex", "-1")
+                .add("div", "text", "Layout", "role", "presentation")
+                .add("div", "text", "Just text")
+                // a role and a tabindex: listed once, for its role
+                .add("span", "text", "Help", "role", "link", "tabindex", "0");
+
+        assertEquals(List.of(
+                "div “Mon” (role tab)  page.find(UnifiedDiv.class).withText(\"Mon\")",
+                "div “Tue” (role tab)  page.find(UnifiedDiv.class).withText(\"Tue\")",
+                "span “Week of 2026-11-16” (role button)  page.find(UnifiedSpan.class).withText(\"Week of 2026-11-16\")",
+                "span “Help” (role link)  page.find(UnifiedSpan.class).withText(\"Help\")",
+                "article “Pancakes” (focusable)  page.find(UnifiedArticle.class).withText(\"Pancakes\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
+    void aClickableOnesTextSharedWithAPlainOneIsNoLookupOfItsOwn() {
+        fake.add("span", "text", "Save", "role", "button")
+                .add("span", "text", "Save");
+
+        assertEquals(List.of("span “Save” (role button)  not unique: 2 alike"), lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
     void aSecretValueIsMasked() {
         fake.add("vaadin-text-field", "label", "API key", "value", page.secret("s3cr3t-key"));
 

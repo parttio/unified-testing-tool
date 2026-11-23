@@ -47,6 +47,18 @@ class FindableViewTest {
     }
 
     @Test
+    @DisplayName("Plain HTML that says it is clickable is listed, with why; a click listener alone is not")
+    void listsClickablePlainHtml(UnifiedPage page) {
+        page.navigate(ClickablesView.class);
+
+        assertEquals(List.of(
+                "div “Mon” (role tab)  page.find(UnifiedDiv.class).withText(\"Mon\")",
+                "span “Week of 2026-11-16” (role button)  page.find(UnifiedSpan.class).withText(\"Week of 2026-11-16\")",
+                "article “Pancakes” (focusable)  page.find(UnifiedArticle.class).withText(\"Pancakes\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
     @DisplayName("Two fields with the same label are found through the containers that tell them apart")
     void findsAlikeFieldsThroughTheirContainers(UnifiedPage page) {
         page.navigate(CheckoutView.class);
