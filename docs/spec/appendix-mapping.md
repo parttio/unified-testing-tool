@@ -64,6 +64,8 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s)` + Migration Marker |
 | query `first()` / `get(i)` | the plain lookup + `was first()` Migration Marker / `all().get(i)` |
 | `page.locator("#x")` / `locator("[data-testid=x]")` / `getByTestId("x")` | `page.find(W.class).withId("x")` / `withTestId("x")`, `W` the Wrapper of the component the sources give that id, else `UnifiedContainer` + Migration Marker; `fill(s)` / `inputValue()` are `setValue(s)` / `getValue()` |
+| on such a raw locator, `assertThat(l).containsText(s)` / `hasText(s)` / `hasAttribute("disabled", "")` / `not().hasAttribute("disabled", ..)` or `not().hasAttribute("aria-disabled", "true")` / `isAttached()` *(unreleased)* | `assertThat(w).hasTextContaining(s)` / `hasText(s)` / `isDisabled()` / `isEnabled()` / `exists()` |
+| on such a raw locator, `assertThat(l).hasClass("c")` or `hasClass(Pattern.compile(".*c.*"))` / `not().isVisible()` *(unreleased)* | `assertThat(w.withClassName("c")).exists()` / `assertThat(w.visible()).doesNotExist()` |
 | `assertVisible` / `assertHidden` / `assertEnabled` / `assertDisabled` | `assertThat(w).isVisible()` / `isHidden()` / `isEnabled()` / `isDisabled()` |
 | `assertValue` / `assertLabel` / `assertValid` / `assertInvalid` / `assertErrorMessage` | `hasValue` / `hasLabel` / `isValid` / `isInvalid` / `hasErrorMessage` |
 | `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |
@@ -78,8 +80,12 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |
 | `waitForGridToStopLoading()`, `scrollToRow(i)` | dropped (Auto-Wait) |
 | `MessageInputElement.get(page)`, `MessageListElement.get(page)` | `page.find(UnifiedMessageInput.class)`, `page.find(UnifiedMessageList.class)` (no marker: a second one fails loudly) |
+| `MessageInputElement.get(l)` / `MessageListElement.get(l)`, `l` an id or test id locator on the page *(unreleased)* | `page.find(UnifiedContainer.class).withId(..)` / `withTestId(..)` + `.find(UnifiedMessageInput.class)` / `.find(UnifiedMessageList.class)` |
+| `new MessageInputElement(l)` / `new MessageListElement(l)`, `l` an id or test id locator on the page *(unreleased)* | `page.find(UnifiedMessageInput.class)` / `page.find(UnifiedMessageList.class)` + `.withId(..)` / `.withTestId(..)` |
 | message input `typeAndSubmit(s)` | `send(s)` |
+| message input `focus()` *(unreleased)* | `element().focus()` |
 | message list `assertMessageCount(n)` / `assertEmpty()` | `assertThat(list).hasMessageCount(n)` / `isEmpty()` |
+| `assertThat(list.getMessage(i)).containsText(s)` / `hasText(s)` *(unreleased)* | `assertThat(list.message(i)).hasTextContaining(s)` / `hasText(s)` |
 
 ## Escape Hatch
 
