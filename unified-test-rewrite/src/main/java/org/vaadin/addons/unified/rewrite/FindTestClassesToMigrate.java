@@ -2,6 +2,7 @@ package org.vaadin.addons.unified.rewrite;
 
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 import org.openrewrite.Column;
 import org.openrewrite.DataTable;
 import org.openrewrite.ExecutionContext;
@@ -22,7 +23,9 @@ import org.openrewrite.marker.SearchResult;
  * shows every blocker instead of one per migration run (issue #352). It reports the same decisions as the
  * precondition recipes ({@code Find*Tests}) and the Migration Markers on skipped classes. A TestBench class also lists
  * the application's page objects and custom elements it uses, as {@link TestBenchPageObjectsToUnified} and
- * {@link CustomElements} decide them, and {@code migrates partly} when one of them stays TestBench (issue #527).
+ * {@link CustomElements} decide them, and {@code migrates partly} when one of them stays TestBench (issue #527). In a
+ * Spring Boot app's module, the TestBench class that takes the test annotation without {@code @SpringBootTest} names
+ * the annotation the {@code springBootTest} option gives it (issue #528).
  */
 public class FindTestClassesToMigrate extends ScanningRecipe<TestBenchPageObjectsToUnified.Found> {
 
@@ -33,6 +36,10 @@ public class FindTestClassesToMigrate extends ScanningRecipe<TestBenchPageObject
     static final String SKIPPED = "skipped";
     static final String PASSES_ITSELF = "passes itself (this) to a page object or helper; "
             + "run with includePageObjects, or make it take a UnifiedPage";
+    /** A TestBench class without {@code @SpringBootTest} that takes the annotation, in a Spring Boot app's module. */
+    static final String SPRING_BOOT_TEST = "@UnifiedSpringBootTest, the recipe option springBootTest decides: "
+            + "false keeps @UnifiedUITest, against a server the build starts";
+    private static final String SPRING_MODULES = "unified.spring-modules";
     static final String USES_CONTEXT = "uses the Browserless application or user context beyond opening a window; "
             + "use page.openWindow() or page.openAsUser(..) instead";
 
@@ -71,10 +78,18 @@ public class FindTestClassesToMigrate extends ScanningRecipe<TestBenchPageObject
                 String reason,
                 @Column(displayName = "Page objects", description = "For a TestBench class, the application's page "
                         + "objects and custom elements it uses: each `converts with includePageObjects` or `stays "
-                        + "TestBench (Escape Hatch)`, and why.") String pageObjects) {
+                        + "TestBench (Escape Hatch)`, and why.") String pageObjects,
+                @Column(displayName = "Annotation", description = "For a TestBench class of a Spring Boot app that "
+                        + "had no `@SpringBootTest`, the test annotation it gets and the recipe option that decides it.")
+                String annotation) {
 
             public Row(String sourcePath, String className, String testingTool, String status, String reason) {
                 this(sourcePath, className, testingTool, status, reason, "");
+            }
+
+            public Row(String sourcePath, String className, String testingTool, String status, String reason,
+                    String pageObjects) {
+                this(sourcePath, className, testingTool, status, reason, pageObjects, "");
             }
         }
     }
@@ -91,6 +106,7 @@ public class FindTestClassesToMigrate extends ScanningRecipe<TestBenchPageObject
             public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext ctx) {
                 // which page objects convert with includePageObjects: the page-object recipe's own decision
                 new TestBenchPageObjectsToUnified().getScanner(found).visit(cu, ctx);
+                ctx.computeMessageIfAbsent(SPRING_MODULES, k -> new SpringModules()).collect(cu);
                 return super.visitCompilationUnit(cu, ctx);
             }
 
@@ -112,6 +128,7 @@ public class FindTestClassesToMigrate extends ScanningRecipe<TestBenchPageObject
                 String tool;
                 String reason;
                 String pageObjects = "";
+                String annotation = "";
                 if (Dramafinder.isDramafinderClass(classDecl)) {
                     tool = "Dramafinder";
                     reason = String.join(", ", Dramafinder.blockers(classDecl, DramafinderCopies.of(ctx)));
@@ -124,6 +141,11 @@ public class FindTestClassesToMigrate extends ScanningRecipe<TestBenchPageObject
                     tool = "TestBench";
                     reason = "";
                     pageObjects = LitTemplates.with(ctx, () -> pageObjects(classDecl, found));
+                    SpringModules spring = ctx.getMessage(SPRING_MODULES);
+                    if (spring != null && TestBenchSetupToUnified.takesTestAnnotation(classDecl)
+                            && spring.hasApplication(getCursor().firstEnclosingOrThrow(SourceFile.class))) {
+                        annotation = SPRING_BOOT_TEST;
+                    }
                 } else {
                     return c;
                 }
@@ -131,8 +153,9 @@ public class FindTestClassesToMigrate extends ScanningRecipe<TestBenchPageObject
                 testClasses.insertRow(ctx, new TestClasses.Row(
                         getCursor().firstEnclosingOrThrow(SourceFile.class).getSourcePath().toString().replace('\\', '/'),
                         classDecl.getType() == null ? classDecl.getSimpleName() : classDecl.getType().getFullyQualifiedName(),
-                        tool, status, reason, pageObjects));
-                String detail = reason.isEmpty() ? pageObjects : reason;
+                        tool, status, reason, pageObjects, annotation));
+                String detail = reason.isEmpty() ? String.join("; ", Stream.of(pageObjects, annotation)
+                        .filter(d -> !d.isEmpty()).toList()) : reason;
                 return SearchResult.found(c, detail.isEmpty() ? status : status + ": " + detail);
             }
         };
