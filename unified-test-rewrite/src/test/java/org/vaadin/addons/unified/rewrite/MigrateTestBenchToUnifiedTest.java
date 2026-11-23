@@ -3303,4 +3303,374 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         }
                         """));
     }
+
+    // A Spring Boot app tested against a server the build starts (#528, ADR 0013)
+
+    private static final String SPRING_BOOT_APPLICATION = """
+            package org.springframework.boot.autoconfigure;
+
+            public @interface SpringBootApplication {}
+            """;
+
+    private static final String APPLICATION = """
+            package com.example;
+
+            import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+            @SpringBootApplication
+            public class Application {}
+            """;
+
+    private static final String ENABLE_WEB_SECURITY = """
+            package org.springframework.security.config.annotation.web.configuration;
+
+            public @interface EnableWebSecurity {}
+            """;
+
+    private static final String SECURITY_CONFIGURATION = """
+            package com.example;
+
+            import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
+            @EnableWebSecurity
+            public class SecurityConfiguration {}
+            """;
+
+    private static final String ABSTRACT_IT = """
+            package com.example;
+
+            import com.vaadin.testbench.BrowserTestBase;
+
+            public abstract class AbstractIT extends BrowserTestBase {
+            }
+            """;
+
+    private static final String USERS_IT = """
+            package com.example;
+
+            import com.vaadin.testbench.BrowserTest;
+
+            class UsersIT extends AbstractIT {
+
+                @BrowserTest
+                void opensUsers() {
+                    getDriver().get("http://localhost:8080/users");
+                }
+            }
+            """;
+
+    private static final String USERS_IT_MIGRATED = """
+            package com.example;
+
+            import com.vaadin.testing.unified.UnifiedPage;
+            import org.junit.jupiter.api.Test;
+
+            class UsersIT extends AbstractIT {
+
+                @Test
+                void opensUsers(UnifiedPage page) {
+                    page.navigate("users");
+                }
+            }
+            """;
+
+    @Test
+    void aSpringBootAppsTestWithoutSpringBootTestStartsTheAppByDefault() {
+        rewriteRun(java(SPRING_BOOT_APPLICATION), java(APPLICATION),
+                java(ABSTRACT_IT,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+
+                        // TODO unified: %s
+                        @UnifiedSpringBootTest
+                        public abstract class AbstractIT {
+                        }
+                        """.formatted(TestBenchSetupToUnified.STARTS_THE_APP)),
+                java(USERS_IT, USERS_IT_MIGRATED));
+    }
+
+    @Test
+    void springBootTestFalseKeepsTheTestAgainstTheServerTheBuildStartsWithAMarker() {
+        rewriteRun(spec -> spec.recipe(new MigrateTestBenchToUnified(null, null, null, false)),
+                java(SPRING_BOOT_APPLICATION), java(APPLICATION),
+                java(ABSTRACT_IT,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testing.unified.UnifiedUITest;
+
+                        // TODO unified: %s
+                        @UnifiedUITest
+                        public abstract class AbstractIT {
+                        }
+                        """.formatted(TestBenchSetupToUnified.EXTERNAL_SERVER)),
+                java(USERS_IT, USERS_IT_MIGRATED));
+    }
+
+    @Test
+    void withoutASpringBootApplicationATestWithoutSpringBootTestStaysAUnifiedUITestWhateverTheOption() {
+        for (Boolean springBootTest : new Boolean[] {null, true, false}) {
+            rewriteRun(spec -> spec.recipe(new MigrateTestBenchToUnified(null, null, null, springBootTest)),
+                    java(ABSTRACT_IT,
+                            """
+                            package com.example;
+
+                            import com.vaadin.testing.unified.UnifiedUITest;
+
+                            @UnifiedUITest
+                            public abstract class AbstractIT {
+                            }
+                            """),
+                    java(USERS_IT, USERS_IT_MIGRATED));
+        }
+    }
+
+    private static final String SIGN_IN_VIEW_ELEMENT = """
+            package com.example;
+
+            import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+            import com.vaadin.testbench.annotations.Attribute;
+
+            @Attribute(name = "id", value = "login")
+            public class LoginViewElement extends LoginOverlayElement {
+                public void signIn(String user) {
+                    getUsernameField().setValue(user);
+                }
+            }
+            """;
+
+    private static final String ORDERS_IT = """
+            package com.example;
+
+            import com.vaadin.testbench.BrowserTest;
+            import com.vaadin.testbench.BrowserTestBase;
+
+            public class OrdersIT extends BrowserTestBase {
+
+                @BrowserTest
+                void opensOrders() {
+                    LoginViewElement login = $(LoginViewElement.class).first();
+                    login.signIn("admin");
+                }
+            }
+            """;
+
+    @Test
+    void aLoginPageObjectCallInASpringSecurityModuleIsMarkedWithWithMockUser() {
+        rewriteRun(
+
+                java(SPRING_BOOT_APPLICATION), java(APPLICATION), java(ENABLE_WEB_SECURITY), java(SECURITY_CONFIGURATION),
+                java(SIGN_IN_VIEW_ELEMENT), java(ORDERS_IT, spec -> spec.after(after -> {
+                    org.assertj.core.api.Assertions.assertThat(after)
+                            .contains("@UnifiedSpringBootTest")
+                            .containsOnlyOnce("// TODO unified: " + TestBenchSetupToUnified.SIGNS_IN + "\n        login.signIn(");
+                    return after;
+                })));
+    }
+
+    @Test
+    void aLoginPageObjectCallIsNotMarkedWithSpringBootTestFalseOrWithoutSpringSecurity() {
+        rewriteRun(spec -> spec.recipe(new MigrateTestBenchToUnified(null, null, null, false)),
+                java(SPRING_BOOT_APPLICATION), java(APPLICATION), java(ENABLE_WEB_SECURITY), java(SECURITY_CONFIGURATION),
+                java(SIGN_IN_VIEW_ELEMENT), java(ORDERS_IT, spec -> spec.after(after -> {
+                    org.assertj.core.api.Assertions.assertThat(after).doesNotContain(TestBenchSetupToUnified.SIGNS_IN);
+                    return after;
+                })));
+        rewriteRun(java(SPRING_BOOT_APPLICATION), java(APPLICATION), java(SIGN_IN_VIEW_ELEMENT),
+                java(ORDERS_IT, spec -> spec.after(after -> {
+                    org.assertj.core.api.Assertions.assertThat(after).doesNotContain(TestBenchSetupToUnified.SIGNS_IN);
+                    return after;
+                })));
+    }
+
+    private static final String SECURITY_POM = """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-bom</artifactId>
+                                <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>%BOOT%</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-starter-security</artifactId>
+                        </dependency>%EXTRA%
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>vaadin-testbench-core-junit6</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                    <profiles>
+                        <profile>
+                            <id>it</id>
+                            <build>
+                                <plugins>
+                                    <plugin>
+                                        <groupId>org.springframework.boot</groupId>
+                                        <artifactId>spring-boot-maven-plugin</artifactId>
+                                        <executions>
+                                            <execution>
+                                                <id>start-spring-boot</id>
+                                                <phase>pre-integration-test</phase>
+                                                <goals><goal>start</goal></goals>
+                                            </execution>
+                                            <execution>
+                                                <id>stop-spring-boot</id>
+                                                <phase>post-integration-test</phase>
+                                                <goals><goal>stop</goal></goals>
+                                            </execution>
+                                        </executions>
+                                    </plugin>
+                                </plugins>
+                            </build>
+                        </profile>
+                    </profiles>
+                </project>
+                """;
+
+    private static final String SECURITY_POM_AFTER = """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-bom</artifactId>
+                                <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>%BOOT%</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-bom</artifactId>
+                                <version>%UNIFIED%</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-starter-security</artifactId>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>%EXTRA%
+                %ADDED%        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-browserless</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-selenium</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                    <profiles>
+                        <profile>
+                            <id>it</id>
+                            <build>
+                                <plugins>
+                                    <plugin>
+                                        <groupId>org.springframework.boot</groupId>
+                                        <artifactId>spring-boot-maven-plugin</artifactId>
+                                        <executions>
+                                            <execution>
+                                                <id>start-spring-boot</id>
+                                                <phase>pre-integration-test</phase>
+                                                <goals><goal>start</goal></goals>
+                                            </execution>
+                                            <execution>
+                                                <id>stop-spring-boot</id>
+                                                <phase>post-integration-test</phase>
+                                                <goals><goal>stop</goal></goals>
+                                            </execution>
+                                        </executions>
+                                    </plugin>
+                                </plugins>
+                            </build>
+                        </profile>
+                    </profiles>
+                </project>
+                """;
+
+    /** Already in the pom; the migration sorts the dependencies it adds in before it. */
+    private static final String SECURITY_TEST = "\n" + """
+                    <dependency>
+                        <groupId>org.springframework.security</groupId>
+                        <artifactId>spring-security-test</artifactId>
+                        <scope>test</scope>
+                    </dependency>""".indent(8).stripTrailing();
+
+    private static String securityPom(String template, String boot, String extra, String added) {
+        return template.replace("%BOOT%", boot).replace("%EXTRA%", extra)
+                .replace("%ADDED%", added).replace("%UNIFIED%", String.valueOf(UNIFIED_VERSION));
+    }
+
+    private static String added(String groupId, String artifactId) {
+        return """
+                        <dependency>
+                            <groupId>%s</groupId>
+                            <artifactId>%s</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                """.formatted(groupId, artifactId);
+    }
+
+    @Test
+    void aSpringSecurityAppGetsTheSecurityTestStarterAndKeepsItsServerStartExecutions() {
+        rewriteRun(pomXml(securityPom(SECURITY_POM, "4.1.1", "", ""),
+                securityPom(SECURITY_POM_AFTER, "4.1.1", "", added("org.springframework.boot", "spring-boot-starter-security-test"))));
+    }
+
+    @Test
+    void aSpringSecurityAppOnASpringBootWithoutTheStarterGetsSpringSecurityTest() {
+        rewriteRun(pomXml(securityPom(SECURITY_POM, "3.5.0", "", ""),
+                securityPom(SECURITY_POM_AFTER, "3.5.0", "", added("org.springframework.security", "spring-security-test"))));
+    }
+
+    @Test
+    void aSpringSecurityTestDependencyPresentIsNotAddedAgain() {
+        rewriteRun(pomXml(securityPom(SECURITY_POM, "4.1.1", SECURITY_TEST, ""),
+                securityPom(SECURITY_POM_AFTER, "4.1.1", SECURITY_TEST, "")));
+    }
 }

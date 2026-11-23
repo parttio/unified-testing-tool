@@ -1,15 +1,21 @@
 package org.vaadin.addons.unified.rewrite;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.openrewrite.Cursor;
+import org.jspecify.annotations.Nullable;
 import org.openrewrite.ExecutionContext;
+import org.openrewrite.Option;
 import org.openrewrite.ScanningRecipe;
+import org.openrewrite.SourceFile;
 import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.AnnotationMatcher;
 import org.openrewrite.java.JavaIsoVisitor;
@@ -28,7 +34,10 @@ import org.openrewrite.java.tree.TypeUtils;
  * {@code extends BrowserTestBase} and the {@code @LocalServerPort} field, gives every
  * {@code @BrowserTest} method a {@code UnifiedPage page} parameter, and turns
  * {@code getDriver().get(url)} (or {@code get(url)} on any {@code WebDriver}) into {@code page.navigate(path)} when
- * the URL is one to the local application, removing a URL constant only navigation read.
+ * the URL is one to the local application, removing a URL constant only navigation read. A test class it takes off
+ * TestBench's base class becomes a {@code @UnifiedUITest}, unless it is a Spring test; in a module with a
+ * {@code @SpringBootApplication}, a test without {@code @SpringBootTest} ran against a server the build started, and
+ * becomes a {@code @UnifiedSpringBootTest} unless {@code springBootTest} is false (ADR 0013).
  */
 public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnified.Scanned> {
 
@@ -36,8 +45,22 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     static final String TEST_BENCH_TEST_CASE = "com.vaadin.testbench.TestBenchTestCase";
     static final String PARALLEL_TEST = "com.vaadin.testbench.parallel.ParallelTest";
     static final String UNIFIED_UI_TEST = "com.vaadin.testing.unified.UnifiedUITest";
+    static final String UNIFIED_SPRING_BOOT_TEST = "com.vaadin.testing.unified.spring.UnifiedSpringBootTest";
     private static final Set<String> TEST_ANNOTATIONS = Set.of("org.springframework.boot.test.context.SpringBootTest",
-            "com.vaadin.testing.unified.spring.UnifiedSpringBootTest", UNIFIED_UI_TEST);
+            UNIFIED_SPRING_BOOT_TEST, UNIFIED_UI_TEST);
+    /** On a class that became a {@code @UnifiedSpringBootTest} where it had no {@code @SpringBootTest}. */
+    static final String STARTS_THE_APP = "the tests ran against a server started outside the test; they now start "
+            + "the app themselves, on a random port and with its test configuration (@UnifiedSpringBootTest); the "
+            + "build's spring-boot:start/stop executions can be removed (recipe option springBootTest)";
+    /** On such a class kept a {@code @UnifiedUITest} by {@code springBootTest: false}. */
+    static final String EXTERNAL_SERVER = "a Spring Boot app tested against a server the build starts: Browserless "
+            + "can't build its Spring views and @WithMockUser has no effect; consider @UnifiedSpringBootTest (recipe "
+            + "option springBootTest)";
+    /** On a statement signing in through a login page object, in a Spring Security module. */
+    static final String SIGNS_IN = "signs in through the login form: unless this test checks the login itself, "
+            + "consider @WithMockUser";
+    private static final Set<String> LOGIN_ELEMENTS = Set.of("com.vaadin.flow.component.login.testbench.LoginOverlayElement",
+            "com.vaadin.flow.component.login.testbench.LoginFormElement");
     static final String BROWSER_TEST = "com.vaadin.testbench.BrowserTest";
     static final String LOCAL_SERVER_PORT = "org.springframework.boot.test.web.server.LocalServerPort";
     static final String BEFORE_EACH = "org.junit.jupiter.api.BeforeEach";
@@ -52,6 +75,32 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
 
     private static final MethodMatcher DRIVER_GET = new MethodMatcher("org.openqa.selenium.WebDriver get(String)", true);
     private static final MethodMatcher GET_DRIVER = new MethodMatcher("com.vaadin.testbench.HasDriver getDriver()", true);
+
+    @Option(displayName = "Test a Spring Boot app in the test",
+            description = SPRING_BOOT_TEST_OPTION,
+            required = false)
+    private final @Nullable Boolean springBootTest;
+
+    static final String SPRING_BOOT_TEST_OPTION = "Test a Spring Boot application by starting it in the test "
+            + "(`@UnifiedSpringBootTest`) instead of against a server the build starts.";
+
+    public TestBenchSetupToUnified() {
+        this(null);
+    }
+
+    @JsonCreator
+    public TestBenchSetupToUnified(@JsonProperty("springBootTest") @Nullable Boolean springBootTest) {
+        this.springBootTest = springBootTest;
+    }
+
+    public @Nullable Boolean getSpringBootTest() {
+        return springBootTest;
+    }
+
+    /** The option's value: true unless set to false. */
+    private boolean startsTheApp() {
+        return !Boolean.FALSE.equals(springBootTest);
+    }
 
     @Override
     public String getDisplayName() {
@@ -79,6 +128,8 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
         private final Map<String, String> constants = new HashMap<>();
         /** The places reading each field, by {@code declaringClass#name}. */
         private final Map<String, List<FieldRead>> fieldReads = new HashMap<>();
+        /** The modules with a {@code @SpringBootApplication}, and those using Spring Security. */
+        private final SpringModules spring = new SpringModules();
         private boolean resolved;
 
         /** The value of the constant string field the expression reads, else {@code null}. */
@@ -229,6 +280,12 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
         Map<String, Set<String>> routes = scanned.routes();
         return new JavaIsoVisitor<>() {
             @Override
+            public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext ctx) {
+                scanned.spring.collect(cu);
+                return super.visitCompilationUnit(cu, ctx);
+            }
+
+            @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
                 if (isTestBenchClass(classDecl)) {
                     scanned.classes.put(classDecl.getType().getFullyQualifiedName(), classDecl);
@@ -356,13 +413,28 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                 maybeRemoveImport(PARALLEL_TEST);
                 if (c.getLeadingAnnotations().stream().noneMatch(a -> TEST_ANNOTATIONS.stream()
                         .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)))) {
-                    // no Spring test: a test against a running application
-                    maybeAddImport(UNIFIED_UI_TEST);
-                    c = JavaTemplate.builder("@UnifiedUITest")
-                            .imports(UNIFIED_UI_TEST)
-                            .javaParser(Stubs.parser("package com.vaadin.testing.unified; public @interface UnifiedUITest {}"))
-                            .build()
-                            .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
+                    // no Spring test: a test against a running application, which a Spring Boot app's build started
+                    boolean springBootApp = scanned.spring.hasApplication(getCursor().firstEnclosingOrThrow(SourceFile.class));
+                    if (springBootApp && startsTheApp()) {
+                        maybeAddImport(UNIFIED_SPRING_BOOT_TEST);
+                        c = JavaTemplate.builder("@UnifiedSpringBootTest")
+                                .imports(UNIFIED_SPRING_BOOT_TEST)
+                                .javaParser(Stubs.parser("package com.vaadin.testing.unified.spring; "
+                                        + "public @interface UnifiedSpringBootTest {}"))
+                                .build()
+                                .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
+                        c = MigrationMarkers.onClass(c, STARTS_THE_APP);
+                    } else {
+                        maybeAddImport(UNIFIED_UI_TEST);
+                        c = JavaTemplate.builder("@UnifiedUITest")
+                                .imports(UNIFIED_UI_TEST)
+                                .javaParser(Stubs.parser("package com.vaadin.testing.unified; public @interface UnifiedUITest {}"))
+                                .build()
+                                .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
+                        if (springBootApp) {
+                            c = MigrationMarkers.onClass(c, EXTERNAL_SERVER);
+                        }
+                    }
                 }
                 maybeRemoveImport(LOCAL_SERVER_PORT);
                 return c;
@@ -415,6 +487,9 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
             @Override
             public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+                if (signsIn(m)) {
+                    MigrationMarkers.add(getCursor(), SIGNS_IN);
+                }
                 Set<String> helpers = getCursor().getNearestMessage(HELPERS, Set.of());
                 Set<String> tests = getCursor().getNearestMessage(TESTS, Set.of());
                 if (m.getSelect() == null && (helpers.contains(m.getSimpleName()) || tests.contains(m.getSimpleName()))
@@ -465,6 +540,17 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                         .apply(getCursor(), m.getCoordinates().replace(), page(), Stubs.literal(path));
             }
 
+            /**
+             * A call on a TestBench login element, or a page object extending one, in a test of a Spring Security
+             * module that starts the app: {@code @WithMockUser} could sign in instead.
+             */
+            private boolean signsIn(J.MethodInvocation m) {
+                J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                return startsTheApp() && m.getSelect() != null && c != null && isTestBenchClass(c)
+                        && LOGIN_ELEMENTS.stream().anyMatch(login -> TypeUtils.isAssignableTo(login, m.getSelect().getType()))
+                        && scanned.spring.usesSecurity(getCursor().firstEnclosingOrThrow(SourceFile.class));
+            }
+
             /** Whether the method the cursor is in has or gains the Unified Page: a test or a helper of a TestBench class. */
             private boolean bearsPage() {
                 J.MethodDeclaration method = getCursor().firstEnclosing(J.MethodDeclaration.class);
@@ -483,6 +569,16 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
         };
     }
 
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof TestBenchSetupToUnified other && Objects.equals(springBootTest, other.springBootTest);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(springBootTest);
+    }
+
     /** A call that already passes a Unified Page, rewritten on an earlier cycle. */
     private static boolean passesPage(J.MethodInvocation m) {
         return !m.getArguments().isEmpty() && TypeUtils.isOfClassType(m.getArguments().get(0).getType(), UNIFIED_PAGE);
@@ -492,6 +588,16 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     private static boolean overridesTestBase(J.MethodDeclaration m) {
         return m.getMethodType() != null && TypeUtils.findOverriddenMethod(m.getMethodType())
                 .filter(TestBenchLeftoversToEscapeHatch::isTestBaseMethod).isPresent();
+    }
+
+    /**
+     * A TestBench class that gets the test annotation: it extends TestBench's base class directly, so its subclasses
+     * inherit it, and has none of its own.
+     */
+    static boolean takesTestAnnotation(J.ClassDeclaration c) {
+        return isTestBenchClass(c) && c.getExtends() != null && isTestBenchBase(c.getExtends().getType())
+                && c.getLeadingAnnotations().stream().noneMatch(a -> TEST_ANNOTATIONS.stream()
+                        .anyMatch(t -> TypeUtils.isOfClassType(a.getType(), t)));
     }
 
     /** A class that is, or extends, TestBench's {@code BrowserTestBase}. */

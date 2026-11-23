@@ -92,6 +92,30 @@ final class MigrationMarkers {
         return method.withBody(method.getBody().withStatements(statements));
     }
 
+    /** The class with a marker above its first annotation, or above the class; unchanged when it has the marker. */
+    static J.ClassDeclaration onClass(J.ClassDeclaration c, String text) {
+        if (!c.getLeadingAnnotations().isEmpty()) {
+            J.Annotation first = c.getLeadingAnnotations().get(0);
+            Space prefix = withClassMarker(first.getPrefix(), c.getPrefix().getIndent(), text);
+            if (prefix == first.getPrefix()) {
+                return c;
+            }
+            List<J.Annotation> annotations = new ArrayList<>(c.getLeadingAnnotations());
+            annotations.set(0, first.withPrefix(prefix));
+            return c.withLeadingAnnotations(annotations);
+        }
+        return c.withPrefix(withClassMarker(c.getPrefix(), c.getPrefix().getIndent(), text));
+    }
+
+    private static Space withClassMarker(Space prefix, String indent, String text) {
+        List<Comment> comments = new ArrayList<>(prefix.getComments());
+        if (comments.stream().anyMatch(c -> c instanceof TextComment t && t.getText().endsWith(text))) {
+            return prefix;
+        }
+        comments.add(new TextComment(false, " TODO unified: " + text, "\n" + indent, Markers.EMPTY));
+        return prefix.withComments(comments);
+    }
+
     private static Cursor statementInMethodBody(Cursor cursor) {
         Cursor c = cursor;
         while (c.getParent() != null) {

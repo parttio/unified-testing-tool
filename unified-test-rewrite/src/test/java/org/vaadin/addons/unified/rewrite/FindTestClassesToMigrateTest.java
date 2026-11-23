@@ -356,4 +356,66 @@ class FindTestClassesToMigrateTest implements RewriteTest {
                         }
                         """));
     }
+
+    @Test
+    void aSpringBootAppsTestBenchClassWithoutSpringBootTestNamesTheAnnotationItGetsAndTheOption() {
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactlyInAnyOrder(
+                                new FindTestClassesToMigrate.TestClasses.Row("com/example/AbstractIT.java",
+                                        "com.example.AbstractIT", "TestBench", "migrates", "", "",
+                                        FindTestClassesToMigrate.SPRING_BOOT_TEST),
+                                new FindTestClassesToMigrate.TestClasses.Row("com/example/UsersIT.java",
+                                        "com.example.UsersIT", "TestBench", "migrates", ""))),
+                java("""
+                        package org.springframework.boot.autoconfigure;
+
+                        public @interface SpringBootApplication {}
+                        """),
+                java("""
+                        package com.example;
+
+                        import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+                        @SpringBootApplication
+                        public class Application {}
+                        """),
+                java("""
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        public abstract class AbstractIT extends BrowserTestBase {
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        /*~~(migrates: %s)~~>*/public abstract class AbstractIT extends BrowserTestBase {
+                        }
+                        """.formatted(FindTestClassesToMigrate.SPRING_BOOT_TEST)),
+                java("""
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class UsersIT extends AbstractIT {
+                            @BrowserTest
+                            void opensUsers() {
+                            }
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        /*~~(migrates)~~>*/class UsersIT extends AbstractIT {
+                            @BrowserTest
+                            void opensUsers() {
+                            }
+                        }
+                        """));
+    }
 }
