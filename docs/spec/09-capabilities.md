@@ -92,11 +92,11 @@ Differences in meaning are documented, not banned. Tests that depend on the brow
 
 | Testing Tool | Captured automatically on failure |
 |---|---|
-| Playwright, Selenium | screenshot: `<test class>.<method>.png` (Playwright: the full page; Selenium: the window), with the failed step's Step Target's box in `user-steps.json` |
-| Browserless | location and component tree as text: `<test class>.<method>.tree.txt`, the failed step's Step Target marked `← this step` |
-| every Testing Tool | the [Findable View](12-readable-tests.md#findable-view) of the page: `<test class>.<method>.view.txt` |
+| Playwright, Selenium | screenshot: `failure.png` (Playwright: the full page; Selenium: the window), with the failed step's Step Target's box in `user-steps.json` |
+| Browserless | location and component tree as text: `failure.tree.txt`, the failed step's Step Target marked `← this step` |
+| every Testing Tool | the [Findable View](12-readable-tests.md#findable-view) of the page: `failure.view.txt` |
 
-Written to `vaadin.testing.evidence-dir` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes. The failure names the files (a suppressed exception), so they show in the test report. Next to them, every test writes its User Steps (`<test class>/<test method>/user-steps.txt` and `user-steps.json`), and the run writes `summary.md`; the failure's `Evidence` line names that directory ([12. Readable tests, Reports](12-readable-tests.md#reports)).
+Written into the test's evidence directory, `<vaadin.testing.evidence-dir>/<test class>/<test method>/` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes, next to the test's User Steps (`user-steps.txt` and `user-steps.json`) *(unreleased)*; a test that passes leaves no `failure.*` there, and an earlier run's are removed. The failure names the files (a suppressed exception), so they show in the test report, and so do its `Evidence` line, the test's directory followed by the files (`(failure.png, failure.view.txt)`), and `user-steps.json`'s `failure.evidence` ([12. Readable tests, Reports](12-readable-tests.md#reports)). The run writes `summary.md` at the evidence directory's root.
 
 ## Requirements on Testing Tool adapters
 

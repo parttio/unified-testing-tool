@@ -78,10 +78,10 @@ class ReportViewerTest {
         Files.createDirectories(scenarioDir.resolve("steps"));
         png(scenarioDir.resolve("steps/001.png"));
         png(scenarioDir.resolve("steps/002.png"));
-        png(dir.resolve("demo.CheckoutTest.pays.png"));
+        png(scenarioDir.resolve("failure.png"));
         ScenarioResult scenario = ScenarioResult.parse(SCENARIO, "CheckoutTest/pays/");
         String html = new RunReport(new RunSummary("Playwright", List.of(scenario), 0, null),
-                s -> List.of("demo.CheckoutTest.pays.png")).html();
+                s -> List.of("CheckoutTest/pays/failure.png")).html();
         Files.writeString(dir.resolve("report.html"), html);
         page = browser.newPage(new Browser.NewPageOptions().setViewportSize(1200, 900));
         page.navigate(dir.resolve("report.html").toUri().toString());

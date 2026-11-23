@@ -171,7 +171,9 @@ class FailureMessagesTest {
         assertTrue(lines.get(9).matches("  Code          FailureMessagesTest\\.java:\\d+ \\(renamedLabel\\)"
                 + " ← FailureMessagesTest\\.java:\\d+ \\(renamedLabel\\)"), lines.get(9));
         Path evidence = dir.resolve("FailureMessagesTest$Failing").resolve("renamedLabel");
-        assertEquals("  Evidence      " + evidence.toString().replace('\\', '/') + "/", lines.get(10));
+        // the test's evidence directory, and the failure evidence in it
+        assertEquals("  Evidence      " + evidence.toString().replace('\\', '/') + "/  ("
+                + (tool.hasRealBrowser() ? "failure.png" : "failure.tree.txt") + ", failure.view.txt)", lines.get(10));
         assertEquals(11, lines.size(), failure.getMessage());
 
         // the same parts in user-steps.json

@@ -155,13 +155,14 @@ UnifiedAssertionError: Renaming a person in the editor updates the grid
   Waited        10 s (vaadin.testing.timeout)
   Tool          playwright (chromium)
   Code          EditPersonTest.java:14 (renamesAPerson) ← EditPersonTest.java:27 (renamePerson)
-  Evidence      target/surefire-reports/unified-evidence/EditPersonTest/renamesAPerson/
+  Evidence      target/surefire-reports/unified-evidence/EditPersonTest/renamesAPerson/  (failure.png, failure.view.txt)
 ```
 
 `Nearby` lists the Near Misses, closest first; `Found` is `none`, `2: …` (several matches: add a filter),
 `1, but disabled` (the user can't use it yet: do the step that enables it), or the values an assertion saw while
-waiting. `Evidence` holds a screenshot (browser) or the component tree (Browserless), and on every Testing Tool
-`<test>.view.txt`: each component the page held at the failure, with the lookup that finds it.
+waiting. `Evidence` is the test's directory and the files in it: `failure.png`, a screenshot (browser), or
+`failure.tree.txt`, the component tree (Browserless), and on every Testing Tool `failure.view.txt`: each component
+the page held at the failure, with the lookup that finds it.
 
 By default that is all a run keeps beyond `user-steps.txt`. Two opt-in settings keep more, for passing tests too
 (see Configuration):

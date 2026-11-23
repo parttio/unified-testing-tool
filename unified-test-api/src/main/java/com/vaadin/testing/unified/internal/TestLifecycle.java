@@ -46,12 +46,10 @@ public final class TestLifecycle {
      * @param invocation the n-th run of a parameterized or repeated test, or null
      */
     public record TestId(String className, String methodName, String displayName, Integer invocation) {
-
-        /** The name of its failure evidence files, such as {@code com.example.LoginTest.logsIn}. */
-        String evidenceName() {
-            return className + "." + methodName;
-        }
     }
+
+    /** The name of a test's failure evidence files in its evidence directory: {@code failure.png}, … */
+    static final String FAILURE_EVIDENCE = "failure";
 
     private final Settings settings;
     private final Function<TestingTool, TestingToolAdapter> adapters;
@@ -201,10 +199,12 @@ public final class TestLifecycle {
                 if (logs != null) {
                     logs.close();
                 }
-                // the Testing Tool's evidence first: user-steps.json names where its screenshot shows the Step Target
-                ToolEvidence tool = failure == null ? null : toolEvidence(failure, test.evidenceName());
+                // the failure evidence first: user-steps.json and the failure name it, and where the screenshot
+                // shows the Step Target
+                Path directory = testEvidenceDir(test);
+                deleteFailureEvidence(directory);
+                List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, directory);
                 reportUserSteps(steps, failure, test);
-                List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, test.evidenceName(), tool);
                 keepRecording(failure, test);
                 return evidence;
             } finally {
@@ -230,9 +230,9 @@ public final class TestLifecycle {
         private record ToolEvidence(List<Path> files, String problem) {
         }
 
-        private ToolEvidence toolEvidence(Throwable failure, String name) {
+        private ToolEvidence toolEvidence(Throwable failure, Path directory) {
             try {
-                Evidence evidence = session.writeFailureEvidence(settings.evidenceDir(), name,
+                Evidence evidence = session.writeFailureEvidence(directory, FAILURE_EVIDENCE,
                         steps.targetOf(failure));
                 steps.failureHighlight(evidence.highlight());
                 return new ToolEvidence(evidence.files(), null);
@@ -241,23 +241,39 @@ public final class TestLifecycle {
             }
         }
 
-        /** The Testing Tool's evidence, then the Findable View, each written even when the other can't be. */
-        private List<Path> writeEvidence(Throwable failure, String name, ToolEvidence tool) {
+        /**
+         * The Testing Tool's evidence, then the Findable View, into the test's evidence directory, each written even
+         * when the other can't be; their names go to the failure and to {@code user-steps.json}.
+         */
+        private List<Path> writeEvidence(Throwable failure, Path directory) {
+            ToolEvidence tool = toolEvidence(failure, directory);
             List<Path> files = new ArrayList<>(tool.files());
             if (tool.problem() != null) {
                 failure.addSuppressed(new FailureEvidence(tool.problem()));
             }
-            findableView(name).ifPresent(files::add);
+            findableView(directory).ifPresent(files::add);
             if (!files.isEmpty()) {
                 failure.addSuppressed(new FailureEvidence("Failure evidence: " + describe(files)));
+            }
+            List<String> names = files.stream().map(f -> nameIn(directory, f)).toList();
+            steps.failureEvidence(names);
+            if (failure instanceof UnifiedAssertionError unified) {
+                unified.parts().evidenceFiles(names);
             }
             return List.copyOf(files);
         }
 
-        /** The Findable View of the test's first window, {@code <name>.view.txt}; none if it can't be read. */
-        private Optional<Path> findableView(String name) {
+        /** The file's path relative to the test's evidence directory, or its name when it lies elsewhere. */
+        private static String nameIn(Path directory, Path file) {
+            Path dir = directory.toAbsolutePath().normalize();
+            Path path = file.toAbsolutePath().normalize();
+            return (path.startsWith(dir) ? dir.relativize(path) : path.getFileName()).toString().replace('\\', '/');
+        }
+
+        /** The Findable View of the test's first window, {@code failure.view.txt}; none if it can't be read. */
+        private Optional<Path> findableView(Path directory) {
             try {
-                return Optional.of(FindableView.write(((UnifiedPageImpl) page).run(), settings.evidenceDir(), name));
+                return Optional.of(FindableView.write(((UnifiedPageImpl) page).run(), directory, FAILURE_EVIDENCE));
             } catch (Exception | LinkageError e) {
                 return Optional.empty();
             }
@@ -312,6 +328,21 @@ public final class TestLifecycle {
         String classDir = className.substring(className.lastIndexOf('.') + 1);
         String methodDir = test.methodName() + (test.invocation() == null ? "" : "[" + test.invocation() + "]");
         return settings.evidenceDir().resolve(classDir).resolve(methodDir);
+    }
+
+    /** Removes the failure evidence an earlier run of the test left, so a passing test has none. */
+    private static void deleteFailureEvidence(Path directory) {
+        if (!Files.isDirectory(directory)) {
+            return;
+        }
+        try (java.util.stream.Stream<Path> files = Files.list(directory)) {
+            for (Path file : files.filter(f -> f.getFileName().toString().startsWith(FAILURE_EVIDENCE + "."))
+                    .toList()) {
+                Files.deleteIfExists(file);
+            }
+        } catch (java.io.IOException e) {
+            System.err.println("Old failure evidence could not be removed from " + directory + ": " + e);
+        }
     }
 
     /** Removes the snapshots an earlier run of the test left, so the directory holds this run's only. */

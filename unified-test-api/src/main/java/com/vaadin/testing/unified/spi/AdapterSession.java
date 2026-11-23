@@ -63,7 +63,8 @@ public interface AdapterSession extends AutoCloseable {
 
     /**
      * Writes what a developer needs to see why a test failed (browsers: a screenshot; Browserless: the
-     * component tree) into {@code directory}, with file names starting with {@code name}.
+     * component tree) into {@code directory}, with file names starting with {@code name}: the core passes the
+     * test's evidence directory and {@code failure}, so a screenshot is {@code failure.png}.
      *
      * @param target the Step Target of the step that failed, as this session found it; null when the failure
      *        was no step's, or its step singled out nothing

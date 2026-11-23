@@ -52,6 +52,23 @@ class RunSummaryWriterTest {
                 List.of("app/src/test/java/demo/EditPersonTest.java"), List.of(), Map.of())));
     }
 
+    /**
+     * A test's {@code user-steps.json}; a failed one with this failure evidence, each file written into its evidence
+     * directory with its name as content.
+     */
+    private void test(String testClass, String method, String status, String startedAt, String... evidence)
+            throws Exception {
+        test(testClass, method, status, startedAt);
+        Path file = evidence().resolve(testClass.substring(testClass.lastIndexOf('.') + 1)).resolve(method)
+                .resolve("user-steps.json");
+        String names = String.join(", ", java.util.Arrays.stream(evidence).map(n -> "\"" + n + "\"").toList());
+        Files.writeString(file, Files.readString(file).replace("\"steps\":",
+                "\"failure\": {\"type\": \"x\", \"message\": \"m\", \"evidence\": [" + names + "]},\n \"steps\":"));
+        for (String name : evidence) {
+            Files.writeString(file.resolveSibling(name), name);
+        }
+    }
+
     private void test(String testClass, String method, String status, String startedAt) throws Exception {
         String simple = testClass.substring(testClass.lastIndexOf('.') + 1);
         Path file = evidence().resolve(simple).resolve(method).resolve("user-steps.json");
@@ -72,23 +89,24 @@ class RunSummaryWriterTest {
 
     @Test
     void writesAReadablePageBesideEachComponentTreeTheReportShows() throws Exception {
-        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z");
+        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z", "failure.tree.txt");
         Path json = evidence().resolve("EditPersonTest/edits/user-steps.json");
+        Files.writeString(json.resolveSibling("failure.tree.txt"), "Location: /\n\n└── UI[]\n");
         Files.writeString(json, Files.readString(json).replace("\"verb\": \"open\",",
                 "\"verb\": \"open\", \"snapshot\": \"steps/001.tree.txt\","));
         Files.createDirectories(json.resolveSibling("steps"));
         Files.writeString(json.resolveSibling("steps/001.tree.txt"), "Location: /people\n\n└── UI[]\n");
-        Files.writeString(evidence().resolve("demo.EditPersonTest.edits.tree.txt"), "Location: /\n\n└── UI[]\n");
 
         writer(Map.of(), Map.of()).write(Set.of(), "1");
 
         String step = Files.readString(json.resolveSibling("steps/001.tree.html"));
         assertTrue(step.contains("<code>/people</code>"), step);
-        assertTrue(Files.exists(evidence().resolve("demo.EditPersonTest.edits.tree.html")));
+        assertTrue(Files.exists(json.resolveSibling("failure.tree.html")));
         String html = Files.readString(evidence().resolve("report.html"), StandardCharsets.UTF_8);
         assertTrue(html.contains("href=\"EditPersonTest/edits/steps/001.tree.html\" data-tree"), html);
         // the page is no failure evidence of its own
-        assertFalse(html.contains("<a href=\"demo.EditPersonTest.edits.tree.html\">"), html);
+        assertTrue(html.contains("EditPersonTest/edits/failure.tree.txt"), html);
+        assertFalse(html.contains("<a href=\"EditPersonTest/edits/failure.tree.html\">"), html);
     }
 
     @Test
@@ -109,30 +127,27 @@ class RunSummaryWriterTest {
 
     @Test
     void writesTheHtmlReportNextToTheSummaryWithItsFailureEvidence() throws Exception {
-        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z");
+        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z", "failure.png", "failure.view.txt",
+                "failure.gone.txt");
+        Files.delete(evidence().resolve("EditPersonTest/edits/failure.gone.txt"));
         test("demo.EditPersonTest", "editsAll", "passed", "2026-11-16T10:00:06Z");
-        Files.writeString(evidence().resolve("demo.EditPersonTest.edits.png"), "png");
-        Files.writeString(evidence().resolve("demo.EditPersonTest.editsAll.tree.txt"), "an earlier run's");
+        Files.writeString(evidence().resolve("EditPersonTest/editsAll/failure.tree.txt"), "an earlier run's");
 
         writer(Map.of(), Map.of()).write(Set.of(), "1");
 
         String html = Files.readString(evidence().resolve("report.html"), StandardCharsets.UTF_8);
         assertTrue(html.startsWith("<!doctype html>"), html);
-        assertTrue(html.contains("<img src=\"demo.EditPersonTest.edits.png\""), html);
-        // another method's file with the same start, and evidence of a passing scenario, are not linked
-        assertFalse(html.contains("editsAll.tree.txt"), html);
-        assertEquals(List.of("demo.A.save.png", "demo.A.save.tree.txt"), RunSummaryWriter.failureEvidence(
-                List.of("demo.A.save.png", "demo.A.save.tree.txt", "demo.A.saveAll.png", "summary.md"),
-                com.vaadin.testing.unified.internal.steps.ScenarioResult.parse("""
-                        {"schemaVersion": 1, "testClass": "demo.A", "testMethod": "save", "status": "failed",
-                         "steps": []}""", "A/save/")));
+        assertTrue(html.contains("<img src=\"EditPersonTest/edits/failure.png\""), html);
+        assertTrue(html.contains("EditPersonTest/edits/failure.view.txt"), html);
+        // a file user-steps.json names but that is gone, and a passing scenario's earlier evidence, are not linked
+        assertFalse(html.contains("failure.gone.txt"), html);
+        assertFalse(html.contains("editsAll/failure.tree.txt"), html);
     }
 
     @Test
     void writesTheRunAsJsonNextToTheSummaryWithPathsRelativeToTheEvidenceDirectory() throws Exception {
-        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z");
+        test("demo.EditPersonTest", "edits", "failed", "2026-11-16T10:00:05Z", "failure.png");
         test("demo.OldTest", "fromAnEarlierRun", "failed", "2019-12-31T23:59:59Z");
-        Files.writeString(evidence().resolve("demo.EditPersonTest.edits.png"), "png");
 
         writer(Map.of(), Map.of()).write(Set.of("demo.SkippedTest#skips#[id]"), "1");
 
@@ -142,7 +157,7 @@ class RunSummaryWriterTest {
         assertTrue(json.contains("\"passed\": 0,\n  \"failed\": 1,\n  \"skipped\": 1,"), json);
         assertTrue(json.contains("\"evidenceDir\": \"EditPersonTest/edits/\""), json);
         assertTrue(json.contains("\"userSteps\": \"EditPersonTest/edits/user-steps.json\""), json);
-        assertTrue(json.contains("\"demo.EditPersonTest.edits.png\""), json);
+        assertTrue(json.contains("\"EditPersonTest/edits/failure.png\""), json);
         assertFalse(json.contains("fromAnEarlierRun"), json);
         assertFalse(json.contains(dir.toString()), "no absolute path: the directory is read from a CI artifact too");
     }

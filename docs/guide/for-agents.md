@@ -29,7 +29,7 @@ The skill follows the guide's [rules of thumb](index.md#rules-of-thumb). They ar
 An agent reads the same outputs as a person ([Reading reports and failures](reports-and-failures.md)):
 
 - **The failure message** has fixed labels in a fixed order, with `Did you mean` when one Near Miss is clearly meant. The same parts are in the `failure` of `user-steps.json`.
-- **The Findable View**, `<test>.view.txt` next to a failure, lists what the page held as lookups to paste. In a test, `page.describe()` prints it.
+- **The Findable View**, `failure.view.txt` in a failed test's evidence directory, lists what the page held as lookups to paste. In a test, `page.describe()` prints it.
 - **`summary.json`** says which tests failed, why, and where their files are ([The run as data](reports-and-failures.md#the-run-as-data)).
 
 ## Checking what an agent did

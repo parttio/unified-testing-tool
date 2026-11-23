@@ -771,6 +771,17 @@ public final class StepRecorder {
         this.failureHighlight = highlight;
     }
 
+    private volatile List<String> failureEvidence = List.of();
+
+    /** The failure evidence files in the test's evidence directory, by name; empty without any. */
+    public List<String> failureEvidence() {
+        return failureEvidence;
+    }
+
+    public void failureEvidence(List<String> names) {
+        this.failureEvidence = List.copyOf(names);
+    }
+
     public synchronized Step stepThatThrew(Throwable failure) {
         Step[] found = { null };
         visit(root.children, entry -> {
