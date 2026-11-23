@@ -2331,6 +2331,170 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void testBenchStaysAsJUnit6WhileAPageObjectStillUsesAnElementJar() {
+        rewriteRun(
+                pomXml(testBenchJUnit5Pom(), keptTestBenchPom()),
+                java("""
+                    import com.vaadin.flow.component.html.testbench.DivElement;
+                    import com.vaadin.testbench.TestBenchElement;
+
+                    public class ProfileViewElement extends TestBenchElement {
+
+                        public DivElement header() {
+                            return $(DivElement.class).first();
+                        }
+                    }
+                    """),
+                java("""
+                    import com.vaadin.testbench.BrowserTest;
+                    import com.vaadin.testbench.BrowserTestBase;
+
+                    class ProfileTest extends BrowserTestBase {
+
+                        @BrowserTest
+                        void opens() {
+                            getDriver().get("http://localhost:8080/profile");
+                        }
+                    }
+                    """, spec -> spec.after(after -> after)),
+                InstalledSkill.files());
+    }
+
+    @Test
+    void testBenchGoesWhenEveryTestConverts() {
+        rewriteRun(
+                pomXml(testBenchJUnit5Pom(), unifiedOnlyPom()),
+                java("""
+                    import com.vaadin.testbench.BrowserTest;
+                    import com.vaadin.testbench.BrowserTestBase;
+
+                    class ProfileTest extends BrowserTestBase {
+
+                        @BrowserTest
+                        void opens() {
+                            getDriver().get("http://localhost:8080/profile");
+                        }
+                    }
+                    """, spec -> spec.after(after -> after)),
+                InstalledSkill.files());
+    }
+
+    @Test
+    void testBenchStaysWhileAnEscapeHatchRemains() {
+        rewriteRun(
+                pomXml(testBenchJUnit5Pom(), keptTestBenchPom()),
+                java("""
+                    import com.vaadin.testbench.BrowserTest;
+                    import com.vaadin.testbench.BrowserTestBase;
+
+                    class ProfileTest extends BrowserTestBase {
+
+                        @BrowserTest
+                        void scrolls() {
+                            getDriver().get("http://localhost:8080/profile");
+                            executeScript("window.scrollTo(0, 0)");
+                        }
+                    }
+                    """, spec -> spec.after(after -> after)),
+                InstalledSkill.files());
+    }
+
+    private static String testBenchJUnit5Pom() {
+        return pomWith("""
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>vaadin-testbench-junit5</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                """, "");
+    }
+
+    private static String keptTestBenchPom() {
+        return pomWith("""
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>vaadin-testbench-junit6</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                """ + UNIFIED_DEPENDENCIES, UNIFIED_BOM);
+    }
+
+    private static String unifiedOnlyPom() {
+        return pomWith("""
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>browserless-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                """ + UNIFIED_DEPENDENCIES, UNIFIED_BOM);
+    }
+
+    private static final String UNIFIED_BOM = """
+                            <dependency>
+                                <groupId>org.vaadin.addons</groupId>
+                                <artifactId>unified-test-bom</artifactId>
+                                <version>%s</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                """.formatted(UNIFIED_VERSION);
+
+    private static final String UNIFIED_DEPENDENCIES = """
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-browserless</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-selenium</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.vaadin.addons</groupId>
+                            <artifactId>unified-test-spring</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+                """;
+
+    /** A Vaadin 25.3 Spring Boot pom with these dependencies, and these BOMs after Vaadin's and Spring Boot's. */
+    private static String pomWith(String dependencies, String moreBoms) {
+        return """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencyManagement>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.vaadin</groupId>
+                                <artifactId>vaadin-bom</artifactId>
+                                <version>25.3.5</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-dependencies</artifactId>
+                                <version>4.1.1</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                            </dependency>
+                %s        </dependencies>
+                    </dependencyManagement>
+                    <dependencies>
+                %s    </dependencies>
+                </project>
+                """.formatted(moreBoms, dependencies);
+    }
+
+    @Test
     void addAgentSkillWritesTheMigrationMarkersSkill() throws Exception {
         String skill = new String(getClass().getResourceAsStream(
                 "/META-INF/unified/skills/resolve-migration-markers/SKILL.md").readAllBytes(),

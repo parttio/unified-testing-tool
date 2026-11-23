@@ -89,6 +89,7 @@ public class MigrateTestBenchToUnified extends Recipe {
         Environment recipes = Environment.builder().load(DeclaredRecipes.load(RECIPES)).build();
         List<Recipe> list = new ArrayList<>(names.stream().map(name -> recipes.activateRecipes(name)).map(Recipe.class::cast).toList());
         list.add(new RemoveJUnit4WhenUnused()); // scans every source, so outside the build and test-code preconditions
+        list.add(new RemoveTestBenchWhenUnused(includePageObjects)); // the same, on the migrated test code
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
         }
