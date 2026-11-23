@@ -34,6 +34,16 @@ With Spring Security, put Spring's own `@WithMockUser` or `@WithUserDetails` on 
 --8<-- "unified-test-demo/src/test/java/demo/UsersTest.java:adminSeesTheAdminArea"
 ```
 
+`@WithMockUser` comes from Spring Security's test support, which a project tested through its login form may not have yet. Add it as a test dependency: `spring-boot-starter-security-test` on Spring Boot 4, or `org.springframework.security:spring-security-test` otherwise.
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
 ## Several windows and users
 
 | Need | Write | Session |

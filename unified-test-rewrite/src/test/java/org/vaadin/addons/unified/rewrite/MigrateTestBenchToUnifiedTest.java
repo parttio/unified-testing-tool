@@ -3071,4 +3071,236 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void driverGetOfAUrlConstantNavigatesToItsPath() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.openqa.selenium.WebDriver;
+
+                class UsersIT extends BrowserTestBase {
+
+                    private static final String APP_URL = "http://localhost:8080/";
+
+                    WebDriver driver;
+
+                    @BrowserTest
+                    void opensUsers() {
+                        driver.get(APP_URL + "users");
+                    }
+
+                    @BrowserTest
+                    void opensRoot() {
+                        driver.get(APP_URL);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import org.junit.jupiter.api.Test;
+                import org.openqa.selenium.WebDriver;
+
+                @UnifiedUITest
+                class UsersIT {
+
+                    WebDriver driver;
+
+                    @Test
+                    void opensUsers(UnifiedPage page) {
+                        page.navigate("users");
+                    }
+
+                    @Test
+                    void opensRoot(UnifiedPage page) {
+                        page.navigate("");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void driverGetOnAParameterOrWithTheSlashOnThePathNavigatesTheSameWay() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.openqa.selenium.WebDriver;
+
+                class UsersIT extends BrowserTestBase {
+
+                    static final String APP_URL = "http://127.0.0.1:8080";
+
+                    WebDriver driver;
+
+                    @BrowserTest
+                    void opensUsers() {
+                        open(driver);
+                    }
+
+                    void open(WebDriver driver) {
+                        driver.get(APP_URL + "/users");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import org.junit.jupiter.api.Test;
+                import org.openqa.selenium.WebDriver;
+
+                @UnifiedUITest
+                class UsersIT {
+
+                    WebDriver driver;
+
+                    @Test
+                    void opensUsers(UnifiedPage page) {
+                        open(page, driver);
+                    }
+
+                    void open(UnifiedPage page, WebDriver driver) {
+                        page.navigate("users");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void driverGetOfABaseTheRecipeCantReadIsMarked() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class UsersIT extends BrowserTestBase {
+
+                    static final String REMOTE_URL = "https://staging.example.com/";
+                    String appUrl = "http://localhost:8080/";
+
+                    @BrowserTest
+                    void opensUsers() {
+                        getDriver().get(appUrl + "users");
+                        getDriver().get(REMOTE_URL + "users");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class UsersIT {
+
+                    static final String REMOTE_URL = "https://staging.example.com/";
+                    String appUrl = "http://localhost:8080/";
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void opensUsers(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: navigation to appUrl + "users": not a local application URL the recipe can read; use page.navigate("<path>")
+                        // TODO unified: TestBench Escape Hatch: getDriver()
+                        testBench.getDriver().get(appUrl + "users");
+                        // TODO unified: navigation to REMOTE_URL + "users": not a local application URL the recipe can read; use page.navigate("<path>")
+                        // TODO unified: TestBench Escape Hatch: getDriver()
+                        testBench.getDriver().get(REMOTE_URL + "users");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aUrlConstantStillReadElsewhereIsKept() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.openqa.selenium.WebDriver;
+
+                class UsersIT extends BrowserTestBase {
+
+                    static final String APP_URL = "http://localhost:8080/";
+
+                    WebDriver driver;
+
+                    @BrowserTest
+                    void opensUsers() {
+                        driver.get(APP_URL + "users");
+                        System.out.println(APP_URL);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import org.junit.jupiter.api.Test;
+                import org.openqa.selenium.WebDriver;
+
+                @UnifiedUITest
+                class UsersIT {
+
+                    static final String APP_URL = "http://localhost:8080/";
+
+                    WebDriver driver;
+
+                    @Test
+                    void opensUsers(UnifiedPage page) {
+                        page.navigate("users");
+                        System.out.println(APP_URL);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aBaseClassUrlConstantUsedOnlyForNavigationIsRemoved() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        public abstract class AbstractIT extends BrowserTestBase {
+
+                            protected static final String APP_URL = "http://localhost:8080/";
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedUITest;
+
+                        @UnifiedUITest
+                        public abstract class AbstractIT {
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class UsersIT extends AbstractIT {
+
+                            @BrowserTest
+                            void opensUsers() {
+                                getDriver().get(APP_URL + "users");
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import org.junit.jupiter.api.Test;
+
+                        class UsersIT extends AbstractIT {
+
+                            @Test
+                            void opensUsers(UnifiedPage page) {
+                                page.navigate("users");
+                            }
+                        }
+                        """));
+    }
 }

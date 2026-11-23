@@ -111,6 +111,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 |---|---|
 | `extends BrowserTestBase`, `TestBenchTestCase` or `ParallelTest`; `@BrowserTest` | `@UnifiedSpringBootTest` (from `@SpringBootTest`) or `@UnifiedUITest`; `@Test` with a `UnifiedPage page` parameter |
 | `getDriver().get("http://localhost:" + port + "/people")` | `page.navigate(PeopleView.class)` when one view has the route, else `page.navigate("people")` |
+| `driver.get(APP_URL + "people")` on any `WebDriver`, with `APP_URL` a constant `"http://localhost:8080/"` (or `127.0.0.1`) *(unreleased)* | the same; the constant goes when nothing else reads it. A base the recipe can't read (not a constant, not a local URL) keeps the call, with a Migration Marker |
 | `$(TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | `withClassName("a", "b")`, or one name with a space | `withClassNames("a", "b")`: the Unified `withClassName` takes one class name, as Flow's `addClassName` does |
 | `first()`, `waitForFirst()` | the same lookup, with a `was first()` Migration Marker: the lookup fails when several components match |

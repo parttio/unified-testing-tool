@@ -18,6 +18,16 @@ class AdminViewTest {
 }
 ```
 
+`@WithMockUser` comes from Spring Security's test support, which a project tested through its login form may not have yet. Add it as a test dependency: `spring-boot-starter-security-test` on Spring Boot 4, or `org.springframework.security:spring-security-test` otherwise.
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
 | Testing Tool | How the adapter logs in |
 |---|---|
 | Browserless | `SpringBrowserlessApplicationContext.createSecured(..)`, then `newUser(username, roles…)` |
