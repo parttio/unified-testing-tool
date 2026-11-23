@@ -241,6 +241,15 @@ final class SeleniumSession implements AdapterSession {
         return result;
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        WebElement scope = parent == null ? null : ((SeleniumElement) parent).webElement();
+        SeleniumComponents.Support support = SeleniumComponents.of(Component.class);
+        return ((List<WebElement>) js("return (" + BrowserQueries.TEMPLATES + ")(arguments[0], arguments[1]);",
+                scope, inTemplate)).stream().map(e -> (UnifiedElement) new SeleniumElement(this, e, support)).toList();
+    }
+
     /** The candidates inside a Template the test entered, in one round trip ({@link BrowserQueries#IN_TEMPLATE}). */
     @SuppressWarnings("unchecked")
     private List<WebElement> inTemplate(WebElement host, String selector) {

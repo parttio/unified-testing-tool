@@ -88,6 +88,7 @@ public final class Wrappers {
         String name = "findTemplate(" + templateType.getSimpleName() + ")";
         String tag = requireTag(templateType, "", name);
         requireBrowserInside(run, parent);
+        run.steps().templateUsed(templateType);
         ElementSource source = new ElementSource(run, name, null, templateType, tag, List.of(), 0, List.of(),
                 List.of(), parent, true);
         return (UnifiedTemplate) newWrapper(UnifiedTemplate.class, new LazyElement(source, -1, run));

@@ -166,6 +166,24 @@ final class BrowserlessSession implements AdapterSession {
         return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
     }
 
+    /** The {@code LitTemplate}s in the scope, with Browserless Test's walk, which doesn't enter them. */
+    @Override
+    public List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        BrowserlessElement scope = (BrowserlessElement) parent;
+        List<Component> roots = scope == null ? List.of(window().getUI())
+                : inTemplate ? templateRoots(scope.component()) : scope.scopeRoots();
+        boolean rootsIncluded = inTemplate || scope != null && scope.rootsIncluded();
+        java.util.Set<Component> found = new java.util.LinkedHashSet<>();
+        for (Component root : roots) {
+            for (Component c : com.vaadin.browserless.internal.LocatorKt._walkAll(root)) {
+                if ((c != root || rootsIncluded) && c instanceof com.vaadin.flow.component.littemplate.LitTemplate) {
+                    found.add(c);
+                }
+            }
+        }
+        return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
+    }
+
     /**
      * Where a lookup inside a Template searches (spec 04, "Templates"): the components bound to its template with
      * {@code @Id}, which Flow keeps as virtual children and Browserless Test's own walk leaves out, then its light

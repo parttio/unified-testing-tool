@@ -373,4 +373,38 @@ public final class BrowserQueries {
               const match = %s;
               return match(kept.map(i => elements[i]), arg.filters).map(j => kept[j]);
             }""".formatted(MATCH);
+
+    /** Whether an element is a Template: an element of the application's own with a shadow root. */
+    private static final String IS_TEMPLATE = """
+            e => !!e.shadowRoot && e.localName.includes('-') && !/^(vaadin-|copilot-)/.test(e.localName)""";
+
+    /**
+     * Browser function {@code (scope, inTemplate) => elements}: the Templates in a scope, not entering them; the
+     * whole page when {@code scope} is null. {@code querySelectorAll} doesn't enter shadow roots, so Templates nested
+     * in another are not found.
+     */
+    public static final String TEMPLATES = """
+            (scope, inTemplate) => {
+              const all = scope === null || scope === undefined ? Array.from(document.querySelectorAll('*'))
+                  : inTemplate ? (%s)(scope, '*') : Array.from(scope.querySelectorAll('*'));
+              return all.filter(%s);
+            }""".formatted(IN_TEMPLATE, IS_TEMPLATE);
+
+    /**
+     * Browser function {@code (elements, {scope, inTemplate}) => indices}: {@link #TEMPLATES} for candidates found
+     * with CSS that enters every shadow root (Playwright's): those in the scope's own tree, or as
+     * {@link #MATCH_IN_TEMPLATE} keeps them inside a Template.
+     */
+    public static final String TEMPLATES_AMONG = """
+            (elements, arg) => {
+              const scope = arg.scope;
+              const inside = e => scope === null || scope === undefined ? e.getRootNode() === document
+                  : arg.inTemplate ? e !== scope && (scope.shadowRoot && e.getRootNode() === scope.shadowRoot
+                      ? e.closest('[id]') !== null : scope.contains(e))
+                  : e !== scope && scope.contains(e);
+              const isTemplate = %s;
+              const found = [];
+              elements.forEach((e, i) => { if (inside(e) && isTemplate(e)) found.push(i); });
+              return found;
+            }""".formatted(IS_TEMPLATE);
 }

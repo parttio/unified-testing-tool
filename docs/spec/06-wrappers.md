@@ -134,7 +134,9 @@ Implemented; demo: `demo.addon` (component) and `demo.addon.testing` (wrappers, 
 
 ### Templates
 
-*(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* A Wrapper for a [Template](04-locating.md#templates) extends the `TemplateScope` mixin. It is then a Scope whose lookups search the Template's shadow root and light DOM:
+> **Unreleased:** on `main`, not in `0.1.0-alpha4`. See [what is unreleased](../releases/unreleased.md).
+
+A Wrapper for a [Template](04-locating.md#templates) extends the `TemplateScope` mixin. It is then a Scope whose lookups search the Template's shadow root and light DOM:
 
 ```java
 @UnifiedComponent(SearchBar.class)                  // SearchBar extends LitTemplate, @Tag("search-bar")

@@ -234,8 +234,27 @@ public final class FindableView {
                             : apart(run, t, r, scope, inTemplate, prefix, containers)));
                 }
             }
+            lines.addAll(templates(run, scope, inTemplate, prefix, listed));
             return lines;
         });
+    }
+
+    /**
+     * The Templates in the scope, one line each with the lookup that enters it (spec 12, "Findable View"); what is
+     * inside them is listed by {@code describe()} on the Template. A Template the test's own Wrapper lists already
+     * is left out.
+     */
+    private static List<Line> templates(TestRun run, UnifiedElement scope, boolean inTemplate, String prefix,
+            Set<String> listed) {
+        List<Templates.Found> found = Templates.in(run, scope, inTemplate).stream()
+                .filter(t -> listed.stream().noneMatch(key -> key.startsWith(t.tag() + " "))).toList();
+        List<Line> lines = new ArrayList<>();
+        for (Templates.Found t : found) {
+            long alike = found.stream().filter(o -> o.tag().equals(t.tag())).count();
+            lines.add(new Line("Template <" + t.tag() + ">", alike == 1 ? prefix + t.enter()
+                    : "not unique: " + alike + " alike"));
+        }
+        return lines;
     }
 
     private static OfType ofType(TestRun run, Class<?> type, UnifiedComponent annotation, UnifiedElement scope,

@@ -237,6 +237,30 @@ final class PlaywrightSession implements AdapterSession {
         return result;
     }
 
+    /** One round trip: every element under the scope, kept in the page as {@link BrowserQueries#TEMPLATES} would. */
+    @Override
+    public List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        Locator scope = parent == null ? null : ((PlaywrightElement) parent).locator();
+        Locator candidates = scope == null ? page.locator("*") : scope.locator("*");
+        com.microsoft.playwright.ElementHandle host = scope == null ? null : scope.elementHandle();
+        PlaywrightComponents.Support support = PlaywrightComponents.of(Component.class);
+        Map<String, Object> arg = new java.util.HashMap<>();
+        arg.put("scope", host);
+        arg.put("inTemplate", inTemplate);
+        try {
+            List<UnifiedElement> result = new ArrayList<>();
+            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.TEMPLATES_AMONG, arg)) {
+                int index = ((Number) i).intValue();
+                result.add(new PlaywrightElement(this, candidates.nth(index), null, support, candidates, index));
+            }
+            return result;
+        } finally {
+            if (host != null) {
+                host.dispose();
+            }
+        }
+    }
+
     /** Dramafinder's element of the component's type over {@code locator}, for the actions it offers; or null. */
     private static VaadinElement dramafinderElement(PlaywrightComponents.Support support, Locator locator) {
         Class<? extends VaadinElement> type = support.dramafinderElement();

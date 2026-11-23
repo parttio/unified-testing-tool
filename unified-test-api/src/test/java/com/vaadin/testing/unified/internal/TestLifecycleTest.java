@@ -223,7 +223,8 @@ class TestLifecycleTest {
                 Files.readString(saves.resolve("user-steps.json")));
         assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + saves + ", failure, null]",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"),
-                session.calls.stream().filter(call -> !call.startsWith("find[") && !call.equals("currentPath")
+                session.calls.stream().filter(call -> !call.startsWith("find[") && !call.startsWith("findTemplates[")
+                        && !call.equals("currentPath")
                         && !call.equals("browserName")).toList()); // the Findable View's reads
         Throwable[] suppressed = failure.getSuppressed();
         assertEquals(2, suppressed.length);

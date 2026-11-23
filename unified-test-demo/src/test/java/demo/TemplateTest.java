@@ -1,9 +1,12 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.testing.unified.TemplateScope;
 import com.vaadin.testing.unified.UnifiedComponent;
+import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
@@ -17,17 +20,21 @@ import demo.template.OrdersPanel;
 import demo.template.OrdersView;
 import demo.template.SearchBar;
 import org.junit.jupiter.api.DisplayName;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 /** Components in a Template's shadow root, found by entering the Template (#347), on every Testing Tool. */
 @UnifiedSpringBootTest
 public class TemplateTest {
 
+    // --8<-- [start:wrapper]
     /** A Wrapper for a Template: its lookups search inside it. */
     @UnifiedComponent(SearchBar.class)
     public interface UnifiedSearchBar extends UnifiedWrapper, CommonFilters<UnifiedSearchBar>, TemplateScope {
     }
+    // --8<-- [end:wrapper]
 
+    // --8<-- [start:entersNestedTemplates]
     @Test
     @DisplayName("A button in a Template nested in another is found by entering both")
     void entersNestedTemplates(UnifiedPage page) {
@@ -40,6 +47,7 @@ public class TemplateTest {
 
         assertThat(panel.find(UnifiedSpan.class).withId("status")).hasText("Order created");
     }
+    // --8<-- [end:entersNestedTemplates]
 
     @Test
     @DisplayName("Typing into a field in a Template runs the server's listener")
@@ -96,5 +104,37 @@ public class TemplateTest {
         } else {
             assertThat(searchBar.find(UnifiedButton.class).withText("New order")).doesNotExist();
         }
+    }
+
+    @Test
+    @DisplayName("A lookup that finds nothing names the Templates where it would, and how to enter them")
+    void failureNamesTheTemplate(UnifiedPage page) {
+        page.navigate(OrdersView.class);
+        page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).describe(); // the test knows both classes
+
+        UnifiedTextField filter = (UnifiedTextField) page.find(UnifiedTextField.class).withId("filter")
+                .withTimeout(Duration.ofMillis(200));
+        UnifiedAssertionError failure = assertThrows(UnifiedAssertionError.class, () -> filter.setValue("x"));
+
+        String message = failure.getMessage();
+        assertTrue(message.contains("text field (id “filter”) in Template <demo-search-bar> in Template"
+                + " <demo-orders-panel>: findTemplate(OrdersPanel.class).findTemplate(SearchBar.class)"
+                + ".find(UnifiedTextField.class).withId(\"filter\")"), message);
+        assertTrue(message.contains("Did you mean  findTemplate(OrdersPanel.class).findTemplate(SearchBar.class)"
+                + ".find(UnifiedTextField.class).withId(\"filter\")"), message);
+    }
+
+    @Test
+    @DisplayName("The Findable View lists a Template as one line, with the lookup that enters it")
+    void findableViewListsTemplates(UnifiedPage page) {
+        page.navigate(OrdersView.class);
+
+        String view = page.describe();
+
+        assertTrue(view.contains("Template <demo-orders-panel>"), view);
+        assertTrue(view.contains("page.findTemplate(<the class with @Tag(\"demo-orders-panel\")>.class)"), view);
+        String inside = page.findTemplate(OrdersPanel.class).describe();
+        assertTrue(inside.contains("Template <demo-search-bar>"), inside);
+        assertTrue(inside.contains("span (id “status”)") || inside.contains("button “New customer”"), inside);
     }
 }

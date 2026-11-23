@@ -77,6 +77,14 @@ When that doesn't read like what a user does, name the kind with `@UnifiedCompon
 
 `selector` is a compound CSS selector of `.class`, `#id`, `[attribute="value"]` and `[theme~="value"]`, without spaces.
 
+## A Template
+
+*(unreleased)* A Wrapper for a `LitTemplate` (or another component with a shadow root of its own) extends `TemplateScope`: lookups on it then search inside the Template ([Finding components, Templates](finding-components.md#templates)).
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:wrapper"
+```
+
 ## When one Testing Tool needs other code
 
 Browserless runs no client-side JavaScript, so content the browser draws isn't there. Override the methods that need it for that tool, in an interface extending the Wrapper:
