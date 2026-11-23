@@ -152,6 +152,114 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void aChatInADockFocusAndAMessageByIndexBecomeUnifiedChatCalls() {
+        // issue #511: a chat scoped by test id, focus(), and getMessage(i) next to assertMessageCount(n)
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.MessageInputElement;
+                import org.vaadin.addons.dramafinder.element.MessageListElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class ChatTest extends SpringPlaywrightIT {
+                    @Test
+                    void asks() {
+                        navigate(PeopleView.class);
+                        MessageInputElement input = MessageInputElement.get(page.getByTestId("chat-dock"));
+                        input.typeAndSubmit("What's on Friday?");
+                        input.focus();
+                        MessageListElement messages = MessageListElement.get(page);
+                        messages.assertMessageCount(3);
+                        assertThat(messages.getMessage(2)).containsText("Got it");
+                        assertThat(messages.getMessage(0)).hasText("What's on Friday?");
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedMessageInput input = page.find(UnifiedContainer.class).withTestId("chat-dock").find(UnifiedMessageInput.class);
+                        input.send("What's on Friday?");
+                        input.element().focus();
+                        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+                        assertThat(messages).hasMessageCount(3);
+                        assertThat(messages.message(2)).hasTextContaining("Got it");
+                        assertThat(messages.message(0)).hasText("What's on Friday?");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aChatElementGivenAnIdOrTestIdLocatorBecomesALookupOfItsWrapper() {
+        // issue #511: get(locator) finds the element inside the locator, new X(locator) is the locator itself
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.MessageInputElement;
+                import org.vaadin.addons.dramafinder.element.MessageListElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class ChatTest extends SpringPlaywrightIT {
+                    @Test
+                    void asks() {
+                        navigate(PeopleView.class);
+                        MessageInputElement.get(page.locator("[data-testid=chat-dock]")).typeAndSubmit("Hi");
+                        new MessageInputElement(page.locator("#chat-input")).focus();
+                        MessageListElement messages = new MessageListElement(page.getByTestId("chat-history"));
+                        messages.assertMessageCount(1);
+                        MessageListElement.get(page.locator("#chat-dock")).assertEmpty();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        page.find(UnifiedContainer.class).withTestId("chat-dock").find(UnifiedMessageInput.class).send("Hi");
+                        page.find(UnifiedMessageInput.class).withId("chat-input").element().focus();
+                        UnifiedMessageList messages = page.find(UnifiedMessageList.class).withTestId("chat-history");
+                        assertThat(messages).hasMessageCount(1);
+                        assertThat(page.find(UnifiedContainer.class).withId("chat-dock").find(UnifiedMessageList.class)).isEmpty();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void springBootTestAndTheToolGuardGo() {
         rewriteRun(java(VIEW), java(
                 """

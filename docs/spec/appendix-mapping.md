@@ -80,8 +80,12 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |
 | `waitForGridToStopLoading()`, `scrollToRow(i)` | dropped (Auto-Wait) |
 | `MessageInputElement.get(page)`, `MessageListElement.get(page)` | `page.find(UnifiedMessageInput.class)`, `page.find(UnifiedMessageList.class)` (no marker: a second one fails loudly) |
+| `MessageInputElement.get(l)` / `MessageListElement.get(l)`, `l` an id or test id locator on the page *(unreleased)* | `page.find(UnifiedContainer.class).withId(..)` / `withTestId(..)` + `.find(UnifiedMessageInput.class)` / `.find(UnifiedMessageList.class)` |
+| `new MessageInputElement(l)` / `new MessageListElement(l)`, `l` an id or test id locator on the page *(unreleased)* | `page.find(UnifiedMessageInput.class)` / `page.find(UnifiedMessageList.class)` + `.withId(..)` / `.withTestId(..)` |
 | message input `typeAndSubmit(s)` | `send(s)` |
+| message input `focus()` *(unreleased)* | `element().focus()` |
 | message list `assertMessageCount(n)` / `assertEmpty()` | `assertThat(list).hasMessageCount(n)` / `isEmpty()` |
+| `assertThat(list.getMessage(i)).containsText(s)` / `hasText(s)` *(unreleased)* | `assertThat(list.message(i)).hasTextContaining(s)` / `hasText(s)` |
 
 ## Escape Hatch
 

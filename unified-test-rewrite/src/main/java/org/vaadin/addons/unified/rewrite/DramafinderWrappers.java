@@ -22,6 +22,8 @@ final class DramafinderWrappers {
 
     private static final String ELEMENT = "org.vaadin.addons.dramafinder.element.";
     private static final String COMPONENT = "com.vaadin.testing.unified.component.";
+    /** The Wrapper of any component: a raw locator's when no other has it, and a chat element's scope. */
+    static final String CONTAINER = COMPONENT + "UnifiedContainer";
     static final String QUERIES = "org.vaadin.addons.dramafinder.element.query.ElementQueries";
 
     /** A Wrapper: its filters, the element methods it has (Dramafinder name to Unified name) and assertions. */
@@ -50,8 +52,14 @@ final class DramafinderWrappers {
     /**
      * A Dramafinder lookup the Wrapper can express: {@code page.find(W.class)} and the filters (the Wrapper
      * itself, ADR 0007), then {@code all().get(index)} when {@code index} is set. {@code marker} is the Migration Marker it needs, if any.
+     * {@code scope}, when set, is the filter of a container the Wrapper is found in:
+     * {@code page.find(UnifiedContainer.class).<scope>.find(W.class)} (#511).
      */
-    record Lookup(Wrapper wrapper, List<Filter> filters, Expression index, String marker) {
+    record Lookup(Wrapper wrapper, List<Filter> filters, Expression index, String marker, Filter scope) {
+
+        Lookup(Wrapper wrapper, List<Filter> filters, Expression index, String marker) {
+            this(wrapper, filters, index, marker, null);
+        }
     }
 
     private static final Set<String> COMMON_FILTERS = Set.of("withAccessibleName", "withAccessibleNameContaining",
@@ -87,7 +95,8 @@ final class DramafinderWrappers {
                     Map.of("getTotalRowCount", "getRowCount"), Map.of("assertRowCount", "hasRowCount"))), Map.of(
             // a chat, on Vaadin's AI components (#357)
             ELEMENT + "MessageInputElement", new Wrapper(COMPONENT + "UnifiedMessageInput", COMMON_FILTERS,
-                    Map.of("typeAndSubmit", "send", "isEnabled", "isEnabled", "isVisible", "isVisible"), VISIBILITY),
+                    Map.of("typeAndSubmit", "send", "isEnabled", "isEnabled", "isVisible", "isVisible",
+                            "focus", "element().focus"), VISIBILITY),
             ELEMENT + "MessageListElement", new Wrapper(COMPONENT + "UnifiedMessageList", COMMON_FILTERS,
                     same("isVisible"), with(VISIBILITY, Map.of("assertMessageCount", "hasMessageCount", "assertEmpty", "isEmpty")))))
             .flatMap(m -> m.entrySet().stream()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -95,6 +104,12 @@ final class DramafinderWrappers {
     /** Elements whose {@code get(page)} finds the first one on the page: the Wrapper finds it, and a second one fails loudly. */
     private static final Set<String> GET_FIRST = Set.of(ELEMENT + "GridElement", ELEMENT + "MessageInputElement",
             ELEMENT + "MessageListElement");
+
+    /**
+     * Chat elements, whose {@code get(locator)} finds the first one inside the locator and whose constructor takes
+     * the element's own locator: on an id or test id locator, a container scope and a filter (#511).
+     */
+    private static final Set<String> CHAT = Set.of(ELEMENT + "MessageInputElement", ELEMENT + "MessageListElement");
 
     /** A grid row: what {@code grid.findRow(index).orElseThrow()} becomes, {@code grid.row(index)}. */
     static final Wrapper ROW = new Wrapper(COMPONENT + "UnifiedGrid$UnifiedGridRow", Set.of(),
@@ -135,7 +150,7 @@ final class DramafinderWrappers {
                     same("check", "uncheck", "setChecked", "isChecked", "isVisible", "isEnabled"), Map.of()));
 
     /** Any component: what a raw locator becomes when no other Wrapper has it. */
-    private static final Wrapper RAW_CONTAINER = new Wrapper(COMPONENT + "UnifiedContainer", COMMON_FILTERS,
+    private static final Wrapper RAW_CONTAINER = new Wrapper(CONTAINER, COMMON_FILTERS,
             same("click", "isVisible", "isEnabled"), Map.of());
 
     /**
@@ -148,7 +163,7 @@ final class DramafinderWrappers {
             COMPONENT + "UnifiedTextField", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
             COMPONENT + "UnifiedTextArea", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
             COMPONENT + "UnifiedCheckbox", Set.of("isVisible", "isEnabled", "isDisabled", "isChecked"),
-            COMPONENT + "UnifiedContainer", Set.of("isVisible", "isEnabled", "isDisabled"));
+            CONTAINER, Set.of("isVisible", "isEnabled", "isDisabled"));
 
     /** Playwright text checks with a string, and the Unified check of each (#510). */
     private static final Map<String, String> RAW_TEXT_CHECKS = Map.of("containsText", "hasTextContaining",
@@ -273,16 +288,43 @@ final class DramafinderWrappers {
      * {@code UnifiedContainer}, which finds any component, with a Migration Marker.
      */
     private static Lookup ofRawLocator(J.MethodInvocation call, ExecutionContext ctx) {
-        if (ctx == null || call.getSelect() == null || !Dramafinder.isPageField(call.getSelect())
-                || call.getArguments().size() != 1 || !(call.getArguments().get(0) instanceof J.Literal l)
-                || !(l.getValue() instanceof String selector)
+        Filter idFilter = ctx == null ? null : idFilter(call);
+        if (idFilter == null) {
+            return null;
+        }
+        J.Literal l = (J.Literal) call.getArguments().get(0);
+        String filter = idFilter.name();
+        String value = (String) ((J.Literal) idFilter.arguments().get(0)).getValue();
+        String what = filter.equals("withId") ? "id" : "test id";
+        String component = DramafinderIds.of(ctx, (filter.equals("withId") ? "id:" : "testid:") + value);
+        Wrapper wrapper = component == null || component.equals(DramafinderIds.AMBIGUOUS) ? null
+                : RAW_BY_COMPONENT.getOrDefault(component, RAW_CONTAINER);
+        String marker = null;
+        if (wrapper == null) {
+            wrapper = RAW_CONTAINER;
+            marker = "was " + call.getSimpleName() + "(" + l.getValueSource() + "): "
+                    + (component == null ? "no view in the sources sets this " + what
+                            : "the sources set this " + what + " on components of different classes")
+                    + "; UnifiedContainer finds any component, use the component's own Wrapper if it has one";
+        }
+        return new Lookup(wrapper, List.of(new Filter(filter, List.of(Stubs.literal(value)))), null, marker);
+    }
+
+    /**
+     * {@code withId("x")} or {@code withTestId("x")} for {@code page.locator("#x")}, {@code page.locator("[data-testid=x]")}
+     * or {@code page.getByTestId("x")} on the test's page; else {@code null}.
+     */
+    private static Filter idFilter(Expression e) {
+        if (!(e instanceof J.MethodInvocation call) || call.getMethodType() == null || call.getSelect() == null
+                || !Dramafinder.isPageField(call.getSelect()) || call.getArguments().size() != 1
+                || !(call.getArguments().get(0) instanceof J.Literal l) || !(l.getValue() instanceof String selector)
                 || !TypeUtils.isOfClassType(call.getMethodType().getDeclaringType(), Dramafinder.PAGE)) {
             return null;
         }
-        String filter;
-        String value;
         java.util.regex.Matcher id = ID_SELECTOR.matcher(selector);
         java.util.regex.Matcher testId = TEST_ID_SELECTOR.matcher(selector);
+        String filter;
+        String value;
         if (call.getSimpleName().equals("getByTestId")) {
             filter = "withTestId";
             value = selector;
@@ -297,19 +339,18 @@ final class DramafinderWrappers {
         } else {
             return null;
         }
-        String what = filter.equals("withId") ? "id" : "test id";
-        String component = DramafinderIds.of(ctx, (filter.equals("withId") ? "id:" : "testid:") + value);
-        Wrapper wrapper = component == null || component.equals(DramafinderIds.AMBIGUOUS) ? null
-                : RAW_BY_COMPONENT.getOrDefault(component, RAW_CONTAINER);
-        String marker = null;
-        if (wrapper == null) {
-            wrapper = RAW_CONTAINER;
-            marker = "was " + call.getSimpleName() + "(" + l.getValueSource() + "): "
-                    + (component == null ? "no view in the sources sets this " + what
-                            : "the sources set this " + what + " on components of different classes")
-                    + "; UnifiedContainer finds any component, use the component's own Wrapper if it has one";
-        }
-        return new Lookup(wrapper, List.of(new Filter(filter, List.of(Stubs.literal(value)))), null, marker);
+        return new Filter(filter, List.of(Stubs.literal(value)));
+    }
+
+    /**
+     * {@code new MessageListElement(page.getByTestId("x"))}, a chat element on its own id or test id locator:
+     * {@code page.find(UnifiedMessageList.class).withTestId("x")} (#511); else {@code null}.
+     */
+    private static Lookup ofConstructor(J.NewClass newClass) {
+        JavaType.FullyQualified type = TypeUtils.asFullyQualified(newClass.getType());
+        Filter filter = type == null || !CHAT.contains(type.getFullyQualifiedName()) || newClass.getArguments().size() != 1
+                ? null : idFilter(newClass.getArguments().get(0));
+        return filter == null ? null : new Lookup(BY_ELEMENT.get(type.getFullyQualifiedName()), List.of(filter), null, null);
     }
 
     static Wrapper forElement(JavaType type) {
@@ -328,6 +369,9 @@ final class DramafinderWrappers {
      * holds the ids the application's sources set ({@link DramafinderIds}), for raw Playwright locators.
      */
     static Lookup ofLookup(Expression e, boolean version2, ExecutionContext ctx) {
+        if (e instanceof J.NewClass newClass) {
+            return ofConstructor(newClass);
+        }
         if (!(e instanceof J.MethodInvocation call) || call.getMethodType() == null) {
             return null;
         }
@@ -344,8 +388,14 @@ final class DramafinderWrappers {
         JavaType.FullyQualified declaring = call.getMethodType().getDeclaringType();
         Wrapper wrapper = BY_ELEMENT.get(declaring.getFullyQualifiedName());
         if (wrapper == null || !call.getMethodType().hasFlags(org.openrewrite.java.tree.Flag.Static)
-                || call.getArguments().isEmpty() || !Dramafinder.isPageField(call.getArguments().get(0))) {
+                || call.getArguments().isEmpty()) {
             return null;
+        }
+        if (!Dramafinder.isPageField(call.getArguments().get(0))) {
+            // MessageInputElement.get(page.getByTestId("dock")): the first one inside that component (#511)
+            Filter scope = call.getSimpleName().equals("get") && call.getArguments().size() == 1
+                    && CHAT.contains(declaring.getFullyQualifiedName()) ? idFilter(call.getArguments().get(0)) : null;
+            return scope == null ? null : new Lookup(wrapper, List.of(), null, null, scope);
         }
         String name = call.getSimpleName();
         if (name.equals("get") && call.getArguments().size() == 1 && GET_FIRST.contains(declaring.getFullyQualifiedName())) {
@@ -415,20 +465,29 @@ final class DramafinderWrappers {
 
     /** The lookup as template code on {@code #{any(UnifiedPage)}}, and the arguments for its placeholders. */
     static String code(Lookup lookup, List<Object> parameters) {
-        StringBuilder code = new StringBuilder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.find("
-                + lookup.wrapper().simpleName() + ".class)");
+        StringBuilder code = new StringBuilder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}");
         parameters.add(Stubs.page());
+        if (lookup.scope() != null) {
+            code.append(".find(UnifiedContainer.class)");
+            filter(lookup.scope(), code, parameters);
+        }
+        code.append(".find(").append(lookup.wrapper().simpleName()).append(".class)");
         for (Filter f : lookup.filters()) {
-            code.append('.').append(f.name()).append('(');
-            code.append(String.join(", ", java.util.Collections.nCopies(f.arguments().size(), "#{any()}")));
-            code.append(')');
-            parameters.addAll(f.arguments());
+            filter(f, code, parameters);
         }
         if (lookup.index() != null) {
             code.append(".all().get(#{any(int)})");
             parameters.add(lookup.index());
         }
         return code.toString();
+    }
+
+    /** {@code .<filter>(#{any()}, ..)}, its arguments added to the template's. */
+    static void filter(Filter f, StringBuilder code, List<Object> parameters) {
+        code.append('.').append(f.name()).append('(');
+        code.append(String.join(", ", java.util.Collections.nCopies(f.arguments().size(), "#{any()}")));
+        code.append(')');
+        parameters.addAll(f.arguments());
     }
 
     @SafeVarargs
