@@ -1,6 +1,6 @@
 # 4. Locating components
 
-Decided in [#7](https://github.com/parttio/unified-testing-tool/issues/7), [#12](https://github.com/parttio/unified-testing-tool/issues/12) and "What shape does a lookup take?" (#199); see [ADR 0001](../adr/0001-locator-filters-follow-component-type.md), [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). The style the lookups are written in: [12. Readable tests](12-readable-tests.md#lookups).
+Decided in [#7](https://github.com/parttio/unified-testing-tool/issues/7), [#12](https://github.com/parttio/unified-testing-tool/issues/12) and "What shape does a lookup take?" (#199); see [ADR 0001](../adr/0001-locator-filters-follow-component-type.md), [ADR 0002](../adr/0002-unified-wrapper-names-and-class-literal-lookups.md) and [ADR 0007](../adr/0007-wrappers-carry-their-filters.md). Templates: [#347](https://github.com/parttio/unified-testing-tool/issues/347), [ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md). The style the lookups are written in: [12. Readable tests](12-readable-tests.md#lookups).
 
 ## Lookup shape
 
@@ -64,7 +64,7 @@ The same on every Testing Tool:
 |---|---|
 | Hidden components | **included**: a component hidden after it was shown stays in a browser's page, so Browserless includes it too. Add `.visible()` for "the action is gone". A component that was never visible is in no browser's page (Flow doesn't send it), but Browserless finds it: `.visible()` gives the same answer everywhere. |
 | Dialogs, notifications | open ones only; a closed dialog (the app's or the dev tools') is not part of the page |
-| Shadow DOM | not searched: neither Vaadin's components and the dev tools nor the app's own templates |
+| Shadow DOM | not searched by a lookup: neither Vaadin's components and the dev tools nor the app's own Templates. A test enters a Template explicitly ([Templates](#templates)) *(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* |
 | Grid cell components | found page-wide for the rows the grid rendered, as a browser has them |
 | No tag | a lookup for a component without a tag (`findComponent(Component.class)`, a `Composite`) fails at once on every Testing Tool: a browser can't find it |
 
@@ -104,6 +104,30 @@ It searches what the scope holds, not the scope itself: `dialog.find(UnifiedDial
 
 Components created by renderers (e.g. Grid cells) and the content of closed overlays are reached through their **owning Wrapper** on every Testing Tool ([7. Grid](07-grid.md)).
 
+## Templates
+
+*(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* Decided in #347; see [ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md).
+
+A **Template** is a component whose own content a test reaches only by entering it: an app's `LitTemplate`, whose `@Id` components live in its shadow root, or a web component that renders its content in the browser. No lookup enters a Template by itself. A test enters one Template at a time, by finding it as a Scope:
+
+```java
+page.findTemplate(StorefrontView.class)                    // no Wrapper of its own
+    .find(UnifiedSearchBar.class)                          // a Wrapper with TemplateScope (6. Wrappers)
+    .find(UnifiedButton.class).withId("new").click();
+```
+
+| Rule | Detail |
+|---|---|
+| Entering | `findTemplate(X.class)` on any Scope, for a Template without a Wrapper of its own (the tag from `@Tag`), or `find(..)` of a Wrapper that extends `TemplateScope` ([6. Wrappers](06-wrappers.md#templates)). There is no setting that makes lookups enter shadow roots. |
+| What it searches | the Template's shadow root and its light DOM (slotted children, children the server added), not the shadow roots of nested Templates: each is entered with its own lookup. A slotted component is found once, where it is in the light DOM. |
+| What is findable inside a `LitTemplate` | what the server knows, the same on every Testing Tool: the `@Id` components and what is under them. A browser takes the elements with an `id` in the shadow root, and what is under them; plain template HTML without an `id` is not found. |
+| Portable lookups inside | `withId(..)`, and filters on state the server set. Text, labels and attributes written in the template's HTML are empty on the server: on Browserless such a filter doesn't match ([Appendix B](appendix-gaps.md#browserless-test)). |
+| Ids | compared within the Template entered: the same id in two Templates is not ambiguous. |
+| Client-rendered web components | entered the same way in a browser. Browserless can't see inside them: a test that enters one declares `@RequiresBrowser` ([9. Capabilities](09-capabilities.md#browser-only-features-in-the-unified-api)). |
+| The Template's own text | `getText()` and `withText(..)` on a Template read its light DOM only, as on any component. |
+
+A failed lookup that would have found its component inside a Template says so, with the lookup that enters it ([12. Readable tests, Failures](12-readable-tests.md#failures)).
+
 ## Components without a Wrapper
 
 ```java
@@ -128,3 +152,4 @@ CSS, XPath, ARIA role queries, predicates over a tool's own objects ([8. Escape 
 - Resolve a lookup on every use, and fail when zero or several components match, after waiting up to the timeout.
 - Let the core list Near Misses: re-run a lookup without its user-facing filters, and read `label`, text, `placeholder`, `data-testid` and the accessible name of each candidate ([12. Readable tests](12-readable-tests.md#requirements-on-testing-tool-adapters)).
 - TestBench before 25.4: implement `withTestId` with the `data-testid` attribute.
+- *(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* Search a Template's shadow root and light DOM when a lookup is scoped on it, and never a shadow root otherwise. Browserless: walk the Template's virtual children (its `@Id` components), which Browserless Test's own walk leaves out.

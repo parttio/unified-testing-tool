@@ -111,6 +111,8 @@ nav:
       - adr/0008-adapter-spi-is-test-runner-neutral.md
       - adr/0009-findable-view-in-lookups-not-aria-yaml.md
       - adr/0010-browser-screenshots-are-highlighted-by-the-report.md
+      - adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md
+      - adr/0012-lookups-enter-templates-explicitly.md
   - Release notes:
       - Unreleased: releases/unreleased.md
       - 0.1.0-alpha4: releases/0.1.0-alpha4.md
