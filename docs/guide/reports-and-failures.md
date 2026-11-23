@@ -61,7 +61,15 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
 
 ### Did you mean
 
-`Did you mean` appears only when one Near Miss is clearly what the test meant: it differs only in case, spacing or punctuation; or it is a small edit away with no equal rival; or it has the exact name but is another kind. It is written as the lookup to paste, from `find(..)` on. A dialog whose title the test misspelled:
+`Did you mean` appears only when one Near Miss is clearly what the test meant. The rules are tried in this order, and the first that applies decides:
+
+1. **Same letters and digits.** Exactly one component of the same kind has the wanted name when case, spaces and punctuation are ignored: `Previous week` and `Previous Week`, `Email` and `E-mail`. If two do, there is no suggestion.
+2. **A few edits away.** Otherwise, exactly one component of the same kind is the fewest edits (characters added, removed or changed, ignoring case) from the wanted name, and that is at most a quarter of the wanted name's length, rounded down, or 2 for a short name. `Previous week` has 13 characters, so up to 3 edits: `Previus week` gets a suggestion, `Go to previous week` (6 edits) does not. Two components equally close get none.
+3. **Another kind, the exact name.** Otherwise, exactly one component of another kind has the exact name: a combo box labelled `Role` when the test looked for a text field. When rule 2 and rule 3 both find one, neither is clearly best, and there is no suggestion.
+
+A component of the same kind with exactly the wanted name rules out every suggestion: it is there, and another filter or the scope left it out. A name that only contains the wanted one, or is contained in it, moves up in `Nearby` but is never suggested. So no `Did you mean` means that no Near Miss was close enough by these rules, not that one was missed, and [`ApplyDidYouMean`](#applying-it) has nothing to apply to that failure: read `Nearby`, or the [Findable View](#the-findable-view), and write the lookup yourself.
+
+It is written as the lookup to paste, from `find(..)` on. A dialog whose title the test misspelled:
 
 ```
   Failed at     User Step 3 of 3: click button “Close” in dialog “Export Report”
@@ -142,7 +150,7 @@ The parts are getters on `UnifiedAssertionError`, for a test that checks a failu
 
 ## The CI log
 
-A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line and where it happened:
+A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line, its `Did you mean` when it has one *(unreleased)*, and where it happened:
 
 ```
 ✘ EditEmailTest › Changing a person's email updates the grid   browserless · 11.4 s
@@ -151,6 +159,7 @@ A failed test prints its User Steps to stdout, so the CI log shows them next to 
       2.1  click row where Name is “Alan Turing” in grid
       2.2  fill text field “E-mail” with “alan@bletchley.uk”   ✘
    ✘ UnifiedAssertionError: Expected exactly one text field labelled “E-mail”, found none
+     Did you mean  find(UnifiedTextField.class).withLabel("Email")
      at EditEmailTest.java:31 (changeEmail) ← EditEmailTest.java:33 (changeEmail)
 ```
 

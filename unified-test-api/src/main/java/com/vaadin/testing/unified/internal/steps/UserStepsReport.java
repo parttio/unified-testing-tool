@@ -60,6 +60,9 @@ public record UserStepsReport(String testClass, String testMethod, String displa
      *    ✘ AssertionError: Expected …
      *      at EditPersonTest.java:13 (editsAPersonInTheDialog)
      * </pre>
+     *
+     * A Unified failure with a suggestion gets its {@code Did you mean} line under the {@code ✘} line, in the
+     * failure message's wording; its Near Misses stay in the message and {@code user-steps.json}.
      */
     public String text() {
         StringBuilder sb = new StringBuilder();
@@ -78,6 +81,10 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         }
         if (failure != null && status.equals("failed")) {
             sb.append(INDENT).append(FAILED_MARK).append(' ').append(steps.mask(firstLine(failure))).append('\n');
+            if (failure instanceof UnifiedAssertionError unified && unified.getSuggestion().isPresent()) {
+                sb.append(INDENT).append("  Did you mean  ").append(steps.mask(unified.getSuggestion().get()))
+                        .append('\n');
+            }
             List<CallSite> codePath = codePath();
             if (!codePath.isEmpty()) {
                 sb.append(INDENT).append("  at ").append(String.join(" ← ", codePath.stream().map(String::valueOf).toList()))
