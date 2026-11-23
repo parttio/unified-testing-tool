@@ -34,14 +34,16 @@ class FindableViewTest {
     }
 
     @Test
-    @DisplayName("A chat's message list shows how many messages it holds")
-    void showsAMessageListsMessageCount(UnifiedPage page) {
+    @DisplayName("A chat lists its message list and message input, and the text area the application added, but not"
+            + " the message input's own text area")
+    void listsAChatButNotTheMessageInputsOwnTextArea(UnifiedPage page) {
         page.navigate(ChatView.class);
 
-        // only this line: until #517, Playwright and Selenium also list the message input's own text area
-        assertEquals("message list, 1 message  page.find(UnifiedMessageList.class)",
-                lines(page.describe()).stream().filter(l -> l.startsWith("message list")).findFirst().orElse(null)
-                        .replaceAll(" {2,}", "  "));
+        assertEquals(List.of(
+                "text area “Notes”        page.find(UnifiedTextArea.class).withLabel(\"Notes\")",
+                "message list, 1 message  page.find(UnifiedMessageList.class)",
+                "message input            page.find(UnifiedMessageInput.class)"),
+                lines(page.describe()));
     }
 
     @Test

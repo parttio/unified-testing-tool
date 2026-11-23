@@ -5,6 +5,7 @@ import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
 import com.vaadin.testing.unified.spi.AdapterSession;
+import com.vaadin.testing.unified.spi.ElementFacts;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
@@ -37,6 +38,7 @@ final class FakePage {
         AdapterSession session = (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { AdapterSession.class }, (proxy, method, args) -> switch (method.getName()) {
                     case "find" -> find((QuerySpec) args[0]);
+                    case "facts" -> facts((List<?>) args[0]);
                     case "isAt" -> true;
                     case "currentPath" -> "people";
                     case "title" -> "People";
@@ -76,6 +78,16 @@ final class FakePage {
                 .filter(c -> spec.filters().stream().allMatch(f -> f.matches(c.get(property(f)))))
                 .map(this::element)
                 .toList();
+    }
+
+    /** Each element's facts as read through it, and whether it is an internal part ({@code "internalPart"}). */
+    private static List<ElementFacts> facts(List<?> elements) {
+        return elements.stream().map(o -> {
+            UnifiedElement e = (UnifiedElement) o;
+            ElementFacts f = ElementFacts.read(e);
+            return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
+                    null, null, Boolean.parseBoolean(e.getAttribute("internalPart")));
+        }).toList();
     }
 
     private static String property(Filter f) {

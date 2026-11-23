@@ -164,7 +164,10 @@ final class BrowserlessSession implements AdapterSession {
         return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
     }
 
-    /** In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id. */
+    /**
+     * In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id.
+     * Every element found is a component of the application's, so none is an internal part.
+     */
     @Override
     public List<com.vaadin.testing.unified.spi.ElementFacts> facts(List<UnifiedElement> elements) {
         return elements.stream().map(e -> {
@@ -183,7 +186,7 @@ final class BrowserlessSession implements AdapterSession {
             String label = own.label() != null && !own.label().isBlank() || !(e instanceof BrowserlessElement b2)
                     ? own.label() : formItemLabel(b2.component());
             return new com.vaadin.testing.unified.spi.ElementFacts(label, own.text(), own.placeholder(),
-                    own.testId(), own.accessibleName(), testId, testId == null ? id : null);
+                    own.testId(), own.accessibleName(), testId, testId == null ? id : null, false);
         }).toList();
     }
 
