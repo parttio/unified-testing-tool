@@ -17,6 +17,7 @@ No component matched the lookup.
 | The step that shows it didn't happen: the dialog isn't open, the tab isn't selected. `Nearby` then lists the Near Misses of the missing scope. | Add the step the user takes first, such as the click that opens the dialog. |
 | It is in another scope than the lookup searches. | Search from the right container: `dialog.find(..)`, `tabs.content().find(..)` ([Scopes](finding-components.md#scopes)). |
 | It is hidden. `Nearby` marks it `(hidden)`. | Do what makes it visible to the user. |
+| It is inside a Template (a `LitTemplate`'s `@Id` component, or a web component's shadow root), which no lookup enters by itself. `Nearby` names the Template, such as `in Template <search-bar>`, with the lookup that enters it. *(unreleased)* | Enter the Template: `page.findTemplate(SearchBar.class).find(..)`, and find by `withId(..)` ([Templates](finding-components.md#templates)). |
 
 When `Nearby` doesn't help, look at the Findable View: what the page held at the failure, as lookups ([The Findable View](reports-and-failures.md#the-findable-view)). In a test, `page.describe()` prints the same.
 

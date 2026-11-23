@@ -28,5 +28,5 @@ page.findTemplate(StorefrontView.class)
 
 ## Consequences
 
-- This matches TestBench, where a query on an element searches that element's shadow root one level deep and a page query searches none, so TestBench tests migrate naturally (follow-up issue).
+- This matches TestBench, where a query on an element searches that element's shadow root one level deep and a page query searches none, so TestBench tests migrate naturally: the TestBench and Browserless Migration Recipes turn lookups into a `LitTemplate` into Template lookups (#543).
 - Bakery's obvious `page.find(UnifiedButton.class).withText("New order")` fails. Its failure names the Template to enter.
