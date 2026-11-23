@@ -23,6 +23,8 @@ final class LitTemplates {
     private static final String ELEMENT = "com.vaadin.testbench.elementsbase.Element";
     private static final String TEMPLATES_KEY = "unified.lit-templates";
     private static final String ELEMENTS_KEY = "unified.element-tags";
+    private static final String IDS_KEY = "unified.lit-template-ids";
+    private static final String ID = "com.vaadin.flow.component.template.Id";
 
     /** The context of the visitor running now, on this thread: what the scanners found. */
     private static final ThreadLocal<ExecutionContext> CURRENT = new ThreadLocal<>();
@@ -40,6 +42,17 @@ final class LitTemplates {
         if (tag != null && TypeUtils.isAssignableTo(LIT_TEMPLATE, c.getType())) {
             ctx.<Map<String, Set<String>>>computeMessageIfAbsent(TEMPLATES_KEY, k -> new HashMap<>())
                     .computeIfAbsent(tag, t -> new TreeSet<>()).add(fqn);
+        }
+        if (TypeUtils.isAssignableTo(LIT_TEMPLATE, c.getType())) {
+            for (var statement : c.getBody().getStatements()) {
+                if (statement instanceof J.VariableDeclarations field && field.getVariables().size() == 1) {
+                    String id = annotationValue(field.getLeadingAnnotations(), ID);
+                    if (id != null) {
+                        ctx.<Map<String, String>>computeMessageIfAbsent(IDS_KEY, k -> new HashMap<>())
+                                .put(fqn + "#" + field.getVariables().get(0).getSimpleName(), id);
+                    }
+                }
+            }
         }
         String element = annotationValue(c, ELEMENT);
         if (element != null) {
@@ -73,8 +86,23 @@ final class LitTemplates {
         return tag == null ? null : ofTag(tag);
     }
 
+    /** The id of the template element a {@code LitTemplate}'s field is bound to with {@code @Id}, or {@code null}. */
+    static String idOf(String templateFqn, String field) {
+        ExecutionContext ctx = CURRENT.get();
+        return ctx == null ? null : ctx.<Map<String, String>>getMessage(IDS_KEY, Map.of()).get(templateFqn + "#" + field);
+    }
+
+    /** Whether the type is a {@code LitTemplate}. */
+    static boolean isLitTemplate(org.openrewrite.java.tree.JavaType type) {
+        return TypeUtils.isAssignableTo(LIT_TEMPLATE, type);
+    }
+
     private static String annotationValue(J.ClassDeclaration c, String annotationType) {
-        for (J.Annotation a : c.getLeadingAnnotations()) {
+        return annotationValue(c.getLeadingAnnotations(), annotationType);
+    }
+
+    private static String annotationValue(java.util.List<J.Annotation> annotations, String annotationType) {
+        for (J.Annotation a : annotations) {
             if (TypeUtils.isOfClassType(a.getType(), annotationType) && a.getArguments() != null
                     && a.getArguments().size() == 1) {
                 Expression arg = a.getArguments().get(0);

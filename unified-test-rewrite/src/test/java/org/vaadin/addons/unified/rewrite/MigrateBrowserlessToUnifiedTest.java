@@ -1623,4 +1623,175 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void idFieldsOfALitTemplateBecomeLookupsInsideIt() {
+        rewriteRun(
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.Tag;
+                        import com.vaadin.flow.component.button.Button;
+                        import com.vaadin.flow.component.littemplate.LitTemplate;
+                        import com.vaadin.flow.component.template.Id;
+                        import com.vaadin.flow.component.textfield.TextField;
+
+                        @Tag("search-bar")
+                        public class SearchBar extends LitTemplate {
+                            @Id("filter")
+                            public TextField filter;
+                            @Id("new")
+                            public Button newOrder;
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.Tag;
+                        import com.vaadin.flow.component.littemplate.LitTemplate;
+                        import com.vaadin.flow.component.template.Id;
+
+                        @Tag("orders-panel")
+                        public class OrdersPanel extends LitTemplate {
+                            @Id("search")
+                            public SearchBar search;
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+                        import com.vaadin.flow.router.Route;
+
+                        @Route("orders")
+                        public class OrdersView extends VerticalLayout {
+                            public final OrdersPanel panel = new OrdersPanel();
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.browserless.SpringBrowserlessTest;
+                        import org.junit.jupiter.api.Test;
+                        import org.springframework.boot.test.context.SpringBootTest;
+
+                        @SpringBootTest
+                        class OrdersTest extends SpringBrowserlessTest {
+                            @Test
+                            void createsAnOrder() {
+                                OrdersView view = navigate(OrdersView.class);
+                                test(view.panel.search.filter).setValue("open");
+                                test(view.panel.search.newOrder).click();
+                                String filter = view.panel.search.filter.getValue();
+                            }
+                        }
+                        """,
+                        """
+                        package demo;
+
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.component.UnifiedTextField;
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                        import org.junit.jupiter.api.Test;
+
+                        @UnifiedSpringBootTest
+                        class OrdersTest {
+                            @Test
+                            void createsAnOrder(UnifiedPage page) {
+                                page.navigate(OrdersView.class);
+                                page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).find(UnifiedTextField.class).withId("filter").setValue("open");
+                                page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new").click();
+                                String filter = page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).find(UnifiedTextField.class).withId("filter").getValue();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void anIdFieldOfAFoundLitTemplateBecomesALookupInsideIt() {
+        rewriteRun(
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.Tag;
+                        import com.vaadin.flow.component.button.Button;
+                        import com.vaadin.flow.component.littemplate.LitTemplate;
+                        import com.vaadin.flow.component.template.Id;
+                        import com.vaadin.flow.component.textfield.TextField;
+
+                        @Tag("search-bar")
+                        public class SearchBar extends LitTemplate {
+                            @Id("filter")
+                            public TextField filter;
+                            @Id("new")
+                            public Button newOrder;
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.Tag;
+                        import com.vaadin.flow.component.littemplate.LitTemplate;
+                        import com.vaadin.flow.component.template.Id;
+
+                        @Tag("orders-panel")
+                        public class OrdersPanel extends LitTemplate {
+                            @Id("search")
+                            public SearchBar search;
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+                        import com.vaadin.flow.router.Route;
+
+                        @Route("orders")
+                        public class OrdersView extends VerticalLayout {
+                            public final OrdersPanel panel = new OrdersPanel();
+                        }
+                        """),
+                java(
+                        """
+                        package demo;
+
+                        import com.vaadin.browserless.SpringBrowserlessTest;
+                        import org.junit.jupiter.api.Test;
+                        import org.springframework.boot.test.context.SpringBootTest;
+
+                        @SpringBootTest
+                        class OrdersTest extends SpringBrowserlessTest {
+                            @Test
+                            void createsAnOrder() {
+                                navigate(OrdersView.class);
+                                test($(SearchBar.class).single().newOrder).click();
+                            }
+                        }
+                        """,
+                        """
+                        package demo;
+
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.component.UnifiedButton;
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                        import org.junit.jupiter.api.Test;
+
+                        @UnifiedSpringBootTest
+                        class OrdersTest {
+                            @Test
+                            void createsAnOrder(UnifiedPage page) {
+                                page.navigate(OrdersView.class);
+                                page.findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new").click();
+                            }
+                        }
+                        """));
+    }
 }

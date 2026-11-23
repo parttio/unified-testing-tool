@@ -67,6 +67,7 @@ public class BrowserlessSetupToUnified extends ScanningRecipe<BrowserlessSetupTo
         return new JavaIsoVisitor<>() {
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
+                LitTemplates.collect(classDecl, ctx);
                 if (Browserless.isBrowserlessClass(classDecl)) {
                     Set<String> helpers = Helpers.using(classDecl, Set.of(), Browserless::isTestBaseCall);
                     String name = classDecl.getType().getFullyQualifiedName();

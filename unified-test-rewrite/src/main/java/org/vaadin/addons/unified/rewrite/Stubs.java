@@ -58,7 +58,7 @@ final class Stubs {
             """
             package com.vaadin.testing.unified.component;
             public interface UnifiedTemplate {
-                Object find(Class<?> type);
+                <T> T find(Class<T> type);
                 UnifiedTemplate findTemplate(Class<?> type);
             }
             """,
