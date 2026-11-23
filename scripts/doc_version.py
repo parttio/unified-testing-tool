@@ -5,9 +5,11 @@ The single source is the newest release notes file, docs/releases/<version>.md. 
 (the README's dependencies, the migration guides' recipe coordinates, the developer guide) must all name it.
 
   scripts/doc_version.py            check (run by scripts/build-docs.sh): fail if the pages name different versions;
-                                    warn if they name an older one than the latest release notes, which is normal
-                                    only between writing the notes and the release reaching Maven Central
-  scripts/doc_version.py --update   rewrite every pinned version to the latest release
+                                    warn if they name another one than the latest release notes, which means the
+                                    notes were written but --update wasn't run
+  scripts/doc_version.py --update   rewrite every pinned version to the latest release; run it right after writing
+                                    the release notes, before tagging, so the tag names the release itself
+                                    (CONTRIBUTING.md, "Cutting a release")
 
 Release notes, research notes, ADRs and the spec are left alone: a version there is history, not an instruction.
 """
@@ -70,7 +72,7 @@ def main():
         named = next(iter(found))
         # a GitHub Actions annotation, shown on the run's page; plain text elsewhere
         print(f"::warning::The documentation names {named}, the latest release notes are for {latest}. "
-              "Once it is on Maven Central, run scripts/doc_version.py --update.")
+              "Run scripts/doc_version.py --update before tagging the release.")
 
 
 if __name__ == "__main__":
