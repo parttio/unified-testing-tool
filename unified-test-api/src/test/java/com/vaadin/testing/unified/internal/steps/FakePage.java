@@ -31,6 +31,8 @@ final class FakePage {
     final List<String> actions = new CopyOnWriteArrayList<>();
     /** What the application does when a component is clicked, e.g. log an error. */
     Runnable onClick = () -> { };
+    /** The page's path, which a click may change ({@link #onClick}). */
+    volatile String path = "people";
     /** The errors the fake browser's console holds until they are read. */
     final List<String> console = new CopyOnWriteArrayList<>();
     final StepRecorder steps = new StepRecorder();
@@ -42,7 +44,7 @@ final class FakePage {
                     case "find" -> find((QuerySpec) args[0]);
                     case "facts" -> facts((List<?>) args[0]);
                     case "isAt" -> true;
-                    case "currentPath" -> "people";
+                    case "currentPath" -> path;
                     case "title" -> "People";
                     case "unwrap", "queryParameter" -> Optional.empty();
                     case "navigate" -> {

@@ -235,6 +235,10 @@ final class BrowserlessComponents {
                 return true;
             }
         });
+        // a link: navigates as a user's click does, or says why Browserless can't (BrowserlessLinks)
+        Support link = access(com.vaadin.testing.unified.spi.LinkAccess.class, BrowserlessLinks::new);
+        register(com.vaadin.flow.router.RouterLink.class, link);
+        register(com.vaadin.flow.component.html.Anchor.class, link);
         register(Grid.class, new Support() {
             @Override
             public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {

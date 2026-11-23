@@ -275,7 +275,8 @@ final class BrowserlessSession implements AdapterSession {
         BrowserlessComponents.Support support = BrowserlessComponents.of(spec.componentType());
         List<Component> found = new ArrayList<>();
         for (Component c : com.vaadin.browserless.internal.LocatorKt._walkAll(root)) {
-            if ((c != root || includeRoot) && spec.componentType().isInstance(c) && support.include(c)
+            if ((c != root || includeRoot) && spec.componentType().isInstance(c) && hasQueriedTag(c, spec)
+                    && support.include(c)
                     && spec.filters().stream().allMatch(f -> matches(c, f))) {
                 found.add(c);
             }
@@ -285,6 +286,17 @@ final class BrowserlessSession implements AdapterSession {
             }
         }
         return found;
+    }
+
+    /**
+     * A tag the component class doesn't declare narrows the class, as it does in a browser: {@code UnifiedLink} is
+     * {@code @UnifiedComponent(value = Component.class, tag = "a")}, so a RouterLink, an Anchor or any other
+     * {@code <a>}. A class with a {@code @Tag} of its own is found by class alone, as before.
+     */
+    private static boolean hasQueriedTag(Component c, QuerySpec spec) {
+        String tag = spec.tag();
+        return tag == null || "*".equals(tag) || spec.componentType().isAnnotationPresent(com.vaadin.flow.component.Tag.class)
+                || tag.equalsIgnoreCase(c.getElement().getTag());
     }
 
     private boolean matches(Component c, Filter f) {

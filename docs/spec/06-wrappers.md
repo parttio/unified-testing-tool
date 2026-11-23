@@ -14,6 +14,7 @@ One component per interaction pattern. Every other component follows the same pa
 | Single selection | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | implemented |
 | Multi selection | `UnifiedMultiSelectComboBox` | implemented |
 | Action | `UnifiedButton`, `UnifiedMenuBar` | implemented: `clickItem("File", "Export", "PDF")` opens the menus as a user does; items by Item Name (an icon-only item by its `aria-label`); `isItemEnabled(..)` |
+| Links | `UnifiedLink` | *(unreleased)* implemented ([#561](https://github.com/parttio/unified-testing-tool/issues/561)): a `RouterLink`, an `Anchor` or any other `<a>`, bound to the tag; `withHref(..)`; `click()` follows the link and waits for the new page: a real click in a browser, the link's route on Browserless, where a link out of the application (another host, a servlet path, a download) or into another window (`target="_blank"`) fails asking for `@RequiresBrowser`; a click that navigated is followed by the `open` User Step; `getHref()` and `hasHref(..)` read the `href` as the application set it (relative for a `RouterLink`) on every Testing Tool |
 | Overlays | `UnifiedDialog`, `UnifiedNotification` | implemented |
 | Disclosure | `UnifiedDetails` | implemented: `open()`, `close()`, `content()` Scope |
 | Files | `UnifiedUpload` | implemented: `upload(name, type, bytes)` waits until the server has the file |

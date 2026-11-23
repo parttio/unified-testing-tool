@@ -221,6 +221,16 @@ Integer field, Flow's `IntegerField`. Guide: [Working with components, Typed val
 - **Reads:** `getErrorMessage() → String`, `getHelperText() → String`, `getLabel() → String`, `getPlaceholder() → String`, `getValue() → Integer`, `isInvalid() → boolean`, `isRequired() → boolean`
 - **Checks:** those of every Wrapper, and `hasErrorMessage(String)`, `hasLabel(String)`, `hasValue(int)`, `isEmpty()`, `isInvalid()`, `isRequired()`, `isValid()`
 
+### `UnifiedLink`
+
+Link, any Flow component rendered as `<a>`. Guide: [Working with components, Links](https://parttio.github.io/unified-testing-tool/guide/components/#links).
+
+- **Filters:** `withHref(String)`, `withText(String)`, `withTextContaining(String)`
+- **Actions**, each with the User Step it reports:
+  - `click()`: click link “…”
+- **Reads:** `getHref() → String`, `getText() → String`
+- **Checks:** those of every Wrapper, and `hasHref(String)`
+
 ### `UnifiedMain`
 
 Main, Flow's `Main`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).

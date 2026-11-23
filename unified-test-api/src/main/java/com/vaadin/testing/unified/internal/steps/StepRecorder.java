@@ -184,6 +184,8 @@ public final class StepRecorder {
         boolean step;
         /** The Step Target: the element the step last singled out, or null. */
         com.vaadin.testing.unified.UnifiedElement target;
+        /** User Steps that follow this one when it passes, e.g. the page a link opened ({@link #followedBy}). */
+        final List<Supplier<Phrase>> followUps = new ArrayList<>();
     }
 
     /**
@@ -252,14 +254,14 @@ public final class StepRecorder {
         started(f);
         // a void Wrapper method is a User Step whatever it does; a getter is known to be one only at the end
         AdapterSession traced = voidAction ? traceStart(window, () -> action.get().render()) : null;
+        Object result;
         try {
-            Object result = body.run();
+            result = body.run();
             if (f.acted || voidAction) {
                 add(f, action.get(), window, null);
             } else if (f.read) {
                 countRead();
             }
-            return result;
         } catch (Throwable t) {
             add(f, f.acted || voidAction ? action.get() : read.get(), window, t);
             throw t;
@@ -267,6 +269,28 @@ public final class StepRecorder {
             ended(f);
             frame.remove();
             traceEnd(traced);
+        }
+        recordFollowUps(f, window);
+        return result;
+    }
+
+    /**
+     * A User Step that follows the running one once it passes, such as {@code open “users”} after a click on a link
+     * that navigated: what the user saw happen, recorded as {@code navigate(..)} records it. Outside a User Step, it
+     * is recorded at once.
+     */
+    public void followedBy(Supplier<Phrase> phrase, String window) {
+        Frame current = frame.get();
+        if (current != null) {
+            current.followUps.add(phrase);
+        } else {
+            step(phrase, window, () -> null);
+        }
+    }
+
+    private void recordFollowUps(Frame f, String window) {
+        for (Supplier<Phrase> phrase : f.followUps) {
+            step(phrase, window, () -> null);
         }
     }
 
@@ -427,10 +451,10 @@ public final class StepRecorder {
         frame.set(f);
         started(f);
         AdapterSession traced = traceStart(window, () -> phrase.get().render());
+        T result;
         try {
-            T result = sneaky(body);
+            result = sneaky(body);
             add(f, phrase.get(), window, null);
-            return result;
         } catch (Throwable t) {
             add(f, phrase.get(), window, t);
             throw t;
@@ -439,6 +463,8 @@ public final class StepRecorder {
             frame.remove();
             traceEnd(traced);
         }
+        recordFollowUps(f, window);
+        return result;
     }
 
     /** A call the recorder can't see into, e.g. {@code waitUntil(..)}: one gap, whatever runs inside. */
