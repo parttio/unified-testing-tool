@@ -125,6 +125,11 @@ final class FakePage {
                         actions.add("set " + args[0]);
                         yield null;
                     }
+                    case "setProperty" -> {
+                        component.put((String) args[0], String.valueOf(args[1]));
+                        actions.add("property " + args[0] + "=" + args[1]);
+                        yield null;
+                    }
                     case "click", "focus", "pressKey" -> {
                         actions.add(method.getName() + " " + component.get("tag"));
                         if (method.getName().equals("click")) {

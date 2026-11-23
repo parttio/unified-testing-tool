@@ -35,6 +35,16 @@ Number and date fields take and return Java types, `null` when empty:
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:fillsTheValueFields"
 ```
 
+`setValue(LocalDate)` is the way to choose a date, whether the user types it or picks it in the calendar: the
+calendar is the date picker's own business, tested in Vaadin. *(unreleased)* It also works on a picker whose field
+is hidden, such as a week picker the application opens from a badge of its own, as long as its calendar is open:
+the date is set as a pick sets it, and the calendar closes. A hidden picker whose calendar is closed can't be set,
+as the user can't reach it. Browserless sees no CSS, so there the field counts as visible.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/WeekPickerTest.java:picksAWeekFromTheOpenCalendar"
+```
+
 To check how the field handles text it can't parse, type it:
 
 ```java
