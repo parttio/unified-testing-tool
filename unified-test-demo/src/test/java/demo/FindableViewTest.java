@@ -34,6 +34,17 @@ class FindableViewTest {
     }
 
     @Test
+    @DisplayName("A chat's message list shows how many messages it holds")
+    void showsAMessageListsMessageCount(UnifiedPage page) {
+        page.navigate(ChatView.class);
+
+        // only this line: until #517, Playwright and Selenium also list the message input's own text area
+        assertEquals("message list, 1 message  page.find(UnifiedMessageList.class)",
+                lines(page.describe()).stream().filter(l -> l.startsWith("message list")).findFirst().orElse(null)
+                        .replaceAll(" {2,}", "  "));
+    }
+
+    @Test
     @DisplayName("Two fields with the same label are found through the containers that tell them apart")
     void findsAlikeFieldsThroughTheirContainers(UnifiedPage page) {
         page.navigate(CheckoutView.class);

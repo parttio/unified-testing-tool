@@ -7,6 +7,8 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
+import com.vaadin.testing.unified.internal.messages.MessageSupport;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
 import java.util.List;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedCheckbox;
@@ -74,6 +76,7 @@ public final class UnifiedAssertions {
     public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { return new GridRowAssert(row); }
     public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { return new GridColumnAssert(column); }
     public static MessageListAssert assertThat(com.vaadin.testing.unified.component.UnifiedMessageList list) { return new MessageListAssert(list); }
+    public static MessageAssert assertThat(com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message) { return new MessageAssert(message); }
     public static GenericAssert assertThat(UnifiedWrapper wrapper) { return new GenericAssert(wrapper); }
 
     // ---------------------------------------------------------------- shared retry
@@ -744,6 +747,63 @@ public final class UnifiedAssertions {
         public MessageListAssert hasMessageContaining(String part) {
             return check("to have a message containing", part, list::getMessageTexts,
                     v -> ((List<?>) v).stream().anyMatch(text -> text != null && text.toString().contains(part)));
+        }
+    }
+
+    /**
+     * Retrying checks of one message of a chat, or of the messages a lookup matches: a reply the application adds
+     * later is waited for.
+     */
+    public static final class MessageAssert {
+        private final com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message;
+        private final TestRun run;
+
+        MessageAssert(com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message) {
+            this.message = message;
+            this.run = MessageSupport.runOf(message.list());
+        }
+
+        private MessageAssert check(String expectation, Object expected, Supplier<?> actual, Predicate<Object> ok) {
+            UnifiedAssertions.checkTarget(run, () -> MessageSupport.targetOf(message), message.toString(), expectation,
+                    expected, actual, ok);
+            return this;
+        }
+
+        /** At least one message matches. */
+        public MessageAssert exists() {
+            return check("to exist", null, () -> matches(MessageSupport.countNow(message)), v -> count(v) > 0);
+        }
+
+        /** No message matches, e.g. a prompt the application must not echo. */
+        public MessageAssert doesNotExist() {
+            return check("not to exist", null, () -> matches(MessageSupport.countNow(message)), v -> count(v) == 0);
+        }
+
+        /** Exactly this many messages match. */
+        public MessageAssert hasCount(int expected) {
+            return check("to have count", expected, () -> MessageSupport.countNow(message),
+                    v -> Objects.equals(v, expected));
+        }
+
+        /** The one matching message's text, exactly. */
+        public MessageAssert hasText(String expected) {
+            return check("to have text", expected,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::text),
+                    v -> Objects.equals(v, expected));
+        }
+
+        /** The one matching message's text contains this part. */
+        public MessageAssert hasTextContaining(String part) {
+            return check("to have text containing", part,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::text),
+                    v -> v instanceof String text && text.contains(part));
+        }
+
+        /** The one matching message is from this user name, exactly. */
+        public MessageAssert hasUserName(String expected) {
+            return check("to have user name", expected,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::userName),
+                    v -> Objects.equals(v, expected));
         }
     }
 }

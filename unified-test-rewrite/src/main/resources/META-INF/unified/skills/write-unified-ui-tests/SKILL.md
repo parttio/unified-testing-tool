@@ -95,6 +95,7 @@ class EditPersonTest {
 | a key press | `page.pressKey("Enter")`, sent to the focused component |
 | a grid row | `grid.row().withCellText("Name", "Alan Turing")`; `grid.row(0)` by index; cell components: `row.cell("Actions").find(UnifiedButton.class)` |
 | a check | `assertThat(wrapper).hasText(..)`, `.hasValue(..)`, `.isOpen()`, `.isDisabled()`, `assertThat(row).hasCellText(..)`, `assertThat(page).isAt(View.class)` |
+| a chat's messages | any message: `assertThat(chat).hasMessageContaining("Got it")`; one message: `assertThat(chat.message(2)).hasTextContaining(..)` (index from 0), `assertThat(chat.message().withUserName("Assistant").last()).hasTextContaining(..)`, `assertThat(chat.message().withTextContaining("secret")).doesNotExist()` |
 | a menu's items | `assertThat(menu).hasItems("File", "Help")`, `.hasItems(List.of("File", "Export"), "PDF", "CSV")`, `.hasItem("File", "Print")`, `.hasItemEnabled(..)`, `.hasItemDisabled(..)` |
 | present, absent, how many | `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on grid rows |
 | gone from the user's view | `assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist()`: lookups and `getText()` include hidden components, on every Testing Tool |

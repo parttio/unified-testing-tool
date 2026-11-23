@@ -255,7 +255,15 @@ Message input, Flow's `MessageInput`. Guide: [Working with components, Chat](htt
 Message list, Flow's `MessageList`. Guide: [Working with components, Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat).
 
 - **Reads:** `getMessageCount() → int`, `getMessageTexts() → List<String>`, `getMessages() → List<Message>`
+- **Also:** `message() → UnifiedMessage`, `message(int) → UnifiedMessage`
 - **Checks:** those of every Wrapper, and `hasMessageContaining(String)`, `hasMessageCount(int)`, `hasMessageTexts(String...)`, `isEmpty()`
+
+#### `UnifiedMessageList.UnifiedMessage`
+
+- **Filters:** `last()`, `withText(String)`, `withTextContaining(String)`, `withUserName(String)`
+- **Reads:** `getIndex() → int`, `getText() → String`, `getUserName() → String`
+- **Also:** `all() → List<UnifiedMessage>`, `list() → UnifiedMessageList`
+- **Checks, `assertThat(UnifiedMessage)`:** `doesNotExist()`, `exists()`, `hasCount(int)`, `hasText(String)`, `hasTextContaining(String)`, `hasUserName(String)`
 
 ### `UnifiedMultiSelectComboBox`
 
