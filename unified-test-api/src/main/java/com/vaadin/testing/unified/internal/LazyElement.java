@@ -103,10 +103,20 @@ public final class LazyElement implements UnifiedElement {
     }
 
     private void act(Supplier<Phrase> phrase, String action, Consumer<UnifiedElement> body) {
+        act(phrase, action, LazyElement::usable, body);
+    }
+
+    /**
+     * {@link #act(String, Consumer)} for a component the user can also act on in another state than visible and
+     * enabled, such as a date picker whose calendar is open while its field is hidden: Auto-Wait waits for
+     * {@code ready} instead. The User Step reads as {@code phrase}.
+     */
+    public void act(Supplier<Phrase> phrase, String action, java.util.function.Predicate<UnifiedElement> ready,
+            Consumer<UnifiedElement> body) {
         run.steps().action(phrase, run.window(), () -> StaleRetry.call(run, () -> {
             UnifiedElement element = run.pollFor(() -> {
                 UnifiedElement e = concrete();
-                return usable(e) ? e : null;
+                return ready.test(e) ? e : null;
             }, () -> LookupFailures.notUsable(this));
             body.accept(element);
             run.session().settle();
@@ -115,7 +125,7 @@ public final class LazyElement implements UnifiedElement {
     }
 
     /** Auto-Wait's check: visible and enabled, in one read where the adapter offers it (#402). */
-    private static boolean usable(UnifiedElement e) {
+    public static boolean usable(UnifiedElement e) {
         return e instanceof com.vaadin.testing.unified.spi.UsabilityCheck check ? check.isVisibleAndEnabled()
                 : e.isVisible() && e.isEnabled();
     }
