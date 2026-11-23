@@ -317,7 +317,7 @@ UnifiedAssertionError: Editing a person in the dialog updates the grid
   - then up to 3 components of another kind with the exact name wanted;
   - hidden components marked `(hidden)`;
   - if the scope itself is missing, Near Misses for the scope instead.
-- **Did you mean** appears only when one Near Miss is clearly best: it differs only in case, spacing or punctuation; or it is within a small edit distance with no equal rival; or it has the exact name but is another kind. It is written from `find(..)` on, in ADR 0007 style.
+- **Did you mean** appears only when one Near Miss is clearly best, by the first of these rules that applies: the only one of the same Wrapper type that equals the wanted name compared on letters and digits, ignoring case; else the only one of the same Wrapper type at the smallest edit distance (Levenshtein, ignoring case), if that is at most `max(2, length / 4)` of the wanted name; else the only one of another kind with the exact name. When the last two both find one, there is none. There is none either when a component of the same Wrapper type has exactly the wanted name, and none for a name that only contains the wanted one. It is written from `find(..)` on, in ADR 0007 style. *(unreleased)* `user-steps.txt`, and so the CI log, shows it as the line `Did you mean  find(..)` under the failure.
 - **Other `Found` lines:**
   - several matches (`Found 2: …`, each with its scope, no suggestion);
   - an assertion timeout (the distinct values seen while waiting: `Found “Saving…”, then “Saved Alan Turing”`);
