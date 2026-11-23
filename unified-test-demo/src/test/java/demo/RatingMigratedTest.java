@@ -20,8 +20,10 @@ class RatingMigratedTest {
 
         // TODO unified: TestBench Escape Hatch: $(RatingElement.class), a custom element: write a Wrapper for it (ADR 0003)
         RatingElement food = testBench.$(RatingElement.class).first();
+        // TODO unified: TestBench page object: RatingElement (custom element extending TestBenchElement): write a Wrapper or convert the page object
         food.rate(3);
 
+        // TODO unified: TestBench page object: RatingElement (custom element extending TestBenchElement): write a Wrapper or convert the page object
         Assertions.assertEquals(3, food.getValue());
     }
 }
