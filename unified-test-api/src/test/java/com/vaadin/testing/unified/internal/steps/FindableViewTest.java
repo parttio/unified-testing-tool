@@ -39,6 +39,24 @@ public class FindableViewTest {
     }
 
     @Test
+    void aMessageListShowsItsMessageCount() {
+        fake.add("vaadin-message-list", "messages", "Assistant:Hi!|You:Soup|Assistant:Here is a recipe.");
+
+        assertEquals(List.of("message list, 3 messages  page.find(UnifiedMessageList.class)"), lines(page.describe()));
+    }
+
+    @Test
+    void aComponentsOwnPartIsLeftOutButAFieldTheApplicationAddsIsListed() {
+        fake.add("vaadin-message-input")
+                .add("vaadin-text-area", "label", "Message", "internalPart", "true")
+                .add("vaadin-text-area", "label", "Notes");
+
+        assertEquals(List.of(
+                "text area “Notes”  page.find(UnifiedTextArea.class).withLabel(\"Notes\")",
+                "message input      page.find(UnifiedMessageInput.class)"), lines(page.describe()));
+    }
+
+    @Test
     void aComponentWithoutANameIsFoundByItsTestId() {
         fake.add("vaadin-button", "text", "Save").add("vaadin-button", "data-testid", "close");
 

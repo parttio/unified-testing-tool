@@ -51,9 +51,13 @@ final class PlaywrightGridAccess implements GridAccess {
         return grid.getTotalRowCount();
     }
 
+    /**
+     * Each column's caption, read from whichever header row holds it (a header group may sit above, #338):
+     * Dramafinder's {@code getColumnCaptions()}, which scrolls an unrendered header cell into view.
+     */
     @Override
     public List<String> columnHeaders() {
-        List<String> all = grid.getHeaderCellContents();
+        List<String> all = grid.getColumnCaptions();
         return domColumns().stream().map(i -> all.get(i).strip()).toList();
     }
 
@@ -77,11 +81,81 @@ final class PlaywrightGridAccess implements GridAccess {
         return grid.findRow(row).orElseThrow(() -> new IllegalStateException("No row " + row));
     }
 
-    /** A page of rows at a time (Dramafinder), not one scroll per row: fast on a lazy grid. */
+    /**
+     * Reads a whole column a page at a time (#446): in the browser, in one script that scrolls, asks the server for
+     * the page at once and reads it, as Selenium does (#404); if a page doesn't load in time, through Dramafinder,
+     * which waits with Playwright's timeout. The whole column, as the exactly-one rule needs to see a second match.
+     */
     @Override
     public List<String> columnTexts(int column) {
+        Object read = locator.evaluateAll(COLUMN_IN_PAGE, List.of(column, PAGE_WAIT_MS));
+        if (read instanceof List<?> texts && !texts.contains(null)) {
+            return texts.stream().map(t -> ((String) t).strip()).toList();
+        }
         return grid.getColumnTexts(dom(column)).stream().map(t -> t == null ? null : t.strip()).toList();
     }
+
+    /** How long {@link #COLUMN_IN_PAGE} waits for one page to load, in ms, before giving up. */
+    private static final int PAGE_WAIT_MS = 5000;
+
+    /**
+     * For the first grid: scrolls it a page at a time from the first row not read yet, polls every 5 ms until that
+     * row is rendered with its data and Flow is idle, and reads the column's rendered cells as Dramafinder's
+     * {@code CellElement.getText()} does (the cell content's {@code innerText}). Unified column {@code column} is
+     * the visible columns in display order without the selection column. Every row's text, or null when the grid
+     * or the column is missing or a page didn't load in time.
+     * <p>
+     * When a jump lands on rows that aren't loaded, it calls Flow's {@code $connector.fetchCurrentRange()} itself:
+     * the connector waits 150 ms before it asks (its {@code requestDebouncerDelay}, so a user's fast scrolling sends
+     * one request), which was most of the time of each page. The connector skips a request for a range already
+     * asked, so its own delayed call adds none. A connector without that method waits as before.
+     */
+    private static final String COLUMN_IN_PAGE = """
+            async (gs, [column, pageMs]) => {
+              const g = gs[0];
+              if (!g || !g.isConnected || !g._getRenderedRows) return null;
+              const col = g._getColumns().filter(c => !c.hidden && !c.localName.endsWith('selection-column'))
+                  .sort((a, b) => a._order - b._order)[column];
+              if (!col) return null;
+              const count = g._flatSize;
+              const tick = ms => new Promise(r => setTimeout(r, ms));
+              const busy = () => {
+                const flow = window.Vaadin && window.Vaadin.Flow;
+                return !!(flow && flow.clients && Object.values(flow.clients).some(c => c.isActive()));
+              };
+              const texts = new Array(count).fill(null);
+              const read = () => {
+                for (const tr of g._getRenderedRows()) {
+                  const i = tr.index;
+                  if (tr.hidden || tr.hasAttribute('loading') || !(i >= 0 && i < count) || texts[i] !== null) continue;
+                  const cell = [...tr.children].find(td => td._column === col);
+                  const slot = cell && cell.querySelector('slot');
+                  const content = slot && slot.assignedElements()[0];
+                  if (content) texts[i] = content.innerText;
+                }
+              };
+              let next = 0;
+              read();
+              while (next < count && texts[next] !== null) next++;
+              while (next < count) {
+                g._scrollToFlatIndex(next);
+                const start = performance.now();
+                let fetched = false;
+                for (;;) {
+                  await g.updateComplete;
+                  read();
+                  if (texts[next] !== null && !busy()) break;
+                  if (!fetched && texts[next] === null && g.$connector && g.$connector.fetchCurrentRange) {
+                    fetched = true;
+                    g.$connector.fetchCurrentRange();
+                  }
+                  if (!g.isConnected || performance.now() - start > pageMs) return null;
+                  await tick(5);
+                }
+                while (next < count && texts[next] !== null) next++;
+              }
+              return texts;
+            }""";
 
     // ---------------------------------------------------------------- selection, clicks
 
@@ -143,9 +217,21 @@ final class PlaywrightGridAccess implements GridAccess {
                 : GridElement.SortDirection.DESCENDING);
     }
 
+    /**
+     * The header cell holding the column's sorter: its own cell or a group's, in whichever header row (#338).
+     * Without a sorter, the column's own cell, the lowest one, for Dramafinder's "not sortable" error.
+     */
     private GridElement.HeaderCellElement headerCell(int column) {
-        return grid.findHeaderCell(dom(column))
-                .orElseThrow(() -> new IllegalStateException("No header cell for column " + column));
+        List<GridElement.HeaderCellElement> cells = grid.getHeaderCells(dom(column));
+        if (cells.isEmpty()) {
+            throw new IllegalStateException("No header cell for column " + column);
+        }
+        for (int i = cells.size() - 1; i >= 0; i--) {
+            if (cells.get(i).isSortable()) {
+                return cells.get(i);
+            }
+        }
+        return cells.get(cells.size() - 1);
     }
 
     // ---------------------------------------------------------------- details

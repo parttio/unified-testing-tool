@@ -164,7 +164,10 @@ final class BrowserlessSession implements AdapterSession {
         return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
     }
 
-    /** In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id. */
+    /**
+     * In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id.
+     * Every element found is a component of the application's, so none is an internal part.
+     */
     @Override
     public List<com.vaadin.testing.unified.spi.ElementFacts> facts(List<UnifiedElement> elements) {
         return elements.stream().map(e -> {
@@ -183,7 +186,7 @@ final class BrowserlessSession implements AdapterSession {
             String label = own.label() != null && !own.label().isBlank() || !(e instanceof BrowserlessElement b2)
                     ? own.label() : formItemLabel(b2.component());
             return new com.vaadin.testing.unified.spi.ElementFacts(label, own.text(), own.placeholder(),
-                    own.testId(), own.accessibleName(), testId, testId == null ? id : null);
+                    own.testId(), own.accessibleName(), testId, testId == null ? id : null, false);
         }).toList();
     }
 
@@ -387,25 +390,32 @@ final class BrowserlessSession implements AdapterSession {
 
     /** The UI's component tree as text, with the location: what Browserless's TreeOnFailureExtension prints. */
     @Override
-    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
-        return writeTree(directory, name);
+    public com.vaadin.testing.unified.spi.Evidence writeFailureEvidence(Path directory, String name, com.vaadin.testing.unified.UnifiedElement stepTarget)
+            throws java.io.IOException {
+        return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name, marked(stepTarget)));
+    }
+
+    /** The component a tree marks: the Step Target the API names, else the one this session last acted on. */
+    private Component marked(com.vaadin.testing.unified.UnifiedElement stepTarget) {
+        return stepTarget instanceof BrowserlessElement element ? element.component() : target;
     }
 
     /** The component tree after the step: Browserless has no screenshot, and the tree is cheap. */
     @Override
-    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
+            com.vaadin.testing.unified.UnifiedElement stepTarget) throws java.io.IOException {
         try {
-            return writeTree(directory, name);
+            return com.vaadin.testing.unified.spi.Evidence.of(writeTree(directory, name, marked(stepTarget)));
         } finally {
             target = null;
         }
     }
 
-    private List<Path> writeTree(Path directory, String name) throws java.io.IOException {
+    private List<Path> writeTree(Path directory, String name, Component marked) throws java.io.IOException {
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".tree.txt");
         Location location = activeLocation();
-        String tree = maskPasswords(tree(window().getUI(), target).print());
+        String tree = maskPasswords(tree(window().getUI(), marked).print());
         Files.writeString(file, "Location: /" + (location == null ? "" : location.getPathWithQueryParameters())
                 + "\n\n" + tree);
         return List.of(file);

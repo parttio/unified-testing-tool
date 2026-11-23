@@ -1,6 +1,8 @@
 package demo.perf;
 
+import com.microsoft.playwright.Page;
 import demo.ProfileView;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -22,6 +24,25 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @EnabledIfSystemProperty(named = "vaadin.testing.tool", matches = "playwright")
 class DramafinderPerfTest extends SpringPlaywrightIT {
+
+    /**
+     * SpringPlaywrightIT's setup, then a new page in a browser context of its own: the browser starts as on the
+     * Unified side (fairness rule 4, #444). The base class loads the application in its page before the test,
+     * so the body's {@code navigate} would be the context's second load, about 300 ms faster than the first,
+     * which the Unified UI Test's {@code navigate} makes in a new context.
+     */
+    @Override
+    @BeforeEach
+    public void setupTest() throws Exception {
+        super.setupTest();
+        Page fresh = browser().newPage();
+        prepareBrowserContext(fresh.context());
+        // the base class's timeouts
+        fresh.setDefaultNavigationTimeout(4000);
+        fresh.setDefaultTimeout(15000);
+        page.close();
+        page = fresh;
+    }
 
     @Test
     void smallForm() {
@@ -74,5 +95,39 @@ class DramafinderPerfTest extends SpringPlaywrightIT {
         ComboBoxElement.getByLabel(page, "Product").selectItem(PerfData.ITEM);
 
         assertThat(page.locator("#picked")).hasText(PerfData.PICKED);
+    }
+
+    // Below the tests, so that their source lines, which key the committed round-trip counts, stay where they are.
+
+    /** The browser at {@code vaadin.testing.playwright.executable}, when it is set; launched once per class. */
+    private static com.microsoft.playwright.Playwright ownPlaywright;
+    private static com.microsoft.playwright.Browser ownBrowser;
+
+    /**
+     * The browser the test runs in: SpringPlaywrightIT's own Chromium, or the one at
+     * {@code vaadin.testing.playwright.executable}, launched as the Unified adapter launches it. The tool
+     * comparison (#497) sets it, so that every side of the comparison runs the same browser binary.
+     */
+    private com.microsoft.playwright.Browser browser() {
+        String executable = System.getProperty("vaadin.testing.playwright.executable", "");
+        if (executable.isBlank()) {
+            return getBrowser();
+        }
+        if (ownBrowser == null) {
+            ownPlaywright = com.microsoft.playwright.Playwright.create();
+            ownBrowser = ownPlaywright.chromium().launch(new com.microsoft.playwright.BrowserType.LaunchOptions()
+                    .setHeadless(isHeadless()).setExecutablePath(java.nio.file.Path.of(executable))
+                    .setArgs(java.util.List.of("--no-sandbox")));
+        }
+        return ownBrowser;
+    }
+
+    @org.junit.jupiter.api.AfterAll
+    static void closeOwnBrowser() {
+        if (ownPlaywright != null) {
+            ownPlaywright.close();
+            ownPlaywright = null;
+            ownBrowser = null;
+        }
     }
 }

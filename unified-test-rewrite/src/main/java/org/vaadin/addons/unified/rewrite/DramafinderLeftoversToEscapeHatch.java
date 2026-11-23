@@ -94,7 +94,7 @@ public class DramafinderLeftoversToEscapeHatch extends Recipe {
                 }
                 J m = super.visitMethodInvocation(method, ctx);
                 if (unwraps != null && Dramafinder.isToolCall(method) && !insideAnotherToolCall()) {
-                    MigrationMarkers.add(getCursor(), "Dramafinder Escape Hatch: " + m.printTrimmed(getCursor().getParentTreeCursor()).strip());
+                    MigrationMarkers.add(getCursor(), "Dramafinder Escape Hatch: " + MigrationMarkers.code(m, getCursor().getParentTreeCursor()));
                 }
                 return m;
             }
@@ -106,7 +106,7 @@ public class DramafinderLeftoversToEscapeHatch extends Recipe {
                 if (unwraps != null && (Dramafinder.isToolCall(newClass)
                         || newClass.getArguments().stream().anyMatch(Dramafinder::isPageField)) && !insideAnotherToolCall()) {
                     JavaType.FullyQualified type = org.openrewrite.java.tree.TypeUtils.asFullyQualified(newClass.getType());
-                    MigrationMarkers.add(getCursor(), "Dramafinder Escape Hatch: " + n.printTrimmed(getCursor().getParentTreeCursor()).strip()
+                    MigrationMarkers.add(getCursor(), "Dramafinder Escape Hatch: " + MigrationMarkers.code(n, getCursor().getParentTreeCursor())
                             + (Dramafinder.isCustomElement(type) ? ", a custom element: write a Wrapper for it (ADR 0003)" : ""));
                 }
                 return n;

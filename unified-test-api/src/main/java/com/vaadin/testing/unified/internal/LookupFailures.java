@@ -297,7 +297,7 @@ final class LookupFailures {
             return f;
         }
         return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
-                f.ancestorTestId(), null);
+                f.ancestorTestId(), null, f.internalPart());
     }
 
     private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent) {

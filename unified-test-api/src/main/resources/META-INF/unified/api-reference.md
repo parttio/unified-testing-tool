@@ -7,6 +7,7 @@ Every Wrapper of the Unified API with its filters, actions, reads and checks, an
 - **Reads** return what is there right now, without waiting. Assert with a check instead when you can.
 - **Checks** are `assertThat(wrapper).…` from `UnifiedAssertions`; they retry until the timeout and are User Steps (`see …`).
 - A component without a Wrapper: `page.findComponent(FlowClass.class)`, with the filters of every Wrapper.
+- **Evidence**: a failed test leaves a screenshot (browser) or the component tree (Browserless) under `target/surefire-reports/unified-evidence/`. For every User Step, failed or not, set `vaadin.testing.user-steps.snapshots=true`; for Playwright's trace (`trace.zip`), set `vaadin.testing.playwright.trace=on` or `on-failure`. Every `vaadin.testing.*` setting, with its default: the [configuration guide](https://parttio.github.io/unified-testing-tool/guide/configuration/).
 
 ## The page: `UnifiedPage`
 
@@ -75,6 +76,7 @@ Checkbox, Flow's `Checkbox`. Guide: [Working with components, Checkbox](https://
 - **Filters:** `withLabel(String)`, `withLabelContaining(String)`
 - **Actions**, each with the User Step it reports:
   - `check()`: check checkbox “…”
+  - `click()`: click checkbox “…”
   - `setChecked(boolean)`: check checkbox “…”
   - `uncheck()`: uncheck checkbox “…”
 - **Reads:** `getHelperText() → String`, `getLabel() → String`, `isChecked() → boolean`, `isIndeterminate() → boolean`
@@ -120,6 +122,7 @@ Date-time picker, Flow's `DateTimePicker`. Guide: [Working with components, Type
 - **Actions**, each with the User Step it reports:
   - `clear()`: clear date-time picker “…”
   - `setValue(LocalDateTime)`: fill date-time picker “…” with “…”
+  - `typeText(LocalDate, String)`: fill date-time picker “…” with “…”, “…”
   - `typeText(String, String)`: fill date-time picker “…” with “…”, “…”
 - **Reads:** `getErrorMessage() → String`, `getHelperText() → String`, `getLabel() → String`, `getValue() → LocalDateTime`, `isInvalid() → boolean`, `isRequired() → boolean`
 - **Checks:** those of every Wrapper, and `hasErrorMessage(String)`, `hasLabel(String)`, `hasValue(LocalDateTime)`, `isEmpty()`, `isInvalid()`, `isRequired()`, `isValid()`
@@ -237,7 +240,7 @@ Menu bar, Flow's `MenuBar`. Guide: [Working with components, Buttons and menus](
 - **Actions**, each with the User Step it reports:
   - `clickItem(String, String...)`: click “… › …” in menu bar “…”
 - **Reads:** `getItems() → List<String>`, `getItems(String, String...) → List<String>`, `isItemEnabled(String, String...) → boolean`
-- **Checks:** those of every Wrapper
+- **Checks:** those of every Wrapper, and `hasItem(String, String...)`, `hasItemDisabled(String, String...)`, `hasItemEnabled(String, String...)`, `hasItems(List<String>, String...)`, `hasItems(String...)`
 
 ### `UnifiedMessageInput`
 
@@ -252,7 +255,15 @@ Message input, Flow's `MessageInput`. Guide: [Working with components, Chat](htt
 Message list, Flow's `MessageList`. Guide: [Working with components, Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat).
 
 - **Reads:** `getMessageCount() → int`, `getMessageTexts() → List<String>`, `getMessages() → List<Message>`
+- **Also:** `message() → UnifiedMessage`, `message(int) → UnifiedMessage`
 - **Checks:** those of every Wrapper, and `hasMessageContaining(String)`, `hasMessageCount(int)`, `hasMessageTexts(String...)`, `isEmpty()`
+
+#### `UnifiedMessageList.UnifiedMessage`
+
+- **Filters:** `last()`, `withText(String)`, `withTextContaining(String)`, `withUserName(String)`
+- **Reads:** `getIndex() → int`, `getText() → String`, `getUserName() → String`
+- **Also:** `all() → List<UnifiedMessage>`, `list() → UnifiedMessageList`
+- **Checks, `assertThat(UnifiedMessage)`:** `doesNotExist()`, `exists()`, `hasCount(int)`, `hasText(String)`, `hasTextContaining(String)`, `hasUserName(String)`
 
 ### `UnifiedMultiSelectComboBox`
 

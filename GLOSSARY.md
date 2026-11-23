@@ -56,6 +56,10 @@ _Avoid_: UI, window, driver, browser
 A component whose own content a test reaches only by entering it, one Template at a time: an app's LitTemplate on every Testing Tool, or a client-rendered web component on browser Testing Tools only.
 _Avoid_: Shadow host, web component, LitTemplate, app template
 
+**Viewport**:
+The visible area of a Unified Page, as width × height in CSS pixels, which the application lays itself out for; a test runs at one unless it changes it.
+_Avoid_: Window size, screen size, resolution, breakpoint
+
 **Unified Element**:
 The portable, low-level handle to one component (properties, attributes, text, user actions) that every Testing Tool supports and on which Wrappers are written.
 _Avoid_: Raw element, WebElement, locator
@@ -84,6 +88,10 @@ _Avoid_: Step method, log line, trace, keyword
 A named piece of user work in a Unified UI Test ("edit Alan Turing's name"), shown in the reports as one heading over the User Steps it performs.
 _Avoid_: Task, step method, keyword, flow, journey, page object
 
+**Step Target**:
+The component a User Step acts on or checks, marked in its snapshot and failure evidence on every Testing Tool: its line in a Browserless tree, a spotlighted box over a browser screenshot.
+_Avoid_: Highlighted element, focus, subject
+
 **Base Run**:
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run
@@ -95,3 +103,15 @@ _Avoid_: Snapshot, ARIA snapshot, component tree, page dump
 **Near Miss**:
 A component a failed lookup almost matched (the same kind with a similar name, or another kind with the exact name), listed in the failure so the reader can see what the test should have asked for.
 _Avoid_: Candidate, suggestion, fuzzy match
+
+**Layout Finding**:
+A layout problem seen on a Unified Page at its current Viewport (it scrolls sideways, a component is clipped out of reach, or interactive components overlap), reported on the User Step where it was seen.
+_Avoid_: Violation, layout error, responsive finding, warning
+
+**Viewport Comparison**:
+The comparison of runs of the same Unified UI Tests on one Testing Tool at different Viewports, User Step by User Step: which components the widest run shows and another lacks, which Layout Findings appear at which size, and where the runs part.
+_Avoid_: Responsive check, responsive diff, breakpoint test
+
+**Reach**:
+Whether a user can get to a component on a Unified Page at its current Viewport: visible (perhaps after scrolling), clipped out of reach, or behind another component; a hidden component has none.
+_Avoid_: Visibility, in view, accessible

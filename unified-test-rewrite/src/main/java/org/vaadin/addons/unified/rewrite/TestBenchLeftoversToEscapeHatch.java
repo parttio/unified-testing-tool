@@ -129,7 +129,7 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                 if (escapes == null || !id.getSimpleName().equals("this") || !argument || c == null
                         || !TestBenchSetupToUnified.isTestBenchClass(c)
                         || !MigrationMarkers.add(getCursor(), "TestBench page object: "
-                                + ((J) parent).printTrimmed(getCursor().getParentTreeCursor()))) {
+                                + MigrationMarkers.code((J) parent, getCursor().getParentTreeCursor().getParentTreeCursor()))) {
                     return id;
                 }
                 escapes.set(true);
@@ -142,7 +142,7 @@ public class TestBenchLeftoversToEscapeHatch extends Recipe {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
                 if (escapes == null || m.getSelect() != null || !isTestBaseCall(m)
-                        || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + method.printTrimmed(getCursor())
+                        || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + MigrationMarkers.code(method, getCursor().getParentTreeCursor())
                                 + (isCustomElementLookup(method) ? ", a custom element: write a Wrapper for it (ADR 0003)" : ""))) {
                     return m;
                 }

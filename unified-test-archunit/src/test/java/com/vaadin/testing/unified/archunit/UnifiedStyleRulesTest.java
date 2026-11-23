@@ -14,6 +14,7 @@ import com.vaadin.testing.unified.archunit.fixtures.GeneratedNamesFixture;
 import com.vaadin.testing.unified.archunit.fixtures.LifecycleToolCodeFixture;
 import com.vaadin.testing.unified.archunit.fixtures.MissingSentenceFixture;
 import com.vaadin.testing.unified.archunit.fixtures.NotUnifiedFixture;
+import com.vaadin.testing.unified.archunit.fixtures.OptionalCheckHelpersFixture;
 import com.vaadin.testing.unified.archunit.fixtures.PageParameterFixture;
 import com.vaadin.testing.unified.archunit.fixtures.RawWaitsFixture;
 import com.vaadin.testing.unified.archunit.fixtures.SentencesFixture;
@@ -122,6 +123,26 @@ class UnifiedStyleRulesTest {
                 && all.contains("@RequiresTestingTool(TestingTool.BROWSERLESS)"), all);
         assertTrue(all.contains(".unwrapsInALambda(UnifiedPage)"), all);
         assertFalse(all.contains("staysInTheUnifiedApi"), all);
+    }
+
+    @Test
+    @DisplayName("A helper called from a tryUnwrap(..) check is part of that optional check")
+    void helpersOfAnOptionalCheck() {
+        List<String> violations = violations(UnifiedStyleRules.TOOL_CODE_NEEDS_CAPABILITY,
+                OptionalCheckHelpersFixture.class);
+        String all = String.join("\n", violations);
+
+        assertEquals(2, violations.size(), all);
+        assertFalse(all.contains(".checksInAHelper(UnifiedPage)"), all);
+        assertFalse(all.contains(".checksInAHelperOfAHelper(UnifiedPage)"), all);
+        // the helper is no optional check where a test calls it outside one
+        assertTrue(violations.stream().anyMatch(v -> v.contains(".callsTheHelperOutsideTheCheck(UnifiedPage)")
+                && v.contains("has com.microsoft.playwright.Locator in " + OptionalCheckHelpersFixture.class.getName()
+                        + ".previewShown(Locator)")), all);
+        // unwrap(..) fails on other Testing Tools, also inside an optional check
+        assertTrue(violations.stream().anyMatch(v -> v.contains(".unwrapsInAHelperOfTheCheck(UnifiedPage)")
+                && v.contains("calls the Escape Hatch UnifiedPage.unwrap(..) in "
+                        + OptionalCheckHelpersFixture.class.getName() + ".reload(UnifiedPage)")), all);
     }
 
     @Test

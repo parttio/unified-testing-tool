@@ -8,7 +8,7 @@ Every Wrapper action and every retrying assertion is recorded as a **User Step**
 | [`user-steps.txt`, `user-steps.json`](#the-user-steps-of-a-test) | the evidence directory, per test | every test | people, agents and tools |
 | [`summary.md`](#the-run-summary) | the evidence directory, per run | every run | the reviewer |
 | [`report.html`](#the-html-report) | the evidence directory, per run | every run | the reviewer, in a browser |
-| [`summary.json`](#the-run-as-data) *(unreleased)* | the evidence directory, per run | every run | agents and CI tooling |
+| [`summary.json`](#the-run-as-data) | the evidence directory, per run | every run | agents and CI tooling |
 | [GitHub job summary](#the-github-job-summary) | the job's summary page | every run in GitHub Actions | the reviewer |
 
 The examples on this page are real output of the demo's tests on Browserless, with one test added that looks for a field labelled *E-mail* in a view that labels it *Email*:
@@ -61,7 +61,15 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
 
 ### Did you mean
 
-`Did you mean` appears only when one Near Miss is clearly what the test meant: it differs only in case, spacing or punctuation; or it is a small edit away with no equal rival; or it has the exact name but is another kind. It is written as the lookup to paste, from `find(..)` on. A dialog whose title the test misspelled:
+`Did you mean` appears only when one Near Miss is clearly what the test meant. The rules are tried in this order, and the first that applies decides:
+
+1. **Same letters and digits.** Exactly one component of the same kind has the wanted name when case, spaces and punctuation are ignored: `Previous week` and `Previous Week`, `Email` and `E-mail`. If two do, there is no suggestion.
+2. **A few edits away.** Otherwise, exactly one component of the same kind is the fewest edits (characters added, removed or changed, ignoring case) from the wanted name, and that is at most a quarter of the wanted name's length, rounded down, or 2 for a short name. `Previous week` has 13 characters, so up to 3 edits: `Previus week` gets a suggestion, `Go to previous week` (6 edits) does not. Two components equally close get none.
+3. **Another kind, the exact name.** Otherwise, exactly one component of another kind has the exact name: a combo box labelled `Role` when the test looked for a text field. When rule 2 and rule 3 both find one, neither is clearly best, and there is no suggestion.
+
+A component of the same kind with exactly the wanted name rules out every suggestion: it is there, and another filter or the scope left it out. A name that only contains the wanted one, or is contained in it, moves up in `Nearby` but is never suggested. So no `Did you mean` means that no Near Miss was close enough by these rules, not that one was missed, and [`ApplyDidYouMean`](#applying-it) has nothing to apply to that failure: read `Nearby`, or the [Findable View](#the-findable-view), and write the lookup yourself.
+
+It is written as the lookup to paste, from `find(..)` on. A dialog whose title the test misspelled:
 
 ```
   Failed at     User Step 3 of 3: click button “Close” in dialog “Export Report”
@@ -72,8 +80,6 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
 ```
 
 ### Applying it
-
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
 
 When a label changed in the application and the tests that used it fail, each failure already says what to write instead. The `ApplyDidYouMean` recipe writes it for you. Run the tests, then, in the same directory:
 
@@ -124,8 +130,6 @@ A component that is there but can't be used:
 
 ### The Findable View
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 Next to the screenshot or the component tree, a failed test writes `<test class>.<method>.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Failure evidence` line names it.
 
 ```
@@ -146,7 +150,7 @@ The parts are getters on `UnifiedAssertionError`, for a test that checks a failu
 
 ## The CI log
 
-A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line and where it happened:
+A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line, its `Did you mean` when it has one *(unreleased)*, and where it happened:
 
 ```
 ✘ EditEmailTest › Changing a person's email updates the grid   browserless · 11.4 s
@@ -155,6 +159,7 @@ A failed test prints its User Steps to stdout, so the CI log shows them next to 
       2.1  click row where Name is “Alan Turing” in grid
       2.2  fill text field “E-mail” with “alan@bletchley.uk”   ✘
    ✘ UnifiedAssertionError: Expected exactly one text field labelled “E-mail”, found none
+     Did you mean  find(UnifiedTextField.class).withLabel("Email")
      at EditEmailTest.java:31 (changeEmail) ← EditEmailTest.java:33 (changeEmail)
 ```
 
@@ -198,8 +203,6 @@ What the recorder can't see is never left out silently. Escape Hatch calls, `pag
 
 ### What the application logged
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 A click that makes the server throw often shows the user nothing, or a generic error. The reason is in the application's log, and the Unified API puts it where the click is:
 
 ```
@@ -225,8 +228,8 @@ When the tests have run, the Unified API writes `<evidence dir>/summary.md`: the
 1. a header with the Testing Tool and the counts;
 2. **Changed in this PR**: the scenarios that call code changed against the base branch, marked *new* or *changed*. A change in a shared `…Tasks` class marks every scenario that uses it. A new scenario shows its User Steps; a changed one shows how its User Steps differ from the base branch's last run, when the build gives it that run ([below](#how-a-changed-scenarios-steps-changed)). Left out when the run has no base to compare against;
 3. **Failed scenarios**: the failed User Step, the failure, the Near Misses and the evidence directory;
-4. **Compared with another Testing Tool** *(unreleased)*: the scenarios that end differently, or take different User Steps, on another Testing Tool, when the build gives it that run ([below](#compared-with-another-testing-tool));
-5. **Scenarios without a check** *(unreleased)*: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
+4. **Compared with another Testing Tool**: the scenarios that end differently, or take different User Steps, on another Testing Tool, when the build gives it that run ([below](#compared-with-another-testing-tool));
+5. **Scenarios without a check**: the passing scenarios that end on User Steps nothing checks ([below](#scenarios-without-a-check)).
 
 Passing scenarios count in the header only, unless the pull request changed them or they have no check: the summary stays short to read on the job summary page. Every test's User Steps are in its own `user-steps.txt`, in the evidence directory and the CI artifact.
 
@@ -305,8 +308,6 @@ The directory is any copy of the base branch's evidence directory, such as its d
 
 ### Compared with another Testing Tool
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 A Unified UI Test runs on Browserless in milliseconds, and the fast run is the one a developer or an agent repeats. When the same test then fails in a browser, the first question is where the two runs part. Give a run the evidence directory of a run on another Testing Tool, and its summary answers that:
 
 ```
@@ -343,8 +344,6 @@ The first run needs an evidence directory of its own (`vaadin.testing.evidence-d
 
 ### Scenarios without a check
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
-
 A test that fills a form, clicks *Save* and stops there passes whether or not the save works. The run summary lists the passing scenarios that end this way, so the author, or the reviewer of a test an agent wrote, sees them without reading each test:
 
 ```markdown
@@ -374,8 +373,6 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/report.html`: the s
 Each User Step shows its number, its text, how long it took and the line that called it. User Tasks fold, and calls outside the Unified API show as dimmed gap lines. Each scenario links its `user-steps.txt` and `user-steps.json`.
 
 ## The run as data
-
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
 
 Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the same run for a program to read. An agent that has run the tests, or a CI step that posts a comment, reads the verdict from one file instead of parsing Markdown or walking the evidence directory.
 
@@ -423,7 +420,7 @@ The User Steps themselves stay in each test's `user-steps.json`. The file is ver
 
 Two settings, both off by default, record more than the failure:
 
-- **A snapshot per User Step**: `-Dvaadin.testing.user-steps.snapshots=true`. After every User Step the page is saved into the test's evidence directory, under `steps/`: a screenshot of the browser window (Playwright, Selenium), or the component tree (Browserless). In the HTML report each step gets a *screenshot* link that opens the picture under the step, or a *tree* link. On Selenium each screenshot is a round trip to the browser, so expect slower tests.
+- **A snapshot per User Step**: `-Dvaadin.testing.user-steps.snapshots=true`. After every User Step the page is saved into the test's evidence directory, under `steps/`: a screenshot of the browser window (Playwright, Selenium), or the component tree (Browserless). In the HTML report each step gets a *screenshot* link, which opens the picture in a viewer with the step's component spotlighted (← → for the other steps, Esc to close, the *highlight step targets* switch or `h` to turn the spotlight off), or a *tree* link, which opens the tree under the step with the component marked. A check marks the component it checked. On Selenium each screenshot is a round trip to the browser, so expect slower tests.
 - **Playwright's trace**: `-Dvaadin.testing.playwright.trace=on-failure` (or `on`). Playwright records its trace, with a screenshot and the DOM before and after each of its actions, and the Unified API names a group in it after each User Task and User Step. The trace is kept as `trace.zip` in the test's evidence directory, for every test (`on`) or for failed ones (`on-failure`), and the HTML report links it. Open it at [trace.playwright.dev](https://trace.playwright.dev) (the file stays in your browser) or with Playwright's own viewer:
 
 ```
@@ -469,9 +466,9 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
-| `vaadin.testing.user-steps.server-log` *(unreleased)* | `warn`: the application's warnings and errors under the User Step during which they were logged ([above](#what-the-application-logged)); `error`, or `off` |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged ([above](#what-the-application-logged)); `error`, or `off` |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it |
-| `vaadin.testing.user-steps.compare-dir` *(unreleased)* | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
+| `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step, as `trace.zip` |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |

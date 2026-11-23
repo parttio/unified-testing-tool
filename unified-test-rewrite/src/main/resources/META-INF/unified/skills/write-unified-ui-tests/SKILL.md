@@ -71,9 +71,17 @@ class EditPersonTest {
   it inside the step and after it.
 - **Secrets**: type a password or token through `page.secret(..)`:
   `.setValue(page.secret(apiKey))`. The reports then show `••••`.
+- **Spring setup**: keep the suite on one Spring context. Every class with its own context setup (a
+  `@ServiceConnection` container field, `@MockitoBean`, `@Import`, properties, profiles) starts another, each with an
+  embedded server; share it through one base class. Test data is committed, not rolled back (the browser Testing
+  Tools refuse `@Transactional`): each test cleans up every table it writes to.
 - **Page objects** are optional and hold structure only: methods returning Wrappers
   (`UnifiedTextField name() { return page.find(UnifiedTextField.class).withLabel("Name"); }`). User work goes in
   User Tasks, checks in the test.
+- **One Spring context**: with Spring Boot, the test classes extend one shared base class that holds
+  `@UnifiedSpringBootTest`, the profile (`@ActiveProfiles`) and any `@ServiceConnection` container field. A class
+  with its own `@MockitoBean`, `@Import`, properties or container field gets a Spring context of its own, and each
+  context starts the application's server, on Browserless too. Add one only when the test needs that setup.
 
 ## Canonical forms
 
@@ -87,7 +95,12 @@ class EditPersonTest {
 | a key press | `page.pressKey("Enter")`, sent to the focused component |
 | a grid row | `grid.row().withCellText("Name", "Alan Turing")`; `grid.row(0)` by index; cell components: `row.cell("Actions").find(UnifiedButton.class)` |
 | a check | `assertThat(wrapper).hasText(..)`, `.hasValue(..)`, `.isOpen()`, `.isDisabled()`, `assertThat(row).hasCellText(..)`, `assertThat(page).isAt(View.class)` |
+| a chat's messages | any message: `assertThat(chat).hasMessageContaining("Got it")`; one message: `assertThat(chat.message(2)).hasTextContaining(..)` (index from 0), `assertThat(chat.message().withUserName("Assistant").last()).hasTextContaining(..)`, `assertThat(chat.message().withTextContaining("secret")).doesNotExist()` |
+| a menu's items | `assertThat(menu).hasItems("File", "Help")`, `.hasItems(List.of("File", "Export"), "PDF", "CSV")`, `.hasItem("File", "Print")`, `.hasItemEnabled(..)`, `.hasItemDisabled(..)` |
 | present, absent, how many | `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on grid rows |
+| gone from the user's view | `assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist()`: lookups and `getText()` include hidden components, on every Testing Tool |
+| a checkbox | `check()`, `uncheck()`, `setChecked(..)`: `element().click()` toggles it on Browserless only |
+| a route the user may not open | `page.navigate(AdminView.class)` doesn't throw; check where it lands: `assertThat(page).isAt(LoginView.class)` |
 | a condition no assertion states | `page.waitUntil(() -> ..)`: a last resort, it shows as a gap in the reports |
 | every match, to act on each | `for (UnifiedButton b : page.find(UnifiedButton.class).withText("Done").all()) { .. }` |
 
@@ -150,12 +163,49 @@ UnifiedAssertionError: Renaming a person in the editor updates the grid
 waiting. `Evidence` holds a screenshot (browser) or the component tree (Browserless), and on every Testing Tool
 `<test>.view.txt`: each component the page held at the failure, with the lookup that finds it.
 
+By default that is all a run keeps beyond `user-steps.txt`. Two opt-in settings keep more, for passing tests too
+(see Configuration):
+- `-Dvaadin.testing.user-steps.snapshots=true`: after every User Step, a screenshot (Playwright, Selenium) or the
+  component tree (Browserless) in the test's evidence directory, under `steps/`, linked from each step in the HTML
+  report.
+- `-Dvaadin.testing.playwright.trace=on-failure` (or `on`): Playwright's trace, grouped by User Step, as
+  `trace.zip` in the test's evidence directory. Open it at https://trace.playwright.dev.
+
 Decide who is wrong before changing anything:
 - **The test is wrong** when the view's code shows what the Near Miss shows (the label is "Email", the test guessed
   "E-mail"): apply `Did you mean`, or write the lookup from the view.
 - **The application is wrong** when the scenario you were given says the user should see something else (the
   notification, a saved value, a row): stop and report the failure's `Expected` and `Found` to the person who asked,
   with the view code involved. Change the expectation only when they confirm the new behaviour is intended.
+
+## Configuration
+
+Every setting is a JUnit configuration parameter (`src/test/resources/junit-platform.properties`, or Surefire's
+`configurationParameters`) or a system property (`-D`). Unset means the default.
+
+| Setting | Default |
+|---|---|
+| `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
+| `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
+| `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits (`500ms`, `1m`) |
+| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
+| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a screenshot or component tree after every User Step, in `steps/` |
+| `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step that logged them; `error` or `off` |
+| `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
+| `vaadin.testing.user-steps.changed-since` | in a GitHub pull request, `origin/$GITHUB_BASE_REF`; else unset. The git ref "Changed in this PR" compares with |
+| `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory: changed scenarios show a diff of their User Steps against it |
+| `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run on another Testing Tool: the run summary says which scenarios differ |
+| `vaadin.testing.browserless.view-packages` | with Spring, the `@SpringBootApplication`'s packages and the test's; else the test's package |
+| `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends a listener's exception to the session's `ErrorHandler`, as in a browser |
+| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
+| `vaadin.testing.playwright.headless` | `true` |
+| `vaadin.testing.playwright.executable` | Playwright's own browser; a path to a browser skips its download |
+| `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace as `trace.zip` |
+| `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
+| `vaadin.testing.selenium.headless` | `true` |
+| `vaadin.testing.selenium.executable` | the installed browser |
+| `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
 ## Review a test
 

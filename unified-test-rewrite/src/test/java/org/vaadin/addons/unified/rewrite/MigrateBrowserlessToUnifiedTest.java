@@ -250,6 +250,37 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void checkboxClickStaysAClickThatTogglesOnEveryTool() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.checkbox.Checkbox;
+                import org.junit.jupiter.api.Test;
+
+                class TermsTest extends BrowserlessTest {
+                    @Test
+                    void toggles() {
+                        test($(Checkbox.class).withLabel("Terms").single()).click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class TermsTest {
+                    @Test
+                    void toggles(UnifiedPage page) {
+                        page.find(UnifiedCheckbox.class).withLabel("Terms").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void buttonCaptionBecomesTextAndOtherTerminalsBecomeSingle() {
         rewriteRun(java(
                 """
@@ -380,7 +411,7 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                         browserless.test(name).setValue("Alice");
                         // TODO unified: filter runs Java on the component: test($(TextField.class).withCondition(f -> f.isRequired()).single()).setValue("x"): replace withCondition(..) with a locator
                         browserless.test(browserless.$(TextField.class).withCondition(f -> f.isRequired()).single()).setValue("x");
-                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), no Wrapper for Upload: write one (ADR 0003)
+                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), Upload has a Core Set Wrapper: use UnifiedUpload
                         Assertions.assertTrue(browserless.test(browserless.$(Upload.class).single()).isUsable());
                     }
                 }
@@ -425,8 +456,205 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
 
                     private boolean count(UnifiedPage page) {
                         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
-                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), no Wrapper for Upload: write one (ADR 0003)
+                        // TODO unified: Browserless Escape Hatch: test($(Upload.class).single()).isUsable(), Upload has a Core Set Wrapper: use UnifiedUpload
                         return browserless.test(browserless.$(Upload.class).single()).isUsable();
+                    }
+                }
+                """));
+    }
+
+    /** The page goes up the call graph, through overloads, to the tests (#324). */
+    @Test
+    void thePageIsThreadedThroughEveryHelperUpToTheTests() {
+        rewriteRun(java(
+                """
+                package com.example;
+
+                import com.vaadin.flow.component.Component;
+
+                public class RowActionMenu extends Component {
+                    public void choose(String action) {
+                    }
+                }
+                """),
+                java(
+                """
+                import com.example.RowActionMenu;
+                import com.vaadin.browserless.BrowserlessTest;
+                import org.junit.jupiter.api.Test;
+
+                class LinesTest extends BrowserlessTest {
+                    @Test
+                    void overrides() {
+                        overrideCount("Line 1", 3, "Recount");
+                    }
+
+                    private void overrideCount(String lineLabel, int count, String reason) {
+                        clickRowAction(lineLabel, "Override");
+                    }
+
+                    private void clickRowAction(String rowLabel, String action) {
+                        clickRowAction(rowMenu(rowLabel), action);
+                    }
+
+                    private void clickRowAction(RowActionMenu menu, String action) {
+                        menu.choose(action);
+                    }
+
+                    private RowActionMenu rowMenu(String rowLabel) {
+                        return $(RowActionMenu.class).withId(rowLabel).single();
+                    }
+                }
+                """,
+                """
+                import com.example.RowActionMenu;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LinesTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void overrides(UnifiedPage page) {
+                        overrideCount(page, "Line 1", 3, "Recount");
+                    }
+
+                    private void overrideCount(UnifiedPage page, String lineLabel, int count, String reason) {
+                        clickRowAction(page, lineLabel, "Override");
+                    }
+
+                    private void clickRowAction(UnifiedPage page, String rowLabel, String action) {
+                        clickRowAction(page, rowMenu(page, rowLabel), action);
+                    }
+
+                    private void clickRowAction(UnifiedPage page, RowActionMenu menu, String action) {
+                        menu.choose(action);
+                    }
+
+                    private RowActionMenu rowMenu(UnifiedPage page, String rowLabel) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: $(RowActionMenu.class).withId(rowLabel).single(), no Wrapper for RowActionMenu: write one (ADR 0003)
+                        return browserless.$(RowActionMenu.class).withId(rowLabel).single();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLeftoverOnAComponentTheCoreSetWrapsNamesItsWrapperInsteadOfAskingForOne() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.menubar.MenuBar;
+                import org.junit.jupiter.api.Test;
+
+                class MenuTest extends BrowserlessTest {
+                    @Test
+                    void opensTheMenu() {
+                        test($(MenuBar.class).single()).isUsable();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.menubar.MenuBar;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class MenuTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void opensTheMenu(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: test($(MenuBar.class).single()).isUsable(), MenuBar has a Core Set Wrapper: use UnifiedMenuBar
+                        browserless.test(browserless.$(MenuBar.class).single()).isUsable();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLeftoverOnASubclassOfACoreSetComponentNamesTheSuperclassWrapperAndItsFilters() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.dialog.Dialog;
+
+                public class ErrorDialog extends Dialog {
+                }
+                """),
+                java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import org.junit.jupiter.api.Test;
+
+                class ErrorTest extends BrowserlessTest {
+                    @Test
+                    void showsTheError() {
+                        test($(ErrorDialog.class).single()).isUsable();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ErrorTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void showsTheError(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: test($(ErrorDialog.class).single()).isUsable(), ErrorDialog extends Dialog: use UnifiedDialog with a filter (withHeaderTitle, withClassName, ...)
+                        browserless.test(browserless.$(ErrorDialog.class).single()).isUsable();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aLeftoverOnAComponentNoCoreSetWrapperCoversStillAsksForAWrapper() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.html.Image;
+                import org.junit.jupiter.api.Test;
+
+                class LogoTest extends BrowserlessTest {
+                    @Test
+                    void showsTheLogo() {
+                        test($(Image.class).single()).isUsable();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.html.Image;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LogoTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void showsTheLogo(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // TODO unified: Browserless Escape Hatch: test($(Image.class).single()).isUsable(), no Wrapper for Image: write one (ADR 0003)
+                        browserless.test(browserless.$(Image.class).single()).isUsable();
                     }
                 }
                 """));
@@ -466,6 +694,47 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                         BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
                         // TODO unified: Browserless Escape Hatch: $(TextField.class).withLabel("Name").single().getMaxLength()
                         Assertions.assertEquals(20, browserless.$(TextField.class).withLabel("Name").single().getMaxLength());
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aMigrationMarkerCarriesOnlyTheCallNotTheCommentAboveIt() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.textfield.TextField;
+                import org.junit.jupiter.api.Test;
+
+                class ProfileTest extends BrowserlessTest {
+                    @Test
+                    void reads() {
+                        // the field is capped:
+                        // twenty characters
+                        $(TextField.class).withLabel("Name").single().getMaxLength();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.textfield.TextField;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.browserless.BrowserlessEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ProfileTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void reads(UnifiedPage page) {
+                        BrowserlessEscapeHatch browserless = BrowserlessEscapeHatch.of(page);
+                        // the field is capped:
+                        // twenty characters
+                        // TODO unified: Browserless Escape Hatch: $(TextField.class).withLabel("Name").single().getMaxLength()
+                        browserless.$(TextField.class).withLabel("Name").single().getMaxLength();
                     }
                 }
                 """));
@@ -1107,6 +1376,249 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
                     @Test
                     void sets() {
                         new TextField().setValue("x");
+                    }
+                }
+                """));
+    }
+
+    /** The Locators mixin's lookups are Unified Page lookups; the mixin goes when nothing uses it (#323). */
+    @Test
+    void locatorsMixinLookupsBecomeUnifiedPageLookups() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class ProfileTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void saves() {
+                        findTextField().withLabel("Name").setValue("Alice");
+                        findButton().withText("Save").click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ProfileTest {
+                    @Test
+                    void saves(UnifiedPage page) {
+                        page.find(UnifiedTextField.class).withLabel("Name").setValue("Alice");
+                        page.find(UnifiedButton.class).withText("Save").click();
+                    }
+                }
+                """));
+    }
+
+    /** An aria-label is what the Unified API calls the accessible name (#323). */
+    @Test
+    void locatorsMixinAriaLabelBecomesTheAccessibleName() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class ProfileTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void closes() {
+                        findButton().withAriaLabel("Close").click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ProfileTest {
+                    @Test
+                    void closes(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withAccessibleName("Close").click();
+                    }
+                }
+                """));
+    }
+
+    /** A GridLocator's cell reads are UnifiedGrid row reads, on the locator and on a local holding it (#323). */
+    @Test
+    void locatorsMixinGridCellReadsBecomeUnifiedGridRows() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import com.vaadin.flow.component.grid.GridLocator;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class PeopleTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void lists() {
+                        Assertions.assertEquals("Ada", findGrid(String.class).getCellText(0, 1));
+                        GridLocator<String> people = findGrid(String.class).withId("people");
+                        Assertions.assertEquals(3, people.size());
+                        Assertions.assertEquals("Alan", people.getCellText(2, 0));
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedGrid;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    void lists(UnifiedPage page) {
+                        Assertions.assertEquals("Ada", page.find(UnifiedGrid.class).row(0).getCellText(1));
+                        UnifiedGrid people = page.find(UnifiedGrid.class).withId("people");
+                        Assertions.assertEquals(3, people.getRowCount());
+                        Assertions.assertEquals("Alan", people.row(2).getCellText(0));
+                    }
+                }
+                """));
+    }
+
+    /**
+     * A Locators mixin call no Wrapper says the same as keeps running on Browserless, marked, and the class keeps
+     * the mixin, marked too (#323).
+     */
+    @Test
+    void locatorsMixinCallsThatDontConvertAreMarkedAndRequireBrowserless() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.browserless.locator.Locators;
+                import com.vaadin.flow.component.grid.GridLocator;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class PeopleTest extends SpringBrowserlessTest implements Locators {
+                    @Test
+                    void lists() {
+                        findButton().withText("Load").click();
+                        Assertions.assertEquals("Ada", findGrid(String.class).getRow(0));
+                        Assertions.assertEquals(2, column(findGrid(String.class), 1));
+                    }
+
+                    private int column(GridLocator<String> grid, int index) {
+                        return grid.getColumnPosition("name") + index;
+                    }
+                }
+                """,
+                """
+                import com.vaadin.browserless.locator.Locators;
+                import com.vaadin.flow.component.grid.GridLocator;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                // TODO unified: Browserless Locators mixin: its locators run on Browserless only; find the components the marked calls use with page.find(..), then drop implements Locators
+                @UnifiedSpringBootTest
+                class PeopleTest implements Locators {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void lists(UnifiedPage page) {
+                        page.find(UnifiedButton.class).withText("Load").click();
+                        // TODO unified: Browserless Locators mixin: findGrid(String.class).getRow(0)
+                        Assertions.assertEquals("Ada", findGrid(String.class).getRow(0));
+                        // TODO unified: Browserless Locators mixin: findGrid(String.class)
+                        Assertions.assertEquals(2, column(findGrid(String.class), 1));
+                    }
+
+                    private int column(GridLocator<String> grid, int index) {
+                        return grid.getColumnPosition("name") + index;
+                    }
+                }
+                """));
+    }
+
+    /**
+     * The current UI and session are the server's, which only Browserless runs in the test's JVM: reading them is
+     * marked and requires Browserless, in a test and in a helper it calls (#323).
+     */
+    @Test
+    void currentUiAndSessionAreMarkedAndRequireBrowserless() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.SpringBrowserlessTest;
+                import com.vaadin.flow.component.UI;
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.flow.server.VaadinSession;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+                import org.springframework.boot.test.context.SpringBootTest;
+
+                @SpringBootTest
+                class ErrorsTest extends SpringBrowserlessTest {
+                    @Test
+                    void handlesErrors() {
+                        UI.getCurrent().navigate(Div.class);
+                        Assertions.assertNotNull(VaadinSession.getCurrent().getErrorHandler());
+                    }
+
+                    @Test
+                    void welcomes() {
+                        Assertions.assertTrue(pageText().contains("Welcome"));
+                    }
+
+                    private String pageText() {
+                        return UI.getCurrent().getElement().getTextRecursively();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.UI;
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.flow.server.VaadinSession;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Assertions;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class ErrorsTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void handlesErrors(UnifiedPage page) {
+                        page.navigate(Div.class);
+                        // TODO unified: server-side state: VaadinSession.getCurrent().getErrorHandler(): only Browserless runs the server in the test's JVM; check what the user sees instead
+                        Assertions.assertNotNull(VaadinSession.getCurrent().getErrorHandler());
+                    }
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.BROWSERLESS)
+                    void welcomes(UnifiedPage page) {
+                        Assertions.assertTrue(pageText().contains("Welcome"));
+                    }
+
+                    private String pageText() {
+                        // TODO unified: server-side state: UI.getCurrent().getElement().getTextRecursively(): only Browserless runs the server in the test's JVM; check what the user sees instead
+                        return UI.getCurrent().getElement().getTextRecursively();
                     }
                 }
                 """));

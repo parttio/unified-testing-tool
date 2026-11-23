@@ -41,13 +41,22 @@ To check how the field handles text it can't parse, type it:
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:unparsableText"
 ```
 
+Text is typed as it is, and Browserless parses only ISO dates while a browser parses the field's locale format, so
+`"2026-07-01"` is bad input in a browser. For incomplete input, a date the field can parse with no time, give the
+date as a `LocalDate`: `typeText(LocalDate, String)` types it in the field's own format, on every
+Testing Tool and in every locale.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:typesADateWithoutATime"
+```
+
 ## Checkbox
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/PreferencesTest.java:savesTypedValues"
 ```
 
-`check()` and `uncheck()` do nothing when the checkbox is already in that state; `setChecked(boolean)` does either. Assertions: `isChecked()`, `isNotChecked()`, `isIndeterminate()`.
+`check()` and `uncheck()` do nothing when the checkbox is already in that state; `setChecked(boolean)` does either. `click()` toggles it, as a user's click does, on every Testing Tool; prefer it to `element().click()`, which in a browser misses a checkbox wider than its box and label. Assertions: `isChecked()`, `isNotChecked()`, `isIndeterminate()`.
 
 ## Selection: ComboBox, RadioButtonGroup, MultiSelectComboBox
 
@@ -78,7 +87,16 @@ A MenuBar opens its sub-menus as a user does: give the path of item names.
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:clicksNestedMenuItems"
 ```
 
-An icon-only item is named by its `aria-label`. `isItemEnabled("Actions for Hotel", "Delete")` reads whether an item can be clicked.
+An icon-only item is named by its `aria-label`. `assertThat(menu).hasItems(..)` checks the top-level items and
+`hasItems(List.of("File", "Export"), ..)` those of a sub-menu; `hasItem(..)`, `hasItemEnabled(..)` and
+`hasItemDisabled(..)` take a path like `clickItem(..)` and check that the user sees the item, and whether they can
+click it:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ItemNameTest.java:assertsWhetherAMenuItemIsEnabled"
+```
+
+`getItems(..)` and `isItemEnabled(..)` read the same now, without waiting.
 
 ## Tabs and Details
 
@@ -116,6 +134,14 @@ An app built on Vaadin's AI components has a `MessageInput` and a `MessageList`.
 
 A message's text is the text the application gave it: with Markdown on, the Markdown source (`**Pancakes**`), not the rendered text, so that it reads the same on every Testing Tool. `getMessages()` gives each message's user name and text, `getMessageTexts()` the texts only. `hasMessageTexts(..)` checks every message, in order; `isEmpty()` checks there are none.
 
+*(unreleased)* One message is a lazy lookup, as a [grid row](grid.md) is: `message(i)` by its index among all messages, from 0, or `message()` narrowed by `withUserName(..)`, `withText(..)` and `withTextContaining(..)`, with `last()` taking the last of the matches so far. Its checks wait for a reply that comes later:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ChatTest.java:checksOneMessage"
+```
+
+`hasText(..)`, `hasTextContaining(..)` and `hasUserName(..)` need exactly one matching message, `exists()`, `doesNotExist()` and `hasCount(n)` count them. Use `hasMessageContaining(..)` when any message will do, and `message()` for a message at a position, from someone, the last one, or none.
+
 ## Keyboard and DOM events
 
 ```java
@@ -136,7 +162,7 @@ On Browserless, key presses fire the server-side listeners and shortcuts; client
 
 `getText()` is the DOM text, the same on every Testing Tool: CSS such as `text-transform` doesn't change it. In a browser, `element().getVisibleText()` gives the text as rendered.
 
-*(unreleased)* A `Div`, `Span` or other plain HTML element with a click listener, such as a navigation tab or a wordmark, is clicked like a button. So is a layout, through `UnifiedContainer`:
+A `Div`, `Span` or other plain HTML element with a click listener, such as a navigation tab or a wordmark, is clicked like a button. So is a layout, through `UnifiedContainer`:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ClickableHtmlTest.java:clicksADiv"

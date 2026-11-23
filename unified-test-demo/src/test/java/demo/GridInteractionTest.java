@@ -1,6 +1,7 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.testing.unified.RequiresBrowser;
@@ -10,6 +11,7 @@ import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -79,6 +81,20 @@ class GridInteractionTest {
     }
 
     // --8<-- [start:selectsRows]
+    @Test
+    @DisplayName("The user sorts columns whose captions sit under a header group")
+    void sortsAColumnUnderAHeaderGroup(UnifiedPage page) {
+        UnifiedGrid staff = grid(page, "staff");
+        assertEquals(List.of("Name", "Role", "Email"), staff.getColumnHeaders());
+
+        staff.column("Email").sort(SortDirection.DESCENDING);
+        assertThat(staff.column("Email")).isSortedDescending()
+                .hasCellTexts("c@example.com", "b@example.com", "a@example.com");
+
+        staff.column("Role").sort(SortDirection.ASCENDING);
+        assertThat(staff.column("Role")).isSortedAscending().hasCellTexts("Admin", "Editor", "Viewer");
+    }
+
     @Test
     @DisplayName("The user selects one role, then all of them, then none")
     void selectsRows(UnifiedPage page) {

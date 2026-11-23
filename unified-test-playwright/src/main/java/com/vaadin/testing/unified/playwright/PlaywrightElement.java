@@ -71,13 +71,13 @@ final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unif
     }
 
     /**
-     * The DOM text, as {@link BrowserQueries#TEXT} reads it: what Browserless reads on the server. Not
-     * Dramafinder's {@code getText()}, whose {@code textContent} holds a tooltip's text.
+     * The DOM text without a tooltip's, whitespace collapsed: Dramafinder's {@code getText()}, normalized as
+     * {@link BrowserQueries#TEXT} reads it, which is what Browserless reads on the server.
      */
     @Override
     public String getText() {
         Optional<String> special = support.text(locator);
-        return BrowserQueries.normalize(special.orElseGet(() -> (String) locator.evaluate(BrowserQueries.TEXT)));
+        return BrowserQueries.normalize(special.orElseGet(generic::getText));
     }
 
     @Override
@@ -245,8 +245,17 @@ final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unif
 
     @Override
     public void focus() {
-        focusable().focus();
+        if (dramafinder instanceof FocusableElement focusable) {
+            focusable.focus();
+            return;
+        }
+        // as on Selenium: a Vaadin field's focus part, whatever query found it (#450)
+        locator.evaluate(FOCUS);
+        AutoWait.afterAction(page());
     }
+
+    /** The part of a Vaadin component that takes focus: {@code focusElement}, else {@code inputElement}, else itself. */
+    private static final String FOCUS = "el => (el.focusElement || el.inputElement || el).focus()";
 
     @Override
     public void blur() {

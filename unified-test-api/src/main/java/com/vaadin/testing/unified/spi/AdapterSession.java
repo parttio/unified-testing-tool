@@ -65,19 +65,24 @@ public interface AdapterSession extends AutoCloseable {
      * Writes what a developer needs to see why a test failed (browsers: a screenshot; Browserless: the
      * component tree) into {@code directory}, with file names starting with {@code name}.
      *
-     * @return the files written
+     * @param target the Step Target of the step that failed, as this session found it; null when the failure
+     *        was no step's, or its step singled out nothing
+     * @return the files written, and where the screenshot shows the Step Target
      */
-    List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException;
+    Evidence writeFailureEvidence(Path directory, String name, UnifiedElement target) throws java.io.IOException;
 
     /**
      * Evidence of the page right after one User Step, when {@code vaadin.testing.user-steps.snapshots} is on:
      * written into {@code directory}, with file names starting with {@code name}. Browsers: a screenshot of the
-     * viewport; Browserless: the component tree. The default writes nothing.
+     * viewport, with the box of the step's Step Target; Browserless: the component tree, with the Step Target's
+     * line marked. The default writes nothing.
      *
-     * @return the files written
+     * @param target the element the step acted on or checked, as this session found it; null when it singled out
+     *        none
+     * @return the files written, and where the screenshot shows the Step Target
      */
-    default List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
-        return List.of();
+    default Evidence writeStepSnapshot(Path directory, String name, UnifiedElement target) throws java.io.IOException {
+        return Evidence.of(List.of());
     }
 
     /**

@@ -82,7 +82,32 @@ final class PlaywrightSession implements AdapterSession {
             }
         });
         page.onPageError(error -> consoleErrors.add(error));
+        page.onRequest(request -> {
+            if (request.isNavigationRequest() && request.frame() == page.mainFrame()) {
+                pageLoaded = true;
+                loaded = false;
+            }
+        });
+        page.onLoad(p -> loaded = true);
+        page.addInitScript(SEE_LEAVING);
     }
+
+    /** Whether the page has fired {@code load} since it last started loading another document. */
+    private volatile boolean loaded = true;
+
+    /**
+     * Notes in the page when it starts loading another document: the Navigation API's {@code navigate} event fires
+     * inside the location change, the link's click or the form's submit, before the request goes out (#397).
+     */
+    private static final String SEE_LEAVING = """
+            window.navigation?.addEventListener('navigate', e => {
+              if (!e.destination.sameDocument && e.downloadRequest === null) {
+                window.__unifiedLeaving = true;
+              }
+            });""";
+
+    /** Whether the page has started loading another document since {@link #settle()} last ran (#397). */
+    private volatile boolean pageLoaded;
 
     /** What the page logged with console.error, and the exceptions no script caught, since they were last read. */
     private final List<String> consoleErrors = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
@@ -121,6 +146,7 @@ final class PlaywrightSession implements AdapterSession {
     /** Opens the test-only login URL: the browser context's session belongs to that user afterwards. */
     void logIn(String loginUrl) {
         com.microsoft.playwright.Response response = page.navigate(loginUrl);
+        loadWaitedFor();
         if (response == null || !response.ok()) {
             throw new IllegalStateException("Test login failed: " + (response == null ? "no response" : response.status()
                     + " " + response.text()));
@@ -304,16 +330,19 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public void navigate(Class<? extends Component> view) {
         RouteNavigation.navigate(page, baseUrl, view);
+        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, Object urlParameter) {
         RouteNavigation.navigate(page, baseUrl, view, urlParameter);
+        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters));
+        loadWaitedFor();
     }
 
     @Override
@@ -321,6 +350,7 @@ final class PlaywrightSession implements AdapterSession {
         String queryString = query.getQueryString();
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters)
                 + (queryString.isEmpty() ? "" : "?" + queryString));
+        loadWaitedFor();
     }
 
     @Override
@@ -331,12 +361,23 @@ final class PlaywrightSession implements AdapterSession {
         } else {
             RouteNavigation.open(page, baseUrl, path.startsWith("/") ? path.substring(1) : path);
         }
+        loadWaitedFor();
     }
 
     @Override
     public void reload() {
         page.reload();
         AutoWait.waitForVaadinIdle(page);
+        loadWaitedFor();
+    }
+
+    /**
+     * The session loaded the page itself and has waited for it: the next action's {@link #settle()} has no page
+     * load of its own to wait for, and no extra calls to make (#397).
+     */
+    private void loadWaitedFor() {
+        pageLoaded = false;
+        loaded = true;
     }
 
     @Override
@@ -387,27 +428,64 @@ final class PlaywrightSession implements AdapterSession {
     /**
      * Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may
      * start: both in one call to the page (#402). When the action loaded another page, or Flow stays busy
-     * longer than {@link #SETTLE_IDLE_MS}, Dramafinder's own wait takes over, with its timeout.
+     * longer than {@link #SETTLE_IDLE_MS}, Dramafinder's own wait takes over, with its timeout; after a page load,
+     * only once Flow has started the new page's UI (#397).
      */
     @Override
     public void settle() {
         try {
-            if (Boolean.TRUE.equals(page.evaluate(SETTLE_AND_IDLE,
-                    List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS)))) {
+            Object state = page.evaluate(SETTLE_AND_IDLE, List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS));
+            if ("leaving".equals(state)) {
+                // the request for the next page may not be out yet: its load is still to come
+                pageLoaded = true;
+                loaded = false;
+            } else if ("idle".equals(state) && !pageLoaded) {
                 return;
             }
         } catch (com.microsoft.playwright.PlaywrightException e) {
             // the action loaded another page: nothing of Flow's left to wait for in this one
         }
+        if (pageLoaded) {
+            waitForFlowStart();
+        }
         AutoWait.waitForVaadinIdle(page);
     }
+
+    /**
+     * After a page load: waits for the new page's {@code load}, then until Flow has started the page's UI. Before
+     * that, only Flow's TypeScript client is registered, or none, and the page reads as idle while it shows nothing
+     * yet (#397).
+     */
+    private void waitForFlowStart() {
+        pageLoaded = false;
+        try {
+            page.waitForCondition(() -> loaded, new Page.WaitForConditionOptions().setTimeout(timeoutMillis));
+        } catch (com.microsoft.playwright.TimeoutError e) {
+            // the navigation loaded no page (a 204, a cancelled one): the page in place is the one to wait for
+        }
+        page.waitForLoadState(com.microsoft.playwright.options.LoadState.LOAD);
+        try {
+            page.waitForFunction(FLOW_STARTED, null, new Page.WaitForFunctionOptions().setTimeout(FLOW_START_CAP_MS));
+        } catch (com.microsoft.playwright.TimeoutError e) {
+            // Flow runs in the page but shows no Flow UI (a Hilla view): nothing more to wait for
+        }
+    }
+
+    /** How long {@link #FLOW_STARTED} may take after a page load, in ms: a page with no Flow UI never passes it. */
+    private static final int FLOW_START_CAP_MS = 5000;
+
+    /** True once Flow has registered the UI's client next to its TypeScript one, or when the page doesn't run Flow. */
+    private static final String FLOW_STARTED = """
+            () => { const clients = window.Vaadin?.Flow?.clients;
+                    return !clients || Object.keys(clients).some(id => id !== 'TypeScript'); }""";
 
     /** How long {@link #SETTLE_AND_IDLE} waits for Flow to be idle before Dramafinder's wait takes over, in ms. */
     private static final int SETTLE_IDLE_MS = 5000;
 
     /**
      * {@link BrowserQueries#SETTLE_NAVIGATION}, then Dramafinder's idle condition (no Flow client active, the dev
-     * server loaded), polled: true once idle, false when still busy after the given time.
+     * server loaded), polled: {@code idle}, {@code busy} when still busy after the given time, or {@code leaving}
+     * once the page has started loading another document ({@link #SEE_LEAVING}).
      */
     private static final String SETTLE_AND_IDLE = """
             async ([cap, idleMs]) => {
@@ -424,30 +502,74 @@ final class PlaywrightSession implements AdapterSession {
                 }
                 return !(flow && flow.devServerIsNotLoaded);
               };
+              let state = 'busy';
               for (let t = 0; t <= idleMs; t += 10) {
-                if (idle()) return true;
+                if (idle()) { state = 'idle'; break; }
                 await tick(10);
               }
-              return false;
+              return window.__unifiedLeaving ? 'leaving' : state;
             }""";
 
-    /** A full-page screenshot. */
+    /** A full-page screenshot, with where it shows the failed step's Step Target. */
     @Override
-    public List<Path> writeFailureEvidence(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeFailureEvidence(Path directory, String name, com.vaadin.testing.unified.UnifiedElement target)
+            throws java.io.IOException {
         java.nio.file.Files.createDirectories(directory);
         Path file = directory.resolve(name + ".png");
         page.screenshot(new Page.ScreenshotOptions().setPath(file).setFullPage(true));
-        return List.of(file);
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(file), highlight(target, true));
     }
 
-    /** The viewport after the step: what the user saw. */
+    /** The viewport after the step: what the user saw, with where it shows the Step Target. */
     @Override
-    public List<Path> writeStepSnapshot(Path directory, String name) throws java.io.IOException {
+    public com.vaadin.testing.unified.spi.Evidence writeStepSnapshot(Path directory, String name,
+            com.vaadin.testing.unified.UnifiedElement target) throws java.io.IOException {
         java.nio.file.Files.createDirectories(directory);
         Path file = directory.resolve(name + ".png");
         page.screenshot(new Page.ScreenshotOptions().setPath(file));
-        return List.of(file);
+        return new com.vaadin.testing.unified.spi.Evidence(List.of(file), highlight(target, false));
     }
+
+    /**
+     * The Step Target's box in fractions of the screenshot: the viewport, or the whole document for a full-page
+     * one; null without a target. Read with {@code evaluateAll}, which doesn't wait for an element that is gone.
+     */
+    private com.vaadin.testing.unified.spi.Highlight highlight(com.vaadin.testing.unified.UnifiedElement target,
+            boolean fullPage) {
+        if (!(target instanceof PlaywrightElement element)) {
+            return null;
+        }
+        Object result;
+        try {
+            result = element.locator().evaluateAll(TARGET_BOX, fullPage);
+        } catch (RuntimeException e) {
+            return null; // the screenshot is kept without a box: a highlight never costs the snapshot
+        }
+        if (!(result instanceof List<?> box) || box.size() != 6) {
+            return com.vaadin.testing.unified.spi.Highlight.gone();
+        }
+        return com.vaadin.testing.unified.spi.Highlight.of(number(box.get(0)), number(box.get(1)), number(box.get(2)),
+                number(box.get(3)), number(box.get(4)), number(box.get(5)));
+    }
+
+    private static double number(Object value) {
+        return ((Number) value).doubleValue();
+    }
+
+    /**
+     * The first element's box in pixels, and the size of what the screenshot shows: [left, top, width, height,
+     * image width, image height]. The viewport, or with {@code fullPage} the whole document, in which the box
+     * moves by the scroll position. Null when it is no longer on the page or not shown.
+     */
+    private static final String TARGET_BOX = """
+            (els, fullPage) => {
+              if (!els.length || !els[0].isConnected || !els[0].checkVisibility()) return null;
+              const r = els[0].getBoundingClientRect(), d = document.documentElement;
+              return fullPage
+                  ? [r.left + scrollX, r.top + scrollY, r.width, r.height,
+                     Math.max(d.scrollWidth, innerWidth), Math.max(d.scrollHeight, innerHeight)]
+                  : [r.left, r.top, r.width, r.height, innerWidth, innerHeight];
+            }""";
 
     @Override
     public boolean tracesSteps() {

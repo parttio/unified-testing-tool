@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.openrewrite.Cursor;
 import org.openrewrite.java.tree.Comment;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.Space;
 import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TextComment;
 import org.openrewrite.marker.Markers;
@@ -46,6 +47,11 @@ final class MigrationMarkers {
         return true;
     }
 
+    /** The code a marker quotes: the tree printed without its prefix, so without the comments above its statement. */
+    static String code(J tree, Cursor parent) {
+        return tree.withPrefix(Space.EMPTY).printTrimmed(parent);
+    }
+
     /** The method with the collected markers written above their statements. */
     static J.MethodDeclaration write(J.MethodDeclaration method, Map<UUID, List<String>> markers) {
         if (markers.isEmpty() || method.getBody() == null) {
@@ -57,10 +63,17 @@ final class MigrationMarkers {
             if (texts != null) {
                 String indent = s.getPrefix().getIndent();
                 List<Comment> comments = new ArrayList<>(s.getPrefix().getComments());
+                int before = comments.size();
                 for (String text : texts) {
-                    comments.add(new TextComment(false, " TODO unified: " + text, "\n" + indent, Markers.EMPTY));
+                    // a recipe running again in a later cycle finds the marker it left
+                    if (comments.stream().noneMatch(c -> c instanceof TextComment t
+                            && t.getText().equals(" TODO unified: " + text))) {
+                        comments.add(new TextComment(false, " TODO unified: " + text, "\n" + indent, Markers.EMPTY));
+                    }
                 }
-                s = s.withPrefix(s.getPrefix().withComments(comments));
+                if (comments.size() > before) {
+                    s = s.withPrefix(s.getPrefix().withComments(comments));
+                }
             }
             statements.add(s);
         }

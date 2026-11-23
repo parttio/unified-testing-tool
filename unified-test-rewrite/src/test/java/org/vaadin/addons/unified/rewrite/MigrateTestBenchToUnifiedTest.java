@@ -626,6 +626,49 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void anEscapeHatchMarkerCarriesOnlyTheCallNotTheCommentAboveIt() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void scrolls() {
+                        getDriver().get("http://localhost:8080/people");
+                        // back to the top:
+                        // the header is sticky
+                        executeScript("window.scrollTo(0, 0)");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void scrolls(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        page.navigate("people");
+                        // back to the top:
+                        // the header is sticky
+                        // TODO unified: TestBench Escape Hatch: executeScript("window.scrollTo(0, 0)")
+                        testBench.executeScript("window.scrollTo(0, 0)");
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aLookupStaysTestBenchWhenTheWrapperLacksACallUsedOnIt() {
         rewriteRun(java(
                 """
@@ -1776,6 +1819,58 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                                 ProfilePage profile = new ProfilePage(testBench);
                                 profile.setName("Alice");
                                 profile.save().click();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void aPageObjectMarkerCarriesOnlyTheCallNotTheCommentAboveIt() {
+        rewriteRun(
+                java("""
+                        import com.vaadin.testbench.HasElementQuery;
+
+                        class Steps {
+                            static void signIn(HasElementQuery test) {
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class ProfileTest extends BrowserTestBase {
+
+                            @BrowserTest
+                            void saves() {
+                                getDriver().get("http://localhost:8080/profile");
+                                // as an admin:
+                                // users cannot save
+                                Steps.signIn(this);
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        @UnifiedUITest
+                        class ProfileTest {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void saves(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                page.navigate("profile");
+                                // as an admin:
+                                // users cannot save
+                                // TODO unified: TestBench page object: Steps.signIn(this)
+                                Steps.signIn(testBench);
                             }
                         }
                         """));

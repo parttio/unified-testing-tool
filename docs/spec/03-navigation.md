@@ -6,27 +6,27 @@ Decided in [#16](https://github.com/parttio/unified-testing-tool/issues/16).
 page.navigate(ProfileView.class);                              // recommended
 page.navigate(OrderView.class, 42L);                           // HasUrlParameter
 page.navigate(OrderView.class, new RouteParameters("id", "42"));
-page.navigate(PlanView.class, QueryParameters.of("week", "2026-11-02"));   // unreleased
-page.navigate(OrderView.class, new RouteParameters("id", "42"), QueryParameters.of("tab", "2")); // unreleased
+page.navigate(PlanView.class, QueryParameters.of("week", "2026-11-02"));
+page.navigate(OrderView.class, new RouteParameters("id", "42"), QueryParameters.of("tab", "2"));
 page.navigate("profile?tab=2");                                // path, relative to the base URL
 page.reload();
 
 assertThat(page).isAt(ProfileView.class);
 assertThat(page).hasPath("profile").hasQueryParameter("tab", "2");
-assertThat(page).hasTitle("Profile");                          // unreleased
+assertThat(page).hasTitle("Profile");
 ```
 
 | Rule | Detail |
 |---|---|
 | Two forms | Route class (refactor-safe, recommended) or path. Path form covers routes registered at runtime. |
-| Query parameters *(unreleased)* | Either form: `QueryParameters` after the route class, with or without `RouteParameters`, as Flow's `UI.navigate(..)` takes them, or a query string in the path. The User Step names them: `open Plan with “week=2026-11-02”`. |
+| Query parameters | Either form: `QueryParameters` after the route class, with or without `RouteParameters`, as Flow's `UI.navigate(..)` takes them, or a query string in the path. The User Step names them: `open Plan with “week=2026-11-02”`. |
 | Relative only | Paths are relative to the base URL. Absolute or external URLs need `@RequiresBrowser`. |
 | Returns nothing | Auto-Waits until the view is shown and the server is idle. The view instance is available only via the Escape Hatch (Browserless). |
 | Flow types | Route classes, `RouteParameters`, `QueryParameters` from `flow-server`. |
 | Reload | `page.reload()` on every Testing Tool (Browserless simulates it, `@PreserveOnRefresh` respected). |
 | Back / forward | Escape Hatch only. |
 | `isAt(view)` | Browsers compare the page's current location (read in the page, so a RouterLink or `history.pushState` navigation counts) with the view's route. A view with no route (an error view) is matched by the view the page's UI shows: `@UnifiedSpringBootTest` serves a test-only endpoint (`/__unified/current-view`) that answers for the caller's own Vaadin session. Browserless checks the current view's class. |
-| `hasTitle(title)` *(unreleased)* | The page's title, exactly, on every Testing Tool: what a view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)` set. Browsers read `document.title`; Browserless reads the title the UI last sent (`UI.getInternals().getTitle()`), which Flow keeps on the server. A title set by the page's own script or the HTML template, not through Flow, is seen in a browser only. |
+| `hasTitle(title)` | The page's title, exactly, on every Testing Tool: what a view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)` set. Browsers read `document.title`; Browserless reads the title the UI last sent (`UI.getInternals().getTitle()`), which Flow keeps on the server. A title set by the page's own script or the HTML template, not through Flow, is seen in a browser only. |
 
 ## Route class to URL (browser Testing Tools)
 
@@ -44,7 +44,7 @@ Routes registered at runtime (`RouteConfiguration`) use the path form.
 
 - Resolve route classes from `@Route` and parent layouts' `@RoutePrefix`, plus route and URL parameters, and query
   parameters (`AdapterSession.navigate(view, parameters, query)`; its default opens the path the annotations give)
-  *(unreleased)*.
+.
 - After navigation, wait for the target view and an idle server.
-- Read the page's title as it is now (`AdapterSession.title()`) *(unreleased)*.
+- Read the page's title as it is now (`AdapterSession.title()`).
 - Location and title assertions retry until the timeout.

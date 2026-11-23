@@ -152,6 +152,114 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void aChatInADockFocusAndAMessageByIndexBecomeUnifiedChatCalls() {
+        // issue #511: a chat scoped by test id, focus(), and getMessage(i) next to assertMessageCount(n)
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.MessageInputElement;
+                import org.vaadin.addons.dramafinder.element.MessageListElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class ChatTest extends SpringPlaywrightIT {
+                    @Test
+                    void asks() {
+                        navigate(PeopleView.class);
+                        MessageInputElement input = MessageInputElement.get(page.getByTestId("chat-dock"));
+                        input.typeAndSubmit("What's on Friday?");
+                        input.focus();
+                        MessageListElement messages = MessageListElement.get(page);
+                        messages.assertMessageCount(3);
+                        assertThat(messages.getMessage(2)).containsText("Got it");
+                        assertThat(messages.getMessage(0)).hasText("What's on Friday?");
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedMessageInput input = page.find(UnifiedContainer.class).withTestId("chat-dock").find(UnifiedMessageInput.class);
+                        input.send("What's on Friday?");
+                        input.element().focus();
+                        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+                        assertThat(messages).hasMessageCount(3);
+                        assertThat(messages.message(2)).hasTextContaining("Got it");
+                        assertThat(messages.message(0)).hasText("What's on Friday?");
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aChatElementGivenAnIdOrTestIdLocatorBecomesALookupOfItsWrapper() {
+        // issue #511: get(locator) finds the element inside the locator, new X(locator) is the locator itself
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.MessageInputElement;
+                import org.vaadin.addons.dramafinder.element.MessageListElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class ChatTest extends SpringPlaywrightIT {
+                    @Test
+                    void asks() {
+                        navigate(PeopleView.class);
+                        MessageInputElement.get(page.locator("[data-testid=chat-dock]")).typeAndSubmit("Hi");
+                        new MessageInputElement(page.locator("#chat-input")).focus();
+                        MessageListElement messages = new MessageListElement(page.getByTestId("chat-history"));
+                        messages.assertMessageCount(1);
+                        MessageListElement.get(page.locator("#chat-dock")).assertEmpty();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.component.UnifiedMessageInput;
+                import com.vaadin.testing.unified.component.UnifiedMessageList;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class ChatTest {
+                    @Test
+                    void asks(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        page.find(UnifiedContainer.class).withTestId("chat-dock").find(UnifiedMessageInput.class).send("Hi");
+                        page.find(UnifiedMessageInput.class).withId("chat-input").element().focus();
+                        UnifiedMessageList messages = page.find(UnifiedMessageList.class).withTestId("chat-history");
+                        assertThat(messages).hasMessageCount(1);
+                        assertThat(page.find(UnifiedContainer.class).withId("chat-dock").find(UnifiedMessageList.class)).isEmpty();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void springBootTestAndTheToolGuardGo() {
         rewriteRun(java(VIEW), java(
                 """
@@ -310,6 +418,51 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                         Page playwright = page.unwrap(Page.class);
                         // TODO unified: Dramafinder Escape Hatch: ButtonElement.getByText(playwright, "Save").click()
                         ButtonElement.getByText(playwright, "Save").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void anEscapeHatchMarkerCarriesOnlyTheCallNotTheCommentAboveIt() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void saves() {
+                        navigate(PeopleView.class);
+                        // the button has no text:
+                        // only its tag finds it
+                        this.page.locator("vaadin-button").click();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void saves(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PeopleView.class);
+                        // the button has no text:
+                        // only its tag finds it
+                        // TODO unified: Dramafinder Escape Hatch: playwright.locator("vaadin-button").click()
+                        playwright.locator("vaadin-button").click();
                     }
                 }
                 """));
@@ -543,6 +696,132 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                         playwright.locator("#mise-undo").fill("x");
                         // TODO unified: Dramafinder Escape Hatch: playwright.locator("#week-next span").click()
                         playwright.locator("#week-next span").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void textAttributeClassVisibilityAndAttachedChecksOnRawLocatorsBecomeUnifiedChecks() {
+        // issue #510: the Playwright checks a real suite makes most, on the raw locators #356 converts
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Locator;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                import java.util.regex.Pattern;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void plans() {
+                        navigate(PlanView.class);
+                        assertThat(page.locator("#recipe-card")).containsText("Pancakes");
+                        assertThat(page.locator("#recipe-card")).hasText("Pancakes on Friday");
+                        assertThat(page.locator("#week-next")).hasAttribute("disabled", "");
+                        assertThat(page.locator("#week-next")).not().hasAttribute("disabled", "");
+                        assertThat(page.locator("#week-next")).not().hasAttribute("aria-disabled", "true");
+                        assertThat(page.locator("#recipe-card")).hasClass("recipe-card--future");
+                        assertThat(page.locator("#recipe-card")).hasClass(Pattern.compile(".*recipe-card--past.*"));
+                        assertThat(page.getByTestId("cooked")).not().isVisible();
+                        assertThat(page.locator("#recipe-card")).isAttached();
+                        Locator meal = page.locator("#meal-friday");
+                        assertThat(meal).not().hasAttribute("disabled", "");
+                        assertThat(meal).hasClass("filled");
+                        assertThat(meal).not().isVisible();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import com.vaadin.testing.unified.component.UnifiedCheckbox;
+                import com.vaadin.testing.unified.component.UnifiedContainer;
+                import com.vaadin.testing.unified.component.UnifiedTextField;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    void plans(UnifiedPage page) {
+                        page.navigate(PlanView.class);
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card")).hasTextContaining("Pancakes");
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card")).hasText("Pancakes on Friday");
+                        assertThat(page.find(UnifiedButton.class).withId("week-next")).isDisabled();
+                        assertThat(page.find(UnifiedButton.class).withId("week-next")).isEnabled();
+                        assertThat(page.find(UnifiedButton.class).withId("week-next")).isEnabled();
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card").withClassName("recipe-card--future")).exists();
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card").withClassName("recipe-card--past")).exists();
+                        assertThat(page.find(UnifiedCheckbox.class).withTestId("cooked").visible()).doesNotExist();
+                        assertThat(page.find(UnifiedContainer.class).withId("recipe-card")).exists();
+                        UnifiedTextField meal = page.find(UnifiedTextField.class).withId("meal-friday");
+                        assertThat(meal).isEnabled();
+                        assertThat(meal.withClassName("filled")).exists();
+                        assertThat(meal.visible()).doesNotExist();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aTextOrClassCheckOnARawLocatorWithAPatternKeepsItsMarker() {
+        // issue #510: a pattern is not a literal text, and only ".*x.*" is one class name
+        rewriteRun(java(VIEW), java(ID_VIEW), java(
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import java.util.regex.Pattern;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PlanTest extends SpringPlaywrightIT {
+                    @Test
+                    void plans() {
+                        navigate(PlanView.class);
+                        assertThat(page.locator("#recipe-card")).hasText(Pattern.compile("Pan.*"));
+                        assertThat(page.locator("#recipe-card")).containsText(Pattern.compile("Pan"));
+                        assertThat(page.locator("#recipe-card")).hasClass(Pattern.compile("^a|b$"));
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+                import java.util.regex.Pattern;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PlanTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void plans(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PlanView.class);
+                        // TODO unified: Dramafinder Escape Hatch: assertThat(playwright.locator("#recipe-card")).hasText(Pattern.compile("Pan.*"))
+                        assertThat(playwright.locator("#recipe-card")).hasText(Pattern.compile("Pan.*"));
+                        // TODO unified: Dramafinder Escape Hatch: assertThat(playwright.locator("#recipe-card")).containsText(Pattern.compile("Pan"))
+                        assertThat(playwright.locator("#recipe-card")).containsText(Pattern.compile("Pan"));
+                        // TODO unified: Dramafinder Escape Hatch: assertThat(playwright.locator("#recipe-card")).hasClass(Pattern.compile("^a|b$"))
+                        assertThat(playwright.locator("#recipe-card")).hasClass(Pattern.compile("^a|b$"));
                     }
                 }
                 """));
@@ -818,7 +1097,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
 
                     @Test
                     void opensPeople(UnifiedPage page) {
-                        page.navigate("people");
+                        page.navigate(PeopleView.class);
                         openPlan(page);
                     }
 
@@ -832,6 +1111,90 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     }
                 }
                 """));
+    }
+
+    /** A test that opens {@code url}, a concatenation after {@code getUrl()}, and has {@code monday} and {@code week}. */
+    private static String navigatingTo(String url) {
+        return """
+                package com.example;
+
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        String week = "2026-W47";
+                        page.navigate(getUrl() + %s);
+                    }
+                }
+                """.formatted(url);
+    }
+
+    /** What {@link #navigatingTo} becomes, with {@code navigation} the call's arguments. */
+    private static String navigatedTo(String imports, String navigation) {
+        return """
+                package com.example;
+
+                import java.time.LocalDate;
+
+                %simport com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    void opens(UnifiedPage page) {
+                        page.navigate("");
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        String week = "2026-W47";
+                        page.navigate(%s);
+                    }
+                }
+                """.formatted(imports, navigation);
+    }
+
+    @Test
+    void theBaseUrlPlusAPathAndOneQueryParameterBecomesTheRouteClassAndTheParameter() {
+        // issue #513: as getView() does since #370, a path one @Route has becomes the route class
+        rewriteRun(java(VIEW), java(navigatingTo("\"/people?week=\" + monday"),
+                navigatedTo("import com.vaadin.flow.router.QueryParameters;\n",
+                        "PeopleView.class, QueryParameters.of(\"week\", String.valueOf(monday))")));
+    }
+
+    @Test
+    void aStringQueryParameterValueIsPassedAsItIs() {
+        rewriteRun(java(VIEW), java(navigatingTo("\"/people?week=\" + week"),
+                navigatedTo("import com.vaadin.flow.router.QueryParameters;\n",
+                        "PeopleView.class, QueryParameters.of(\"week\", week)")));
+    }
+
+    @Test
+    void theBaseUrlPlusAPathNoRouteHasStaysAPath() {
+        rewriteRun(java(VIEW), java(navigatingTo("\"/plan?week=\" + monday"),
+                navigatedTo("", "\"plan?week=\" + monday")));
+    }
+
+    @Test
+    void theBaseUrlPlusAPathTwoRoutesHaveStaysAPath() {
+        rewriteRun(java(VIEW), java("""
+                package com.example;
+
+                import com.vaadin.flow.component.Component;
+                import com.vaadin.flow.router.Route;
+
+                @Route("people")
+                public class OtherPeopleView extends Component {}
+                """), java(navigatingTo("\"/people\""), navigatedTo("", "\"people\"")));
+    }
+
+    @Test
+    void theBaseUrlPlusAPathAndTwoQueryParametersStaysAPath() {
+        rewriteRun(java(VIEW), java(navigatingTo("\"/people?week=\" + monday + \"&name=\" + week"),
+                navigatedTo("", "\"people?week=\" + monday + \"&name=\" + week")));
     }
 
     @Test

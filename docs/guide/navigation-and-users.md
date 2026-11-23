@@ -8,7 +8,7 @@ Spec: [3. Navigation](../spec/03-navigation.md), [11. Users](../spec/11-users.md
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:navigate"
 ```
 
-`navigate` returns once the view is shown and the server is idle. The route class form survives renaming a route; use the path form for routes registered at runtime. Query parameters go after the route class, as in Flow's `UI.navigate(..)` *(unreleased)*:
+`navigate` returns once the view is shown and the server is idle. The route class form survives renaming a route; use the path form for routes registered at runtime. Query parameters go after the route class, as in Flow's `UI.navigate(..)`:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/NavigationTest.java:navigatesByClassWithQuery"

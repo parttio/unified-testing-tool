@@ -50,7 +50,7 @@ The Unified API never starts a server itself.
 | Spring Boot, `@UnifiedSpringBootTest` | App built in the test JVM from the Spring context (`SpringBrowserlessApplicationContext`); routes from the packages of the `@SpringBootApplication` and the test's own package. Needs `com.vaadin:browserless-test-spring` (a Spring test without it fails at once). | Same Spring context, random port; base URL `http://localhost:<port>` |
 | Plain servlet / other | Views found with Browserless's `@ViewPackages` | Server started by the build (e.g. Failsafe + `jetty:start`); base URL from `vaadin.testing.base-url` |
 
-`@UnifiedSpringBootTest` always uses a random port, also on Browserless runs. Cost: one embedded-server start per cached Spring context, not per test. Benefit: same app setup on every Testing Tool.
+`@UnifiedSpringBootTest` always uses a random port, also on Browserless runs. Cost: one embedded-server start per cached Spring context, not per test. Benefit: same app setup on every Testing Tool. A suite whose classes each declare their own `@MockitoBean`s, `@Import`s, properties or `@ServiceConnection` containers starts one context per class; keep it on one through a shared base class ([#331](https://github.com/parttio/unified-testing-tool/issues/331), [Migrating from Browserless](../migrating-from-browserless.md#one-spring-context)).
 
 ```java
 @UnifiedSpringBootTest(properties = "app.feature.x=true")
@@ -66,7 +66,7 @@ class ProfileViewTest {
 |---|---|
 | Narrow Spring context (`@ContextConfiguration`, no web server) | Browserless only: declare `@RequiresTestingTool(BROWSERLESS)`. Portable alternative: `@UnifiedSpringBootTest` + `@MockitoBean`. |
 | Browser runs | Need `com.vaadin:vaadin-dev` (dev mode with the pre-built dev bundle). |
-| Development tools *(unreleased)* | Off in a `@UnifiedSpringBootTest`'s application: `vaadin.devmode.devTools.enabled=false`, as the last property source, so the test's `properties`, the application's configuration, system properties and the environment win over it. In development mode Vaadin Copilot starts file watchers for every browser session and stops them when the application stops; a run's sessions add up to the machine's limit (about two watchers per test, 128 instances on a usual Linux), after which each session logs an error. |
+| Development tools | Off in a `@UnifiedSpringBootTest`'s application: `vaadin.devmode.devTools.enabled=false`, as the last property source, so the test's `properties`, the application's configuration, system properties and the environment win over it. In development mode Vaadin Copilot starts file watchers for every browser session and stops them when the application stops; a run's sessions add up to the machine's limit (about two watchers per test, 128 instances on a usual Linux), after which each session logs an error. |
 | Quarkus | Not specified yet ([open-questions.md](open-questions.md)). |
 
 ## Test data

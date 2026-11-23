@@ -60,6 +60,9 @@ public record UserStepsReport(String testClass, String testMethod, String displa
      *    ✘ AssertionError: Expected …
      *      at EditPersonTest.java:13 (editsAPersonInTheDialog)
      * </pre>
+     *
+     * A Unified failure with a suggestion gets its {@code Did you mean} line under the {@code ✘} line, in the
+     * failure message's wording; its Near Misses stay in the message and {@code user-steps.json}.
      */
     public String text() {
         StringBuilder sb = new StringBuilder();
@@ -78,6 +81,10 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         }
         if (failure != null && status.equals("failed")) {
             sb.append(INDENT).append(FAILED_MARK).append(' ').append(steps.mask(firstLine(failure))).append('\n');
+            if (failure instanceof UnifiedAssertionError unified && unified.getSuggestion().isPresent()) {
+                sb.append(INDENT).append("  Did you mean  ").append(steps.mask(unified.getSuggestion().get()))
+                        .append('\n');
+            }
             List<CallSite> codePath = codePath();
             if (!codePath.isEmpty()) {
                 sb.append(INDENT).append("  at ").append(String.join(" ← ", codePath.stream().map(String::valueOf).toList()))
@@ -225,6 +232,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             json.key("codePath").open('[');
             codePath().forEach(site -> callSite(json, site));
             json.close(']');
+            highlight(json, steps.failureHighlight());
             if (failure instanceof UnifiedAssertionError unified) {
                 json.optional("expected", steps.mask(unified.getExpected()));
                 json.optional("found", steps.mask(unified.getFound()));
@@ -277,6 +285,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     }
                     common(json, step.window(), step.status(), step.durationNanos(), step.callSite(), step.error());
                     json.optional("snapshot", step.snapshot());
+                    highlight(json, step.highlight());
                     readsAfter(json, step);
                 }
                 case Group group -> {
@@ -301,6 +310,23 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             json.close('}');
         }
         json.close(']');
+    }
+
+    /** Where a screenshot shows its Step Target: a box in fractions of the image, or why there is none. */
+    static void highlight(Json json, com.vaadin.testing.unified.spi.Highlight highlight) {
+        if (highlight == null) {
+            return;
+        }
+        json.key("highlight").open('{');
+        if (highlight.missing() != null) {
+            json.field("missing", highlight.missing());
+        } else {
+            json.fraction("x", highlight.x());
+            json.fraction("y", highlight.y());
+            json.fraction("width", highlight.width());
+            json.fraction("height", highlight.height());
+        }
+        json.close('}');
     }
 
     /** Before a group's {@code steps}, so the file reads in the order things happened. */
@@ -394,6 +420,13 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             key(key);
             beforeValue();
             sb.append(value);
+        }
+
+        /** A fraction from 0 to 1, to four places: a tenth of a pixel on a 1000-pixel image. */
+        void fraction(String key, double value) {
+            key(key);
+            beforeValue();
+            sb.append(String.format(java.util.Locale.ROOT, "%.4f", value));
         }
 
         void optional(String key, String value) {

@@ -7,6 +7,7 @@ import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedMessageInput;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.component.UnifiedMessageList.Message;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -44,5 +45,50 @@ class ChatTest {
                 new Message("You", "Soup"),
                 new Message("Assistant", "Here is a recipe for **Soup**.")), messages.getMessages());
         assertEquals(3, messages.getMessageCount());
+    }
+
+    // --8<-- [start:checksOneMessage]
+    @Test
+    @DisplayName("The assistant's latest reply names the dish the user asked for last")
+    void checksOneMessage(UnifiedPage page) {
+        page.navigate(ChatView.class);
+        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+        UnifiedMessageInput input = page.find(UnifiedMessageInput.class);
+
+        input.send("Soup");
+        input.send("Pancakes");
+
+        assertThat(messages.message(2)).hasTextContaining("**Soup**").hasUserName("Assistant");
+        assertThat(messages.message().withUserName("Assistant").last()).hasTextContaining("**Pancakes**");
+        assertThat(messages.message().withUserName("You")).hasCount(2);
+        assertThat(messages.message().withTextContaining("Pizza")).doesNotExist();
+    }
+    // --8<-- [end:checksOneMessage]
+
+    @Test
+    @DisplayName("A check on the latest reply waits for a reply that comes later")
+    void waitsForALateReply(UnifiedPage page) {
+        page.navigate(ChatView.class, QueryParameters.of("reply-delay", "300"));
+        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+
+        page.find(UnifiedMessageInput.class).send("Soup");
+
+        assertThat(messages.message().withUserName("Assistant").last()).hasTextContaining("**Soup**");
+        assertThat(messages.message(2)).hasText("Here is a recipe for **Soup**.");
+    }
+
+    @Test
+    @DisplayName("A message is read by its index, its user name or as the last one")
+    void readsOneMessage(UnifiedPage page) {
+        page.navigate(ChatView.class);
+        UnifiedMessageList messages = page.find(UnifiedMessageList.class);
+        page.find(UnifiedMessageInput.class).send("Soup");
+        assertThat(messages).hasMessageCount(3);
+
+        assertEquals("Soup", messages.message().withUserName("You").getText());
+        assertEquals("Assistant", messages.message(2).getUserName());
+        assertEquals(2, messages.message().last().getIndex());
+        assertEquals(List.of(0, 2), messages.message().withUserName("Assistant").all().stream()
+                .map(UnifiedMessageList.UnifiedMessage::getIndex).toList());
     }
 }

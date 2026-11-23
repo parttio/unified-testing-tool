@@ -30,7 +30,7 @@
         <url>https://github.com/parttio/unified-testing-tool</url>
         <connection>scm:git:https://github.com/parttio/unified-testing-tool.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/parttio/unified-testing-tool.git</developerConnection>
-        <tag>unified-test-0.1.0-alpha3</tag>
+        <tag>unified-test-0.1.0-alpha4</tag>
     </scm>
     <issueManagement>
         <system>GitHub</system>

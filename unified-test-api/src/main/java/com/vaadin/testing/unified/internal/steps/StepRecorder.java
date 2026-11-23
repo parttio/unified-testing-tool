@@ -72,6 +72,9 @@ public final class StepRecorder {
         private Throwable error;
         private List<CallSite> codePath = List.of();
         private String snapshot;
+        private com.vaadin.testing.unified.spi.Highlight highlight;
+        /** A failed step's Step Target, for the failure's evidence; null otherwise. */
+        private transient com.vaadin.testing.unified.UnifiedElement target;
 
         Step(String index, int number, Phrase phrase, String window, CallSite callSite) {
             this.index = index;
@@ -97,6 +100,8 @@ public final class StepRecorder {
         public List<CallSite> codePath() { return codePath; }
         /** Its snapshot, relative to the test's evidence directory ({@code steps/003.png}); null without one. */
         public String snapshot() { return snapshot; }
+        /** Where its screenshot shows its Step Target; null without one. */
+        public com.vaadin.testing.unified.spi.Highlight highlight() { return highlight; }
     }
 
     /** A step group: {@code page.step("Edit Alan Turing", () -> …)}, a User Task's heading. */
@@ -177,6 +182,19 @@ public final class StepRecorder {
         boolean read;
         /** A User Step or a gap already: what is read inside belongs to it. */
         boolean step;
+        /** The Step Target: the element the step last singled out, or null. */
+        com.vaadin.testing.unified.UnifiedElement target;
+    }
+
+    /**
+     * The running User Step singled out this element (to act on it or check it): it is the step's Step Target,
+     * which its snapshot marks. Outside a step, nothing.
+     */
+    public void singledOut(com.vaadin.testing.unified.UnifiedElement element) {
+        Frame f = frame.get();
+        if (f != null) {
+            f.target = element;
+        }
     }
 
     private final ThreadLocal<Frame> frame = new ThreadLocal<>();
@@ -510,6 +528,7 @@ public final class StepRecorder {
         if (error != null) {
             step.status = Status.FAILED;
             step.error = error;
+            step.target = f.target;
             List<CallSite> path = new ArrayList<>();
             for (Iterator<Group> it = open.descendingIterator(); it.hasNext();) {
                 CallSite site = it.next().callSite;
@@ -533,7 +552,7 @@ public final class StepRecorder {
             }
         }
         container.children.add(step);
-        snapshot(step);
+        snapshot(step, f.target);
         AdapterSession session = sessions.get(step.window == null ? "" : step.window);
         if (session != null) {
             console(session);
@@ -553,7 +572,7 @@ public final class StepRecorder {
     }
 
     /** The step's snapshot, from its window's session. A snapshot that can't be taken is left out. */
-    private void snapshot(Step step) {
+    private void snapshot(Step step, com.vaadin.testing.unified.UnifiedElement target) {
         Path dir = snapshotDir;
         AdapterSession session = sessions.get(step.window == null ? "" : step.window);
         if (dir == null || session == null || snapshots >= MAX_SNAPSHOTS) {
@@ -561,8 +580,10 @@ public final class StepRecorder {
         }
         try {
             java.nio.file.Files.createDirectories(dir);
-            List<Path> files = session.writeStepSnapshot(dir, String.format(java.util.Locale.ROOT, "%03d",
-                    step.number));
+            com.vaadin.testing.unified.spi.Evidence evidence = session.writeStepSnapshot(dir,
+                    String.format(java.util.Locale.ROOT, "%03d", step.number), target);
+            List<Path> files = evidence.files();
+            step.highlight = evidence.highlight();
             if (!files.isEmpty()) {
                 snapshots++;
                 step.snapshot = SNAPSHOT_DIR + "/" + files.get(0).getFileName();
@@ -733,6 +754,23 @@ public final class StepRecorder {
     }
 
     /** The User Step that threw this failure (or a failure it caused), if any. */
+    /** The Step Target of the step that threw this failure, for its evidence; null when there is none. */
+    public com.vaadin.testing.unified.UnifiedElement targetOf(Throwable failure) {
+        Step step = stepThatThrew(failure);
+        return step == null ? null : step.target;
+    }
+
+    private volatile com.vaadin.testing.unified.spi.Highlight failureHighlight;
+
+    /** Where the failure's screenshot shows the failed step's Step Target; null without one. */
+    public com.vaadin.testing.unified.spi.Highlight failureHighlight() {
+        return failureHighlight;
+    }
+
+    public void failureHighlight(com.vaadin.testing.unified.spi.Highlight highlight) {
+        this.failureHighlight = highlight;
+    }
+
     public synchronized Step stepThatThrew(Throwable failure) {
         Step[] found = { null };
         visit(root.children, entry -> {

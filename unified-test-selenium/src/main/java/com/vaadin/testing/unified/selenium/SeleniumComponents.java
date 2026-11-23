@@ -2,7 +2,6 @@ package com.vaadin.testing.unified.selenium;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.checkbox.Checkbox;
-import com.vaadin.flow.component.checkbox.testbench.CheckboxElement;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -118,7 +117,11 @@ final class SeleniumComponents {
         register(Checkbox.class, new Support() {
             @Override
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {
-                session.testBench(element).wrap(CheckboxElement.class).setChecked(Boolean.TRUE.equals(value));
+                // TestBench's setChecked: the property, then change; plus what a click does to indeterminate,
+                // in the same script so it costs no extra round trip
+                session.js("if (arguments[0].checked !== arguments[1]) { arguments[0].indeterminate = false; }"
+                        + " arguments[0].checked = arguments[1];", element, Boolean.TRUE.equals(value));
+                session.testBench(element).dispatchEvent("change", Map.of("bubbles", true));
                 return true;
             }
         });
@@ -132,15 +135,25 @@ final class SeleniumComponents {
                 return notification(element, session).isOpen();
             }
 
-            /** The card the notification shows its content in. */
+            /**
+             * The card the notification shows its content in. Not NotificationElement.getContext(), which waits
+             * for the card to show its content, polling every 500 ms.
+             */
             @Override
             public WebElement content(WebElement element, SeleniumSession session) {
-                return (WebElement) notification(element, session).getContext();
+                return card(element, session);
             }
 
+            /**
+             * The card's DOM text, as the Playwright adapter reads it: not NotificationElement.getText(), the
+             * visible text, which is empty while the card's open animation runs, and which TestBench waits for
+             * in 500 ms polls (#447). getVisibleText() still reads what is shown.
+             */
             @Override
             public Optional<String> text(WebElement element, SeleniumSession session) {
-                return Optional.of(notification(element, session).getText());
+                return Optional.of((String) session.js("const card = arguments[0]._card;"
+                        + " return card ? (" + com.vaadin.testing.unified.internal.BrowserQueries.TEXT + ")(card) : '';",
+                        element));
             }
 
             @Override
@@ -156,6 +169,10 @@ final class SeleniumComponents {
 
             private NotificationElement notification(WebElement element, SeleniumSession session) {
                 return session.testBench(element).wrap(NotificationElement.class);
+            }
+
+            private WebElement card(WebElement element, SeleniumSession session) {
+                return SeleniumSession.stale(() -> session.testBench(element).getPropertyElement("_card"));
             }
         });
         register(Dialog.class, new Support() {

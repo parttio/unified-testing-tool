@@ -34,6 +34,19 @@ class FindableViewTest {
     }
 
     @Test
+    @DisplayName("A chat lists its message list and message input, and the text area the application added, but not"
+            + " the message input's own text area")
+    void listsAChatButNotTheMessageInputsOwnTextArea(UnifiedPage page) {
+        page.navigate(ChatView.class);
+
+        assertEquals(List.of(
+                "text area “Notes”        page.find(UnifiedTextArea.class).withLabel(\"Notes\")",
+                "message list, 1 message  page.find(UnifiedMessageList.class)",
+                "message input            page.find(UnifiedMessageInput.class)"),
+                lines(page.describe()));
+    }
+
+    @Test
     @DisplayName("Two fields with the same label are found through the containers that tell them apart")
     void findsAlikeFieldsThroughTheirContainers(UnifiedPage page) {
         page.navigate(CheckoutView.class);

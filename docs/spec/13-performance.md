@@ -24,7 +24,7 @@ The demo's golden migration pairs are not Performance Pairs. They are fixtures f
 1. The same user actions and checks, in the same order.
 2. Each Direct Test is written the way a skilled user of its tool would write it, with the waits that tool needs. It is not stripped down.
 3. The Unified UI Test uses no Escape Hatch and has no Migration Markers.
-4. The browser starts and stops the same way on both sides. Only the test body is timed.
+4. The browser starts and stops the same way on both sides. Only the test body is timed. On a browser, the body starts in a new browser context with nothing of the application loaded yet: the first page load in a context is the slowest, so it belongs inside the body on both sides. Dramafinder's `SpringPlaywrightIT` loads the application before each test, so its Direct Test opens a new page after that setup ([#444](https://github.com/parttio/unified-testing-tool/issues/444)).
 5. Settings stay at their defaults.
 
 ## What is measured
@@ -71,12 +71,13 @@ The round trips per user action of every Performance Pair, on every Testing Tool
 
 ## Where and when it runs
 
-Two checks, with different costs and different reliability ([#305](https://github.com/parttio/unified-testing-tool/issues/305)):
+Two checks, and one informational comparison, with different costs and different reliability ([#305](https://github.com/parttio/unified-testing-tool/issues/305)):
 
 | Check | When | Where | Fails |
 |---|---|---|---|
 | **Round trips** | every pull request and push to `main` that touches the API, an adapter module, the Performance Pairs, their counts or the scripts | workflow `round-trips.yml`, one job per Testing Tool, about 1 to 4 minutes each | the pull request, when a count differs from the committed one |
 | **Time** | by hand; on a pull request labelled `benchmark`; Mondays on `main` | workflow `benchmark.yml`, one job per Testing Tool in parallel, at most 30 minutes; a job that hits the limit fails as unfinished, with no verdict | its own check, which is never required |
+| **Tool comparison** (informational, [#497](https://github.com/parttio/unified-testing-tool/issues/497)) | with the time check | workflow `benchmark.yml`, job *Compare Playwright and Selenium*: both tools in one JVM, on the runner's Chrome, at most 60 minutes | never: no budget, only the ratio Selenium ÷ Playwright and its interval |
 
 - **Results:** both put their table in the job summary. The time benchmark also uploads every timed body as a CSV artifact. There is no PR comment and no trend store: the weekly `main` runs are the record.
 - **Forks:** on a pull request from a fork there is no TestBench licence, so the Selenium jobs are skipped with a line in the job summary.

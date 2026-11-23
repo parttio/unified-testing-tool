@@ -43,7 +43,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 .append("<title>Unified UI Tests · ").append(esc(summary.tool())).append("</title>\n")
                 .append("<style>").append(CSS).append("</style>\n</head>\n<body>\n<main>\n");
         header(h, scenarios);
-        controls(h, passed.size(), changes != null, summary.base() != null && !summary.base().isEmpty());
+        controls(h, passed.size(), changes != null, summary.base() != null && !summary.base().isEmpty(),
+                scenarios.stream().anyMatch(RunReport::hasHighlight));
         if (changes != null) {
             changed(h, changes);
         }
@@ -90,7 +91,7 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         h.append("<section id=\"passing\" hidden>\n<h2>Passing scenarios</h2>\n");
         passed.forEach(s -> scenario(h, s, false, false, false));
         h.append("</section>\n<p id=\"no-match\" class=\"none\" hidden>No scenario matches.</p>\n");
-        h.append("</main>\n<script>").append(SCRIPT).append("</script>\n</body>\n</html>\n");
+        h.append("</main>\n").append(VIEWER).append("<script>").append(SCRIPT).append("</script>\n</body>\n</html>\n");
         return h.toString();
     }
 
@@ -111,7 +112,57 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         h.append("</p>\n</header>\n");
     }
 
-    private static void controls(StringBuilder h, int passing, boolean changes, boolean baseRun) {
+    /** Whether a screenshot of the scenario shows a Step Target: a step's, or its failure's. */
+    private static boolean hasHighlight(ScenarioResult s) {
+        if (s.failure() != null && s.failure().get("highlight") instanceof Map) {
+            return true;
+        }
+        boolean[] found = {false};
+        visit(s.steps(), e -> found[0] |= e.get("highlight") instanceof Map);
+        return found[0];
+    }
+
+    private static void visit(List<Map<String, Object>> entries, java.util.function.Consumer<Map<String, Object>> f) {
+        for (Map<String, Object> e : entries) {
+            f.accept(e);
+            visit(ScenarioResult.entries(e.get("steps")), f);
+        }
+    }
+
+    /** A highlight's attribute: {@code data-highlight="x y w h"}, {@code data-missing="gone"}, or nothing. */
+    private static String highlightAttribute(Object highlight) {
+        if (!(highlight instanceof Map<?, ?> map)) {
+            return "";
+        }
+        if (map.get("missing") instanceof String missing) {
+            return " data-missing=\"" + esc(missing) + "\"";
+        }
+        return " data-highlight=\"" + fraction(map.get("x")) + " " + fraction(map.get("y")) + " "
+                + fraction(map.get("width")) + " " + fraction(map.get("height")) + "\"";
+    }
+
+    /** A fraction as JSON had it, without float noise: {@code 0.1}, not {@code 0.1000000001}. */
+    private static String fraction(Object value) {
+        return value instanceof Number n ? java.math.BigDecimal.valueOf(n.doubleValue()).stripTrailingZeros()
+                .toPlainString() : "0";
+    }
+
+    /** The box over an image, in % of it, which the CSS dims around: its spotlight. */
+    private static String spotlight(Object highlight) {
+        if (!(highlight instanceof Map<?, ?> map) || map.get("missing") != null) {
+            return "";
+        }
+        return "<span class=\"spot\" style=\"left:" + percent(map.get("x")) + "%;top:" + percent(map.get("y"))
+                + "%;width:" + percent(map.get("width")) + "%;height:" + percent(map.get("height")) + "%\"></span>";
+    }
+
+    private static String percent(Object value) {
+        return value instanceof Number n ? java.math.BigDecimal.valueOf(n.doubleValue()).movePointRight(2)
+                .stripTrailingZeros().toPlainString() : "0";
+    }
+
+    private static void controls(StringBuilder h, int passing, boolean changes, boolean baseRun,
+            boolean highlights) {
         h.append("<nav class=\"controls\">\n")
                 .append("<label><input type=\"checkbox\" id=\"show-passing\"> Show passing (").append(passing)
                 .append(")</label>\n");
@@ -121,6 +172,9 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         if (baseRun) {
             h.append("<label title=\"Changed scenarios: their User Steps against the base branch's last run, or in ")
                     .append("full\"><input type=\"checkbox\" id=\"show-diff\" checked> Diff against base run</label>\n");
+        }
+        if (highlights) {
+            h.append("<label><input type=\"checkbox\" id=\"highlight\" checked> highlight step targets</label>\n");
         }
         h.append("<input type=\"search\" id=\"search\" placeholder=\"Search scenarios and steps\" ")
                 .append("aria-label=\"Search scenarios and steps\">\n</nav>\n");
@@ -273,9 +327,11 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             h.append("<div class=\"evidence\">\n");
             for (String file : files) {
                 if (file.endsWith(".png")) {
-                    h.append("<a href=\"").append(href(file)).append("\"><img src=\"").append(href(file))
+                    Object highlight = s.failure() == null ? null : s.failure().get("highlight");
+                    h.append("<a class=\"shot\" href=\"").append(href(file)).append("\" data-image")
+                            .append(highlightAttribute(highlight)).append("><img src=\"").append(href(file))
                             .append("\" alt=\"Screenshot when ").append(esc(s.displayName()))
-                            .append(" failed\" loading=\"lazy\"></a>\n");
+                            .append(" failed\" loading=\"lazy\">").append(spotlight(highlight)).append("</a>\n");
                 } else if (TreePage.isTree(file)) {
                     h.append("<iframe class=\"tree-frame\" src=\"").append(href(TreePage.pageFor(file)))
                             .append("\" title=\"Component tree when ").append(esc(s.displayName()))
@@ -369,7 +425,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             boolean image = snapshot.endsWith(".png");
             boolean tree = TreePage.isTree(snapshot);
             h.append("<a class=\"snap\" href=\"").append(href(dir + (tree ? TreePage.pageFor(snapshot) : snapshot)))
-                    .append("\"").append(image ? " data-image" : tree ? " data-tree" : "").append(">")
+                    .append("\"").append(image ? " data-image" + highlightAttribute(entry.get("highlight"))
+                            : tree ? " data-tree" : "").append(">")
                     .append(image ? "screenshot" : "tree").append("</a>");
         }
         if (entry.get("durationMs") instanceof Number n) {
@@ -498,6 +555,31 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             padding:1px 4px;border-radius:4px}
             .evidence a{overflow-wrap:anywhere}
             .evidence img{max-width:100%;border:1px solid var(--line);border-radius:6px;margin:4px 0 12px}
+            .shot{position:relative;display:inline-block;max-width:100%;line-height:0;overflow:hidden;\
+            border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+            .evidence a.shot{margin:4px 0 12px}.shot img,.evidence .shot img{display:block;max-width:100%;\
+            height:auto;margin:0;border:0;border-radius:0}
+            .spot{position:absolute;pointer-events:none;border:2px solid var(--accent);border-radius:3px;\
+            box-shadow:0 0 0 1px #fff,0 0 0 9999px rgba(0,0,0,.38)}
+            body.no-highlight .spot{display:none}
+            .viewer{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;background:var(--bg)}
+            .viewer[hidden]{display:none}
+            .viewer header{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline;padding:10px 16px;\
+            border-bottom:1px solid var(--line)}
+            .viewer .v-title{flex:1 1 240px;min-width:0;font-weight:600;overflow-wrap:anywhere}
+            .viewer .v-title .idx{margin-right:6px}.viewer .v-title .mark{color:var(--fail)}
+            .viewer button{font:inherit;padding:3px 10px;border:1px solid var(--line);border-radius:6px;\
+            background:var(--surface);color:var(--text);cursor:pointer}
+            .viewer .stage{flex:1;overflow:auto;padding:16px;text-align:center}
+            .viewer .stage .shot{max-width:min(100%,1200px)}
+            .viewer .note{color:var(--muted);font-size:13px;margin:8px 0 0}
+            .viewer .strip{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;border-top:1px solid var(--line)}
+            .viewer .strip button{flex:0 0 auto;padding:0;line-height:0;border:2px solid transparent;\
+            border-radius:4px;position:relative}
+            .viewer .strip button[aria-current]{border-color:var(--accent)}
+            .viewer .strip img{height:54px;border-radius:2px}
+            .viewer .strip span{position:absolute;left:2px;top:2px;font:600 10px/1 system-ui,sans-serif;\
+            background:var(--bg);color:var(--text);padding:2px 3px;border-radius:3px}
             .files{font-size:13px;margin:8px 0 12px}
             .diffstat{color:var(--muted);font-weight:400;font-size:12px}
             .diffstat .add,pre.diff .add{color:var(--pass)}.diffstat .del,pre.diff .del{color:var(--fail)}
@@ -516,6 +598,18 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             li.step,li.group>details>summary{grid-template-columns:2.2em minmax(0,1fr)}\
             .meta{grid-column:2;justify-content:flex-start;white-space:normal;flex-wrap:wrap;gap:0 8px}\
             ol.steps ol{padding-left:10px;margin-left:2px}}
+            """;
+
+    /** The screenshot viewer: one scenario's screenshots, its Step Targets spotlighted; the script fills it. */
+    private static final String VIEWER = """
+            <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Screenshot" hidden>
+            <header><span class="v-title"></span><button type="button" data-v="prev">‹ prev</button>\
+            <button type="button" data-v="next">next ›</button><a class="v-png" href="">open PNG</a>\
+            <button type="button" data-v="close">close · Esc</button></header>
+            <div class="stage"><span class="shot"><img alt=""><span class="spot"></span></span>\
+            <p class="note" hidden></p></div>
+            <div class="strip"></div>
+            </div>
             """;
 
     /** Show passing, changed only, and search; without the script the passing section stays hidden. */
@@ -544,21 +638,90 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
               var diff=document.getElementById('show-diff');
               if(diff){diff.addEventListener('change',function(){
                 document.querySelector('main').classList.toggle('full-steps',!diff.checked);});}
-              // a step's screenshot or component tree opens under the step; a second click closes it
+              // the Step Targets' spotlights: on, or off for the whole report
+              var hl=document.getElementById('highlight');
+              function highlight(on){document.body.classList.toggle('no-highlight',!on);if(hl){hl.checked=on;}}
+              if(hl){hl.addEventListener('change',function(){highlight(hl.checked);});}
+              // a screenshot opens in the viewer, with its scenario's other screenshots; a tree opens under its step
+              var viewer=document.getElementById('viewer'),frames=[],at=0,
+                  NOTES={gone:'No box: the component is no longer on the page.',
+                         outside:'No box: the component is outside the visible area.'};
+              function frame(a){
+                var li=a.closest('li'),t;
+                if(li){
+                  t='<span class="idx"></span><span class="t"></span>';
+                }else{
+                  t='<span class="mark">✘</span> <span class="t"></span>';
+                }
+                return {href:a.getAttribute('href'),box:a.getAttribute('data-highlight'),
+                  missing:a.getAttribute('data-missing'),title:t,
+                  idx:li?li.querySelector('.idx').textContent:'',
+                  text:li?li.querySelector('.text').textContent
+                    :'Failure: '+a.closest('details.scenario').querySelector('summary .name').textContent};
+              }
+              function show(i){
+                at=(i+frames.length)%frames.length;
+                var f=frames[at],title=viewer.querySelector('.v-title'),spot=viewer.querySelector('.spot'),
+                    note=viewer.querySelector('.note');
+                title.innerHTML=f.title;
+                var idx=title.querySelector('.idx');if(idx){idx.textContent=f.idx;}
+                title.querySelector('.t').textContent=f.text;
+                viewer.querySelector('.stage img').src=f.href;
+                viewer.querySelector('.v-png').href=f.href;
+                if(f.box){
+                  var b=f.box.split(' ');
+                  spot.style.left=b[0]*100+'%';spot.style.top=b[1]*100+'%';
+                  spot.style.width=b[2]*100+'%';spot.style.height=b[3]*100+'%';
+                }
+                spot.hidden=!f.box;
+                note.hidden=!f.missing;note.textContent=f.missing?NOTES[f.missing]||'':'';
+                viewer.querySelectorAll('.strip button').forEach(function(b,k){
+                  if(k===at){b.setAttribute('aria-current','true');b.scrollIntoView({block:'nearest',inline:'nearest'});}
+                  else{b.removeAttribute('aria-current');}
+                });
+              }
+              function open(a){
+                var scenario=a.closest('details.scenario'),
+                    links=Array.prototype.slice.call(scenario.querySelectorAll('a.snap[data-image]'))
+                      .concat(Array.prototype.slice.call(scenario.querySelectorAll('.evidence a.shot')));
+                frames=links.map(frame);
+                var strip=viewer.querySelector('.strip');strip.textContent='';
+                frames.forEach(function(f,k){
+                  var b=document.createElement('button'),img=document.createElement('img'),s=document.createElement('span');
+                  b.type='button';b.title=f.text;img.src=f.href;img.alt='';img.loading='lazy';
+                  s.textContent=f.idx||'✘';b.appendChild(img);b.appendChild(s);
+                  b.addEventListener('click',function(){show(k);});
+                  strip.appendChild(b);
+                });
+                viewer.hidden=false;
+                show(links.indexOf(a));
+                viewer.querySelector('[data-v=close]').focus();
+              }
+              function close(){viewer.hidden=true;}
+              viewer.addEventListener('click',function(e){
+                var v=e.target.closest('[data-v]');
+                if(!v){return;}
+                var what=v.getAttribute('data-v');
+                if(what==='prev'){show(at-1);}else if(what==='next'){show(at+1);}else{close();}
+              });
+              document.addEventListener('keydown',function(e){
+                if(viewer.hidden||e.ctrlKey||e.metaKey||e.altKey){return;}
+                if(e.key==='Escape'){close();}
+                else if(e.key==='ArrowRight'){show(at+1);}
+                else if(e.key==='ArrowLeft'){show(at-1);}
+                else if(e.key==='h'){highlight(document.body.classList.contains('no-highlight'));}
+                else{return;}
+                e.preventDefault();
+              });
               document.addEventListener('click',function(e){
-                var a=e.target.closest('a.snap[data-image],a.snap[data-tree]');
+                var a=e.target.closest('a.snap[data-image],a.shot[data-image],a.snap[data-tree]');
                 if(!a||e.ctrlKey||e.metaKey||e.shiftKey){return;}
                 e.preventDefault();
-                var tree=a.hasAttribute('data-tree'),li=a.closest('li'),
-                    shown=li.querySelector(tree?':scope > iframe.snap-tree':':scope > img.snap-img');
+                if(a.hasAttribute('data-image')){open(a);return;}
+                var li=a.closest('li'),shown=li.querySelector(':scope > iframe.snap-tree');
                 if(shown){shown.remove();return;}
-                if(tree){
-                  shown=document.createElement('iframe');
-                  shown.className='snap-tree';shown.title='The component tree after this step';
-                }else{
-                  shown=document.createElement('img');
-                  shown.className='snap-img';shown.alt='The page after this step';
-                }
+                shown=document.createElement('iframe');
+                shown.className='snap-tree';shown.title='The component tree after this step';
                 shown.src=a.getAttribute('href');
                 li.appendChild(shown);
               });

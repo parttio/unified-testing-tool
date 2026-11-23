@@ -10,6 +10,7 @@ import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
 import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
+import com.vaadin.testing.unified.spi.Evidence;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Inherited;
@@ -200,8 +201,10 @@ public final class TestLifecycle {
                 if (logs != null) {
                     logs.close();
                 }
+                // the Testing Tool's evidence first: user-steps.json names where its screenshot shows the Step Target
+                ToolEvidence tool = failure == null ? null : toolEvidence(failure, test.evidenceName());
                 reportUserSteps(steps, failure, test);
-                List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, test.evidenceName());
+                List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, test.evidenceName(), tool);
                 keepRecording(failure, test);
                 return evidence;
             } finally {
@@ -223,13 +226,26 @@ public final class TestLifecycle {
             }
         }
 
-        /** The Testing Tool's evidence, then the Findable View, each written even when the other can't be. */
-        private List<Path> writeEvidence(Throwable failure, String name) {
-            List<Path> files = new ArrayList<>();
+        /** The Testing Tool's failure evidence, or why it could not be written. */
+        private record ToolEvidence(List<Path> files, String problem) {
+        }
+
+        private ToolEvidence toolEvidence(Throwable failure, String name) {
             try {
-                files.addAll(session.writeFailureEvidence(settings.evidenceDir(), name));
+                Evidence evidence = session.writeFailureEvidence(settings.evidenceDir(), name,
+                        steps.targetOf(failure));
+                steps.failureHighlight(evidence.highlight());
+                return new ToolEvidence(evidence.files(), null);
             } catch (Exception | LinkageError e) {
-                failure.addSuppressed(new FailureEvidence("Failure evidence could not be written: " + e));
+                return new ToolEvidence(List.of(), "Failure evidence could not be written: " + e);
+            }
+        }
+
+        /** The Testing Tool's evidence, then the Findable View, each written even when the other can't be. */
+        private List<Path> writeEvidence(Throwable failure, String name, ToolEvidence tool) {
+            List<Path> files = new ArrayList<>(tool.files());
+            if (tool.problem() != null) {
+                failure.addSuppressed(new FailureEvidence(tool.problem()));
             }
             findableView(name).ifPresent(files::add);
             if (!files.isEmpty()) {

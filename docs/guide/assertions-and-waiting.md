@@ -23,10 +23,11 @@ Each assertion retries until it holds or the timeout (10 s by default) passes, t
 | `UnifiedNotification` | `isOpen()`, `hasText(..)` |
 | `UnifiedTabSheet`, `UnifiedTabs` | `hasSelectedTab(..)`, `hasTabs(..)` |
 | `UnifiedDetails` | `isOpen()`, `isClosed()`, `hasSummaryText(..)` |
-| `UnifiedGrid` | `hasRowCount(..)`, `isEmpty()`, `hasColumn(..)`, `doesNotHaveColumn(..)`, `hasColumnHeaders(..)` *(unreleased)* |
+| `UnifiedMenuBar` | `hasItems(..)`, `hasItems(path, ..)`, `hasItem(..)`, `hasItemEnabled(..)`, `hasItemDisabled(..)` |
+| `UnifiedGrid` | `hasRowCount(..)`, `isEmpty()`, `hasColumn(..)`, `doesNotHaveColumn(..)`, `hasColumnHeaders(..)` |
 | grid row | `exists()`, `doesNotExist()`, `hasCount(n)`, `hasCellText(column, text)`, `isSelected()`, `isNotSelected()`, `hasDetailsOpen()`, `hasDetailsClosed()` |
 | grid column | `hasCellTexts(..)`, `isSortedAscending()`, `isSortedDescending()` |
-| `UnifiedPage` | `isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)`, `hasTitle(..)` *(unreleased)*, `hasNoErrors()` *(unreleased)* ([what the application logged](reports-and-failures.md#what-the-application-logged)) |
+| `UnifiedPage` | `isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)`, `hasTitle(..)`, `hasNoErrors()` ([what the application logged](reports-and-failures.md#what-the-application-logged)) |
 
 ## Getters don't retry
 

@@ -7,6 +7,8 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
+import com.vaadin.testing.unified.internal.messages.MessageSupport;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
 import java.util.List;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedCheckbox;
@@ -66,6 +68,7 @@ public final class UnifiedAssertions {
     public static DateTimePickerAssert assertThat(com.vaadin.testing.unified.component.UnifiedDateTimePicker field) { return new DateTimePickerAssert(field); }
     public static TabsAssert assertThat(com.vaadin.testing.unified.component.UnifiedTabs tabs) { return new TabsAssert(tabs); }
     public static DetailsAssert assertThat(com.vaadin.testing.unified.component.UnifiedDetails details) { return new DetailsAssert(details); }
+    public static MenuBarAssert assertThat(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { return new MenuBarAssert(menuBar); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
@@ -73,6 +76,7 @@ public final class UnifiedAssertions {
     public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { return new GridRowAssert(row); }
     public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { return new GridColumnAssert(column); }
     public static MessageListAssert assertThat(com.vaadin.testing.unified.component.UnifiedMessageList list) { return new MessageListAssert(list); }
+    public static MessageAssert assertThat(com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message) { return new MessageAssert(message); }
     public static GenericAssert assertThat(UnifiedWrapper wrapper) { return new GenericAssert(wrapper); }
 
     // ---------------------------------------------------------------- shared retry
@@ -664,6 +668,61 @@ public final class UnifiedAssertions {
         }
     }
 
+    /** Retrying checks of a menu bar's items, named by their Item Names from the top level down. */
+    public static final class MenuBarAssert extends WrapperAssert<MenuBarAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedMenuBar menuBar;
+
+        MenuBarAssert(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { super(menuBar); this.menuBar = menuBar; }
+
+        /** Exactly these top-level items, in this order. */
+        public MenuBarAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, menuBar::getItems, list::equals);
+        }
+
+        /**
+         * Exactly these items, in this order, in the sub-menu at this path:
+         * {@code hasItems(List.of("File", "Export"), "PDF", "CSV")}. Opens the menus along the path in a browser.
+         */
+        public MenuBarAssert hasItems(List<String> path, String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items under " + shown(String.join(" › ", path)), list, () -> itemsUnder(path),
+                    list::equals);
+        }
+
+        /** The menu offers the item at this path: {@code hasItem("File", "Export", "CSV")}. Opens its menus in a browser. */
+        public MenuBarAssert hasItem(String topLevel, String... nested) {
+            List<String> path = path(topLevel, nested);
+            String item = path.get(path.size() - 1);
+            return check("to have item", String.join(" › ", path), () -> itemsUnder(path.subList(0, path.size() - 1)),
+                    v -> ((List<?>) v).contains(item));
+        }
+
+        /** The user can click the item at this path. Opens the menus along it in a browser. */
+        public MenuBarAssert hasItemEnabled(String topLevel, String... nested) {
+            return check("to have enabled item", String.join(" › ", path(topLevel, nested)),
+                    () -> menuBar.isItemEnabled(topLevel, nested), Boolean.TRUE::equals);
+        }
+
+        /** The item at this path is shown but can't be clicked. Opens the menus along it in a browser. */
+        public MenuBarAssert hasItemDisabled(String topLevel, String... nested) {
+            return check("to have disabled item", String.join(" › ", path(topLevel, nested)),
+                    () -> menuBar.isItemEnabled(topLevel, nested), Boolean.FALSE::equals);
+        }
+
+        private static List<String> path(String topLevel, String... nested) {
+            List<String> path = new java.util.ArrayList<>();
+            path.add(topLevel);
+            path.addAll(List.of(nested));
+            return List.copyOf(path);
+        }
+
+        private List<String> itemsUnder(List<String> path) {
+            return path.isEmpty() ? menuBar.getItems()
+                    : menuBar.getItems(path.get(0), path.subList(1, path.size()).toArray(String[]::new));
+        }
+    }
+
     /** Retrying checks of a chat's messages: a reply the application adds later is waited for. */
     public static final class MessageListAssert extends WrapperAssert<MessageListAssert> {
         private final com.vaadin.testing.unified.component.UnifiedMessageList list;
@@ -688,6 +747,63 @@ public final class UnifiedAssertions {
         public MessageListAssert hasMessageContaining(String part) {
             return check("to have a message containing", part, list::getMessageTexts,
                     v -> ((List<?>) v).stream().anyMatch(text -> text != null && text.toString().contains(part)));
+        }
+    }
+
+    /**
+     * Retrying checks of one message of a chat, or of the messages a lookup matches: a reply the application adds
+     * later is waited for.
+     */
+    public static final class MessageAssert {
+        private final com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message;
+        private final TestRun run;
+
+        MessageAssert(com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message) {
+            this.message = message;
+            this.run = MessageSupport.runOf(message.list());
+        }
+
+        private MessageAssert check(String expectation, Object expected, Supplier<?> actual, Predicate<Object> ok) {
+            UnifiedAssertions.checkTarget(run, () -> MessageSupport.targetOf(message), message.toString(), expectation,
+                    expected, actual, ok);
+            return this;
+        }
+
+        /** At least one message matches. */
+        public MessageAssert exists() {
+            return check("to exist", null, () -> matches(MessageSupport.countNow(message)), v -> count(v) > 0);
+        }
+
+        /** No message matches, e.g. a prompt the application must not echo. */
+        public MessageAssert doesNotExist() {
+            return check("not to exist", null, () -> matches(MessageSupport.countNow(message)), v -> count(v) == 0);
+        }
+
+        /** Exactly this many messages match. */
+        public MessageAssert hasCount(int expected) {
+            return check("to have count", expected, () -> MessageSupport.countNow(message),
+                    v -> Objects.equals(v, expected));
+        }
+
+        /** The one matching message's text, exactly. */
+        public MessageAssert hasText(String expected) {
+            return check("to have text", expected,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::text),
+                    v -> Objects.equals(v, expected));
+        }
+
+        /** The one matching message's text contains this part. */
+        public MessageAssert hasTextContaining(String part) {
+            return check("to have text containing", part,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::text),
+                    v -> v instanceof String text && text.contains(part));
+        }
+
+        /** The one matching message is from this user name, exactly. */
+        public MessageAssert hasUserName(String expected) {
+            return check("to have user name", expected,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::userName),
+                    v -> Objects.equals(v, expected));
         }
     }
 }

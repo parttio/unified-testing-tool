@@ -53,8 +53,8 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
  *     (simulated server round trips), from Browserless Test's lifecycle hook and its round-trip methods.
  * </ul>
  *
- * <p>Only tests in {@code demo.perf} are counted. Calls outside a test method's own lines (browser launch,
- * setup in base classes) are left out.
+ * <p>Only tests in {@code demo.perf} are counted. Calls made outside the test method (browser launch, the
+ * {@code @BeforeEach} and {@code @AfterEach} methods, setup in base classes) are left out.
  */
 public class RoundTripCounter implements TestExecutionListener {
 
@@ -63,6 +63,8 @@ public class RoundTripCounter implements TestExecutionListener {
 
     /** The running test's class name, or null between tests. */
     private static volatile String testClass;
+    /** The running test's method name, or null between tests. */
+    private static volatile String testMethod;
     /** "UnifiedPerfTest.smallForm:31" -> counter -> count, for the whole run. */
     private static final Map<String, Map<String, Integer>> COUNTS = new TreeMap<>();
 
@@ -84,6 +86,7 @@ public class RoundTripCounter implements TestExecutionListener {
     public void executionStarted(TestIdentifier test) {
         if (test.getSource().orElse(null) instanceof MethodSource method
                 && method.getClassName().startsWith(PACKAGE)) {
+            testMethod = method.getMethodName();
             testClass = method.getClassName();
         }
     }
@@ -92,6 +95,7 @@ public class RoundTripCounter implements TestExecutionListener {
     public void executionFinished(TestIdentifier test, TestExecutionResult result) {
         if (test.getSource().orElse(null) instanceof MethodSource) {
             testClass = null;
+            testMethod = null;
         }
     }
 
@@ -116,15 +120,21 @@ public class RoundTripCounter implements TestExecutionListener {
     /** Adds one to {@code counter} for the test line on the current stack. Public: Byte Buddy advice inlines calls to it. */
     public static void count(String counter) {
         String current = testClass;
-        if (current == null) {
+        String method = testMethod;
+        if (current == null || method == null) {
             return;
         }
-        String action = StackWalker.getInstance().walk(frames -> frames
-                .filter(f -> f.getClassName().equals(current) || f.getClassName().startsWith(current + "$"))
-                .findFirst()
-                .map(f -> current.substring(current.lastIndexOf('.') + 1) + "." + f.getMethodName() + ":"
-                        + f.getLineNumber())
-                .orElse(null));
+        // the test class's innermost line, as long as the test method is on the stack: a helper it calls is
+        // credited by its own line, while @BeforeEach and @AfterEach (a base class's setup too) are left out
+        String action = StackWalker.getInstance().walk(frames -> {
+            List<StackWalker.StackFrame> inClass = frames
+                    .filter(f -> f.getClassName().equals(current) || f.getClassName().startsWith(current + "$"))
+                    .toList();
+            boolean inTest = inClass.stream().anyMatch(f -> f.getClassName().equals(current)
+                    && (f.getMethodName().equals(method) || f.getMethodName().startsWith("lambda$" + method + "$")));
+            return inTest ? current.substring(current.lastIndexOf('.') + 1) + "." + inClass.get(0).getMethodName()
+                    + ":" + inClass.get(0).getLineNumber() : null;
+        });
         if (action == null) {
             return;
         }

@@ -62,7 +62,7 @@ Write an example inline only when it can't compile: a signature, a class skeleto
 The site documents `main`, so mark what the latest release doesn't have, where a reader of that release meets it. Mark the item, not its surroundings: a row, a bullet or a sentence gets `*(unreleased)*` next to its name. Only a section whose every line is new gets the banner instead:
 
 ```markdown
-> **Unreleased:** on `main`, not in `0.1.0-alpha3`. See [what is unreleased](../releases/unreleased.md).
+> **Unreleased:** on `main`, not in `0.1.0-alpha4`. See [what is unreleased](../releases/unreleased.md).
 ```
 
 A section that keeps released content under a new heading, or a sentence that names a released and an unreleased item, is marked per item, so a reader of the release can tell which half they have.
@@ -71,18 +71,18 @@ A section that keeps released content under a new heading, or a sentence that na
 
 1. Make sure the build passes locally and in the Tests workflow on `main`.
 2. Turn `docs/releases/unreleased.md` into the release's notes (`docs/releases/<version>.md`, and its entry in `mkdocs.yml`), start a new `unreleased.md`, and take out the marks of what the release now has: `grep -rni "unreleased" README.md docs/guide docs/spec scripts`.
-3. From an up-to-date `main` with push rights:
+3. Point the documentation at the new version, then commit and push the notes and the pages to `main`:
+
+   ```
+   scripts/doc_version.py --update
+   ```
+
+   The version the README, the migration guides and the developer guide name comes from the newest file in `docs/releases/`, so the release's tag names the release itself. Until the release reaches Maven Central, about half an hour after the tag, the site names a version that can't be downloaded yet.
+
+4. From an up-to-date `main` with push rights:
 
    ```
    mvn release:prepare release:clean -DreleaseVersion=<version> -DdevelopmentVersion=0.1.0-SNAPSHOT
    ```
 
    This runs the tests, sets the version in every module, commits, tags `unified-test-<version>`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
-
-4. Once the release is on Central, point the documentation at it, and push:
-
-   ```
-   scripts/doc_version.py --update
-   ```
-
-   The version the README, the migration guides and the developer guide name comes from the newest file in `docs/releases/`. Until you run this, the Docs workflow warns that the documentation names the previous release.
