@@ -6,7 +6,9 @@ import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
+import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
 import java.lang.reflect.Proxy;
 import java.time.Duration;
@@ -98,7 +100,9 @@ final class FakePage {
                     case "getTag" -> component.get("tag");
                     case "getProperty", "getAttribute" -> component.get((String) args[0]);
                     case "getPropertyBoolean" -> Boolean.valueOf(component.get((String) args[0]));
-                    case "tryUnwrap" -> args[0] == MenuBarAccess.class ? Optional.of(menuBar(component)) : Optional.empty();
+                    case "tryUnwrap" -> args[0] == MenuBarAccess.class ? Optional.of(menuBar(component))
+                            : args[0] == MessageListAccess.class ? Optional.of(messageList(component)) : Optional.empty();
+                    case "unwrap" -> args[0] == MessageListAccess.class ? messageList(component) : null;
                     case "setValueAsUser" -> {
                         component.put("value", String.valueOf(args[0]));
                         component.put("checked", String.valueOf(args[0]));
@@ -137,6 +141,20 @@ final class FakePage {
             public boolean isEnabled(List<String> path) {
                 return !List.of(component.getOrDefault("disabled", "").split(",")).contains(String.join("/", path));
             }
+        };
+    }
+
+    /**
+     * A message list's messages from its {@code "messages"} property, read again on every call so that a test can
+     * add a reply later: {@code "Assistant:Hi!|You:Soup"}.
+     */
+    private static MessageListAccess messageList(Map<String, String> component) {
+        return () -> {
+            String messages = component.getOrDefault("messages", "");
+            return messages.isEmpty() ? List.of() : java.util.Arrays.stream(messages.split("\\|"))
+                    .map(m -> new UnifiedMessageList.Message(m.substring(0, m.indexOf(':')),
+                            m.substring(m.indexOf(':') + 1)))
+                    .toList();
         };
     }
 

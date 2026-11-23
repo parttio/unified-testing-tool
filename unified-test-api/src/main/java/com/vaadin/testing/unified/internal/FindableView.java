@@ -34,6 +34,7 @@ import com.vaadin.testing.unified.query.TextFilter;
 import com.vaadin.testing.unified.spi.ElementFacts;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.GridAccess;
+import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -60,6 +61,7 @@ import java.util.Set;
  * text field “Name” = “Alan Turing”     page.find(UnifiedTextField.class).withLabel("Name")
  * button “Save” (disabled)              page.find(UnifiedButton.class).withText("Save")
  * grid, 12 rows: Name, Email            page.find(UnifiedGrid.class)
+ * message list, 3 messages              page.find(UnifiedMessageList.class)
  * button (no name; test id “close”)     page.find(UnifiedButton.class).withTestId("close")
  * </pre>
  *
@@ -173,7 +175,7 @@ public final class FindableView {
 
     /** One component as read. {@code values} are its namers' values, normalized, null when it has none. */
     private record Read(UnifiedElement element, ElementFacts facts, Map<Namer, String> values, String value,
-            boolean hidden, boolean disabled, String grid) {
+            boolean hidden, boolean disabled, String summary) {
         String valueOf(Namer namer) {
             return values.get(namer);
         }
@@ -286,8 +288,19 @@ public final class FindableView {
         } else if (SHOWS_VALUE.contains(type)) {
             value = safely(() -> e.getProperty("value"), null);
         }
-        String grid = UnifiedGrid.class.isAssignableFrom(type) ? safely(() -> grid(e), null) : null;
-        return new Read(e, f, values, value, hidden, disabled, grid);
+        String summary = UnifiedGrid.class.isAssignableFrom(type) ? safely(() -> grid(e), null)
+                : UnifiedMessageList.class.isAssignableFrom(type) ? safely(() -> messageList(e), null) : null;
+        return new Read(e, f, values, value, hidden, disabled, summary);
+    }
+
+    /** {@code 3 messages}, from the Testing Tool's message list access. */
+    private static String messageList(UnifiedElement e) {
+        Optional<MessageListAccess> access = e.tryUnwrap(MessageListAccess.class);
+        if (access.isEmpty()) {
+            return null;
+        }
+        int messages = access.get().messages().size();
+        return messages + (messages == 1 ? " message" : " messages");
     }
 
     /** {@code 12 rows: Name, Email}, from the Testing Tool's grid access. */
@@ -355,7 +368,10 @@ public final class FindableView {
 
     // ---------------------------------------------------------------- one line
 
-    /** {@code text field “Name” = “Alan”}, {@code button (no name; test id “close”)}, {@code grid, 3 rows}. */
+    /**
+     * {@code text field “Name” = “Alan”}, {@code button (no name; test id “close”)}, {@code grid, 3 rows},
+     * {@code message list, 2 messages}.
+     */
     private static String description(OfType t, Read r) {
         StringBuilder sb = new StringBuilder(words(t, r));
         List<String> state = new ArrayList<>();
@@ -369,8 +385,8 @@ public final class FindableView {
         if (r.value() != null && !r.value().isEmpty()) {
             sb.append(UnifiedCheckbox.class.isAssignableFrom(t.type()) ? " (checked)" : " = " + quote(r.value()));
         }
-        if (r.grid() != null) {
-            sb.append(", ").append(r.grid());
+        if (r.summary() != null) {
+            sb.append(", ").append(r.summary());
         }
         if (r.disabled()) {
             state.add("disabled");
