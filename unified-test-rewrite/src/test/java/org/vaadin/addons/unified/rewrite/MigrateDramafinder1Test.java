@@ -392,7 +392,7 @@ class MigrateDramafinder1Test implements RewriteTest {
     }
 
     @Test
-    void anExtensionOfTheCopyReadingThePageKeepsItsTestsAndSaysWhy() {
+    void aScreenshotExtensionOfTheCopyKeepsItsTestsAndSaysToRemoveIt() {
         rewriteRun(
                 pomXml(pom("2.0.2"), pom(null)),
                 java("""
@@ -411,6 +411,49 @@ class MigrateDramafinder1Test implements RewriteTest {
                                 @Override
                                 public void testFailed(ExtensionContext context, Throwable cause) {
                                     page.screenshot();
+                                    page.context().tracing().stop();
+                                }
+                            };
+                        }
+                        """),
+                java(TEST, """
+                        package com.example;
+
+                        import org.junit.jupiter.api.Test;
+                        import org.vaadin.addons.dramafinder.element.ButtonElement;
+
+                        // TODO unified: not migrated: uses screenshots of SpringPlaywrightIT, which uses the test base; the Unified API writes failure evidence itself: remove it; convert them by hand, then run the migration again
+                        class PeopleTest extends SpringPlaywrightIT {
+                            @Test
+                            void saves() {
+                                ButtonElement.getByText(page, "Save").click();
+                            }
+                        }
+                        """),
+                InstalledSkill.files());
+    }
+
+    @Test
+    void anExtensionOfTheCopyUsingThePageForMoreThanEvidenceKeepsItsTestsAndSaysWhy() {
+        rewriteRun(
+                pomXml(pom("2.0.2"), pom(null)),
+                java("""
+                        package com.example;
+
+                        import org.junit.jupiter.api.extension.ExtensionContext;
+                        import org.junit.jupiter.api.extension.RegisterExtension;
+                        import org.junit.jupiter.api.extension.TestWatcher;
+                        import org.springframework.boot.test.context.SpringBootTest;
+                        import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                        @SpringBootTest
+                        public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                            @RegisterExtension
+                            TestWatcher screenshots = new TestWatcher() {
+                                @Override
+                                public void testFailed(ExtensionContext context, Throwable cause) {
+                                    page.screenshot();
+                                    System.out.println(page.content());
                                 }
                             };
                         }
