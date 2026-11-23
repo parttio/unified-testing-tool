@@ -39,7 +39,7 @@ public final class SelectionSupport {
             try {
                 selected = access.selectedItems();
             } catch (RuntimeException readFailed) {
-                if (!stillFound(element)) {
+                if (!element.stillFound()) {
                     return;
                 }
                 if (readFailed instanceof StaleElementException stale) {
@@ -48,7 +48,7 @@ public final class SelectionSupport {
                 // e.g. Playwright's own timeout: the Unified failure, with it as the cause
                 throw notSelected(element, label, null, readFailed);
             }
-            if (!selected.contains(label) && stillFound(element)) {
+            if (!selected.contains(label) && element.stillFound()) {
                 throw notSelected(element, label, selected, null);
             }
         });
@@ -66,12 +66,12 @@ public final class SelectionSupport {
             try {
                 selected = access.selectedItems();
             } catch (RuntimeException readFailed) {
-                if (!stillFound(element)) {
+                if (!element.stillFound()) {
                     return; // replaced as it took the change (#377)
                 }
                 throw readFailed;
             }
-            if (selected.contains(label) && stillFound(element)) {
+            if (selected.contains(label) && element.stillFound()) {
                 throw new IllegalStateException("\"" + label + "\" could not be deselected in " + element.describe());
             }
         });
@@ -95,11 +95,6 @@ public final class SelectionSupport {
                 : selected.stream().map(s -> "“" + s + "”").collect(Collectors.joining(", "));
         return element.run().failure(FailureParts.of("item “" + label + "” selected in "
                 + StepTarget.of(element).renderWithScope(), found), cause);
-    }
-
-    /** Whether the lookup still finds the field, without waiting. */
-    private static boolean stillFound(LazyElement element) {
-        return element.countNow() > Math.max(element.index(), 0);
     }
 
     /** The single selected label, or null. */

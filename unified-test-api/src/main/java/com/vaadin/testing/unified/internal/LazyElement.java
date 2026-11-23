@@ -70,6 +70,14 @@ public final class LazyElement implements UnifiedElement {
         return StaleRetry.call(run, () -> source.resolve().size());
     }
 
+    /**
+     * Whether the lookup still finds this element, without waiting: after an action whose check couldn't read the
+     * result, an element the app replaced or navigated away from has nothing to check (#377, #554).
+     */
+    public boolean stillFound() {
+        return countNow() > Math.max(index, 0);
+    }
+
     /** The adapter's element, waiting until it can be singled out. */
     public UnifiedElement concrete() {
         int[] lastCount = {0};
