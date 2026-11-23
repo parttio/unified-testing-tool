@@ -7,6 +7,7 @@ import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
+import com.vaadin.testing.unified.component.UnifiedTemplate;
 import com.vaadin.testing.unified.query.CommonFilters;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -40,6 +41,11 @@ public final class UnifiedPageImpl implements UnifiedPage {
     @Override
     public <C extends Component> UnifiedGenericComponent findComponent(Class<C> componentType) {
         return Wrappers.newComponent(run, componentType, null);
+    }
+
+    @Override
+    public <C extends Component> UnifiedTemplate findTemplate(Class<C> templateType) {
+        return Wrappers.newTemplate(run, templateType, null);
     }
 
     @Override

@@ -64,7 +64,7 @@ The same on every Testing Tool:
 |---|---|
 | Hidden components | **included**: a component hidden after it was shown stays in a browser's page, so Browserless includes it too. Add `.visible()` for "the action is gone". A component that was never visible is in no browser's page (Flow doesn't send it), but Browserless finds it: `.visible()` gives the same answer everywhere. |
 | Dialogs, notifications | open ones only; a closed dialog (the app's or the dev tools') is not part of the page |
-| Shadow DOM | not searched by a lookup: neither Vaadin's components and the dev tools nor the app's own Templates. A test enters a Template explicitly ([Templates](#templates)) *(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* |
+| Shadow DOM | not searched by a lookup: neither Vaadin's components and the dev tools nor the app's own Templates. A test enters a Template explicitly ([Templates](#templates)) *(unreleased)* |
 | Grid cell components | found page-wide for the rows the grid rendered, as a browser has them |
 | No tag | a lookup for a component without a tag (`findComponent(Component.class)`, a `Composite`) fails at once on every Testing Tool: a browser can't find it |
 
@@ -106,7 +106,9 @@ Components created by renderers (e.g. Grid cells) and the content of closed over
 
 ## Templates
 
-*(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* Decided in #347; see [ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md).
+> **Unreleased:** on `main`, not in `0.1.0-alpha4`. See [what is unreleased](../releases/unreleased.md).
+
+Decided in #347; see [ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md).
 
 A **Template** is a component whose own content a test reaches only by entering it: an app's `LitTemplate`, whose `@Id` components live in its shadow root, or a web component that renders its content in the browser. No lookup enters a Template by itself. A test enters one Template at a time, by finding it as a Scope:
 
@@ -152,4 +154,4 @@ CSS, XPath, ARIA role queries, predicates over a tool's own objects ([8. Escape 
 - Resolve a lookup on every use, and fail when zero or several components match, after waiting up to the timeout.
 - Let the core list Near Misses: re-run a lookup without its user-facing filters, and read `label`, text, `placeholder`, `data-testid` and the accessible name of each candidate ([12. Readable tests](12-readable-tests.md#requirements-on-testing-tool-adapters)).
 - TestBench before 25.4: implement `withTestId` with the `data-testid` attribute.
-- *(planned, [#347](https://github.com/parttio/unified-testing-tool/issues/347))* Search a Template's shadow root and light DOM when a lookup is scoped on it, and never a shadow root otherwise. Browserless: walk the Template's virtual children (its `@Id` components), which Browserless Test's own walk leaves out.
+- *(unreleased)* Search a Template's shadow root and light DOM when a lookup is scoped on it (`QuerySpec.inTemplate()`), and never a shadow root otherwise. Browserless: walk the Template's virtual children (its `@Id` components), which Browserless Test's own walk leaves out, and read an `@Id` binding's id as the element's `id`, as a browser does. List the Templates in a scope without entering them (`AdapterSession.findTemplates`), for failures and the Findable View.

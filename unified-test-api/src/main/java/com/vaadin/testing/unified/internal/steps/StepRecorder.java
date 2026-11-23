@@ -203,6 +203,7 @@ public final class StepRecorder {
     private final Set<String> secrets = new LinkedHashSet<>();
     /** The Wrapper types the test has looked up, in order: the custom ones show in its Findable View. */
     private final Set<Class<?>> wrapperTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
+    private final Set<Class<?>> templateTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private final Instant startedAt = Instant.now();
     private final long start = System.nanoTime();
     private int steps;
@@ -690,6 +691,18 @@ public final class StepRecorder {
     /** A lookup of this Wrapper type started, in any window of the test. */
     public void wrapperUsed(Class<?> wrapperType) {
         wrapperTypes.add(wrapperType);
+    }
+
+    /** A {@code findTemplate(..)} of this component type started, in any window of the test. */
+    public void templateUsed(Class<?> templateType) {
+        templateTypes.add(templateType);
+    }
+
+    /** The Template classes the test has looked up with {@code findTemplate(..)} so far, first lookup first. */
+    public List<Class<?>> templateTypes() {
+        synchronized (templateTypes) {
+            return List.copyOf(templateTypes);
+        }
     }
 
     /** The Wrapper types the test has looked up so far, in the order of their first lookup. */

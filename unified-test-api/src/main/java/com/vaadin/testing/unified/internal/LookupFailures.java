@@ -194,6 +194,7 @@ final class LookupFailures {
     private static FailureParts withNearMisses(FailureParts parts, LazyElement element) {
         if (element.source() instanceof ElementSource source) {
             safely(() -> addNearMisses(parts, source));
+            safely(() -> addTemplateMatches(parts, element, source));
         }
         return parts;
     }
@@ -209,8 +210,9 @@ final class LookupFailures {
         }
         TestRun run = source.run();
         UnifiedElement parent = scope.orElse(null);
+        boolean inTemplate = parent != null && ElementSource.entersTemplate(source.parent());
         List<UnifiedElement> found = run.session().find(new QuerySpec(source.componentType(), source.tag(),
-                source.filters().subList(0, source.selectorFilters()), parent));
+                source.filters().subList(0, source.selectorFilters()), parent, inTemplate));
         found = found.subList(0, Math.min(found.size(), MAX_CANDIDATES));
         List<String> values = values(source, probe, found);
         String kind = StepTarget.kindOf(source);
@@ -219,7 +221,8 @@ final class LookupFailures {
             same.add(new Candidate<>(kind, values.get(i), false, new Ref(null, found.get(i))));
         }
         List<Candidate<Ref>> other = probe.kind() == Filter.Kind.LABEL || probe.kind() == Filter.Kind.TEXT
-                || probe.kind() == Filter.Kind.ACCESSIBLE_NAME ? otherKinds(source, probe.wanted(), parent) : List.of();
+                || probe.kind() == Filter.Kind.ACCESSIBLE_NAME ? otherKinds(source, probe.wanted(), parent, inTemplate)
+                : List.of();
         NearMisses.Result<Ref> result = NearMisses.rank(probe.wanted(), same, other);
         parts.nearMisses(result.shown().stream()
                 .map(c -> new Candidate<>(c.kind(), c.value(), hidden(c.payload().element()), c.payload()).render())
@@ -228,6 +231,52 @@ final class LookupFailures {
             parts.suggestion(suggestion(source, probe, result.suggestion()));
             parts.lookup(lookup(source, probe, probe.wanted()));
         }
+    }
+
+    /**
+     * For a lookup that found none: the components it finds inside the Templates in its scope, as Near Misses with the
+     * lookup that enters their Template (spec 12, "Failures"). The suggestion, when there is no other and only one
+     * Template matches, is that lookup.
+     */
+    private static void addTemplateMatches(FailureParts parts, LazyElement element, ElementSource source) {
+        Optional<UnifiedElement> scope = scope(source);
+        if (scope == null) {
+            return;
+        }
+        UnifiedElement parent = scope.orElse(null);
+        boolean inTemplate = parent != null && ElementSource.entersTemplate(source.parent());
+        List<Templates.Match> matches = Templates.matching(source, parent, inTemplate);
+        if (matches.isEmpty()) {
+            return;
+        }
+        String wanted = target(element.withSource(withoutParent(source)));
+        String code = asCode(source);
+        List<String> lines = new ArrayList<>(parts.nearMisses());
+        for (Templates.Match m : matches) {
+            lines.add((m.count() > 1 ? m.count() + " × " : "") + wanted + " in " + m.where() + ": " + m.chain() + "."
+                    + code);
+        }
+        parts.nearMisses(lines);
+        if (parts.suggestion() == null && matches.size() == 1 && matches.get(0).count() == 1
+                && matches.get(0).known()) {
+            parts.suggestion(matches.get(0).chain() + "." + code);
+            parts.lookup(code);
+        }
+    }
+
+    private static ElementSource withoutParent(ElementSource s) {
+        return new ElementSource(s.run(), s.wrapperName(), s.wrapperType(), s.componentType(), s.tag(), s.filters(),
+                s.selectorFilters(), s.coreFilters(), s.coreFilterNames(), null, s.template());
+    }
+
+    /** The lookup as the test wrote it, from {@code find(..)} on. */
+    private static String asCode(ElementSource source) {
+        StringBuilder sb = new StringBuilder(source.wrapperType() != null
+                ? "find(" + source.wrapperType().getSimpleName() + ".class)"
+                : source.wrapperName().replace(")", ".class)"));
+        userFilters(source).forEach(f -> sb.append('.').append(f));
+        source.coreFilterNames().forEach(n -> sb.append('.').append(n.display()));
+        return sb.toString();
     }
 
     /** The scope's element: empty for the page, null when the scope can't be singled out right now. */
@@ -300,7 +349,8 @@ final class LookupFailures {
                 f.ancestorTestId(), null, f.internalPart());
     }
 
-    private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent) {
+    private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent,
+            boolean inTemplate) {
         List<Candidate<Ref>> found = new ArrayList<>();
         for (Class<?> type : OTHER_KINDS) {
             UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
@@ -313,7 +363,7 @@ final class LookupFailures {
             filters.add(new Filter(namingKind(type), null, wanted, true));
             try {
                 for (UnifiedElement e : source.run().session().find(new QuerySpec(annotation.value(), tag,
-                        List.copyOf(filters), parent))) {
+                        List.copyOf(filters), parent, inTemplate))) {
                     found.add(new Candidate<>(StepTarget.kindOf(type), wanted, false, new Ref(type, e)));
                 }
             } catch (RuntimeException e) {

@@ -183,6 +183,7 @@ A page has many "City" fields, "Save" buttons and "Email" fields. Narrow the sea
 | `UnifiedDetails.content()` | `details.content()` | the Details content |
 | `UnifiedTabSheet.content()` | `tabs.content()` | the selected tab's content |
 | Grid cells, header, row details | `row.cell("Actions")`, `column.header()`, `row.details()` | see [Grid](grid.md) |
+| a Template *(unreleased)* | `page.findTemplate(SearchBar.class)`, or a Wrapper with `TemplateScope` | its shadow root and light DOM: see [Templates](#templates) |
 
 A Scope is a Wrapper too: a lookup inside it finds the Scope again first, so a missing dialog fails with the dialogs that are there.
 
@@ -225,6 +226,27 @@ A TabSheet's `content()` follows the selected tab: the same Scope searches the n
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:searchesInPlainHtmlContainers"
 ```
+
+## Templates
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha4`. See [what is unreleased](../releases/unreleased.md).
+
+A `LitTemplate`'s `@Id` components live in its shadow root, and no lookup enters a shadow root by itself: `page.find(UnifiedButton.class).withId("new")` doesn't find the button of a search bar template. Enter the Template first, one at a time, with `findTemplate(..)` or with a Wrapper of your own that extends `TemplateScope`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:wrapper"
+```
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:entersNestedTemplates"
+```
+
+- **Find by id.** Inside a `LitTemplate`, every Testing Tool finds what the server knows: the `@Id` components and what is under them. Text, labels and attributes written in the template's HTML are empty on the server, so `withText("New order")` finds the button in a browser and not on Browserless. `withId("new")` finds it everywhere.
+- **Ids are per Template.** The same id in two Templates is not ambiguous: the lookup only sees the Template it entered.
+- **Slotted content** (what the view adds to the Template) is found inside it, and on the page, once.
+- **A web component that renders its content in the browser** (not a `LitTemplate`) is entered the same way, but Browserless has nothing inside it: such a test declares `@RequiresBrowser`.
+
+When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. Spec: [4. Locating, Templates](../spec/04-locating.md#templates).
 
 ## Components without a Wrapper
 
