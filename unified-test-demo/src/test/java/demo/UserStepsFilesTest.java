@@ -136,9 +136,10 @@ class UserStepsFilesTest {
                 "      2.2  fill text field “Nmae” with “Alan M. Turing”   ✘"), lines.subList(1, 5));
         assertEquals("   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Nmae”, found none",
                 lines.get(5), text);
-        assertTrue(lines.get(6).matches("     at UserStepsFilesTest\\.java:\\d+ \\(fails\\)"
+        assertEquals("     Did you mean  find(UnifiedTextField.class).withLabel(\"Name\")", lines.get(6), text);
+        assertTrue(lines.get(7).matches("     at UserStepsFilesTest\\.java:\\d+ \\(fails\\)"
                 + " ← UserStepsFilesTest\\.java:\\d+ \\(fails\\)"), text);
-        assertEquals(7, lines.size(), text);
+        assertEquals(8, lines.size(), text);
 
         Throwable failure = summary.getFailures().get(0).getException();
         assertTrue(Arrays.stream(failure.getSuppressed()).anyMatch(s -> s.getMessage().contains(text)),

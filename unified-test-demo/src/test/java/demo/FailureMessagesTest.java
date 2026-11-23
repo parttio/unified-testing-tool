@@ -185,7 +185,8 @@ class FailureMessagesTest {
         // the lookup as the test wrote it, in the same form: what ApplyDidYouMean changes into the suggestion
         assertEquals("find(UnifiedTextField.class).withLabel(\"Email\")", json.get("lookup").asString());
         assertTrue(Files.readString(evidence.resolve("user-steps.txt")).contains(
-                "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Email”, found none\n"));
+                "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Email”, found none\n"
+                        + "     Did you mean  find(UnifiedTextField.class).withLabel(\"E-mail\")\n"));
     }
 
     /** The quick pick by filter (#403) finds nothing: every item is read for the Near Misses, as before. */
