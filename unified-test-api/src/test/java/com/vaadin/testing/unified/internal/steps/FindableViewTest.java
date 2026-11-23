@@ -82,6 +82,29 @@ public class FindableViewTest {
     }
 
     @Test
+    void aContainerHintCountsWhatItHoldsAndIsLeftOutWhenEveryRowSharesIt() {
+        fake.add("vaadin-form-layout", "testId", "billing")
+                .add("vaadin-button", "text", "Save", "in", "billing")
+                .add("vaadin-button", "text", "Save", "in", "billing")
+                .add("vaadin-button", "text", "Save")
+                // three rows with the same test id, a Pin button in each (#522)
+                .add("vaadin-horizontal-layout", "testId", "meal-row")
+                .add("vaadin-horizontal-layout", "testId", "meal-row")
+                .add("vaadin-horizontal-layout", "testId", "meal-row")
+                .add("vaadin-text-field", "label", "Pin", "in", "meal-row")
+                .add("vaadin-text-field", "label", "Pin", "in", "meal-row")
+                .add("vaadin-text-field", "label", "Pin", "in", "meal-row");
+
+        assertEquals(List.of(
+                "text field “Pin”  not unique: 3 alike",
+                "text field “Pin”  not unique: 3 alike",
+                "text field “Pin”  not unique: 3 alike",
+                "button “Save”     not unique: 3 alike; 2 in container (test id “billing”)",
+                "button “Save”     not unique: 3 alike; 2 in container (test id “billing”)",
+                "button “Save”     not unique: 3 alike"), lines(page.describe()));
+    }
+
+    @Test
     void aSecretValueIsMasked() {
         fake.add("vaadin-text-field", "label", "API key", "value", page.secret("s3cr3t-key"));
 

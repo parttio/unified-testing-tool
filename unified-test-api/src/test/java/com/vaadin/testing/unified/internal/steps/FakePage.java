@@ -21,7 +21,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * A page of fake components for tests of the User Step recording: each has a tag and properties ({@code label},
- * {@code text}, {@code testId}, ...). Lookups match the tag and the filters, and ignore the parent scope.
+ * {@code text}, {@code testId}, ...). Lookups match the tag ({@code *} any) and the filters. A component with
+ * {@code in} lies in the container whose {@code testId} that is: a lookup inside that container finds it, and its
+ * facts name that test id as its nearest ancestor's; any other lookup ignores the scope.
  */
 final class FakePage {
 
@@ -74,7 +76,9 @@ final class FakePage {
 
     private List<UnifiedElement> find(QuerySpec spec) {
         return components.stream()
-                .filter(c -> spec.tag().equals(c.get("tag")))
+                .filter(c -> spec.tag().equals("*") || spec.tag().equals(c.get("tag")))
+                .filter(c -> spec.parent() == null || spec.parent().getProperty("testId") == null
+                        || spec.parent().getProperty("testId").equals(c.get("in")))
                 .filter(c -> spec.filters().stream().allMatch(f -> f.matches(c.get(property(f)))))
                 .map(this::element)
                 .toList();
@@ -86,7 +90,7 @@ final class FakePage {
             UnifiedElement e = (UnifiedElement) o;
             ElementFacts f = ElementFacts.read(e);
             return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
-                    null, null, Boolean.parseBoolean(e.getAttribute("internalPart")));
+                    e.getAttribute("in"), null, Boolean.parseBoolean(e.getAttribute("internalPart")));
         }).toList();
     }
 
