@@ -863,7 +863,7 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
 
                     @Test
                     void opensPeople(UnifiedPage page) {
-                        page.navigate("people");
+                        page.navigate(PeopleView.class);
                         openPlan(page);
                     }
 
@@ -877,6 +877,90 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
                     }
                 }
                 """));
+    }
+
+    /** A test that opens {@code url}, a concatenation after {@code getUrl()}, and has {@code monday} and {@code week}. */
+    private static String navigatingTo(String url) {
+        return """
+                package com.example;
+
+                import java.time.LocalDate;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        String week = "2026-W47";
+                        page.navigate(getUrl() + %s);
+                    }
+                }
+                """.formatted(url);
+    }
+
+    /** What {@link #navigatingTo} becomes, with {@code navigation} the call's arguments. */
+    private static String navigatedTo(String imports, String navigation) {
+        return """
+                package com.example;
+
+                import java.time.LocalDate;
+
+                %simport com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    void opens(UnifiedPage page) {
+                        page.navigate("");
+                        LocalDate monday = LocalDate.of(2026, 11, 16);
+                        String week = "2026-W47";
+                        page.navigate(%s);
+                    }
+                }
+                """.formatted(imports, navigation);
+    }
+
+    @Test
+    void theBaseUrlPlusAPathAndOneQueryParameterBecomesTheRouteClassAndTheParameter() {
+        // issue #513: as getView() does since #370, a path one @Route has becomes the route class
+        rewriteRun(java(VIEW), java(navigatingTo("\"/people?week=\" + monday"),
+                navigatedTo("import com.vaadin.flow.router.QueryParameters;\n",
+                        "PeopleView.class, QueryParameters.of(\"week\", String.valueOf(monday))")));
+    }
+
+    @Test
+    void aStringQueryParameterValueIsPassedAsItIs() {
+        rewriteRun(java(VIEW), java(navigatingTo("\"/people?week=\" + week"),
+                navigatedTo("import com.vaadin.flow.router.QueryParameters;\n",
+                        "PeopleView.class, QueryParameters.of(\"week\", week)")));
+    }
+
+    @Test
+    void theBaseUrlPlusAPathNoRouteHasStaysAPath() {
+        rewriteRun(java(VIEW), java(navigatingTo("\"/plan?week=\" + monday"),
+                navigatedTo("", "\"plan?week=\" + monday")));
+    }
+
+    @Test
+    void theBaseUrlPlusAPathTwoRoutesHaveStaysAPath() {
+        rewriteRun(java(VIEW), java("""
+                package com.example;
+
+                import com.vaadin.flow.component.Component;
+                import com.vaadin.flow.router.Route;
+
+                @Route("people")
+                public class OtherPeopleView extends Component {}
+                """), java(navigatingTo("\"/people\""), navigatedTo("", "\"people\"")));
+    }
+
+    @Test
+    void theBaseUrlPlusAPathAndTwoQueryParametersStaysAPath() {
+        rewriteRun(java(VIEW), java(navigatingTo("\"/people?week=\" + monday + \"&name=\" + week"),
+                navigatedTo("", "\"people?week=\" + monday + \"&name=\" + week")));
     }
 
     @Test
