@@ -12,6 +12,7 @@ preconditions:
       artifactIdPattern: dramafinder
       onlyDirect: true
 recipeList:
+  - org.vaadin.addons.unified.rewrite.SeparateFailsafeEvidence
   - org.vaadin.addons.unified.rewrite.CheckVaadinVersion
   - org.openrewrite.maven.AddManagedDependency:
       groupId: org.vaadin.addons

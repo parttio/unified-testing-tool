@@ -453,7 +453,7 @@ To keep every test's User Steps and failure evidence, upload the evidence direct
   uses: actions/upload-artifact@v4
   with:
     name: unified-evidence
-    path: '**/target/surefire-reports/unified-evidence/'
+    path: '**/target/*-reports/unified-evidence/'
     if-no-files-found: ignore
 ```
 
