@@ -100,6 +100,8 @@ mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
 
 `target/rewrite/rewrite.patch` (one per module) marks every Dramafinder, Browserless and TestBench test class: `/*~~(migrates)~~>*/`, or `/*~~(skipped: overrides setupTest() of AbstractBasePlaywrightIT, calls getUrl() of SpringPlaywrightIT)~~>*/` naming the base class members that keep it from migrating, and with `exportDatatables` the file `FindTestClassesToMigrate$TestClasses.csv`, in `target/rewrite/datatables/<date-time>/` under the directory you ran Maven in, lists them one row per class with their reasons. Fix what blocks the skipped ones, run it again until none is left, then run the migration.
 
+A common blocker is a `@RegisterExtension` `TestWatcher` in your copy of `SpringPlaywrightIT` that takes a screenshot or saves a trace from `page` when a test fails: `skipped: uses screenshotOnFailure of MyPlaywrightIT, which uses the test base; the Unified API writes failure evidence itself: remove it` *(unreleased)*. Delete that field: every failed test already gets a screenshot (browser) or component tree (Browserless), `user-steps.txt` and the Findable View. The recipe doesn't delete it for you. An extension that uses `page` for anything else keeps the plain reason: rewrite it without the Dramafinder page, or convert the class by hand.
+
 On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch is `build/reports/rewrite/rewrite.patch`.
 
 ## What it converts
