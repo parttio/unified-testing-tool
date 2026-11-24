@@ -12,6 +12,7 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.openrewrite.HttpSenderExecutionContextView;
 import org.openrewrite.ipc.http.HttpSender;
@@ -71,6 +72,39 @@ class RetryingHttpSenderTest {
 
         assertEquals(429, get(answering(limited)).getCode());
         assertEquals(List.of(1000L, 2000L, 4000L, 8000L, 16000L), waits);
+    }
+
+    /** A rate limit that outlasts the retries: later downloads fail at once instead of each waiting again. */
+    @Test
+    void stopsWaitingOnceARequestRanOutOfAttempts() {
+        AtomicBoolean gaveUp = new AtomicBoolean();
+        Object[] limited = new Object[RetryingHttpSender.ATTEMPTS + 1];
+        for (int i = 0; i < limited.length; i++) {
+            limited[i] = response(429, Map.of());
+        }
+        HttpSender sender = answering(limited);
+        RetryingHttpSender first = new RetryingHttpSender(sender, waits::add, gaveUp);
+        RetryingHttpSender second = new RetryingHttpSender(sender, waits::add, gaveUp);
+
+        assertEquals(429, first.send(first.get("https://repo.maven.apache.org/maven2/a.pom").build()).getCode());
+        waits.clear();
+        assertEquals(429, second.send(second.get("https://repo.maven.apache.org/maven2/b.pom").build()).getCode());
+
+        assertEquals(List.of(), waits);
+    }
+
+    /** Once a download succeeds again, a 429 is waited for and retried again. */
+    @Test
+    void waitsAgainAfterADownloadSucceeds() {
+        AtomicBoolean gaveUp = new AtomicBoolean(true);
+        RetryingHttpSender sender = new RetryingHttpSender(
+                answering(response(200, Map.of()), response(429, Map.of()), response(200, Map.of())), waits::add,
+                gaveUp);
+
+        assertEquals(200, sender.send(sender.get("https://repo.maven.apache.org/maven2/a.pom").build()).getCode());
+        assertEquals(200, sender.send(sender.get("https://repo.maven.apache.org/maven2/b.pom").build()).getCode());
+
+        assertEquals(List.of(1000L), waits);
     }
 
     /** A repository a POM names but the build doesn't need: its miss stays quick. */
