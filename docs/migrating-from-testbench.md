@@ -127,6 +127,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `@BeforeEach` and helper methods that use TestBench | helpers taking `UnifiedPage page` (`unifiedPage` when the method has a `page` already), passed by every call, a test's call to another test too; a `@BeforeEach` becomes a call at the start of each test, which declares its `throws` |
 | a project base class extending `BrowserTestBase` | a plain base class with `@UnifiedSpringBootTest`; its tests and helpers convert as above, an abstract helper along with its overrides |
 | an override of `getDriver()`, or another TestBench base method, and calls to it | the override without `@Override`, taking the page; it and the calls go through the TestBench Escape Hatch, with a Migration Marker |
+| `getRunLocallyBrowser()`, `getRunLocallyBrowserVersion()` *(unreleased)* | `testBench.getRunLocallyBrowser()`, `testBench.getRunLocallyBrowserVersion()` through the TestBench Escape Hatch, with a Migration Marker: the browser `vaadin.testing.selenium.browser` sets (`CHROME`, `FIREFOX`), or `null` without the setting, as without `@RunLocally`; the version is always `""` |
 | Grid `getCell("text")`, `getCell(row, col).getText()` | `row().withCellText("text")`, `row(row).getCellText(col)` |
 | ComboBox / RadioButtonGroup / MultiSelectComboBox `selectByText`, `getSelectedText`, ... | `selectItem`, `getSelectedItem`, ... |
 | DatePicker `setDate`, `getDate` | `setValue`, `getValue` |

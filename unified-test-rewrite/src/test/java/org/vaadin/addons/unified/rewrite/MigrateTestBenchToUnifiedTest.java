@@ -1,12 +1,20 @@
 package org.vaadin.addons.unified.rewrite;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.openrewrite.java.Assertions.java;
 import static org.openrewrite.maven.Assertions.pomXml;
 import static org.openrewrite.test.SourceSpecs.text;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.openrewrite.InMemoryExecutionContext;
 import org.openrewrite.config.Environment;
+import org.openrewrite.java.search.FindMissingTypes;
+import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaParser;
+import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.test.RecipeSpec;
 import org.openrewrite.test.RewriteTest;
 
@@ -775,6 +783,120 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                     }
                 }
                 """));
+    }
+
+    /** Bakery's check for a local browser (#621): {@code TestBenchEscapeHatch} answers it, so the test compiles. */
+    @Test
+    void runLocallyBrowserGoesThroughTheEscapeHatch() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void scrolls() {
+                        getDriver().get("http://localhost:8080/people");
+                        if (getRunLocallyBrowser() == null) {
+                            System.out.println("remote");
+                        }
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void scrolls(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        page.navigate("people");
+                        // TODO unified: TestBench Escape Hatch: getRunLocallyBrowser()
+                        if (testBench.getRunLocallyBrowser() == null) {
+                            System.out.println("remote");
+                        }
+                    }
+                }
+                """,
+                spec -> spec.afterRecipe(cu -> assertTypeChecksAgainstTheEscapeHatch(cu.printAll(), "getRunLocallyBrowser"))));
+    }
+
+    @Test
+    void runLocallyBrowserVersionGoesThroughTheEscapeHatch() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class PeopleTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void scrolls() {
+                        getDriver().get("http://localhost:8080/people");
+                        if (getRunLocallyBrowserVersion().isEmpty()) {
+                            System.out.println("any version");
+                        }
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class PeopleTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void scrolls(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        page.navigate("people");
+                        // TODO unified: TestBench Escape Hatch: getRunLocallyBrowserVersion()
+                        if (testBench.getRunLocallyBrowserVersion().isEmpty()) {
+                            System.out.println("any version");
+                        }
+                    }
+                }
+                """,
+                spec -> spec.afterRecipe(cu -> assertTypeChecksAgainstTheEscapeHatch(cu.printAll(),
+                        "getRunLocallyBrowserVersion"))));
+    }
+
+    /**
+     * The migrated source, parsed again against the real Unified API and TestBench: no type is missing, and
+     * {@code method} resolves on {@code TestBenchEscapeHatch}.
+     */
+    private static void assertTypeChecksAgainstTheEscapeHatch(String migrated, String method) {
+        J.CompilationUnit cu = (J.CompilationUnit) JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath())
+                .build().parse(new InMemoryExecutionContext(Throwable::printStackTrace), migrated)
+                .findFirst().orElseThrow();
+        assertThat(FindMissingTypes.findMissingTypes(cu, true)).extracting(r -> r.getMessage() + ": " + r.getPrintedTree())
+                .isEmpty();
+        List<JavaType.Method> calls = new ArrayList<>();
+        new JavaIsoVisitor<Integer>() {
+            @Override
+            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation call, Integer p) {
+                if (call.getSimpleName().equals(method)) {
+                    calls.add(call.getMethodType());
+                }
+                return super.visitMethodInvocation(call, p);
+            }
+        }.visit(cu, 0);
+        assertThat(calls).singleElement().extracting(t -> t.getDeclaringType().getFullyQualifiedName())
+                .isEqualTo("com.vaadin.testing.unified.selenium.TestBenchEscapeHatch");
     }
 
     @Test
