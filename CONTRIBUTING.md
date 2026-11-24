@@ -82,7 +82,7 @@ A section that keeps released content under a new heading, or a sentence that na
 4. From an up-to-date `main` with push rights:
 
    ```
-   mvn release:prepare release:clean -DreleaseVersion=<version> -DdevelopmentVersion=0.1.0-SNAPSHOT
+   mvn release:prepare release:clean -DreleaseVersion=<version> -DdevelopmentVersion=0.1.0-SNAPSHOT "-DpreparationGoals=clean install"
    ```
 
-   This runs the tests, sets the version in every module, commits, tags `unified-test-<version>`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
+   This sets the version in every module, runs the tests, commits, tags `unified-test-<version>`, moves to the next snapshot and pushes. The preparation build installs the release version: the Migration Recipes' tests resolve the `unified-test-*` artifacts at that version, which are on neither Central nor the local repository yet, and fail with `Unable to download POM` under the default `verify`. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
