@@ -63,7 +63,7 @@ The same on every Testing Tool:
 | Rule | Detail |
 |---|---|
 | Hidden components | **included**: a component hidden after it was shown stays in a browser's page, so Browserless includes it too. Add `.visible()` for "the action is gone". A component that was never visible is in no browser's page (Flow doesn't send it), but Browserless finds it: `.visible()` gives the same answer everywhere. |
-| Dialogs, notifications | open ones only; a closed dialog (the app's or the dev tools') is not part of the page |
+| Overlay hosts | a component whose content an overlay shows, and whose own element has no box (`Dialog`, `ConfirmDialog` *(unreleased)*, `Notification`): open ones only, and an open one is visible, so `visible()` and `isVisible()` agree. A closed one (the app's or the dev tools') is not part of the page. Each adapter registers its overlay hosts; another overlay component opts in with one registration |
 | Shadow DOM | not searched by a lookup: neither Vaadin's components and the dev tools nor the app's own Templates. A test enters a Template explicitly ([Templates](#templates)) *(unreleased)* |
 | Grid cell components | found page-wide for the rows the grid rendered, as a browser has them |
 | No tag | a lookup for a component without a tag (`findComponent(Component.class)`, a `Composite`) fails at once on every Testing Tool: a browser can't find it |

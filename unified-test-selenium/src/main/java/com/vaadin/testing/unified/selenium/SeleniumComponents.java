@@ -4,13 +4,12 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.datepicker.testbench.DatePickerElement;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.dialog.testbench.DialogElement;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.notification.Notification;
-import com.vaadin.flow.component.notification.testbench.NotificationElement;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.tabs.TabSheet;
 import com.vaadin.flow.component.textfield.NumberField;
@@ -78,6 +77,33 @@ final class SeleniumComponents {
         }
     }
 
+    /**
+     * An overlay host (spec 04, "What a lookup sees"): an element with no box of its own, whose content its
+     * overlay shows. It is part of the page, and visible, while its overlay is open: its {@code opened}
+     * property, as TestBench's DialogElement and NotificationElement read it. Closed ones (the app's or the dev
+     * tools') are not part of the page. Another overlay component opts in by registering one.
+     */
+    static class OverlayHost implements Support {
+        @Override
+        public boolean include(WebElement element, SeleniumSession session) {
+            return opened(element, session);
+        }
+
+        @Override
+        public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
+            return Optional.of(opened(element, session));
+        }
+
+        @Override
+        public Optional<Boolean> booleanProperty(WebElement element, String name, SeleniumSession session) {
+            return "opened".equals(name) ? Optional.of(opened(element, session)) : Optional.empty();
+        }
+
+        static boolean opened(WebElement element, SeleniumSession session) {
+            return Boolean.TRUE.equals(session.testBench(element).getPropertyBoolean("opened"));
+        }
+    }
+
     static final Support DEFAULT = new Support() {};
     private static final Map<Class<? extends Component>, Support> REGISTRY = new LinkedHashMap<>();
 
@@ -128,13 +154,7 @@ final class SeleniumComponents {
     }
 
     static {
-        register(Notification.class, new Support() {
-            /** Open notifications only, as TestBench's NotificationElement tells. */
-            @Override
-            public boolean include(WebElement element, SeleniumSession session) {
-                return notification(element, session).isOpen();
-            }
-
+        register(Notification.class, new OverlayHost() {
             /**
              * The card the notification shows its content in. Not NotificationElement.getContext(), which waits
              * for the card to show its content, polling every 500 ms.
@@ -156,38 +176,12 @@ final class SeleniumComponents {
                         element));
             }
 
-            @Override
-            public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
-                // the notification host has no box of its own; open means shown
-                return Optional.of(notification(element, session).isOpen());
-            }
-
-            @Override
-            public Optional<Boolean> booleanProperty(WebElement element, String name, SeleniumSession session) {
-                return "opened".equals(name) ? Optional.of(notification(element, session).isOpen()) : Optional.empty();
-            }
-
-            private NotificationElement notification(WebElement element, SeleniumSession session) {
-                return session.testBench(element).wrap(NotificationElement.class);
-            }
-
             private WebElement card(WebElement element, SeleniumSession session) {
                 return SeleniumSession.stale(() -> session.testBench(element).getPropertyElement("_card"));
             }
         });
-        register(Dialog.class, new Support() {
-            /** Open dialogs only: closed ones (the app's or the dev tools') are not part of the page. */
-            @Override
-            public boolean include(WebElement element, SeleniumSession session) {
-                return session.testBench(element).wrap(DialogElement.class).isOpen();
-            }
-
-            @Override
-            public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
-                // the dialog host has no box of its own; open means shown
-                return Optional.of(session.testBench(element).wrap(DialogElement.class).isOpen());
-            }
-        });
+        register(Dialog.class, new OverlayHost());
+        register(ConfirmDialog.class, new OverlayHost());
     }
 
     static {
