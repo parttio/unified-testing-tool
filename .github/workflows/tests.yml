@@ -7,9 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# a pull request's newer push replaces its older run; every push to main gets a run of its own and finishes, so each
+# merge is tested and leaves its evidence for the next pull requests' base run
 concurrency:
-  group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  group: tests-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -17,10 +19,30 @@ permissions:
   actions: read
 
 jobs:
+  # Is there more than documentation in this change? Documentation only: Browserless still runs (its unit tests read
+  # docs/guide), Playwright, Selenium and the comparison are skipped, which a required check counts as passed.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Look for changes beyond documentation
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: scripts/changes-beyond-docs.sh "$EVENT" "$BASE" >> "$GITHUB_OUTPUT"
+
   browserless:
     name: Browserless
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # a healthy run takes about 5 minutes: a hang fails the job instead of holding a runner for half an hour
+    timeout-minutes: 15
     steps:
       # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
       - uses: actions/checkout@v7
@@ -66,6 +88,8 @@ jobs:
 
   playwright:
     name: Playwright (Dramafinder)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -123,6 +147,8 @@ jobs:
 
   selenium:
     name: Selenium (TestBench)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -176,9 +202,9 @@ jobs:
   # after the three: where the same scenarios end differently, or take different User Steps, on two Testing Tools
   compare:
     name: Compare Testing Tools
-    needs: [browserless, playwright, selenium]
-    # also when a job failed: that is when the comparison says most
-    if: ${{ !cancelled() }}
+    needs: [changes, browserless, playwright, selenium]
+    # also when a job failed: that is when the comparison says most; not for documentation only, with one Testing Tool
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
