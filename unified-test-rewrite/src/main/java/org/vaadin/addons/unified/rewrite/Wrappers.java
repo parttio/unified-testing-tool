@@ -130,6 +130,14 @@ final class Wrappers {
                     // find is what a $(..) inside the dialog becomes
                     Set.of("isOpen", "getHeaderTitle", "find"),
                     Chains::scopedLookupConverts)),
+            // a confirm dialog: its buttons by their role (#532), getConfirmButton().click() → confirm(), ...
+            Map.entry(ConfirmDialogs.TESTBENCH_ELEMENT, new Wrapper(
+                    ConfirmDialogs.CONFIRM_DIALOG,
+                    COMMON_FILTERS,
+                    // the Unified names the renames write
+                    Set.copyOf(ConfirmDialogs.PRESSES.values()),
+                    Map.of("getHeaderText", "getHeaderTitle", "getMessageText", "getText"),
+                    ConfirmDialogs::converts)),
             Map.entry("com.vaadin.flow.component.tabs.testbench.TabSheetElement", new Wrapper(
                     TabSheets.TAB_SHEET,
                     COMMON_FILTERS,

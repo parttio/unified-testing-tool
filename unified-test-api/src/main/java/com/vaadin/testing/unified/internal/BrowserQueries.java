@@ -159,6 +159,41 @@ public final class BrowserQueries {
             }""";
 
     /**
+     * A confirm dialog's buttons as {@code [[role, text], ...]}: the button in each role's slot of the host, the
+     * application's own or the web component's, with its text as {@link #TEXT} reads it. Reject and Cancel only
+     * while the web component shows them ({@code rejectButtonVisible}, {@code cancelButtonVisible}).
+     */
+    public static final String CONFIRM_DIALOG_BUTTONS = """
+            e => {
+              const textOf = %s;
+              return ['confirm', 'reject', 'cancel']
+                  .filter(role => role === 'confirm' || e[role + 'ButtonVisible'] === true)
+                  .map(role => {
+                    const button = e.querySelector(':scope > [slot="' + role + '-button"]');
+                    return [role, button ? textOf(button) : (e[role + 'Text'] || '')];
+                  });
+            }""".formatted(TEXT.strip());
+
+    /** {@link #CONFIRM_DIALOG_BUTTONS}' result, by role. */
+    public static java.util.Map<com.vaadin.testing.unified.spi.ConfirmDialogAccess.Role, String> confirmDialogButtons(
+            Object result) {
+        java.util.Map<com.vaadin.testing.unified.spi.ConfirmDialogAccess.Role, String> buttons =
+                new java.util.EnumMap<>(com.vaadin.testing.unified.spi.ConfirmDialogAccess.Role.class);
+        for (Object pair : (List<?>) result) {
+            List<?> roleAndText = (List<?>) pair;
+            buttons.put(com.vaadin.testing.unified.spi.ConfirmDialogAccess.Role.valueOf(
+                    String.valueOf(roleAndText.get(0)).toUpperCase(java.util.Locale.ROOT)),
+                    String.valueOf(roleAndText.get(1)));
+        }
+        return buttons;
+    }
+
+    /** The CSS selector, from the confirm dialog's host, of the button in the role's slot. */
+    public static String confirmDialogButton(com.vaadin.testing.unified.spi.ConfirmDialogAccess.Role role) {
+        return ":scope > [slot='" + role.name().toLowerCase(java.util.Locale.ROOT) + "-button']";
+    }
+
+    /**
      * The Item Name of a tab or a menu item: its text, whitespace collapsed, leaving out children in a named
      * slot (a tooltip); when it shows no text, its {@code aria-label}, or that of the component it holds (a
      * menu-bar button holds the app's item). Browserless reads the same from the server-side elements.

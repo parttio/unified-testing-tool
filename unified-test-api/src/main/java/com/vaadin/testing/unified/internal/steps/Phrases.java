@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.internal.steps;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UserStepVerb;
+import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.internal.LazyElement;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -53,6 +54,9 @@ public final class Phrases {
             case "upload" -> Phrase.template("upload", "upload {value} to", target, uploadName(args));
             case "send" -> Phrase.template("send", "send {value} in", target, values(args));
             case "pressKey" -> Phrase.template("press", "press {value} on", target, values(args));
+            // a confirm dialog's answer reads as the user gives it: confirm “Delete order?”
+            case "confirm", "reject", "cancel" -> UnifiedConfirmDialog.class.isAssignableFrom(wrapperType)
+                    ? Phrase.of(name, target).byNameOnly() : Phrase.of(name, target);
             default -> {
                 String verb = String.join(" ", StepTarget.splitWords(name)).toLowerCase(Locale.ROOT);
                 yield Phrase.of(verb, target, values(args));

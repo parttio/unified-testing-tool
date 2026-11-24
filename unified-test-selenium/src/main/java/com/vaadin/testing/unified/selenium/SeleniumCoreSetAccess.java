@@ -13,6 +13,7 @@ import com.vaadin.testbench.TestBenchElement;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.internal.BrowserQueries;
+import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
@@ -25,14 +26,32 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
 /**
- * Access to Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Selenium, through TestBench's element classes; a bare Tabs bar
+ * Access to ConfirmDialog, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Selenium, through TestBench's element classes; a bare Tabs bar
  * uses {@link SeleniumTabSheetAccess}.
  */
 final class SeleniumCoreSetAccess {
     private SeleniumCoreSetAccess() {}
+
+    /** Each button by its slot in the host, never by its text: the application's own or the web component's. */
+    record ConfirmDialogAccessImpl(SeleniumSession session, WebElement element) implements ConfirmDialogAccess {
+        @Override
+        public Map<Role, String> buttons() {
+            return BrowserQueries.confirmDialogButtons(
+                    session.js("return (" + BrowserQueries.CONFIRM_DIALOG_BUTTONS + ")(arguments[0]);", element));
+        }
+
+        @Override
+        public void press(Role role) {
+            SeleniumSession.stale(() -> element.findElement(By.cssSelector(BrowserQueries.confirmDialogButton(role))))
+                    .click();
+            session.waitForVaadin();
+        }
+    }
 
     /** Through TestBench's DetailsElement. */
     record DetailsAccessImpl(SeleniumSession session, WebElement element) implements DetailsAccess {

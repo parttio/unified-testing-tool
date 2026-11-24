@@ -171,7 +171,14 @@ final class PlaywrightComponents {
                 return DialogElement.class;
             }
         });
-        register(ConfirmDialog.class, new OverlayHost());
+        register(ConfirmDialog.class, new OverlayHost() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
+                return type == com.vaadin.testing.unified.spi.ConfirmDialogAccess.class
+                        ? Optional.of(new PlaywrightCoreSetAccess.ConfirmDialogAccessImpl(session, locator))
+                        : Optional.empty();
+            }
+        });
     }
 
     static {

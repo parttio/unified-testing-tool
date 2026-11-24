@@ -235,6 +235,12 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
         return sb.toString();
     }
 
+    /** {@link #render} without the kind, for a named target: {@code “Delete order?” (test id “delete”)}. */
+    public String renderWithoutKind() {
+        String rendered = render(false);
+        return position > 0 ? rendered : rendered.substring(kind.length()).stripLeading();
+    }
+
     /** {@link #render} followed by {@code in <scope>}. */
     public String renderWithScope() {
         return render(false) + (scope == null ? "" : " in " + scope);

@@ -285,6 +285,48 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void confirmDialogButtonsBecomeTheirRole() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.confirmdialog.testbench.ConfirmDialogElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class OrderTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void deletesTheOrder() {
+                        String header = $(ConfirmDialogElement.class).single().getHeaderText();
+                        String message = $(ConfirmDialogElement.class).single().getMessageText();
+                        $(ConfirmDialogElement.class).single().getConfirmButton().click();
+                        $(ConfirmDialogElement.class).first().getRejectButton().click();
+                        $(ConfirmDialogElement.class).withId("leave").single().getCancelButton().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class OrderTest {
+
+                    @Test
+                    void deletesTheOrder(UnifiedPage page) {
+                        String header = page.find(UnifiedConfirmDialog.class).getHeaderTitle();
+                        String message = page.find(UnifiedConfirmDialog.class).getText();
+                        page.find(UnifiedConfirmDialog.class).confirm();
+                        // TODO unified: was first(); the lookup fails when several components match
+                        page.find(UnifiedConfirmDialog.class).reject();
+                        page.find(UnifiedConfirmDialog.class).withId("leave").cancel();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void assertEqualsOnValueOrTextBecomesARetryingAssertion() {
         rewriteRun(java(
                 """

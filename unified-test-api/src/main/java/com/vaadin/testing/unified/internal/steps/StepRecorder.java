@@ -184,6 +184,8 @@ public final class StepRecorder {
         boolean step;
         /** The Step Target: the element the step last singled out, or null. */
         com.vaadin.testing.unified.UnifiedElement target;
+        /** The Step Target's name as the user read it, when its lookup doesn't name it ({@link #nameTarget}). */
+        String targetName;
         /** User Steps that follow this one when it passes, e.g. the page a link opened ({@link #followedBy}). */
         final List<Supplier<Phrase>> followUps = new ArrayList<>();
     }
@@ -196,6 +198,17 @@ public final class StepRecorder {
         Frame f = frame.get();
         if (f != null) {
             f.target = element;
+        }
+    }
+
+    /**
+     * The running User Step's target reads as {@code name} when its lookup gave it none: what the user read on the
+     * component before the step changed it, such as the header of a dialog the step closes. Outside a step, nothing.
+     */
+    public void nameTarget(String name) {
+        Frame f = frame.get();
+        if (f != null && name != null) {
+            f.targetName = name;
         }
     }
 
@@ -547,7 +560,9 @@ public final class StepRecorder {
         }
     }
 
-    private synchronized void add(Frame f, Phrase phrase, String window, Throwable error) {
+    private synchronized void add(Frame f, Phrase given, String window, Throwable error) {
+        Phrase phrase = f.targetName == null || given.target() == null || given.target().name() != null ? given
+                : given.withTarget(given.target().withName(f.targetName));
         Group container = current();
         Step step = new Step(container.nextIndex(), ++steps, phrase, window, f.callSite);
         last = step;

@@ -3,20 +3,11 @@ package com.vaadin.testing.unified.component;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.UnifiedComponent;
-import com.vaadin.testing.unified.UnifiedWrapper;
-import com.vaadin.testing.unified.query.CommonFilters;
 
-/** A Scope: {@code dialog.find(UnifiedButton.class)} searches inside the dialog. */
+/**
+ * A {@link Dialog}: {@code withHeaderTitle(..)}, {@code isOpen()} and {@code close()} as every
+ * {@link UnifiedOverlayDialog}. A Scope: {@code dialog.find(UnifiedButton.class)} searches inside the dialog.
+ */
 @UnifiedComponent(Dialog.class)
-public interface UnifiedDialog extends UnifiedWrapper, Scope, CommonFilters<UnifiedDialog> {
-
-    /** The dialog's header title, exactly. A custom filter built from {@code where(..)}. */
-    default UnifiedDialog withHeaderTitle(String title) {
-        return where(e -> title.equals(e.getProperty("headerTitle")));
-    }
-
-    default String getHeaderTitle() { return element().getProperty("headerTitle"); }
-    default boolean isOpen() { return Boolean.TRUE.equals(element().getPropertyBoolean("opened")); }
-    /** Like pressing Escape. */
-    default void close() { element().pressKey("Escape"); }
+public interface UnifiedDialog extends UnifiedOverlayDialog<UnifiedDialog>, Scope {
 }

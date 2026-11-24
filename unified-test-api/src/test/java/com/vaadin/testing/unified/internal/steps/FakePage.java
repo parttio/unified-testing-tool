@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
+import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import java.lang.reflect.Proxy;
 import java.time.Duration;
 import java.util.HashMap;
@@ -124,7 +125,8 @@ final class FakePage {
                     case "tryUnwrap" -> args[0] == MenuBarAccess.class ? Optional.of(menuBar(component))
                             : args[0] == MessageListAccess.class ? Optional.of(messageList(component)) : Optional.empty();
                     case "unwrap" -> args[0] == MessageListAccess.class ? messageList(component)
-                            : args[0] == TabSheetAccess.class ? tabs(component) : null;
+                            : args[0] == TabSheetAccess.class ? tabs(component)
+                            : args[0] == ConfirmDialogAccess.class ? confirmDialog(component) : null;
                     case "setValueAsUser" -> {
                         component.put("value", String.valueOf(args[0]));
                         component.put("checked", String.valueOf(args[0]));
@@ -147,6 +149,30 @@ final class FakePage {
                     case "equals" -> proxy == args[0];
                     default -> null;
                 });
+    }
+
+    /**
+     * A confirm dialog's buttons from its {@code "buttons"} property, by role and text
+     * ({@code "CONFIRM=Delete,CANCEL=Keep editing"}); pressing one closes the dialog.
+     */
+    private ConfirmDialogAccess confirmDialog(Map<String, String> component) {
+        return new ConfirmDialogAccess() {
+            @Override
+            public Map<Role, String> buttons() {
+                Map<Role, String> buttons = new java.util.EnumMap<>(Role.class);
+                for (String button : component.getOrDefault("buttons", "").split(",")) {
+                    String[] roleAndText = button.split("=", 2);
+                    buttons.put(Role.valueOf(roleAndText[0]), roleAndText[1]);
+                }
+                return buttons;
+            }
+
+            @Override
+            public void press(Role role) {
+                component.put("opened", "false");
+                actions.add("press " + role);
+            }
+        };
     }
 
     /**

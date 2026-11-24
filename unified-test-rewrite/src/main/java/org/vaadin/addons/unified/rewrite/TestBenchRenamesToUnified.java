@@ -54,6 +54,12 @@ public class TestBenchRenamesToUnified extends Recipe {
                         && isTabSheet(wrapperOf(original.getSelect()))) {
                     return selected.withName(selected.getName().withSimpleName("getSelectedTab")).withPrefix(m.getPrefix());
                 }
+                // d.getConfirmButton().click() → d.confirm(), as getRejectButton() and getCancelButton()
+                if (ConfirmDialogs.press(m) != null && m.getSelect() instanceof J.MethodInvocation button
+                        && method.getSelect() instanceof J.MethodInvocation original && original.getSelect() != null
+                        && wrapperOf(original.getSelect()) == Wrappers.forElement(ConfirmDialogs.TESTBENCH_ELEMENT)) {
+                    return button.withName(button.getName().withSimpleName(ConfirmDialogs.press(m))).withPrefix(m.getPrefix());
+                }
                 // l.getMessageElements().size() → l.getMessageCount()
                 if (m.getSimpleName().equals("size") && m.getSelect() instanceof J.MethodInvocation elements
                         && elements.getSimpleName().equals("getMessageElements")

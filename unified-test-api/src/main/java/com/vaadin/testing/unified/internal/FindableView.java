@@ -13,6 +13,7 @@ import com.vaadin.testing.unified.component.UnifiedDatePicker;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDetails;
 import com.vaadin.testing.unified.component.UnifiedLink;
+import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNav;
@@ -91,7 +92,7 @@ public final class FindableView {
     private FindableView() {}
 
     /** The Wrapper types listed, in this order, before the custom Wrappers the test has looked up. */
-    static final List<Class<?>> BUILT_IN = List.of(UnifiedDialog.class, UnifiedNotification.class,
+    static final List<Class<?>> BUILT_IN = List.of(UnifiedDialog.class, UnifiedConfirmDialog.class, UnifiedNotification.class,
             UnifiedTextField.class, UnifiedTextArea.class, UnifiedEmailField.class, UnifiedPasswordField.class,
             UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class, UnifiedComboBox.class, UnifiedMultiSelectComboBox.class,
             UnifiedDatePicker.class, UnifiedDateTimePicker.class, UnifiedRadioButtonGroup.class,
@@ -430,7 +431,7 @@ public final class FindableView {
     private static Method namingGetter(Class<?> type, Method filter) {
         String name = filter.getName();
         if (!filter.isDefault() || !name.startsWith("with") || name.length() <= 4 || filter.getParameterCount() != 1
-                || filter.getParameterTypes()[0] != String.class || !type.isAssignableFrom(filter.getReturnType())) {
+                || filter.getParameterTypes()[0] != String.class || !returnsWrapper(type, filter)) {
             return null;
         }
         List<String> words = StepTarget.splitWords(name.substring(4));
@@ -443,6 +444,13 @@ public final class FindableView {
         } catch (NoSuchMethodException e) {
             return null;
         }
+    }
+
+    /** The filter returns the Wrapper: its own type, or {@code SELF} of a shared mixin ({@code UnifiedOverlayDialog}). */
+    private static boolean returnsWrapper(Class<?> type, Method filter) {
+        return type.isAssignableFrom(filter.getReturnType())
+                || filter.getGenericReturnType() instanceof java.lang.reflect.TypeVariable<?> self
+                        && self.getGenericDeclaration() instanceof Class<?>;
     }
 
     // ---------------------------------------------------------------- one line

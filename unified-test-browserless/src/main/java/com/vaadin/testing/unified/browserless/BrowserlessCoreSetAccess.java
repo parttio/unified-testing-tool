@@ -1,6 +1,9 @@
 package com.vaadin.testing.unified.browserless;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.ComponentUtil;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialogTester;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.details.DetailsTester;
 import com.vaadin.flow.component.contextmenu.MenuItem;
@@ -20,6 +23,7 @@ import com.vaadin.flow.component.upload.UploadTester;
 import com.vaadin.browserless.BrowserlessUIContext;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
+import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
@@ -30,11 +34,13 @@ import com.vaadin.testing.unified.spi.UploadAccess;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * Access to Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Browserless, through
+ * Access to ConfirmDialog, Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Browserless, through
  * their testers.
  */
 final class BrowserlessCoreSetAccess {
@@ -81,6 +87,74 @@ final class BrowserlessCoreSetAccess {
         @Override
         public UnifiedElement content() {
             throw new UnsupportedOperationException("A Tabs bar has no content; use UnifiedTabSheet for a TabSheet");
+        }
+    }
+
+    /**
+     * Through ConfirmDialogTester, by role. A button the application put in a role's slot is clicked first, as a
+     * browser's click runs its listeners, then the dialog fires the role's event and closes, as the web component
+     * does on that click.
+     */
+    record ConfirmDialogAccessImpl(BrowserlessSession session, ConfirmDialog dialog) implements ConfirmDialogAccess {
+
+        @Override
+        public Map<Role, String> buttons() {
+            Map<Role, String> buttons = new EnumMap<>(Role.class);
+            for (Role role : Role.values()) {
+                if (role == Role.CONFIRM || dialog.getElement().getProperty(key(role) + "ButtonVisible", false)) {
+                    buttons.put(role, own(role).map(c -> new BrowserlessElement(session, c).getText())
+                            .orElseGet(() -> dialog.getElement().getProperty(key(role) + "Text", role.title())));
+                }
+            }
+            return buttons;
+        }
+
+        @Override
+        public void press(Role role) {
+            session.act(dialog, () -> {
+                Optional<Component> own = own(role);
+                if (own.isPresent()) {
+                    new BrowserlessElement(session, own.get()).click();
+                    fire(dialog, role);
+                } else {
+                    ConfirmDialogTester tester = (ConfirmDialogTester) session.window().test(dialog);
+                    switch (role) {
+                        case CONFIRM -> tester.confirm();
+                        case REJECT -> tester.reject();
+                        case CANCEL -> tester.cancel();
+                    }
+                }
+                session.window().roundTrip();
+            });
+        }
+
+        /** What the web component does on Escape, unless the application turned it off: it cancels. */
+        static void escape(ConfirmDialog dialog) {
+            if (dialog.isCloseOnEsc()) {
+                fire(dialog, Role.CANCEL);
+            }
+        }
+
+        /** The role's event, as from the browser, then the dialog closes, unless a listener closed it. */
+        private static void fire(ConfirmDialog dialog, Role role) {
+            ComponentUtil.fireEvent(dialog, switch (role) {
+                case CONFIRM -> new ConfirmDialog.ConfirmEvent(dialog, true);
+                case REJECT -> new ConfirmDialog.RejectEvent(dialog, true);
+                case CANCEL -> new ConfirmDialog.CancelEvent(dialog, true);
+            });
+            if (dialog.isOpened()) {
+                dialog.close();
+            }
+        }
+
+        /** The button the application put in the role's slot ({@code setConfirmButton(Component)}), if any. */
+        private Optional<Component> own(Role role) {
+            String slot = key(role) + "-button";
+            return dialog.getChildren().filter(c -> slot.equals(c.getElement().getAttribute("slot"))).findFirst();
+        }
+
+        private static String key(Role role) {
+            return role.name().toLowerCase(java.util.Locale.ROOT);
         }
     }
 

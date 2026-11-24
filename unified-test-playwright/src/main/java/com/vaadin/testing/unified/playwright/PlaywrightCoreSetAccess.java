@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.playwright;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.FilePayload;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
@@ -15,8 +16,10 @@ import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
+import org.vaadin.addons.dramafinder.element.ConfirmDialogElement;
 import org.vaadin.addons.dramafinder.element.DateTimePickerElement;
 import org.vaadin.addons.dramafinder.element.DetailsElement;
 import org.vaadin.addons.dramafinder.element.MenuBarElement;
@@ -28,7 +31,7 @@ import org.vaadin.addons.dramafinder.element.TabsElement;
 import org.vaadin.addons.dramafinder.element.UploadElement;
 
 /**
- * Access to Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Playwright, through
+ * Access to ConfirmDialog, Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Playwright, through
  * Dramafinder's elements.
  * Dramafinder's element actions wait for the server round-trip themselves; only actions on raw locators
  * wait here.
@@ -115,6 +118,24 @@ final class PlaywrightCoreSetAccess {
         @Override
         public UnifiedElement content() {
             throw new UnsupportedOperationException("A Tabs bar has no content; use UnifiedTabSheet for a TabSheet");
+        }
+    }
+
+    /** Through Dramafinder's ConfirmDialogElement: each button by its slot, never by its text. */
+    record ConfirmDialogAccessImpl(PlaywrightSession session, Locator locator) implements ConfirmDialogAccess {
+        @Override
+        public Map<Role, String> buttons() {
+            return BrowserQueries.confirmDialogButtons(locator.evaluate(BrowserQueries.CONFIRM_DIALOG_BUTTONS));
+        }
+
+        @Override
+        public void press(Role role) {
+            ConfirmDialogElement dialog = new ConfirmDialogElement(locator);
+            switch (role) {
+                case CONFIRM -> dialog.getConfirmButton().click();
+                case REJECT -> dialog.getRejectButton().click();
+                case CANCEL -> dialog.getCancelButton().click();
+            }
         }
     }
 
