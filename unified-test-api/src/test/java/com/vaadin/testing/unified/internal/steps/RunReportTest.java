@@ -57,7 +57,9 @@ class RunReportTest {
 
     @Test
     void passingScenariosWithoutACheckHaveASectionAndABadge() {
-        String endsOnAnAction = RunSummaryTest.EDIT_PERSON.replace("\"verb\": \"see\"", "\"verb\": \"click\"");
+        // without its Escape Hatch gap, which would make it an Escape Hatch scenario
+        String endsOnAnAction = RunSummaryTest.EDIT_PERSON.replace("\"verb\": \"see\"", "\"verb\": \"click\"")
+                .replace("\"reason\": \"Escape Hatch\"", "\"reason\": \"waitUntil\"");
         String html = new RunReport(new RunSummary("Playwright",
                 List.of(scenario(endsOnAnAction, "EditPersonTest/editsAPerson")), 0, null), s -> List.of()).html();
 
@@ -71,6 +73,34 @@ class RunReportTest {
         assertTrue(section.contains("<p class=\"why\">no check after: “see notification “Saved””</p>"), section);
         // a run whose scenarios all end on a check has no such section
         assertFalse(report(null).contains("id=\"unchecked\""));
+    }
+
+    @Test
+    void escapeHatchScenariosComeAfterTheOthersWithTheirOwnBadge() {
+        String escapes = RunSummaryTest.EDIT_PERSON.replace("\"verb\": \"see\"", "\"verb\": \"click\"");
+        String noCheck = escapes.replace("editsAPerson", "savesOnly").replace("Editing a person updates the grid",
+                "Saving only").replace("\"reason\": \"Escape Hatch\"", "\"reason\": \"where(..) condition\"");
+        String html = new RunReport(new RunSummary("Playwright", List.of(scenario(escapes, "EditPersonTest/editsAPerson"),
+                scenario(noCheck, "EditPersonTest/savesOnly")), 0, null), s -> List.of()).html();
+
+        int unchecked = html.indexOf("<section id=\"unchecked\">");
+        String section = html.substring(unchecked, html.indexOf("<section id=\"passing\" hidden>"));
+        assertTrue(section.contains("1 passing scenario ends on User Steps that nothing checks"), section);
+        int lead = section.indexOf("1 more ends in Escape Hatch code, whose checks the report can&#39;t see.");
+        int listed = section.indexOf("Saving only");
+        int escapeHatch = section.indexOf("Editing a person updates the grid");
+        assertTrue(listed >= 0 && listed < lead && lead < escapeHatch, section);
+        String escapeHatchOne = section.substring(escapeHatch);
+        assertTrue(escapeHatchOne.contains("<span class=\"badge escape-hatch\">Escape Hatch</span>"), escapeHatchOne);
+        assertFalse(escapeHatchOne.contains("badge unchecked"), escapeHatchOne);
+        assertEquals(1, section.split("badge unchecked", -1).length - 1, section);
+
+        // only Escape Hatch scenarios: the section holds just them
+        String alone = new RunReport(new RunSummary("Playwright", List.of(scenario(escapes, "EditPersonTest/editsAPerson")),
+                0, null), s -> List.of()).html();
+        assertTrue(alone.contains("1 passing scenario ends in Escape Hatch code, whose checks the report can&#39;t see."),
+                alone);
+        assertFalse(alone.contains("ends on User Steps that nothing checks"), alone);
     }
 
     @Test

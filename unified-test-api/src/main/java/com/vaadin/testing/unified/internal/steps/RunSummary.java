@@ -179,28 +179,65 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
     /** At most this many scenarios without a check are listed; the rest are counted. */
     static final int UNCHECKED_LISTED = 10;
 
-    /** The passing scenarios that end without a check ({@link ScenarioResult#unchecked()}). */
+    /**
+     * The passing scenarios that end without a check ({@link ScenarioResult#unchecked()}) and never used an Escape
+     * Hatch: the ones the section lists.
+     */
     public List<ScenarioResult> unchecked() {
-        return scenarios.stream().filter(s -> s.unchecked().isPresent()).toList();
+        return scenarios.stream().filter(s -> s.unchecked().isPresent() && !s.escapeHatch()).toList();
+    }
+
+    /**
+     * The passing scenarios that end without a check and recorded an Escape Hatch gap ({@link
+     * ScenarioResult#escapeHatch()}): their checks may be in code the report can't see, so they are counted apart.
+     */
+    public List<ScenarioResult> uncheckedEscapeHatch() {
+        return scenarios.stream().filter(s -> s.unchecked().isPresent() && s.escapeHatch()).toList();
     }
 
     private void unchecked(StringBuilder md) {
         List<ScenarioResult> unchecked = unchecked();
-        if (unchecked.isEmpty()) {
+        List<ScenarioResult> escapeHatch = uncheckedEscapeHatch();
+        if (unchecked.isEmpty() && escapeHatch.isEmpty()) {
             return;
         }
-        md.append("\n#### Scenarios without a check\n\n").append(unchecked.size())
-                .append(unchecked.size() == 1 ? " passing scenario ends" : " passing scenarios end")
-                .append(" on User Steps that nothing checks: no `see` step follows them, and the test reads no")
-                .append(" value after them.\n\n");
-        for (ScenarioResult s : unchecked.subList(0, Math.min(UNCHECKED_LISTED, unchecked.size()))) {
-            md.append("- **").append(markdown(title(s))).append("** · ")
-                    .append(uncheckedLine(s.unchecked().orElseThrow(), RunSummary::code)).append('\n');
+        md.append("\n#### Scenarios without a check\n\n");
+        if (!unchecked.isEmpty()) {
+            md.append(unchecked.size())
+                    .append(unchecked.size() == 1 ? " passing scenario ends" : " passing scenarios end")
+                    .append(" on User Steps that nothing checks: no `see` step follows them, and the test reads no")
+                    .append(" value after them.\n\n");
+            for (ScenarioResult s : unchecked.subList(0, Math.min(UNCHECKED_LISTED, unchecked.size()))) {
+                md.append("- **").append(markdown(title(s))).append("** · ")
+                        .append(uncheckedLine(s.unchecked().orElseThrow(), RunSummary::code)).append('\n');
+            }
+            if (unchecked.size() > UNCHECKED_LISTED) {
+                md.append("- … and ").append(unchecked.size() - UNCHECKED_LISTED).append(" more, in `")
+                        .append(RunReport.FILE).append("`\n");
+            }
         }
-        if (unchecked.size() > UNCHECKED_LISTED) {
-            md.append("- … and ").append(unchecked.size() - UNCHECKED_LISTED).append(" more, in `")
-                    .append(RunReport.FILE).append("`\n");
+        if (!escapeHatch.isEmpty()) {
+            if (!unchecked.isEmpty()) {
+                md.append('\n');
+            }
+            List<String> names = escapeHatch.stream().limit(3).map(s -> markdown(s.displayName())).toList();
+            md.append(escapeHatchLead(escapeHatch.size(), !unchecked.isEmpty())).append(": ")
+                    .append(String.join(", ", names)).append(escapeHatch.size() > 3 ? ", … " : ". ")
+                    .append(ESCAPE_HATCH_POINTER).append(" `assertThat(..)`, to have them checked here.\n");
         }
+    }
+
+    /** Where the Escape Hatch line points the reader, up to the {@code assertThat(..)} it names. */
+    static final String ESCAPE_HATCH_POINTER = "Resolve their Migration Markers, or move their checks to";
+
+    /**
+     * {@code <n> more end in Escape Hatch code, whose checks the report can't see}, or {@code <n> passing scenarios
+     * end ..} when no other scenario is listed before them.
+     */
+    static String escapeHatchLead(int count, boolean afterOthers) {
+        return count + (afterOthers ? count == 1 ? " more ends" : " more end"
+                : count == 1 ? " passing scenario ends" : " passing scenarios end")
+                + " in Escape Hatch code, whose checks the report can't see";
     }
 
     /** {@code no check}, or {@code no check after: <the last steps>}: at most three steps, then the count. */

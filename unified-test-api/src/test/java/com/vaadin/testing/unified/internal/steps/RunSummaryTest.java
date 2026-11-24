@@ -439,6 +439,78 @@ class RunSummaryTest {
     }
 
     @Test
+    void aScenarioThatRecordsAnEscapeHatchGapIsAnEscapeHatchScenario() {
+        String open = step("open", "open People");
+        String inAGroup = "{\"type\": \"group\", \"index\": \"2\", \"name\": \"Save\", \"status\": \"passed\", \"steps\": ["
+                + gap("Escape Hatch") + "]}";
+
+        assertTrue(passing("escapes", open + "," + gap("Escape Hatch")).escapeHatch());
+        assertTrue(passing("escapesInATask", open + "," + inAGroup).escapeHatch());
+        assertFalse(passing("waits", open + "," + gap("waitUntil")).escapeHatch());
+        assertFalse(passing("onlyUnified", open).escapeHatch());
+    }
+
+    @Test
+    void escapeHatchScenariosAreCountedApartFromTheScenariosWithoutACheck() {
+        String open = step("open", "open People");
+        String click = step("click", "click button “Save”");
+        String see = step("see", "see notification “Saved”");
+        List<ScenarioResult> run = List.of(
+                passing("escapesThenClicks", open + "," + gap("Escape Hatch") + "," + click),
+                passing("onlyClicks", open + "," + click),
+                passing("seesAfterTheClick", gap("Escape Hatch") + "," + click + "," + see));
+
+        RunSummary summary = new RunSummary("Playwright", run, 0, null);
+
+        assertEquals(List.of("onlyClicks"), summary.unchecked().stream().map(ScenarioResult::testMethod).toList());
+        assertEquals(List.of("escapesThenClicks"),
+                summary.uncheckedEscapeHatch().stream().map(ScenarioResult::testMethod).toList());
+        assertEquals("""
+                ### Unified UI Tests · Playwright · 3 passed, 0 failed, 0 skipped
+
+                #### Scenarios without a check
+
+                1 passing scenario ends on User Steps that nothing checks: no `see` step follows them, \
+                and the test reads no value after them.
+
+                - **onlyClicks (SaveTest)** · no check
+
+                1 more ends in Escape Hatch code, whose checks the report can't see: escapesThenClicks. \
+                Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them checked here.
+                """, summary.markdown());
+    }
+
+    @Test
+    void onlyEscapeHatchScenariosUncheckedGiveTheSectionWithJustTheirCount() {
+        String click = step("click", "click button “Save”");
+        List<ScenarioResult> run = java.util.stream.IntStream.range(0, 4)
+                .mapToObj(i -> passing("escapes" + i, gap("Escape Hatch") + "," + click)).toList();
+
+        String md = new RunSummary("Playwright", run, 0, null).markdown();
+
+        assertEquals("""
+                ### Unified UI Tests · Playwright · 4 passed, 0 failed, 0 skipped
+
+                #### Scenarios without a check
+
+                4 passing scenarios end in Escape Hatch code, whose checks the report can't see: escapes0, escapes1, \
+                escapes2, … Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them \
+                checked here.
+                """, md);
+        assertEquals("""
+                ### Unified UI Tests · Playwright · 1 passed, 0 failed, 0 skipped
+
+                #### Scenarios without a check
+
+                1 passing scenario ends in Escape Hatch code, whose checks the report can't see: escapes0. \
+                Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them checked here.
+                """, new RunSummary("Playwright", run.subList(0, 1), 0, null).markdown());
+        assertFalse(new RunSummary("Playwright",
+                List.of(passing("escapesAndSees", gap("Escape Hatch") + "," + click + "," + step("see", "see b"))), 0, null)
+                .markdown().contains("without a check"));
+    }
+
+    @Test
     void aLongListOfScenariosWithoutACheckIsCutWithACount() {
         List<ScenarioResult> run = java.util.stream.IntStream.range(0, 12)
                 .mapToObj(i -> passing("reads" + i, step("open", "open People"))).toList();

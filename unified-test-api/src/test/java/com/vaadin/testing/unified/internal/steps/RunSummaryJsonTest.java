@@ -147,6 +147,8 @@ class RunSummaryJsonTest {
         // the Escape Hatch gap of EDIT_PERSON may hold a check: only the steps after it are unchecked
         assertEquals("end", scenarioOf(run, "editsAPerson").get("unchecked"));
         assertEquals(List.of("see notification “Saved”"), scenarioOf(run, "editsAPerson").get("uncheckedSteps"));
+        assertEquals(true, scenarioOf(run, "editsAPerson").get("escapeHatch"), "it recorded an Escape Hatch gap");
+        assertFalse(scenarioOf(run, "savesLast").containsKey("escapeHatch"), "only with unchecked");
         assertFalse(scenarioOf(run, "savesLast").containsKey("unchecked"), "it ends on a check");
         assertFalse(scenarioOf(run, "paysByCard").containsKey("unchecked"), "a failed scenario is not judged");
     }

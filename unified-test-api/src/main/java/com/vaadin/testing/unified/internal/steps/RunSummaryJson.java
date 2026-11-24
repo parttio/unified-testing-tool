@@ -93,6 +93,7 @@ public record RunSummaryJson(RunSummary summary, Function<ScenarioResult, List<S
         s.unchecked().ifPresent(unchecked -> {
             json.field("unchecked", unchecked.all() ? "all" : "end");
             json.key("uncheckedSteps").any(unchecked.steps());
+            json.key("escapeHatch").any(s.escapeHatch());
         });
         if (s.failed()) {
             failed(json, s);
