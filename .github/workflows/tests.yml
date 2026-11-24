@@ -127,9 +127,10 @@ jobs:
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
           -Dexec.args="install-deps chromium"
+      # no trace here: on-failure records it for every test and costs about a fifth of the run (#601); the failed
+      # tests are re-run with it below
       - name: Demo tests on Playwright
-        # a failed test keeps Playwright's trace, grouped by User Step, in the evidence artifact
-        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
+        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v7
@@ -143,6 +144,36 @@ jobs:
         with:
           name: unified-evidence-playwright
           path: '**/target/*-reports/unified-evidence/'
+          if-no-files-found: ignore
+      # after the uploads above, so they keep the first run's reports and evidence; its own evidence goes elsewhere.
+      # Up to 5 failed test classes: more is likely one cause, and a few traces show it.
+      - name: Re-run the failed tests with Playwright's trace
+        if: failure()
+        run: |
+          classes=$(scripts/failed-test-classes.sh unified-test-demo/target/surefire-reports)
+          if [ -z "$classes" ]; then
+            echo "No failed test class to re-run: the run failed before or outside its tests."
+            exit 0
+          fi
+          classes=$(cut -d, -f1-5 <<<"$classes")
+          echo "Re-running with Playwright's trace: $classes"
+          if mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright \
+              -Dvaadin.testing.playwright.trace=on-failure \
+              -Dvaadin.testing.evidence-dir=target/retraced/unified-evidence \
+              -Dvaadin.testing.user-steps.github-summary=false \
+              -Dtest="$classes" -Dsurefire.failIfNoSpecifiedTests=false; then
+            echo "The failed tests passed when re-run with the trace ($classes): flaky? No trace was kept." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Playwright traces of the tests that failed again ($classes): artifact playwright-traces." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: unified-test-demo/target/retraced/unified-evidence/
           if-no-files-found: ignore
 
   selenium:
