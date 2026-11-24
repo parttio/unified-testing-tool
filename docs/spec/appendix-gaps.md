@@ -60,7 +60,7 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 
 | Gap | Issue |
 |---|---|
-| A lookup's walk leaves out a `LitTemplate`'s `@Id` components (its virtual children), unless a global setting exposes every template's; the adapter walks them itself for a Template the test entered *(unreleased)* | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
+| A lookup's walk leaves out a `LitTemplate`'s `@Id` components (its virtual children), unless a global setting exposes every template's; the adapter walks them itself for a Template the test entered | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
 | Text, labels and attributes written in a `LitTemplate`'s HTML are empty on the server, so filters on them don't match on Browserless: a limit of Flow, which no Testing Tool can close; inside a Template, `withId(..)` is the portable lookup | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
 
 | Gap | Issue |
@@ -78,4 +78,4 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | Gap | Ticket |
 |---|---|
 | Spring Boot: no hook to choose the test web environment at runtime (Browserless runs could otherwise skip the embedded server) | [#27](https://github.com/parttio/unified-testing-tool/issues/27) |
-| Flow: component classes that render the same tag and no attribute that tells them apart, so a browser lookup for one also finds the others, where Browserless finds the class only: `Div` and `FlexLayout` (`div`); `Input` and `RangeInput` (`input`); `Table`, `TableRow`, `TableDataCell` and the other `Table…` classes and their `NativeTable…` counterparts; `ListBox` and `MultiSelectListBox`; `Grid` and `TreeGrid`; `Icon`, `SvgIcon` and `FontIcon`; `ContextMenu` and `GridContextMenu`, `MenuItem` and `GridMenuItem`; `IntegerSlider` and `DecimalSlider`, `IntegerRangeSlider` and `DecimalRangeSlider`. A lookup for a supertype (`Grid` for a `TreeGrid`) is the same everywhere; scope or filter the lookup to single the component out *(unreleased)* | [#562](https://github.com/parttio/unified-testing-tool/issues/562) |
+| Flow: component classes that render the same tag and no attribute that tells them apart, so a browser lookup for one also finds the others, where Browserless finds the class only: `Div` and `FlexLayout` (`div`); `Input` and `RangeInput` (`input`); `Table`, `TableRow`, `TableDataCell` and the other `Table…` classes and their `NativeTable…` counterparts; `ListBox` and `MultiSelectListBox`; `Grid` and `TreeGrid`; `Icon`, `SvgIcon` and `FontIcon`; `ContextMenu` and `GridContextMenu`, `MenuItem` and `GridMenuItem`; `IntegerSlider` and `DecimalSlider`, `IntegerRangeSlider` and `DecimalRangeSlider`. A lookup for a supertype (`Grid` for a `TreeGrid`) is the same everywhere; scope or filter the lookup to single the component out | [#562](https://github.com/parttio/unified-testing-tool/issues/562) |

@@ -8,7 +8,7 @@ Rows are found by **what they show**, like any other component. Spec: [7. Grid](
 
 ## Finding rows
 
-*(unreleased)* To see which lookup finds a row, print `grid.describe()`: the grid's columns and first 20 rows, each with the lookup on the grid that finds it (`row().withCellText("Name", "User 1")`, or `row(i)` when no column's text is its own), the same on every Testing Tool.
+To see which lookup finds a row, print `grid.describe()`: the grid's columns and first 20 rows, each with the lookup on the grid that finds it (`row().withCellText("Name", "User 1")`, or `row(i)` when no column's text is its own), the same on every Testing Tool.
 
 `row()` returns a lazy row, and its filters narrow it down, the way `find(..)` and its filters do for components. Each filter returns a new row. Every use of the row finds it again and waits until exactly one row matches:
 

@@ -80,7 +80,7 @@ When that doesn't read like what a user does, name the kind with `@UnifiedCompon
 
 ## A Template
 
-*(unreleased)* A Wrapper for a `LitTemplate` (or another component with a shadow root of its own) extends `TemplateScope`: lookups on it then search inside the Template ([Finding components, Templates](finding-components.md#templates)).
+A Wrapper for a `LitTemplate` (or another component with a shadow root of its own) extends `TemplateScope`: lookups on it then search inside the Template ([Finding components, Templates](finding-components.md#templates)).
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:wrapper"

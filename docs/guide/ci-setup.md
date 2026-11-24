@@ -158,7 +158,7 @@ On another CI server the command is the same: give it the evidence directories t
 
 ### Surefire and Failsafe in one build
 
-*(unreleased)* The evidence directory is `target/surefire-reports/unified-evidence` whichever plugin runs the tests. A build that runs its Browserless tests with Surefire and its ITs with Failsafe would put both phases in it: one `summary.md` with the counts of both runs, Failsafe's over Surefire's. The migration recipes give every `maven-failsafe-plugin` in `<build><plugins>` and in each profile its own directory, unless it sets one already ([#512](https://github.com/parttio/unified-testing-tool/issues/512)):
+The evidence directory is `target/surefire-reports/unified-evidence` whichever plugin runs the tests. A build that runs its Browserless tests with Surefire and its ITs with Failsafe would put both phases in it: one `summary.md` with the counts of both runs, Failsafe's over Surefire's. The migration recipes give every `maven-failsafe-plugin` in `<build><plugins>` and in each profile its own directory, unless it sets one already ([#512](https://github.com/parttio/unified-testing-tool/issues/512)):
 
 ```xml
 <plugin>

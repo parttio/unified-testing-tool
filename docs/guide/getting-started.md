@@ -12,7 +12,7 @@ Import the BOM and add the adapters of the Testing Tools you run on, as test dep
         <dependency>
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-bom</artifactId>
-            <version>0.1.0-alpha4</version>
+            <version>0.1.0-alpha5</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
