@@ -6,6 +6,9 @@ page becomes the notes of the next alpha.
 
 ## New
 
+- **A failed row or message step shows the grid's rows or the chat's messages**
+  ([#590](https://github.com/parttio/unified-testing-tool/issues/590)): `failure.view.txt` adds that grid's or message
+  list's `describe()` after the page's view, so the rows a lookup was looking among are in the evidence.
 - **`describe()` on a grid or a message list** ([#534](https://github.com/parttio/unified-testing-tool/issues/534)):
   the grid's columns and first 20 rows, the list's first 20 messages, each with the lookup on it that finds it,
   `row().withCellText("Name", "User 1")` or `message().withUserName("Assistant").last()`, the same on every Testing

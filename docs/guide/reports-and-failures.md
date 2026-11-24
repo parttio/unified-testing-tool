@@ -130,7 +130,7 @@ A component that is there but can't be used:
 
 ### The Findable View
 
-Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it.
+Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it. *(unreleased)* When the failed step was about a grid row or a chat message, the grid's columns and first rows, or the list's first messages, follow, each with the lookup that finds it, as `grid.describe()` lists them.
 
 ```
 Findable view of “/checkout” on playwright (chromium): 6 components
