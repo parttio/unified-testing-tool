@@ -298,13 +298,16 @@ final class BrowserlessSession implements AdapterSession {
      * A tag the component class doesn't declare narrows the class, as it does in a browser: {@code UnifiedLink} is
      * {@code @UnifiedComponent(value = Component.class, tag = "a")}, so a RouterLink, an Anchor or any other
      * {@code <a>}. A class with a {@code @Tag} of its own is found by class alone, as before. A tag list matches any
-     * of its tags: {@code UnifiedLogin} is a {@code LoginOverlay} or a {@code LoginForm}.
+     * of its tags: {@code UnifiedLogin} is a {@code LoginOverlay} or a {@code LoginForm}. A {@code Text} component
+     * is a text node, with no tag, so it never matches a tag (#603).
      */
     private static boolean hasQueriedTag(Component c, QuerySpec spec) {
         String tag = spec.tag();
-        return tag == null || "*".equals(tag) || spec.componentType().isAnnotationPresent(com.vaadin.flow.component.Tag.class)
-                || com.vaadin.testing.unified.internal.BrowserQueries.tags(tag).stream()
-                        .anyMatch(t -> t.equalsIgnoreCase(c.getElement().getTag()));
+        if (tag == null || "*".equals(tag) || spec.componentType().isAnnotationPresent(com.vaadin.flow.component.Tag.class)) {
+            return true;
+        }
+        return !c.getElement().isTextNode() && com.vaadin.testing.unified.internal.BrowserQueries.tags(tag).stream()
+                .anyMatch(t -> t.equalsIgnoreCase(c.getElement().getTag()));
     }
 
     private boolean matches(Component c, Filter f) {
