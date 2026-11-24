@@ -167,7 +167,12 @@ public final class FindableView {
      * @return the file written
      */
     static Path write(TestRun run, Path directory, String name) throws IOException {
-        String view = ofPage(run);
+        return write(run, directory, name, null);
+    }
+
+    /** {@link #write(TestRun, Path, String)}, followed by {@code more} (a view of items) when not null. */
+    static Path write(TestRun run, Path directory, String name, String more) throws IOException {
+        String view = ofPage(run) + (more == null ? "" : "\n" + more);
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".view.txt");
         Files.writeString(file, view, StandardCharsets.UTF_8);

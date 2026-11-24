@@ -1,9 +1,11 @@
 package com.vaadin.testing.unified.internal;
 
+import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.component.UnifiedMessageList.Message;
 import com.vaadin.testing.unified.internal.FindableView.Line;
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.internal.steps.StepTarget;
 import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
@@ -29,9 +31,41 @@ public final class ItemsView {
 
     public static String ofGrid(UnifiedGrid grid) {
         LazyElement element = Wrappers.lazyElementOf(grid);
-        TestRun run = element.run();
+        return grid(element.run(), grid.element(), StepTarget.scopeOf(element));
+    }
+
+    /**
+     * The items of the grid or message list a failed User Step was about (#590): its target was a row or a message,
+     * and the element it singled out is that grid or list. Null for any other failure.
+     */
+    public static String ofFailedStep(TestRun run, StepRecorder steps, Throwable failure) {
+        StepRecorder.Step step = steps.stepThatThrew(failure);
+        UnifiedElement element = steps.targetOf(failure);
+        if (step == null || element == null || step.phrase().target() == null) {
+            return null;
+        }
+        StepTarget target = step.phrase().target();
+        String kind = target.kind();
+        String scope = target.scope() == null ? kind : target.scope();
+        try {
+            if ((kind.equals("row") || kind.equals("selected row"))
+                    && element.tryUnwrap(GridAccess.class).isPresent()) {
+                return grid(run, element, scope);
+            }
+            if ((kind.equals("message") || kind.equals("last message"))
+                    && element.tryUnwrap(MessageListAccess.class).isPresent()) {
+                return messageList(run, element, scope);
+            }
+        } catch (RuntimeException | AssertionError e) {
+            // the evidence is written without the items
+        }
+        return null;
+    }
+
+    private static String grid(TestRun run, UnifiedElement element, String scope) {
         return run.steps().mask(run.steps().unrecorded(() -> {
-            GridAccess access = grid.element().unwrap(GridAccess.class);
+            GridAccess access = element.unwrap(GridAccess.class);
+
             int count = access.rowCount();
             List<String> headers = access.columnHeaders();
             List<Line> lines = new ArrayList<>();
@@ -57,7 +91,7 @@ public final class ItemsView {
             if (count > shown) {
                 lines.add(new Line("… " + (count - shown) + " more rows", "row()  (" + count + " rows in all)"));
             }
-            StringBuilder view = new StringBuilder("Findable view of " + StepTarget.scopeOf(element) + " on "
+            StringBuilder view = new StringBuilder("Findable view of " + scope + " on "
                     + run.toolName() + ", " + count + (count == 1 ? " row" : " rows") + "; lookups are on it\n");
             FindableView.appendLines(view, lines);
             return view.toString();
@@ -70,9 +104,13 @@ public final class ItemsView {
      */
     public static String ofMessageList(UnifiedMessageList list) {
         LazyElement element = Wrappers.lazyElementOf(list);
-        TestRun run = element.run();
+        return messageList(element.run(), list.element(), StepTarget.scopeOf(element));
+    }
+
+    private static String messageList(TestRun run, UnifiedElement element, String scope) {
         return run.steps().mask(run.steps().unrecorded(() -> {
-            List<Message> messages = list.element().unwrap(MessageListAccess.class).messages();
+            List<Message> messages = element.unwrap(MessageListAccess.class).messages();
+
             int count = messages.size();
             int shown = Math.min(count, MAX_ITEMS);
             List<Line> lines = new ArrayList<>();
@@ -85,7 +123,7 @@ public final class ItemsView {
                 lines.add(new Line("… " + (count - shown) + " more messages",
                         "message()  (" + count + " messages in all)"));
             }
-            StringBuilder view = new StringBuilder("Findable view of " + StepTarget.scopeOf(element) + " on "
+            StringBuilder view = new StringBuilder("Findable view of " + scope + " on "
                     + run.toolName() + ", " + count + (count == 1 ? " message" : " messages")
                     + "; lookups are on it\n");
             FindableView.appendLines(view, lines);
