@@ -14,6 +14,7 @@ import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDetails;
 import com.vaadin.testing.unified.component.UnifiedLink;
 import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNav;
@@ -92,7 +93,7 @@ public final class FindableView {
     private FindableView() {}
 
     /** The Wrapper types listed, in this order, before the custom Wrappers the test has looked up. */
-    static final List<Class<?>> BUILT_IN = List.of(UnifiedDialog.class, UnifiedConfirmDialog.class, UnifiedNotification.class,
+    static final List<Class<?>> BUILT_IN = List.of(UnifiedDialog.class, UnifiedConfirmDialog.class, UnifiedLogin.class, UnifiedNotification.class,
             UnifiedTextField.class, UnifiedTextArea.class, UnifiedEmailField.class, UnifiedPasswordField.class,
             UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class, UnifiedComboBox.class, UnifiedMultiSelectComboBox.class,
             UnifiedDatePicker.class, UnifiedDateTimePicker.class, UnifiedRadioButtonGroup.class,

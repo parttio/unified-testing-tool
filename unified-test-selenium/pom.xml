@@ -99,6 +99,10 @@
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-details-testbench</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.vaadin</groupId>
+            <artifactId>vaadin-login-testbench</artifactId>
+        </dependency>
         <!-- browser runs serve the app in dev mode -->
         <dependency>
             <groupId>com.vaadin</groupId>

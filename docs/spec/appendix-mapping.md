@@ -71,6 +71,7 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |
 | dialog `assertOpen` / `assertClosed` / `assertHeaderText`, `getHeaderText()`, `closeWithEscape()` | `isOpen` / `isClosed` / `hasHeaderTitle`, `getHeaderTitle()`, `close()` |
 | confirm dialog *(unreleased)*: as a dialog, and `confirm()` / `reject()` / `cancel()`, `getMessage()`, `assertMessage(s)` | `UnifiedConfirmDialog`: `confirm()` / `reject()` / `cancel()`, `getText()`, `hasText(s)` |
+| login form or overlay *(unreleased)*: `login(u, p)`, `isErrorVisible()`, `assertErrorVisible` / `assertNoError`, overlay `getByTitle(page, s)` / `assertHeaderTitle` | `UnifiedLogin`: `login(u, p)`, `isError()`, `hasError` / `hasNoError`, `withTitle(s)` / `hasTitle` |
 | notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
 | `GridElement.get(page)` | `page.find(UnifiedGrid.class)` (no marker: a second grid fails loudly) |

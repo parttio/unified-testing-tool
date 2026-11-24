@@ -177,6 +177,12 @@ final class PlaywrightSession implements AdapterSession {
         // Dramafinder's tag query takes the filters CSS can express; the rest are checked in the page with the
         // Unified API's matching, for every candidate in one round trip: no browser call per element, and no
         // element detaching between two calls.
+        if (BrowserQueries.isTagList(spec.tag())) {
+            // several tags (UnifiedLogin): Dramafinder's tag query takes one, so a plain CSS locator, with the
+            // filters CSS can express, as findInTemplate builds it
+            String selector = BrowserQueries.selector(spec.tag(), spec.filters());
+            return matching(support, scope == null ? page.locator(selector) : scope.locator(selector), spec);
+        }
         // "*" (VaadinElement.ANY_TAG) queries every light-DOM element, whatever its tag
         TagQuery<GenericElement> query = scope == null ? ElementQueries.find(page, spec.tag())
                 : ElementQueries.find(scope, spec.tag());
@@ -192,7 +198,14 @@ final class PlaywrightSession implements AdapterSession {
                 };
             }
         }
-        Locator candidates = query.getLocator();
+        return matching(support, query.getLocator(), spec);
+    }
+
+    /**
+     * The {@code candidates} that pass the filters CSS can't express, checked in the page with the Unified API's
+     * matching, and that {@code support} includes.
+     */
+    private List<UnifiedElement> matching(PlaywrightComponents.Support support, Locator candidates, QuerySpec spec) {
         List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
         List<Integer> indices = new ArrayList<>();
         for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, remaining)) {

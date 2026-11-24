@@ -5,6 +5,8 @@ import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialogTester;
 import com.vaadin.flow.component.details.Details;
+import com.vaadin.flow.component.login.AbstractLogin;
+import com.vaadin.flow.component.login.AbstractLoginTester;
 import com.vaadin.flow.component.details.DetailsTester;
 import com.vaadin.flow.component.contextmenu.MenuItem;
 import com.vaadin.flow.component.datepicker.DatePicker;
@@ -26,6 +28,7 @@ import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
+import com.vaadin.testing.unified.spi.LoginAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.MessageInputAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
@@ -40,7 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Access to ConfirmDialog, Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Browserless, through
+ * Access to LoginOverlay and LoginForm, ConfirmDialog, Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Browserless, through
  * their testers.
  */
 final class BrowserlessCoreSetAccess {
@@ -155,6 +158,37 @@ final class BrowserlessCoreSetAccess {
 
         private static String key(Role role) {
             return role.name().toLowerCase(java.util.Locale.ROOT);
+        }
+    }
+
+    /**
+     * Through Browserless Test's login tester, which fires the component's LoginEvent or ForgotPasswordEvent as the
+     * web component does on submit. The form's {@code action} is not followed: there is no browser to post it.
+     */
+    record LoginAccessImpl(BrowserlessSession session, AbstractLogin login) implements LoginAccess {
+        @Override
+        public boolean postsForms() {
+            return false;
+        }
+
+        @Override
+        public void login(String username, String password) {
+            session.act(login, () -> {
+                tester().login(username, password);
+                session.window().roundTrip();
+            });
+        }
+
+        @Override
+        public void forgotPassword() {
+            session.act(login, () -> {
+                tester().forgotPassword();
+                session.window().roundTrip();
+            });
+        }
+
+        private AbstractLoginTester<?> tester() {
+            return (AbstractLoginTester<?>) session.window().test(login);
         }
     }
 

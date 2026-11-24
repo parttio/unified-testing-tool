@@ -102,6 +102,7 @@ Every Wrapper action and every retrying assertion records one User Step, on ever
   | select, deselect | selection in grids and multi-select fields |
   | sort, expand, upload, press | `sort`, `toggleDetails`/`expand`, `upload`, `pressKey` |
   | confirm, reject, cancel | a confirm dialog's answer, named without its kind: `confirm “Delete order?”`, by the dialog's header, else its message |
+  | sign in | `UnifiedLogin.login(..)`: `sign in as “barista@vaadin.com” in login`, naming the user and never the password; `forgotPassword()` reads `press “Forgot password” in login` |
   | see / see no | retrying assertions, `doesNotExist` |
 - **Component kind:** the Wrapper type in plain words (`UnifiedComboBox` → “combo box”).
 - **Name:** the main filter (label, text or accessible name). Other filters go in brackets: `(test id “billing”)`.

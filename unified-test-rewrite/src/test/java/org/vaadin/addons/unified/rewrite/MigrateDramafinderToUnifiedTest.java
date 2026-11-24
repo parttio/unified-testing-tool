@@ -992,6 +992,60 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void loginElementsBecomeUnifiedLogin() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.LoginFormElement;
+                import org.vaadin.addons.dramafinder.element.LoginOverlayElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LoginTest extends SpringPlaywrightIT {
+                    @Test
+                    void signsIn() {
+                        navigate(PeopleView.class);
+                        LoginOverlayElement login = LoginOverlayElement.getByTitle(page, "Bakery");
+                        login.assertOpen();
+                        login.login("barista@vaadin.com", "coffee-beans");
+                        login.assertErrorVisible();
+                        boolean error = login.isErrorVisible();
+                        LoginFormElement form = LoginFormElement.get(page);
+                        form.login("barista@vaadin.com", "coffee-beans");
+                        form.assertNoError();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedLogin;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class LoginTest {
+                    @Test
+                    void signsIn(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedLogin login = page.find(UnifiedLogin.class).withTitle("Bakery");
+                        assertThat(login).isOpen();
+                        login.login("barista@vaadin.com", "coffee-beans");
+                        assertThat(login).hasError();
+                        boolean error = login.isError();
+                        UnifiedLogin form = page.find(UnifiedLogin.class);
+                        form.login("barista@vaadin.com", "coffee-beans");
+                        assertThat(form).hasNoError();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aLookupWithACallTheWrapperLacksStaysBehindTheEscapeHatch() {
         rewriteRun(java(VIEW), java(
                 """

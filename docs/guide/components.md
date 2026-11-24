@@ -178,6 +178,18 @@ When several notifications can be open at once, filter by text: an unfiltered `f
 
 `reject()` or `cancel()` on a dialog that doesn't show that button fails, listing the buttons it has. `getHeaderTitle()`, `getText()`, `getConfirmText()`, `getRejectText()` and `getCancelText()` read what the user sees (null for a button the dialog doesn't show); `hasText(..)` and `hasTextContaining(..)` check the message. `close()` presses Escape, which fires the dialog's cancel event, as in a browser.
 
+## Login
+
+*(unreleased)* A `LoginOverlay` or a `LoginForm` is a `UnifiedLogin`. There is normally one per page, so `page.find(UnifiedLogin.class)` needs no filter; `withTitle(..)` filters by an overlay's title. An overlay is found while it is open. `login(username, password)` signs in as a user does and waits for the server, or for the page a form post opened; the User Step reads `sign in as “barista@vaadin.com” in login`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/LoginTest.java:signsIn"
+```
+
+The password is never shown: not in the User Steps, the reports or a failure, wherever it would appear (an application log line included), as with `page.secret(..)`. In a browser, `login(..)` types into the form's fields and presses its submit button, which also posts a form with an `action` (Spring Security's `/login`). On Browserless, it fires the component's `LoginEvent`, which the application's listener handles; a component with an `action` fails there, as Browserless can't submit a form post: give that test `@RequiresBrowser`, or sign in with [`@WithMockUser`](navigation-and-users.md) when the test isn't about the login itself.
+
+`forgotPassword()` presses "Forgot password" (the `ForgotPasswordEvent`), and fails when the application hid that button. `isOpen()`, `isError()`, `isEnabled()`, `isForgotPasswordButtonVisible()`, `getTitle()` and `getDescription()` read the same on every Testing Tool (a form is open while it is on the page, and has no title or description); `assertThat(login)` checks `isOpen()`, `isClosed()`, `hasError()`, `hasNoError()` and `hasTitle(..)`.
+
 ## Upload
 
 `upload` returns once the server has received the file:

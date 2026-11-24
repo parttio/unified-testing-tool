@@ -21,6 +21,7 @@ import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedLink;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.component.UnifiedTabs;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
 import com.vaadin.testing.unified.component.UnifiedMessageInput;
@@ -198,6 +199,58 @@ public class UserStepWordingTest {
                 error.getMessage());
         assertTrue(error.getMessage().contains("no Reject button; its buttons: Confirm “Discard”, Cancel “Keep editing”"),
                 error.getMessage());
+        assertEquals(List.of(), fake.actions);
+    }
+
+    @Test
+    void signingInNamesTheUserNeverThePassword() {
+        fake.add("vaadin-login-overlay", "title", "Bakery", "opened", "true");
+
+        fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "coffee-beans");
+        fake.page.find(UnifiedLogin.class).withTitle("Bakery").forgotPassword();
+
+        assertEquals(List.of(
+                "sign in as “barista@vaadin.com” in login",
+                "press “Forgot password” in login “Bakery”"), texts());
+        assertEquals(List.of("login barista@vaadin.com coffee-beans", "forgot password"), fake.actions);
+        assertEquals("a log line with ••••", fake.steps.mask("a log line with coffee-beans"));
+    }
+
+    @Test
+    void anAdaptersFailureWhileSigningInIsMaskedInTheReports() {
+        fake.add("vaadin-login-form");
+
+        RuntimeException error = assertThrows(RuntimeException.class,
+                () -> fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "boom"));
+
+        assertEquals(List.of("sign in as “barista@vaadin.com” in login"), texts());
+        assertEquals("the form rejected barista@vaadin.com/••••", fake.steps.mask(error.getMessage()));
+    }
+
+    @Test
+    void aFormThatPostsFailsWithoutABrowserBeforeSigningIn() {
+        fake.add("vaadin-login-form", "action", "login", "postsForms", "false");
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "coffee-beans"));
+
+        assertTrue(error.getMessage().contains("to sign in through login"), error.getMessage());
+        assertTrue(error.getMessage().contains("a login form that posts to “login”, which BROWSERLESS can't submit"),
+                error.getMessage());
+        assertTrue(error.getMessage().contains("@RequiresBrowser"), error.getMessage());
+        assertTrue(error.getMessage().contains("@WithMockUser"), error.getMessage());
+        assertFalse(error.getMessage().contains("coffee-beans"), error.getMessage());
+        assertEquals(List.of(), fake.actions);
+    }
+
+    @Test
+    void forgotPasswordFailsWhenTheButtonIsHidden() {
+        fake.add("vaadin-login-form", "noForgotPassword", "true");
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> fake.page.find(UnifiedLogin.class).forgotPassword());
+
+        assertTrue(error.getMessage().contains("no “Forgot password” button"), error.getMessage());
         assertEquals(List.of(), fake.actions);
     }
 

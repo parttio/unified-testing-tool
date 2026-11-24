@@ -191,6 +191,40 @@ final class SeleniumComponents {
         });
     }
 
+    /**
+     * UnifiedLogin's lookup, over a LoginOverlay and a LoginForm: an overlay is an overlay host, part of the page
+     * and visible while it is open; a form is found and seen as any other component.
+     */
+    static {
+        register(com.vaadin.flow.component.login.AbstractLogin.class, new OverlayHost() {
+            @Override
+            public boolean include(WebElement element, SeleniumSession session) {
+                return isForm(element) || opened(element, session);
+            }
+
+            @Override
+            public Optional<Boolean> visible(WebElement element, SeleniumSession session) {
+                return isForm(element) ? Optional.empty() : Optional.of(opened(element, session));
+            }
+
+            @Override
+            public Optional<Boolean> booleanProperty(WebElement element, String name, SeleniumSession session) {
+                return isForm(element) ? Optional.empty() : super.booleanProperty(element, name, session);
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, WebElement element, SeleniumSession session) {
+                return type == com.vaadin.testing.unified.spi.LoginAccess.class
+                        ? Optional.of(new SeleniumCoreSetAccess.LoginAccessImpl(session, element))
+                        : Optional.empty();
+            }
+
+            private static boolean isForm(WebElement element) {
+                return "vaadin-login-form".equalsIgnoreCase(SeleniumSession.stale(element::getTagName));
+            }
+        });
+    }
+
     static {
         register(com.vaadin.flow.component.textfield.TextArea.class, new Support() {
             @Override
