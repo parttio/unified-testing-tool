@@ -59,6 +59,18 @@ class FindableViewTest {
     }
 
     @Test
+    @DisplayName("Alike buttons are told apart by the data attribute only each of them has")
+    void findsAlikeButtonsByADataAttribute(UnifiedPage page) {
+        page.navigate(PinsView.class);
+
+        assertEquals(List.of(
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-23\")",
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-24\")",
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-25\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
     @DisplayName("Two fields with the same label are found through the containers that tell them apart")
     void findsAlikeFieldsThroughTheirContainers(UnifiedPage page) {
         page.navigate(CheckoutView.class);

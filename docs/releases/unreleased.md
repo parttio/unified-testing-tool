@@ -6,6 +6,11 @@ page becomes the notes of the next alpha.
 
 ## New
 
+- **The Findable View tells alike components apart by a `data-*` attribute**
+  ([#547](https://github.com/parttio/unified-testing-tool/issues/547)): when no filter of their own and no container
+  does, `button “Pin”  page.find(UnifiedButton.class).withText("Pin").withAttribute("data-pin-date", "2026-11-23")`
+  instead of `not unique: 7 alike`. **Adapter SPI:** `ElementFacts` gains `data()`; an adapter that doesn't fill it
+  keeps working, without these lookups.
 - **A failed row or message step shows the grid's rows or the chat's messages**
   ([#590](https://github.com/parttio/unified-testing-tool/issues/590)): `failure.view.txt` adds that grid's or message
   list's `describe()` after the page's view, so the rows a lookup was looking among are in the evidence.

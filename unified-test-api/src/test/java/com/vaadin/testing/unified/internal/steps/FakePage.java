@@ -94,14 +94,26 @@ final class FakePage {
     }
 
     /** Each element's facts as read through it, and whether it is an internal part ({@code "internalPart"}). */
-    private static List<ElementFacts> facts(List<?> elements) {
+    private List<ElementFacts> facts(List<?> elements) {
         return elements.stream().map(o -> {
             UnifiedElement e = (UnifiedElement) o;
             ElementFacts f = ElementFacts.read(e);
+            // its data-* attributes but the test id, which the view reads as a name of its own
+            Map<String, String> data = new java.util.TreeMap<>();
+            componentOf.getOrDefault(e, Map.of()).forEach((k, v) -> {
+                if (k.startsWith("data-") && !k.equals("data-testid")) {
+                    data.put(k, v);
+                }
+            });
             return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
-                    e.getAttribute("in"), null, Boolean.parseBoolean(e.getAttribute("internalPart")));
+                    e.getAttribute("in"), e.getAttribute("inId"), Boolean.parseBoolean(e.getAttribute("internalPart")),
+                    data);
         }).toList();
     }
+
+    /** Each element handed out, with the component it stands for. */
+    private final Map<Object, Map<String, String>> componentOf = java.util.Collections.synchronizedMap(
+            new java.util.IdentityHashMap<>());
 
     private static String property(Filter f) {
         return switch (f.kind()) {
@@ -117,6 +129,12 @@ final class FakePage {
     }
 
     private UnifiedElement element(Map<String, String> component) {
+        UnifiedElement e = elementProxy(component);
+        componentOf.put(e, component);
+        return e;
+    }
+
+    private UnifiedElement elementProxy(Map<String, String> component) {
         return (UnifiedElement) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { UnifiedElement.class }, (proxy, method, args) -> switch (method.getName()) {
                     case "isVisible" -> !"false".equals(component.get("visible"));

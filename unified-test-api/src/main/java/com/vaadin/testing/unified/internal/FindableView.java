@@ -649,7 +649,9 @@ public final class FindableView {
                         + new Namer(kind, null, null).code(value) + inner;
             }
             if (inside > 1) {
-                return notUnique + "; " + inside + " in container (" + StepTarget.words(filter) + ")";
+                String byData = byDataAttribute(run, t, best, r, scope, inTemplate, prefix);
+                return byData != null ? byData
+                        : notUnique + "; " + inside + " in container (" + StepTarget.words(filter) + ")";
             }
         }
         for (Container container : containers) {
@@ -657,7 +659,38 @@ public final class FindableView {
                 return notUnique + "; one in " + container.words() + ": " + container.lookup() + inner;
             }
         }
-        return notUnique;
+        String byData = byDataAttribute(run, t, best, r, scope, inTemplate, prefix);
+        return byData != null ? byData : notUnique;
+    }
+
+    /**
+     * The last resort for alike components (#547): the name, then the first of the component's {@code data-*}
+     * attributes, by name, whose value none of the alike has, once run and found to match exactly one.
+     */
+    private static String byDataAttribute(TestRun run, OfType t, Namer best, Read r, UnifiedElement scope,
+            boolean inTemplate, String prefix) {
+        String name = r.valueOf(best);
+        if (best.kind() == null || name == null) {
+            return null;
+        }
+        List<Read> alike = t.reads().stream().filter(o -> name.equals(o.valueOf(best))).toList();
+        for (Map.Entry<String, String> attribute : new java.util.TreeMap<>(r.facts().data()).entrySet()) {
+            String value = attribute.getValue();
+            if (value == null || alike.stream().filter(o -> value.equals(o.facts().data().get(attribute.getKey())))
+                    .count() != 1) {
+                continue;
+            }
+            List<Filter> filters = new ArrayList<>(t.selector());
+            filters.add(new Filter(best.kind(), null, name, true));
+            filters.add(new Filter(Filter.Kind.ATTRIBUTE, attribute.getKey(), value, true));
+            int found = safely(() -> run.session().find(new QuerySpec(t.annotation().value(), t.tag(),
+                    List.copyOf(filters), scope, inTemplate)).size(), 0);
+            if (found == 1) {
+                return prefix + "find(" + t.type().getSimpleName() + ".class)." + best.code(name)
+                        + ".withAttribute(\"" + attribute.getKey() + "\", \"" + value + "\")";
+            }
+        }
+        return null;
     }
 
     /** How many components the lookup by {@code namer} finds inside {@code container}; 0 when it can't be run. */
