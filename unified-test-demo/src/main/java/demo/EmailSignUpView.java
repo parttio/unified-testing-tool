@@ -14,9 +14,9 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
  */
 @AnonymousAllowed
 @Route("sign-up")
-public class SignUpView extends VerticalLayout {
+public class EmailSignUpView extends VerticalLayout {
 
-    public SignUpView() {
+    public EmailSignUpView() {
         EmailField email = new EmailField("Email");
         email.setPlaceholder("name@example.com");
         email.setHelperText("We send the confirmation there");
