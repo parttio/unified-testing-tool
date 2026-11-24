@@ -121,6 +121,14 @@ page becomes the notes of the next alpha.
   default, a statement calling a login element (`LoginOverlayElement`, `LoginFormElement` or a page object extending
   one) gets a Migration Marker suggesting `@WithMockUser`. `FindTestClassesToMigrate` names the annotation such a
   class gets in a new `Annotation` column.
+- **Escape Hatch scenarios are counted apart under "Scenarios without a check"**
+  ([#533](https://github.com/parttio/unified-testing-tool/issues/533)): after a TestBench migration, a scenario that
+  checks with JUnit or AssertJ assertions on Escape Hatch reads looked unchecked, and such scenarios filled the list.
+  A passing scenario without a check that recorded an Escape Hatch gap is no longer listed: one line after the list
+  counts them, `13 more end in Escape Hatch code, whose checks the report can't see: …`, and points to resolving
+  their Migration Markers or moving their checks to `assertThat(..)`. `report.html` shows them after that line with
+  an *Escape Hatch* badge instead of *no check*; `summary.json` adds `escapeHatch` next to `unchecked`, whose meaning
+  is unchanged.
 - **`UnifiedDatePicker.setValue(..)` sets a picker whose calendar is open, though its field is hidden**
   ([#516](https://github.com/parttio/unified-testing-tool/issues/516)): such as a week picker an application opens
   from a badge of its own. Auto-Wait waits for the field to be visible and enabled, or for the calendar to be open.

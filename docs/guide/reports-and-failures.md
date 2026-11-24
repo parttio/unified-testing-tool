@@ -358,8 +358,15 @@ A test that fills a form, clicks *Save* and stops there passes whether or not th
 - **A check** is a retrying assertion, `assertThat(..)` from `UnifiedAssertions`, which shows as a `see` or `see no` User Step. The steps after a scenario's last check are the ones listed.
 - **Reading a value counts too.** `assertEquals("Alan", name.getValue())` records no User Step, but the Unified API counts that the test read a value after its last action, and takes the test to assert on it. Such a scenario is not listed. The retrying form, `assertThat(name).hasValue("Alan")`, is still the better one: it waits for the value on every Testing Tool, and its failure names the User Step ([Assertions and waiting](assertions-and-waiting.md)).
 - **Not listed either:** a scenario that ends on `page.waitUntil(..)` or an Escape Hatch call, since the check may be in there, and a passing scenario with a failed User Step, since the test expected that failure (`assertThrows`).
+- **Escape Hatch scenarios are counted, not listed.** After the Escape Hatch call the Unified API sees nothing: a migrated test that reads TestBench elements and checks them with `assertEquals` or AssertJ looks unchecked. So a scenario without a check that used an Escape Hatch anywhere is counted on one line after the list, with the first three names:
 
-The section reports; it fails no test. It can't tell whether a check is the right one, only that the last steps have none. In `report.html` these scenarios have a section of their own and a *no check* badge, and `summary.json` marks them with `unchecked`.
+    ```markdown
+    13 more end in Escape Hatch code, whose checks the report can't see: Edit an order, Add a product, Log out, … Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them checked here.
+    ```
+
+    The list keeps the scenarios that really check nothing, and the count shrinks as you resolve the Migration Markers ([Migrating from TestBench](../migrating-from-testbench.md#what-it-leaves-for-you)). When only Escape Hatch scenarios are unchecked, the section is that line alone.
+
+The section reports; it fails no test. It can't tell whether a check is the right one, only that the last steps have none. In `report.html` these scenarios have a section of their own and a *no check* badge, the Escape Hatch ones after their count line with an *Escape Hatch* badge, and `summary.json` marks them with `unchecked`, and `escapeHatch` true for the Escape Hatch ones.
 
 ## The HTML report
 
@@ -411,7 +418,7 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the 
 - **Every scenario** is listed, passed or failed, with the directory of its files. Paths are relative to the evidence directory, so they work in a downloaded CI artifact too.
 - **A failed scenario** carries the text of the failed User Step, the `failure` object of its `user-steps.json` unchanged (expected, found, Near Misses, *Did you mean*, the code path), and its failure evidence.
 - **A scenario that differs on another Testing Tool** says `differsOn`: the tool, its status there, where the User Steps part, and the failure from there.
-- **A passing scenario without a check** says `unchecked` (`all` or `end`) and lists the User Steps nothing checks.
+- **A passing scenario without a check** says `unchecked` (`all` or `end`) and lists the User Steps nothing checks; `escapeHatch` says whether it used an Escape Hatch, so the summary counts it apart.
 - **A scenario the pull request changed** says `new` or `changed`, the changed files it calls from, and how many User Steps were added and removed against the Base Run.
 
 The User Steps themselves stay in each test's `user-steps.json`. The file is versioned (`schemaVersion`); the fields are in the spec, [`summary.json`, schema version 1](../spec/12-readable-tests.md#summaryjson-schema-version-1).

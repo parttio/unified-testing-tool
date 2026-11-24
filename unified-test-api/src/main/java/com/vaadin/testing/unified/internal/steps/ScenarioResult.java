@@ -90,6 +90,25 @@ public record ScenarioResult(String testClass, String testMethod, String display
                 : Optional.of(new Unchecked(!checked[0], List.copyOf(pending)));
     }
 
+    /**
+     * Whether the scenario recorded an Escape Hatch gap anywhere, step groups opened. Its checks may then be in
+     * code the reports can't see (JUnit or AssertJ assertions on what the Escape Hatch read), so a scenario
+     * without a check that has one is counted apart from the others.
+     */
+    public boolean escapeHatch() {
+        return escapeHatch(steps);
+    }
+
+    private static boolean escapeHatch(List<Map<String, Object>> entries) {
+        for (Map<String, Object> entry : entries) {
+            if ("gap".equals(string(entry, "type")) && "Escape Hatch".equals(string(entry, "reason"))
+                    || escapeHatch(entries(entry.get("steps")))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void unchecked(List<Map<String, Object>> entries, List<String> pending, boolean[] checked) {
         for (Map<String, Object> entry : entries) {
             String type = string(entry, "type");

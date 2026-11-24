@@ -79,13 +79,23 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             h.append("</section>\n");
         }
         List<ScenarioResult> unchecked = summary.unchecked();
-        if (!unchecked.isEmpty()) {
-            h.append("<section id=\"unchecked\">\n<h2>Scenarios without a check</h2>\n<p class=\"lead\">")
-                    .append(unchecked.size()).append(unchecked.size() == 1 ? " passing scenario ends"
-                            : " passing scenarios end")
-                    .append(" on User Steps that nothing checks: no <code>see</code> step follows them, and the")
-                    .append(" test reads no value after them.</p>\n");
-            unchecked.forEach(s -> scenario(h, s, false, false, false));
+        List<ScenarioResult> escapeHatch = summary.uncheckedEscapeHatch();
+        if (!unchecked.isEmpty() || !escapeHatch.isEmpty()) {
+            h.append("<section id=\"unchecked\">\n<h2>Scenarios without a check</h2>\n");
+            if (!unchecked.isEmpty()) {
+                h.append("<p class=\"lead\">").append(unchecked.size()).append(unchecked.size() == 1
+                        ? " passing scenario ends" : " passing scenarios end")
+                        .append(" on User Steps that nothing checks: no <code>see</code> step follows them, and the")
+                        .append(" test reads no value after them.</p>\n");
+                unchecked.forEach(s -> scenario(h, s, false, false, false));
+            }
+            if (!escapeHatch.isEmpty()) {
+                h.append("<p class=\"lead\">")
+                        .append(esc(RunSummary.escapeHatchLead(escapeHatch.size(), !unchecked.isEmpty())))
+                        .append(". ").append(esc(RunSummary.ESCAPE_HATCH_POINTER))
+                        .append(" <code>assertThat(..)</code>, to have them checked here.</p>\n");
+                escapeHatch.forEach(s -> scenario(h, s, false, false, false));
+            }
             h.append("</section>\n");
         }
         h.append("<section id=\"passing\" hidden>\n<h2>Passing scenarios</h2>\n");
@@ -231,7 +241,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         }
         Optional<ScenarioResult.Unchecked> unchecked = s.unchecked();
         if (unchecked.isPresent()) {
-            h.append(" <span class=\"badge unchecked\">no check</span>");
+            h.append(s.escapeHatch() ? " <span class=\"badge escape-hatch\">Escape Hatch</span>"
+                    : " <span class=\"badge unchecked\">no check</span>");
         }
         if (s.durationMs() > 0) {
             h.append(" <span class=\"dur\">").append(duration(s.durationMs())).append("</span>");
