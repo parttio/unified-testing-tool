@@ -430,7 +430,10 @@ final class LookupFailures {
 
     // ---------------------------------------------------------------- several matches
 
-    /** {@code 2: text field “City” in container (test id “billing”), text field “City” in container (…)}. */
+    /**
+     * {@code 2: text field “City” in container (test id “billing”), text field “City” in container (…) (hidden)}: a
+     * listed match that is not visible is marked, as in Near Misses.
+     */
     private static String several(ElementSource source, int lastCount) {
         List<UnifiedElement> matches = source.resolveNow();
         if (matches.size() < 2) {
@@ -441,7 +444,8 @@ final class LookupFailures {
         List<ElementFacts> facts = facts(source.run(), listed);
         String kind = StepTarget.kindOf(source);
         List<String> described = new ArrayList<>();
-        for (ElementFacts f : facts) {
+        for (int i = 0; i < facts.size(); i++) {
+            ElementFacts f = facts.get(i);
             StringBuilder sb = new StringBuilder(kind);
             String name = f == null ? null : probe != null && probe.kind() != null ? f.value(probe.kind())
                     : probe != null ? probe.wanted() : f.label() != null && !f.label().isBlank() ? f.label() : null;
@@ -452,6 +456,9 @@ final class LookupFailures {
                 sb.append(" in container (test id ").append(quote(f.ancestorTestId())).append(')');
             } else if (f != null && f.ancestorId() != null) {
                 sb.append(" in container (id ").append(quote(f.ancestorId())).append(')');
+            }
+            if (hidden(listed.get(i))) {
+                sb.append(" (hidden)");
             }
             described.add(sb.toString());
         }
