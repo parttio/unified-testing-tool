@@ -26,6 +26,11 @@ public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> 
     default UnifiedGridRow row() { return GridSupport.row(this); }
     /** The row at this index. */
     default UnifiedGridRow row(int index) { return GridSupport.row(this, index); }
+    /**
+     * The Findable View of the grid: its columns and rows, each with the lookup on this grid that finds it
+     * ({@code row().withCellText("Name", "Alan Turing")}). The first rows only; print it, don't assert on it.
+     */
+    default String describe() { return com.vaadin.testing.unified.internal.ItemsView.ofGrid(this); }
     /** All rows, not only the rendered ones. Immediate; use assertThat(grid).hasRowCount(n) to wait. */
     default int getRowCount() { return element().unwrap(GridAccess.class).rowCount(); }
 

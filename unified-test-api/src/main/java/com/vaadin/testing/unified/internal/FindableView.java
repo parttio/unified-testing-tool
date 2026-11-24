@@ -683,17 +683,22 @@ public final class FindableView {
         }
         sb.append(lines.size()).append(lines.size() == 1 ? " component\n" : " components\n");
         List<Line> shown = lines.subList(0, Math.min(MAX_LINES, lines.size()));
-        int width = Math.min(COLUMN, shown.stream().mapToInt(l -> l.description().length()).max().orElse(0));
-        for (Line line : shown) {
-            sb.append(line.description());
-            sb.append(" ".repeat(Math.max(2, width + 2 - line.description().length())));
-            sb.append(line.lookup()).append('\n');
-        }
+        appendLines(sb, shown);
         if (lines.size() > shown.size()) {
             sb.append("… and ").append(lines.size() - shown.size())
                     .append(" more: describe a container to see them\n");
         }
         return sb.toString();
+    }
+
+    /** The lines, each description padded so the lookups line up. */
+    static void appendLines(StringBuilder sb, List<Line> lines) {
+        int width = Math.min(COLUMN, lines.stream().mapToInt(l -> l.description().length()).max().orElse(0));
+        for (Line line : lines) {
+            sb.append(line.description());
+            sb.append(" ".repeat(Math.max(2, width + 2 - line.description().length())));
+            sb.append(line.lookup()).append('\n');
+        }
     }
 
     // ---------------------------------------------------------------- helpers
