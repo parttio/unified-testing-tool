@@ -317,7 +317,7 @@ public final class BrowserQueries {
 
     /**
      * Browser function
-     * {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId, internalPart]}:
+     * {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId, internalPart, data]}:
      * what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages; the text is
      * {@link #TEXT}'s, without a tooltip. The ancestor is the
      * nearest one with a {@code data-testid} or an {@code id}, crossing shadow roots to their hosts. Whether it is
@@ -335,7 +335,9 @@ public final class BrowserQueries {
               while (a && !a.getAttribute('data-testid') && !a.getAttribute('id')) a = up(a);
               return [str(label(e)), text(e), str(e.placeholder), e.getAttribute('data-testid'), accessibleName(e),
                   a ? a.getAttribute('data-testid') : null, a && !a.getAttribute('data-testid') ? a.getAttribute('id') : null,
-                  internalPart(e)];
+                  internalPart(e),
+                  Object.fromEntries([...e.attributes].filter(x => x.name.startsWith('data-') && x.name !== 'data-testid')
+                      .map(x => [x.name, x.value]))];
             }""".formatted(TEXT, ACCESSIBLE_NAME, LABEL, INTERNAL_PART);
 
     /** {@link #FACTS}' result as {@link com.vaadin.testing.unified.spi.ElementFacts}. */
@@ -345,8 +347,12 @@ public final class BrowserQueries {
         for (int i = 0; i < s.length && i < values.size(); i++) {
             s[i] = values.get(i) == null ? null : String.valueOf(values.get(i));
         }
+        java.util.Map<String, String> data = new java.util.HashMap<>();
+        if (values.size() > 8 && values.get(8) instanceof java.util.Map<?, ?> m) {
+            m.forEach((k, v) -> data.put(String.valueOf(k), v == null ? "" : String.valueOf(v)));
+        }
         return new com.vaadin.testing.unified.spi.ElementFacts(s[0], s[1], s[2], s[3], s[4], s[5], s[6],
-                Boolean.parseBoolean(s[7]));
+                Boolean.parseBoolean(s[7]), data);
     }
 
     /**

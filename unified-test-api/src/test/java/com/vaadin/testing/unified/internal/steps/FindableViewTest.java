@@ -135,6 +135,35 @@ public class FindableViewTest {
     }
 
     @Test
+    void alikeComponentsAreToldApartByADataAttributeOnlyTheirsHas() {
+        fake.add("vaadin-button", "text", "Pin", "data-pin-date", "2026-11-23", "data-kind", "meal")
+                .add("vaadin-button", "text", "Pin", "data-pin-date", "2026-11-24", "data-kind", "meal")
+                .add("vaadin-button", "text", "Save", "data-testid", "save", "data-kind", "form")
+                .add("vaadin-button", "text", "Save", "data-testid", "save", "data-kind", "form");
+
+        assertEquals(List.of(
+                // data-kind is shared, data-pin-date is not: the first attribute only this one has
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-23\")",
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-24\")",
+                // the test id is a name of its own, and no data-* attribute tells these apart
+                "button “Save”  not unique: 2 alike",
+                "button “Save”  not unique: 2 alike"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
+    void aDataAttributeStillTellsThemApartUnderFlowsRoot() {
+        // a browser sees Flow's root, ROOT-<n>, as the nearest ancestor with an id: never a container to name
+        fake.add("vaadin-button", "text", "Pin", "data-pin-date", "2026-11-23", "inId", "ROOT-2521314")
+                .add("vaadin-button", "text", "Pin", "data-pin-date", "2026-11-24", "inId", "ROOT-2521314");
+
+        assertEquals(List.of(
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-23\")",
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-24\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
     void aSecretValueIsMasked() {
         fake.add("vaadin-text-field", "label", "API key", "value", page.secret("s3cr3t-key"));
 
