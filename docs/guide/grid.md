@@ -39,6 +39,12 @@ Whether a row is there, and how many match, are retrying assertions: `assertThat
 
 Row actions (`click()`, `select()`, `toggleDetails()`) are actions like any other: they wait for the grid and the row (Auto-Wait), and show in the reports as `click row where Name is “Alan Turing” in grid`.
 
+A row's `toString()` *(unreleased)* reads the same way, and a column too (`column “Name” in grid`), so a [User Task](structuring-a-scenario.md#user-tasks) named after a row reads as the reports do. Reading it as text asks the grid nothing:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/GridTest.java:namesAUserTaskAfterARow"
+```
+
 ## Reading and checking rows
 
 ```java

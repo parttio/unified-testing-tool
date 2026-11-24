@@ -40,11 +40,13 @@ final class FakePage {
     /** The errors the fake browser's console holds until they are read. */
     final List<String> console = new CopyOnWriteArrayList<>();
     final StepRecorder steps = new StepRecorder();
+    /** Every call into the fake adapter: its session, its elements and their grids. */
+    final java.util.concurrent.atomic.AtomicInteger adapterCalls = new java.util.concurrent.atomic.AtomicInteger();
     final UnifiedPageImpl page;
 
     FakePage() {
         AdapterSession session = (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
-                new Class<?>[] { AdapterSession.class }, (proxy, method, args) -> switch (method.getName()) {
+                new Class<?>[] { AdapterSession.class }, counted((proxy, method, args) -> switch (method.getName()) {
                     case "find" -> find((QuerySpec) args[0]);
                     case "facts" -> facts((List<?>) args[0]);
                     case "isAt" -> true;
@@ -63,7 +65,7 @@ final class FakePage {
                     }
                     case "hashCode" -> 1;
                     default -> null;
-                });
+                }));
         steps.session(null, session);
         page = new UnifiedPageImpl(new TestRun(TestingTool.BROWSERLESS, session, Duration.ofMillis(200), steps,
                 null));
@@ -136,7 +138,7 @@ final class FakePage {
 
     private UnifiedElement elementProxy(Map<String, String> component) {
         return (UnifiedElement) Proxy.newProxyInstance(getClass().getClassLoader(),
-                new Class<?>[] { UnifiedElement.class }, (proxy, method, args) -> switch (method.getName()) {
+                new Class<?>[] { UnifiedElement.class }, counted((proxy, method, args) -> switch (method.getName()) {
                     case "isVisible" -> {
                         if ("throws".equals(component.get("visible"))) {
                             throw new IllegalStateException("the element went stale");
@@ -178,7 +180,7 @@ final class FakePage {
                     case "hashCode" -> System.identityHashCode(proxy);
                     case "equals" -> proxy == args[0];
                     default -> null;
-                });
+                }));
     }
 
     /**
@@ -315,19 +317,28 @@ final class FakePage {
         return component.containsKey("headers") || component.containsKey("rows");
     }
 
-    private static GridAccess grid(Map<String, String> component) {
+    private GridAccess grid(Map<String, String> component) {
         List<String> headers = List.of(component.getOrDefault("headers", "").split(","));
         String rows = component.getOrDefault("rows", "");
         List<String[]> cells = rows.isEmpty() ? List.of()
                 : java.util.Arrays.stream(rows.split(";")).map(r -> r.split("\\|", -1)).toList();
-        return (GridAccess) Proxy.newProxyInstance(FakePage.class.getClassLoader(), new Class<?>[] { GridAccess.class },
-                (proxy, method, args) -> switch (method.getName()) {
+        return (GridAccess) Proxy.newProxyInstance(getClass().getClassLoader(), new Class<?>[] { GridAccess.class },
+                counted((proxy, method, args) -> switch (method.getName()) {
                     case "rowCount" -> cells.size();
                     case "columnHeaders" -> headers;
                     case "cellText" -> cells.get((Integer) args[0])[(Integer) args[1]];
                     case "columnTexts" -> cells.stream().map(r -> r[(Integer) args[0]]).toList();
+                    case "isSelected" -> List.of(component.getOrDefault("selected", "").split(","))
+                            .contains(String.valueOf(args[0]));
                     default -> method.isDefault() ? InvocationHandler.invokeDefault(proxy, method, args) : null;
-                });
+                }));
+    }
+
+    private InvocationHandler counted(InvocationHandler handler) {
+        return (proxy, method, args) -> {
+            adapterCalls.incrementAndGet();
+            return handler.invoke(proxy, method, args);
+        };
     }
 
     /** The recorded steps as text, one line each, without the header line. */
