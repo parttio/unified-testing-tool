@@ -613,28 +613,31 @@ public final class UnifiedAssertions {
         GridRowAssert(UnifiedGrid.UnifiedGridRow row) { this.row = row; this.run = GridSupport.runOf(row.grid()); }
 
         private GridRowAssert check(String expectation, Supplier<?> actual, Predicate<Object> ok) {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), expectation, null, actual,
-                    ok);
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row), expectation, null,
+                    actual, ok);
             return this;
         }
 
         /** At least one row matches. */
         public GridRowAssert exists() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "to exist", null,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row),
+                    "to exist", null,
                     () -> matches(GridSupport.countNow(row)), v -> count(v) > 0);
             return this;
         }
 
         /** No row matches, e.g. after it was deleted. */
         public GridRowAssert doesNotExist() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "not to exist", null,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row),
+                    "not to exist", null,
                     () -> matches(GridSupport.countNow(row)), v -> count(v) == 0);
             return this;
         }
 
         /** Exactly this many rows match. */
         public GridRowAssert hasCount(int expected) {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "to have count", expected,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row),
+                    "to have count", expected,
                     () -> GridSupport.countNow(row), v -> Objects.equals(v, expected));
             return this;
         }
@@ -663,14 +666,16 @@ public final class UnifiedAssertions {
         }
 
         public GridColumnAssert isSortedAscending() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to be sorted",
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), GridSupport.codeOf(column),
+                    "to be sorted",
                     "ASCENDING", column::getSortDirection,
                     v -> v == com.vaadin.flow.data.provider.SortDirection.ASCENDING);
             return this;
         }
 
         public GridColumnAssert isSortedDescending() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to be sorted",
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), GridSupport.codeOf(column),
+                    "to be sorted",
                     "DESCENDING", column::getSortDirection,
                     v -> v == com.vaadin.flow.data.provider.SortDirection.DESCENDING);
             return this;
@@ -678,7 +683,8 @@ public final class UnifiedAssertions {
 
         public GridColumnAssert hasCellTexts(String... expected) {
             List<String> list = List.of(expected);
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to have cell texts",
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), GridSupport.codeOf(column),
+                    "to have cell texts",
                     list, column::getCellTexts, v -> Objects.equals(v, list));
             return this;
         }

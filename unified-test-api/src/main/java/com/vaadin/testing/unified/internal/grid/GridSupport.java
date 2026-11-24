@@ -71,6 +71,16 @@ public final class GridSupport {
         return column instanceof Column c ? c.target() : StepTarget.of(column.toString());
     }
 
+    /** The row as the code that finds it, {@code row().withCellText("Name", "Alan")}, for failure messages. */
+    public static String codeOf(UnifiedGridRow row) {
+        return row instanceof Row r ? r.code() : row.toString();
+    }
+
+    /** The column as the code that finds it, {@code column("Name")}, for failure messages. */
+    public static String codeOf(UnifiedGridColumn column) {
+        return column instanceof Column c ? c.code() : column.toString();
+    }
+
     /** How many rows a row from {@link UnifiedGrid#row()} matches right now; no waiting. */
     public static int countNow(UnifiedGridRow row) {
         return ((Row) row).matching(access(row.grid())).size();
@@ -245,7 +255,7 @@ public final class GridSupport {
         // ------------------------------------------------------------ actions (Auto-Wait)
 
         private void act(String verb, String action, BiConsumer<GridAccess, Integer> body) {
-            record(grid, () -> Phrase.of(verb, target()), action + " " + this + " of",
+            record(grid, () -> Phrase.of(verb, target()), action + " " + code() + " of",
                     access -> body.accept(access, getIndex()));
         }
 
@@ -279,14 +289,14 @@ public final class GridSupport {
 
         @Override
         public Scope cell(String columnHeader) {
-            return scope(grid, this + ".cell(\"" + columnHeader + "\")",
+            return scope(grid, code() + ".cell(\"" + columnHeader + "\")",
                     StepTarget.of("cell").withName(columnHeader).withScope(target().renderWithScope()),
                     access -> access.cell(getIndex(), columnIndex(access, columnHeader)));
         }
 
         @Override
         public Scope cell(int columnIndex) {
-            return scope(grid, this + ".cell(" + columnIndex + ")",
+            return scope(grid, code() + ".cell(" + columnIndex + ")",
                     StepTarget.of("cell").withQualifier(ordinalWords(columnIndex))
                             .withScope(target().renderWithScope()),
                     access -> access.cell(getIndex(), columnIndex(access, columnIndex)));
@@ -297,13 +307,19 @@ public final class GridSupport {
 
         @Override
         public Scope details() {
-            return scope(grid, this + ".details()",
+            return scope(grid, code() + ".details()",
                     StepTarget.of("details").withScope(target().renderWithScope()),
                     access -> access.details(getIndex()));
         }
 
+        /** The row as its User Step target, grid scope included; no round trip. */
         @Override
         public String toString() {
+            return target().renderWithScope();
+        }
+
+        /** {@code row().withCellText("Name", "Alan Turing")}: the code that finds the row. */
+        String code() {
             StringBuilder sb = new StringBuilder(fixedIndex == null ? "row()" : "row(" + fixedIndex + ")");
             filters.forEach(f -> sb.append('.').append(f));
             if (selectedOnly) {
@@ -343,7 +359,7 @@ public final class GridSupport {
 
         @Override
         public Scope header() {
-            return scope(grid, this + ".header()",
+            return scope(grid, code() + ".header()",
                     StepTarget.of("header").withScope(target().renderWithScope()),
                     access -> access.header(getIndex()));
         }
@@ -352,7 +368,7 @@ public final class GridSupport {
         public void sort(SortDirection direction) {
             record(grid, () -> Phrase.of("sort", target())
                             .withTrailing(direction.name().toLowerCase(java.util.Locale.ROOT)),
-                    "sort " + this + " of", access -> access.sort(getIndex(), direction));
+                    "sort " + code() + " of", access -> access.sort(getIndex(), direction));
         }
 
         /** {@code column “Name”} in the grid, for the User Step reports. */
@@ -370,8 +386,14 @@ public final class GridSupport {
             return access(grid).sortDirection(getIndex());
         }
 
+        /** The column as its User Step target, grid scope included; no round trip. */
         @Override
         public String toString() {
+            return target().renderWithScope();
+        }
+
+        /** {@code column("Name")}: the code that finds the column. */
+        String code() {
             return switch (by) {
                 case HEADER -> "column(\"" + name + "\")";
                 case ID -> "columnWithId(\"" + name + "\")";

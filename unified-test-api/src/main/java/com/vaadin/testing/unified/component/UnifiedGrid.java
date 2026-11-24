@@ -54,7 +54,9 @@ public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> 
 
     /**
      * A lazy row. From {@link #row()}, its filters narrow the rows it stands for; each returns a new row and
-     * leaves this one unchanged. Actions Auto-Wait for the grid and for exactly one matching row.
+     * leaves this one unchanged. Actions Auto-Wait for the grid and for exactly one matching row. Its
+     * {@code toString()} reads as the target of its User Steps, {@code row where Name is “Alan Turing” in grid}, so
+     * that it reads right in a User Task name: {@code page.step("Edit " + row, ..)}. It asks the grid nothing.
      */
     interface UnifiedGridRow {
         // filters
@@ -94,6 +96,10 @@ public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> 
         Scope details();
     }
 
+    /**
+     * A lazy column. Its {@code toString()} reads as the target of its User Steps, {@code column “Name” in grid},
+     * and asks the grid nothing.
+     */
     interface UnifiedGridColumn {
         UnifiedGrid grid();
         /** Index among the visible columns. */
