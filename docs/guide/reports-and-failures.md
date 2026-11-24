@@ -435,7 +435,7 @@ mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScop
     -Dexec.args="show-trace target/surefire-reports/unified-evidence/EditPersonTest/editsAPerson/trace.zip"
 ```
 
-A trace is about 1 MB per test, a screenshot about 130 KB per step. With snapshots on, the demo's tests on Playwright took 7 minutes instead of 4 and wrote 542 screenshots (74 MB), so turn them on to look into a test rather than on every CI run. In CI, `trace=on-failure` keeps what you need to see why a test failed and costs little when tests pass. Values passed through `page.secret(..)` are masked in text snapshots, and Browserless trees show a password field's value as `••••`; screenshots and traces show the page as the browser drew it, where password fields show dots.
+A trace is about 1 MB per test, a screenshot about 130 KB per step. With snapshots on, the demo's tests on Playwright took 7 minutes instead of 4 and wrote 542 screenshots (74 MB), so turn them on to look into a test rather than on every CI run. In CI, `trace=on-failure` keeps what you need to see why a test failed, but it records the trace of every test and only drops it when the test passes: on this project's demo it made the Playwright run about a fifth slower. To pay only when a test fails, run without the trace and, if tests failed, run those again with it, as this repository's CI does (`.github/workflows/tests.yml`). Values passed through `page.secret(..)` are masked in text snapshots, and Browserless trees show a password field's value as `••••`; screenshots and traces show the page as the browser drew it, where password fields show dots.
 
 ## The GitHub job summary
 
