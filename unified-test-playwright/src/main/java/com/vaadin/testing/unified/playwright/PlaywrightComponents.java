@@ -209,6 +209,10 @@ final class PlaywrightComponents {
     static {
         register(com.vaadin.flow.component.textfield.TextArea.class,
                 dramafinder(org.vaadin.addons.dramafinder.element.TextAreaElement.class));
+        register(com.vaadin.flow.component.textfield.EmailField.class,
+                dramafinder(org.vaadin.addons.dramafinder.element.EmailFieldElement.class));
+        register(com.vaadin.flow.component.textfield.PasswordField.class,
+                dramafinder(org.vaadin.addons.dramafinder.element.PasswordFieldElement.class));
         register(com.vaadin.flow.component.textfield.IntegerField.class,
                 dramafinder(org.vaadin.addons.dramafinder.element.IntegerFieldElement.class));
         register(com.vaadin.flow.component.textfield.BigDecimalField.class,

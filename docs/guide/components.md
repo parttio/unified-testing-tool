@@ -17,7 +17,16 @@ Every Wrapper has:
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:textFields"
 ```
 
-`UnifiedTextArea` works the same way.
+`UnifiedTextArea`, `UnifiedEmailField` and `UnifiedPasswordField` work the same way: they share the text-value
+contract (`setValue`, `clear`, `getValue`, the label, helper text and validation getters) and the same checks.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/SignUpTest.java:signsUp"
+```
+
+Whether an email address is well formed is the field's validation: `isInvalid()` and `hasErrorMessage(..)` read it
+as they do on any field. What is typed into a password field reads `••••` in the User Steps, and a failed check on it
+shows `“••••”` for its values, expected and found: `Expected password field “Password” to have value “••••”`.
 
 ## Typed values
 

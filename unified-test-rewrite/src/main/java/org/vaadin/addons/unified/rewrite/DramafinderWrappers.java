@@ -98,7 +98,12 @@ final class DramafinderWrappers {
                     Map.of("typeAndSubmit", "send", "isEnabled", "isEnabled", "isVisible", "isVisible",
                             "focus", "element().focus"), VISIBILITY),
             ELEMENT + "MessageListElement", new Wrapper(COMPONENT + "UnifiedMessageList", COMMON_FILTERS,
-                    same("isVisible"), with(VISIBILITY, Map.of("assertMessageCount", "hasMessageCount", "assertEmpty", "isEmpty")))))
+                    same("isVisible"), with(VISIBILITY, Map.of("assertMessageCount", "hasMessageCount", "assertEmpty", "isEmpty")))), Map.of(
+            // an email or password field: the same text-value Wrapper, of its own type (#555)
+            ELEMENT + "EmailFieldElement", new Wrapper(COMPONENT + "UnifiedEmailField",
+                    union(COMMON_FILTERS, LABEL_FILTERS, Set.of("withPlaceholder")), TEXT_FIELD_METHODS, FIELD_ASSERTIONS),
+            ELEMENT + "PasswordFieldElement", new Wrapper(COMPONENT + "UnifiedPasswordField",
+                    union(COMMON_FILTERS, LABEL_FILTERS, Set.of("withPlaceholder")), TEXT_FIELD_METHODS, FIELD_ASSERTIONS)))
             .flatMap(m -> m.entrySet().stream()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     /** Elements whose {@code get(page)} finds the first one on the page: the Wrapper finds it, and a second one fails loudly. */
@@ -146,6 +151,10 @@ final class DramafinderWrappers {
                     with(same("clear", "isVisible", "isEnabled"), Map.of("fill", "setValue", "inputValue", "getValue")), Map.of()),
             "com.vaadin.flow.component.textfield.TextArea", new Wrapper(COMPONENT + "UnifiedTextArea", COMMON_FILTERS,
                     with(same("clear", "isVisible", "isEnabled"), Map.of("fill", "setValue", "inputValue", "getValue")), Map.of()),
+            "com.vaadin.flow.component.textfield.EmailField", new Wrapper(COMPONENT + "UnifiedEmailField", COMMON_FILTERS,
+                    with(same("clear", "isVisible", "isEnabled"), Map.of("fill", "setValue", "inputValue", "getValue")), Map.of()),
+            "com.vaadin.flow.component.textfield.PasswordField", new Wrapper(COMPONENT + "UnifiedPasswordField", COMMON_FILTERS,
+                    with(same("clear", "isVisible", "isEnabled"), Map.of("fill", "setValue", "inputValue", "getValue")), Map.of()),
             "com.vaadin.flow.component.checkbox.Checkbox", new Wrapper(COMPONENT + "UnifiedCheckbox", COMMON_FILTERS,
                     same("check", "uncheck", "setChecked", "isChecked", "isVisible", "isEnabled"), Map.of()));
 
@@ -162,6 +171,8 @@ final class DramafinderWrappers {
             COMPONENT + "UnifiedButton", Set.of("isVisible", "isEnabled", "isDisabled"),
             COMPONENT + "UnifiedTextField", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
             COMPONENT + "UnifiedTextArea", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
+            COMPONENT + "UnifiedEmailField", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
+            COMPONENT + "UnifiedPasswordField", Set.of("isVisible", "isEnabled", "isDisabled", "hasValue"),
             COMPONENT + "UnifiedCheckbox", Set.of("isVisible", "isEnabled", "isDisabled", "isChecked"),
             CONTAINER, Set.of("isVisible", "isEnabled", "isDisabled"));
 

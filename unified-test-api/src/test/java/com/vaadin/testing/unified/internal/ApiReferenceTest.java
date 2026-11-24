@@ -56,6 +56,8 @@ class ApiReferenceTest {
             entry("UnifiedPage", "navigation-and-users.md"),
             entry("UnifiedTextField", "components.md#text-fields"),
             entry("UnifiedTextArea", "components.md#text-fields"),
+            entry("UnifiedEmailField", "components.md#text-fields"),
+            entry("UnifiedPasswordField", "components.md#text-fields"),
             entry("UnifiedNumberField", "components.md#typed-values"),
             entry("UnifiedIntegerField", "components.md#typed-values"),
             entry("UnifiedBigDecimalField", "components.md#typed-values"),

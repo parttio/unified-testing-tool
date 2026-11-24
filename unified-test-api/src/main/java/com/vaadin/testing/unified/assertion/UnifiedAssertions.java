@@ -63,6 +63,9 @@ public final class UnifiedAssertions {
     public static MultiSelectAssert assertThat(UnifiedMultiSelectComboBox field) { return new MultiSelectAssert(field); }
     public static TabSheetAssert assertThat(UnifiedTabSheet tabSheet) { return new TabSheetAssert(tabSheet); }
     public static TextAreaAssert assertThat(com.vaadin.testing.unified.component.UnifiedTextArea field) { return new TextAreaAssert(field); }
+    public static EmailFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedEmailField field) { return new EmailFieldAssert(field); }
+    /** Its values read {@code “••••”} in a failure, as they do in the User Steps. */
+    public static PasswordFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedPasswordField field) { return new PasswordFieldAssert(field); }
     public static IntegerFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedIntegerField field) { return new IntegerFieldAssert(field); }
     public static BigDecimalFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedBigDecimalField field) { return new BigDecimalFieldAssert(field); }
     public static DateTimePickerAssert assertThat(com.vaadin.testing.unified.component.UnifiedDateTimePicker field) { return new DateTimePickerAssert(field); }
@@ -226,6 +229,26 @@ public final class UnifiedAssertions {
             return self();
         }
 
+        /**
+         * {@link #check} on what a user typed: on a password field its text never reaches the failure, as it never
+         * reaches the User Steps, and reads {@code “••••”}, expected and found.
+         */
+        SELF checkTyped(String expectation, Object expected, Supplier<?> actual, Predicate<Object> ok) {
+            if (!secret()) {
+                return check(expectation, expected, actual, ok);
+            }
+            return check(expectation, Hidden.of(expected), () -> Hidden.of(actual.get()), v -> ok.test(Hidden.reveal(v)));
+        }
+
+        /** Whether what is typed into the component is hidden in the reports (a password field). */
+        private boolean secret() {
+            try {
+                return StepTarget.of(element).secret();
+            } catch (RuntimeException e) {
+                return false;
+            }
+        }
+
         /** At least one component matches the lookup (for a Wrapper from {@code all()}: one at its position). */
         public SELF exists() {
             int needed = Math.max(element.index(), 0) + 1;
@@ -271,6 +294,22 @@ public final class UnifiedAssertions {
         }
     }
 
+    /** A text, as a failure shows a secret one: {@code “••••”}. Empty text stays as it is: it hides nothing. */
+    private record Hidden(CharSequence text) {
+        static Object of(Object value) {
+            return value instanceof CharSequence text && !text.isEmpty() ? new Hidden(text) : value;
+        }
+
+        static Object reveal(Object value) {
+            return value instanceof Hidden hidden ? hidden.text : value;
+        }
+
+        @Override
+        public String toString() {
+            return "“" + com.vaadin.testing.unified.internal.steps.Phrase.MASK + "”";
+        }
+    }
+
     public static final class GenericAssert extends WrapperAssert<GenericAssert> {
         GenericAssert(UnifiedWrapper wrapper) { super(wrapper); }
     }
@@ -295,18 +334,31 @@ public final class UnifiedAssertions {
         }
     }
 
-    public static final class TextFieldAssert extends FieldAssert<TextFieldAssert> {
-        private final UnifiedTextField textField;
+    /** Value checks shared by the text fields ({@link com.vaadin.testing.unified.component.UnifiedTextInput}). */
+    public abstract static class TextValueAssert<SELF extends TextValueAssert<SELF>> extends FieldAssert<SELF> {
+        private final com.vaadin.testing.unified.component.UnifiedTextInput input;
 
-        TextFieldAssert(UnifiedTextField field) { super(field); this.textField = field; }
+        TextValueAssert(com.vaadin.testing.unified.component.UnifiedTextInput field) { super(field); this.input = field; }
 
-        public TextFieldAssert hasValue(String expected) {
-            return check("to have value", expected, textField::getValue, v -> Objects.equals(v, expected));
+        public SELF hasValue(String expected) {
+            return checkTyped("to have value", expected, input::getValue, v -> Objects.equals(v, expected));
         }
 
-        public TextFieldAssert isEmpty() {
-            return check("to be empty", null, textField::getValue, v -> v == null || v.toString().isEmpty());
+        public SELF isEmpty() {
+            return checkTyped("to be empty", null, input::getValue, v -> v == null || v.toString().isEmpty());
         }
+    }
+
+    public static final class TextFieldAssert extends TextValueAssert<TextFieldAssert> {
+        TextFieldAssert(UnifiedTextField field) { super(field); }
+    }
+
+    public static final class EmailFieldAssert extends TextValueAssert<EmailFieldAssert> {
+        EmailFieldAssert(com.vaadin.testing.unified.component.UnifiedEmailField field) { super(field); }
+    }
+
+    public static final class PasswordFieldAssert extends TextValueAssert<PasswordFieldAssert> {
+        PasswordFieldAssert(com.vaadin.testing.unified.component.UnifiedPasswordField field) { super(field); }
     }
 
     public static final class NumberFieldAssert extends FieldAssert<NumberFieldAssert> {
@@ -593,18 +645,8 @@ public final class UnifiedAssertions {
         }
     }
 
-    public static final class TextAreaAssert extends FieldAssert<TextAreaAssert> {
-        private final com.vaadin.testing.unified.component.UnifiedTextArea textArea;
-
-        TextAreaAssert(com.vaadin.testing.unified.component.UnifiedTextArea field) { super(field); this.textArea = field; }
-
-        public TextAreaAssert hasValue(String expected) {
-            return check("to have value", expected, textArea::getValue, v -> Objects.equals(v, expected));
-        }
-
-        public TextAreaAssert isEmpty() {
-            return check("to be empty", null, textArea::getValue, v -> v == null || v.toString().isEmpty());
-        }
+    public static final class TextAreaAssert extends TextValueAssert<TextAreaAssert> {
+        TextAreaAssert(com.vaadin.testing.unified.component.UnifiedTextArea field) { super(field); }
     }
 
     public static final class IntegerFieldAssert extends FieldAssert<IntegerFieldAssert> {

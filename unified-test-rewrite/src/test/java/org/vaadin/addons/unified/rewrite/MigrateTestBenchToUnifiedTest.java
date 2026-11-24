@@ -215,6 +215,43 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void emailAndPasswordFieldLookupsFindTheirWrappers() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.textfield.testbench.EmailFieldElement;
+                import com.vaadin.flow.component.textfield.testbench.PasswordFieldElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class SignUpTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void signsUp() {
+                        $(EmailFieldElement.class).withLabel("Email").single().setValue("ada@example.com");
+                        $(PasswordFieldElement.class).withLabel("Password").single().setValue("correct horse");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedEmailField;
+                import com.vaadin.testing.unified.component.UnifiedPasswordField;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class SignUpTest {
+
+                    @Test
+                    void signsUp(UnifiedPage page) {
+                        page.find(UnifiedEmailField.class).withLabel("Email").setValue("ada@example.com");
+                        page.find(UnifiedPasswordField.class).withLabel("Password").setValue("correct horse");
+                    }
+                }
+                """));
+    }
+
+    @Test
     void anchorLookupsFindTheUnifiedLink() {
         rewriteRun(java(
                 """

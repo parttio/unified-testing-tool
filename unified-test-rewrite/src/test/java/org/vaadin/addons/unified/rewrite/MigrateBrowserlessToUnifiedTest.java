@@ -176,6 +176,45 @@ class MigrateBrowserlessToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void emailAndPasswordFieldsBecomeTheirWrappers() {
+        rewriteRun(java(
+                """
+                import com.vaadin.browserless.BrowserlessTest;
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.flow.component.textfield.EmailField;
+                import com.vaadin.flow.component.textfield.PasswordField;
+                import org.junit.jupiter.api.Test;
+
+                class SignUpTest extends BrowserlessTest {
+                    @Test
+                    void signsUp() {
+                        navigate(Div.class);
+                        test($(EmailField.class).withCaption("Email").single()).setValue("ada@example.com");
+                        test($(PasswordField.class).withCaption("Password").single()).setValue("correct horse");
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.html.Div;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedEmailField;
+                import com.vaadin.testing.unified.component.UnifiedPasswordField;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class SignUpTest {
+                    @Test
+                    void signsUp(UnifiedPage page) {
+                        page.navigate(Div.class);
+                        page.find(UnifiedEmailField.class).withLabel("Email").setValue("ada@example.com");
+                        page.find(UnifiedPasswordField.class).withLabel("Password").setValue("correct horse");
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aLocalTakesTheWrapperType() {
         rewriteRun(java(
                 """

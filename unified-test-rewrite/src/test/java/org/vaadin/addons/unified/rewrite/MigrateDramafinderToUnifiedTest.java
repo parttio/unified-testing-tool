@@ -886,6 +886,57 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void emailAndPasswordFieldsBecomeTheirWrappers() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.EmailFieldElement;
+                import org.vaadin.addons.dramafinder.element.PasswordFieldElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class SignUpTest extends SpringPlaywrightIT {
+                    @Test
+                    void signsUp() {
+                        navigate(PeopleView.class);
+                        EmailFieldElement email = EmailFieldElement.getByLabel(page, "Email");
+                        email.setValue("ada@example.com");
+                        email.assertValue("ada@example.com");
+                        PasswordFieldElement password = PasswordFieldElement.getByLabel(page, "Password");
+                        password.setValue("correct horse");
+                        password.assertValid();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedEmailField;
+                import com.vaadin.testing.unified.component.UnifiedPasswordField;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class SignUpTest {
+                    @Test
+                    void signsUp(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedEmailField email = page.find(UnifiedEmailField.class).withLabel("Email");
+                        email.setValue("ada@example.com");
+                        assertThat(email).hasValue("ada@example.com");
+                        UnifiedPasswordField password = page.find(UnifiedPasswordField.class).withLabel("Password");
+                        password.setValue("correct horse");
+                        assertThat(password).isValid();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aLookupWithACallTheWrapperLacksStaysBehindTheEscapeHatch() {
         rewriteRun(java(VIEW), java(
                 """
