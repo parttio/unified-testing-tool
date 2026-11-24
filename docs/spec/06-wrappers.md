@@ -8,7 +8,7 @@ One component per interaction pattern. Every other component follows the same pa
 
 | Pattern | Wrapper | Status |
 |---|---|---|
-| Text value | `UnifiedTextField`, `UnifiedTextArea` (PasswordField, EmailField follow) | implemented |
+| Text value | `UnifiedTextField`, `UnifiedTextArea`, `UnifiedEmailField`, `UnifiedPasswordField` | implemented; *(unreleased)* `UnifiedEmailField` and `UnifiedPasswordField` ([#555](https://github.com/parttio/unified-testing-tool/issues/555)) share the text-value contract `UnifiedTextInput` (`setValue`, `clear`, `getValue`, `getPlaceholder`, and `UnifiedField`'s getters) with the other two; what is typed into a password field, and its values in a failed check, read `••••`, and the Findable View shows no value for it |
 | Typed value | `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker` | implemented; `UnifiedDatePicker.typeText(..)` and `UnifiedDateTimePicker.typeText(date, time)` type unparsed text; `UnifiedDateTimePicker.typeText(LocalDate, time)` types the date in the field's own format, for incomplete input on every Testing Tool; *(unreleased)* `UnifiedDatePicker.setValue(..)` is ready when the field is visible and enabled or its calendar is open (`opened`), so it sets a picker whose field is hidden but whose calendar the application opened, through its `value`, and closes the calendar as a pick does ([#516](https://github.com/parttio/unified-testing-tool/issues/516)) |
 | Boolean value | `UnifiedCheckbox` | implemented |
 | Single selection | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | implemented |

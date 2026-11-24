@@ -6,15 +6,8 @@ import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
 
+/** A {@link TextField}: single-line text. */
 @UnifiedComponent(TextField.class)
-public interface UnifiedTextField extends UnifiedField,
+public interface UnifiedTextField extends UnifiedTextInput,
         CommonFilters<UnifiedTextField>, LabelFilter<UnifiedTextField>, PlaceholderFilter<UnifiedTextField> {
-
-    // actions (Auto-Wait)
-    default void setValue(String value) { element().setValueAsUser(value); }
-    default void clear() { element().setValueAsUser(""); }
-
-    // getters (immediate)
-    default String getValue() { return element().getProperty("value"); }
-    default String getPlaceholder() { return element().getProperty("placeholder"); }
 }

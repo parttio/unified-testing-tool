@@ -13,6 +13,8 @@ import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
 import com.vaadin.testing.unified.component.UnifiedTextArea;
+import com.vaadin.testing.unified.component.UnifiedEmailField;
+import com.vaadin.testing.unified.component.UnifiedPasswordField;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.internal.ElementSource.FilterLabel;
 import com.vaadin.testing.unified.internal.failures.FailureParts;
@@ -44,6 +46,7 @@ final class LookupFailures {
 
     /** The Wrapper types a lookup by name may have meant instead ("another kind"), with their naming filter. */
     private static final List<Class<?>> OTHER_KINDS = List.of(UnifiedTextField.class, UnifiedTextArea.class,
+            UnifiedEmailField.class, UnifiedPasswordField.class,
             UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class, UnifiedComboBox.class,
             UnifiedMultiSelectComboBox.class, UnifiedDatePicker.class, UnifiedDateTimePicker.class,
             UnifiedCheckbox.class, UnifiedRadioButtonGroup.class, UnifiedButton.class);

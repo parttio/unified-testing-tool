@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.textfield.PasswordField;
+import com.vaadin.testing.unified.component.UnifiedEmailField;
+import com.vaadin.testing.unified.component.UnifiedPasswordField;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.UserStepVerb;
@@ -337,6 +339,26 @@ public class UserStepWordingTest {
         String json = new UserStepsReport("demo.FakeTest", "test", "test", "browserless", "passed", null,
                 fake.steps).json();
         assertFalse(json.contains("hunter2") || json.contains("k-123"), json);
+    }
+
+    /** The Core Set's password field hides what is typed into it, and its values in a failed check (#555). */
+    @Test
+    void corePasswordFieldIsMaskedInStepsAndFailures() {
+        fake.add("vaadin-password-field", "label", "Password", "value", "hunter")
+                .add("vaadin-email-field", "label", "Email");
+
+        fake.page.find(UnifiedPasswordField.class).withLabel("Password").setValue("hunter2");
+        fake.page.find(UnifiedEmailField.class).withLabel("Email").setValue("ada@example.com");
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> assertThat(fake.page.find(UnifiedPasswordField.class).withLabel("Password")).hasValue("hunter3"));
+
+        String lines = fake.lines();
+        assertTrue(lines.contains("fill password field “Password” with “••••”"), lines);
+        assertTrue(lines.contains("fill email field “Email” with “ada@example.com”"), lines);
+        assertTrue(lines.contains("see password field “Password” with value “••••”"), lines);
+        assertFalse(lines.contains("hunter"), lines);
+        assertTrue(error.getMessage().contains("password field “Password” to have value “••••”"), error.getMessage());
+        assertFalse(error.getMessage().contains("hunter"), error.getMessage());
     }
 
     @Test

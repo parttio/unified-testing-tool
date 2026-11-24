@@ -36,6 +36,8 @@ import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
 import com.vaadin.testing.unified.component.UnifiedTabSheet;
 import com.vaadin.testing.unified.component.UnifiedTabs;
 import com.vaadin.testing.unified.component.UnifiedTextArea;
+import com.vaadin.testing.unified.component.UnifiedEmailField;
+import com.vaadin.testing.unified.component.UnifiedPasswordField;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.component.UnifiedUpload;
 import com.vaadin.testing.unified.internal.steps.StepTarget;
@@ -90,8 +92,8 @@ public final class FindableView {
 
     /** The Wrapper types listed, in this order, before the custom Wrappers the test has looked up. */
     static final List<Class<?>> BUILT_IN = List.of(UnifiedDialog.class, UnifiedNotification.class,
-            UnifiedTextField.class, UnifiedTextArea.class, UnifiedNumberField.class, UnifiedIntegerField.class,
-            UnifiedBigDecimalField.class, UnifiedComboBox.class, UnifiedMultiSelectComboBox.class,
+            UnifiedTextField.class, UnifiedTextArea.class, UnifiedEmailField.class, UnifiedPasswordField.class,
+            UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class, UnifiedComboBox.class, UnifiedMultiSelectComboBox.class,
             UnifiedDatePicker.class, UnifiedDateTimePicker.class, UnifiedRadioButtonGroup.class,
             UnifiedCheckbox.class, UnifiedButton.class, UnifiedLink.class, UnifiedGrid.class, UnifiedTabs.class,
             UnifiedTabSheet.class, UnifiedMenuBar.class, UnifiedDetails.class, UnifiedUpload.class,
@@ -112,10 +114,10 @@ public final class FindableView {
 
     /**
      * The fields whose {@code value} property is what a user sees. A combo box's or a radio button group's is an
-     * item key in a browser, so they show none.
+     * item key in a browser, so they show none. A password field shows none: its value is a secret.
      */
     private static final Set<Class<?>> SHOWS_VALUE = Set.of(UnifiedTextField.class, UnifiedTextArea.class,
-            UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class,
+            UnifiedEmailField.class, UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class,
             UnifiedDatePicker.class, UnifiedDateTimePicker.class);
 
     /** Last words of a custom filter's name that make it a name, as in the User Steps: {@code withHeaderTitle}. */

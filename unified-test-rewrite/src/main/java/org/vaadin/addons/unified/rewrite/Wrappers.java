@@ -74,6 +74,15 @@ final class Wrappers {
                     with(COMMON_FILTERS, "withLabel"),
                     Set.of("setValue", "getValue", "clear", "getLabel", "getPlaceholder", "getHelperText",
                             "getErrorMessage", "isEnabled"))),
+            // an email or password field: the same text-value Wrapper, of its own type (#555)
+            Map.entry("com.vaadin.flow.component.textfield.testbench.EmailFieldElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedEmailField",
+                    with(COMMON_FILTERS, "withLabel"),
+                    Set.of("setValue", "getValue", "clear", "getLabel", "getPlaceholder", "getHelperText",
+                            "getErrorMessage", "isEnabled"))),
+            Map.entry("com.vaadin.flow.component.textfield.testbench.PasswordFieldElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedPasswordField",
+                    with(COMMON_FILTERS, "withLabel"),
+                    Set.of("setValue", "getValue", "clear", "getLabel", "getPlaceholder", "getHelperText",
+                            "getErrorMessage", "isEnabled"))),
             Map.entry("com.vaadin.flow.component.button.testbench.ButtonElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedButton",
                     // withLabel and withCaption become withText (ADR 0001), see FILTER_RENAMES
                     with(COMMON_FILTERS, "withText", "withLabel", "withCaption"),

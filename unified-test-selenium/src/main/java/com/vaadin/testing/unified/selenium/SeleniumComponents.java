@@ -199,6 +199,22 @@ final class SeleniumComponents {
                 return true;
             }
         });
+        register(com.vaadin.flow.component.textfield.EmailField.class, new Support() {
+            @Override
+            public boolean setValue(WebElement element, Object value, SeleniumSession session) {
+                session.testBench(element).wrap(com.vaadin.flow.component.textfield.testbench.EmailFieldElement.class)
+                        .setValue(value == null ? "" : value.toString());
+                return true;
+            }
+        });
+        register(com.vaadin.flow.component.textfield.PasswordField.class, new Support() {
+            @Override
+            public boolean setValue(WebElement element, Object value, SeleniumSession session) {
+                session.testBench(element).wrap(com.vaadin.flow.component.textfield.testbench.PasswordFieldElement.class)
+                        .setValue(value == null ? "" : value.toString());
+                return true;
+            }
+        });
         register(com.vaadin.flow.component.textfield.IntegerField.class, new Support() {
             @Override
             public boolean setValue(WebElement element, Object value, SeleniumSession session) {

@@ -162,6 +162,17 @@ Div, Flow's `Div`. Guide: [Working with components, Plain HTML and text](https:/
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
+### `UnifiedEmailField`
+
+Email field, Flow's `EmailField`. Guide: [Working with components, Text fields](https://parttio.github.io/unified-testing-tool/guide/components/#text-fields).
+
+- **Filters:** `withLabel(String)`, `withLabelContaining(String)`, `withPlaceholder(String)`
+- **Actions**, each with the User Step it reports:
+  - `clear()`: clear email field “…”
+  - `setValue(String)`: fill email field “…” with “…”
+- **Reads:** `getErrorMessage() → String`, `getHelperText() → String`, `getLabel() → String`, `getPlaceholder() → String`, `getValue() → String`, `isInvalid() → boolean`, `isRequired() → boolean`
+- **Checks:** those of every Wrapper, and `hasErrorMessage(String)`, `hasLabel(String)`, `hasValue(String)`, `isEmpty()`, `isInvalid()`, `isRequired()`, `isValid()`
+
 ### `UnifiedFooter`
 
 Footer, Flow's `Footer`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
@@ -327,6 +338,17 @@ Paragraph, Flow's `Paragraph`. Guide: [Working with components, Plain HTML and t
 - **Reads:** `getText() → String`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
+
+### `UnifiedPasswordField`
+
+Password field, Flow's `PasswordField`. Guide: [Working with components, Text fields](https://parttio.github.io/unified-testing-tool/guide/components/#text-fields).
+
+- **Filters:** `withLabel(String)`, `withLabelContaining(String)`, `withPlaceholder(String)`
+- **Actions**, each with the User Step it reports:
+  - `clear()`: clear password field “…”
+  - `setValue(String)`: fill password field “…” with “…”
+- **Reads:** `getErrorMessage() → String`, `getHelperText() → String`, `getLabel() → String`, `getPlaceholder() → String`, `getValue() → String`, `isInvalid() → boolean`, `isRequired() → boolean`
+- **Checks:** those of every Wrapper, and `hasErrorMessage(String)`, `hasLabel(String)`, `hasValue(String)`, `isEmpty()`, `isInvalid()`, `isRequired()`, `isValid()`
 
 ### `UnifiedRadioButtonGroup`
 
