@@ -317,7 +317,8 @@ final class PlaywrightSession implements AdapterSession {
                 : invokeStatic("find", new Class<?>[] { Locator.class, Class.class }, scope, type);
         List<Filter> inPage = new ArrayList<>();
         for (Filter f : filters) {
-            if (f.kind() == Filter.Kind.LABEL || f.kind() == Filter.Kind.ATTRIBUTE && f.value() == null) {
+            if (f.kind() == Filter.Kind.LABEL || f.kind() == Filter.Kind.ATTRIBUTE && f.value() == null
+                    || f.kind() == Filter.Kind.WITHOUT_ATTRIBUTE) {
                 // Dramafinder's withLabel reads the field's own label slot only; the label property or a FormLayout
                 // item's label is checked in the page, with the Unified API's matching, as on Selenium (#93)
                 inPage.add(f);
@@ -331,7 +332,7 @@ final class PlaywrightSession implements AdapterSession {
                 case TEST_ID -> "withTestId";
                 case ID -> "withId";
                 case CLASS_NAME -> "withClassName";
-                case THEME, ATTRIBUTE -> null;
+                case THEME, ATTRIBUTE, WITHOUT_ATTRIBUTE -> null;
             };
             if (f.kind() == Filter.Kind.THEME) {
                 query = invoke(query, "withTheme", new Class<?>[] { String.class }, f.value());

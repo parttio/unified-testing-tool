@@ -136,7 +136,11 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
             case THEME -> "theme";
             // UnifiedLink.withHref(..): where the link goes reads as such
             case ATTRIBUTE -> "href".equals(f.name()) ? "href" : "attribute " + f.name();
+            case WITHOUT_ATTRIBUTE -> "without attribute " + f.name();
         };
+        if (f.kind() == Filter.Kind.WITHOUT_ATTRIBUTE) {
+            return what;
+        }
         return what + (f.exact() ? " " : " containing ") + Phrase.quote(f.value());
     }
 

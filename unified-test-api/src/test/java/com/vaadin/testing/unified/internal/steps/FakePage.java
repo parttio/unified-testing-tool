@@ -81,7 +81,8 @@ final class FakePage {
                 .filter(c -> spec.tag().equals("*") || spec.tag().equals(c.get("tag")))
                 .filter(c -> spec.parent() == null || spec.parent().getProperty("testId") == null
                         || spec.parent().getProperty("testId").equals(c.get("in")))
-                .filter(c -> spec.filters().stream().allMatch(f -> f.kind() == Filter.Kind.ATTRIBUTE && f.value() == null
+                .filter(c -> spec.filters().stream().allMatch(f -> f.kind() == Filter.Kind.WITHOUT_ATTRIBUTE
+                        ? !c.containsKey(f.name()) : f.kind() == Filter.Kind.ATTRIBUTE && f.value() == null
                         ? c.containsKey(f.name()) : f.matches(c.get(property(f)))))
                 .map(this::element)
                 .toList();
@@ -106,7 +107,7 @@ final class FakePage {
             case ID -> "id";
             case CLASS_NAME -> "className";
             case THEME -> "theme";
-            case ATTRIBUTE -> f.name();
+            case ATTRIBUTE, WITHOUT_ATTRIBUTE -> f.name();
         };
     }
 

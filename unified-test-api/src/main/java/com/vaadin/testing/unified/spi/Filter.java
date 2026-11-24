@@ -6,10 +6,12 @@ import java.util.regex.Pattern;
  * One filter of a query, as the adapter receives it. {@code exact} is false for the {@code ...Containing}
  * variants, which match case-insensitively (as in Dramafinder). {@code name} is used by {@link Kind#ATTRIBUTE}; an
  * {@code ATTRIBUTE} filter whose {@code value} is null matches an element that has the attribute, whatever its value.
+ * {@link Kind#WITHOUT_ATTRIBUTE} matches an element that doesn't have the attribute {@code name}: the core adds it to
+ * tell apart component classes that share a tag (an {@code Anchor} is an {@code <a>} without {@code router-link}).
  */
 public record Filter(Kind kind, String name, String value, boolean exact) {
 
-    public enum Kind { LABEL, ACCESSIBLE_NAME, TEXT, PLACEHOLDER, TEST_ID, ID, CLASS_NAME, THEME, ATTRIBUTE }
+    public enum Kind { LABEL, ACCESSIBLE_NAME, TEXT, PLACEHOLDER, TEST_ID, ID, CLASS_NAME, THEME, ATTRIBUTE, WITHOUT_ATTRIBUTE }
 
     public boolean matches(String actual) {
         if (actual == null) {
@@ -55,7 +57,11 @@ public record Filter(Kind kind, String name, String value, boolean exact) {
             case CLASS_NAME -> "withClassName";
             case THEME -> "withTheme";
             case ATTRIBUTE -> "withAttribute";
+            case WITHOUT_ATTRIBUTE -> "withoutAttribute";
         };
+        if (kind == Kind.WITHOUT_ATTRIBUTE) {
+            return method + "(\"" + name + "\")";
+        }
         String arg = kind == Kind.ATTRIBUTE ? "\"" + name + "\", \"" + value + "\"" : "\"" + value + "\"";
         return method + (exact ? "" : "Containing") + "(" + arg + ")";
     }

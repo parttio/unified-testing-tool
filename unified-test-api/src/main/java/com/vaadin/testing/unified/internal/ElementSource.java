@@ -104,7 +104,9 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
 
     public String describe() {
         StringBuilder sb = new StringBuilder(wrapperName);
-        filters.forEach(f -> sb.append('.').append(f));
+        // what tells the class apart from others with its tag is the lookup's own, not the test's
+        filters.subList(SharedTags.filters(componentType, tag).size(), filters.size())
+                .forEach(f -> sb.append('.').append(f));
         coreFilterNames.forEach(n -> sb.append('.').append(n));
         if (parent != null) {
             sb.append(" inside ").append(parent.describe());

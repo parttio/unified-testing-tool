@@ -67,6 +67,15 @@ The same on every Testing Tool:
 | Shadow DOM | not searched by a lookup: neither Vaadin's components and the dev tools nor the app's own Templates. A test enters a Template explicitly ([Templates](#templates)) *(unreleased)* |
 | Grid cell components | found page-wide for the rows the grid rendered, as a browser has them |
 | No tag | a lookup for a component without a tag (`findComponent(Component.class)`, a `Composite`) fails at once on every Testing Tool: a browser can't find it |
+| Classes that share a tag | *(unreleased)* Browserless finds a component by its class, a browser by its tag. When component classes share a tag, a browser lookup for one of them also checks the attribute that tells it apart, if the component renders one, so it finds what Browserless finds. A lookup for a supertype (`Component.class` with `tag = "a"`, as `UnifiedLink`) matches them all. Classes that render no such attribute match by tag in a browser: a lookup for one also finds the others ([Appendix: gaps](appendix-gaps.md#outside-the-testing-tools)) |
+
+The classes that share a tag, and what tells them apart *(unreleased)*:
+
+| Tag | Class | A browser lookup matches |
+|---|---|---|
+| `a` | `RouterLink` | `a[router-link]`: Flow puts a `router-link` attribute on a `RouterLink` |
+| `a` | `Anchor` | `a:not([router-link])` |
+| `a` | `Component` with `tag = "a"` (`UnifiedLink`) | every `a` |
 
 Browser adapters put the filters CSS can express (id, test id, class, theme, attribute) into the selector and check the others in the page, for every candidate in one call.
 
@@ -154,4 +163,5 @@ CSS, XPath, ARIA role queries, predicates over a tool's own objects ([8. Escape 
 - Resolve a lookup on every use, and fail when zero or several components match, after waiting up to the timeout.
 - Let the core list Near Misses: re-run a lookup without its user-facing filters, and read `label`, text, `placeholder`, `data-testid` and the accessible name of each candidate ([12. Readable tests](12-readable-tests.md#requirements-on-testing-tool-adapters)).
 - TestBench before 25.4: implement `withTestId` with the `data-testid` attribute.
+- *(unreleased)* Implement the `WITHOUT_ATTRIBUTE` filter: an element without the attribute. The core adds it, and an `ATTRIBUTE` filter without a value, to a lookup for a class that shares its tag ([What a lookup sees](#what-a-lookup-sees)).
 - *(unreleased)* Search a Template's shadow root and light DOM when a lookup is scoped on it (`QuerySpec.inTemplate()`), and never a shadow root otherwise. Browserless: walk the Template's virtual children (its `@Id` components), which Browserless Test's own walk leaves out, and read an `@Id` binding's id as the element's `id`, as a browser does. List the Templates in a scope without entering them (`AdapterSession.findTemplates`), for failures and the Findable View.
