@@ -17,6 +17,7 @@ No implementation class: the Unified API implements the interface at run time, o
 | `CommonFilters<UnifiedRating>` | makes it findable with `page.find(UnifiedRating.class)`, with the filters every Wrapper has: `withAccessibleName`, `withTestId`, `withId`, `visible()`, `where(..)`, `all()`, … |
 | `LabelFilter<UnifiedRating>` | the filter mixins it accepts besides those: `LabelFilter`, `TextFilter`, `PlaceholderFilter` |
 | default methods | your own filters, actions and getters, written on `element()` |
+| `UnifiedRating withTimeout(Duration)` | optional: re-declared with the Wrapper's own type, so its methods chain after `withTimeout(..)`. Without it, `withTimeout(..)` returns a `UnifiedWrapper` |
 
 Each filter mixin takes the Wrapper itself as its type parameter, so `withLabel("Food")` returns a `UnifiedRating`. You list the mixins and write no filter code: the Unified API implements them.
 

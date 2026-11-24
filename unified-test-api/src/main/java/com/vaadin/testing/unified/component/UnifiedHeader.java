@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.TextFilter;
+import java.time.Duration;
 
 /**
  * A {@code <header>} ({@link Header}), to read its text, search inside it or click it. Bound to its tag, so a browser
@@ -13,6 +14,10 @@ import com.vaadin.testing.unified.query.TextFilter;
  */
 @UnifiedComponent(Header.class)
 public interface UnifiedHeader extends UnifiedWrapper, Scope, CommonFilters<UnifiedHeader>, TextFilter<UnifiedHeader> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedHeader withTimeout(Duration timeout);
 
     /** Clicks it as a user does, for a click listener ({@code addClickListener}); Auto-Wait. */
     default void click() { element().click(); }

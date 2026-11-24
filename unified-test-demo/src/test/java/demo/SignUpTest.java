@@ -25,7 +25,7 @@ class SignUpTest {
     @Test
     @DisplayName("The user signs up with an email and a password")
     void signsUp(UnifiedPage page) {
-        page.navigate(SignUpView.class);
+        page.navigate(EmailSignUpView.class);
         UnifiedEmailField email = page.find(UnifiedEmailField.class).withLabel("Email");
         UnifiedPasswordField password = page.find(UnifiedPasswordField.class).withLabel("Password");
 
@@ -42,7 +42,7 @@ class SignUpTest {
     @Test
     @DisplayName("The fields read their label, helper text, placeholder and value")
     void readsTheFields(UnifiedPage page) {
-        page.navigate(SignUpView.class);
+        page.navigate(EmailSignUpView.class);
         UnifiedEmailField email = page.find(UnifiedEmailField.class).withPlaceholder("name@example.com");
         UnifiedPasswordField password = page.find(UnifiedPasswordField.class).withLabel("Password");
 
@@ -63,7 +63,7 @@ class SignUpTest {
     @Test
     @DisplayName("Signing up with a malformed email and a short password marks both fields invalid")
     void validatesBothFields(UnifiedPage page) {
-        page.navigate(SignUpView.class);
+        page.navigate(EmailSignUpView.class);
         UnifiedEmailField email = page.find(UnifiedEmailField.class).withLabel("Email");
         UnifiedPasswordField password = page.find(UnifiedPasswordField.class).withLabel("Password");
 
@@ -81,7 +81,7 @@ class SignUpTest {
     @Test
     @DisplayName("The user clears both fields")
     void clearsTheFields(UnifiedPage page) {
-        page.navigate(SignUpView.class);
+        page.navigate(EmailSignUpView.class);
         UnifiedEmailField email = page.find(UnifiedEmailField.class).withLabel("Email");
         UnifiedPasswordField password = page.find(UnifiedPasswordField.class).withLabel("Password");
         email.setValue("ada@example.com");
@@ -98,8 +98,8 @@ class SignUpTest {
     @Test
     @DisplayName("A failed check on the password field doesn't show the password")
     void failureHidesThePassword(UnifiedPage page) {
-        page.navigate(SignUpView.class);
-        UnifiedPasswordField password = (UnifiedPasswordField) page.find(UnifiedPasswordField.class)
+        page.navigate(EmailSignUpView.class);
+        UnifiedPasswordField password = page.find(UnifiedPasswordField.class)
                 .withLabel("Password").withTimeout(Duration.ofMillis(500));
         password.setValue("correct horse");
 

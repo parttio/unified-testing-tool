@@ -55,7 +55,7 @@ On Browserless, retrying assertions and `waitUntil` also run pending `UI.access`
 | the whole run | `vaadin.testing.timeout=20s` in `junit-platform.properties`, or `-Dvaadin.testing.timeout=20s` |
 | one Wrapper | `wrapper.withTimeout(Duration.ofSeconds(30))` |
 
-`withTimeout` returns a `UnifiedWrapper`; cast it back to use the Wrapper's own methods:
+`withTimeout` returns the same Wrapper type, so its own methods chain after it:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:ownTimeout"

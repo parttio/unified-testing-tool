@@ -4,6 +4,7 @@ import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.internal.dialogs.ConfirmDialogSupport;
 import com.vaadin.testing.unified.spi.ConfirmDialogAccess.Role;
+import java.time.Duration;
 
 /**
  * A {@link ConfirmDialog}: a question with Confirm, and optionally Reject and Cancel, buttons. Its actions press a
@@ -21,6 +22,10 @@ import com.vaadin.testing.unified.spi.ConfirmDialogAccess.Role;
  */
 @UnifiedComponent(ConfirmDialog.class)
 public interface UnifiedConfirmDialog extends UnifiedOverlayDialog<UnifiedConfirmDialog> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedConfirmDialog withTimeout(Duration timeout);
 
     /** Dialogs whose message ({@link #getText()}) contains this. A custom filter built from {@code where(..)}. */
     default UnifiedConfirmDialog withTextContaining(String part) {

@@ -76,7 +76,7 @@ class AccountTest {
         UnifiedTabSheet tabs = page.find(UnifiedTabSheet.class);
 
         AssertionError e = assertThrows(AssertionError.class,
-                () -> ((UnifiedTabSheet) tabs.withTimeout(Duration.ofMillis(500))).selectTab("Billing"));
+                () -> tabs.withTimeout(Duration.ofMillis(500)).selectTab("Billing"));
 
         assertTrue(e.getMessage().contains("the tab is disabled"), e.getMessage());
         assertThat(tabs).hasSelectedTab("Profile");

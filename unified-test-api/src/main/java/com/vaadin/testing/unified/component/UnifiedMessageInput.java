@@ -6,10 +6,15 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.MessageInputAccess;
+import java.time.Duration;
 
 /** A {@link MessageInput}: where a user writes a chat message and sends it. */
 @UnifiedComponent(MessageInput.class)
 public interface UnifiedMessageInput extends UnifiedWrapper, CommonFilters<UnifiedMessageInput> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedMessageInput withTimeout(Duration timeout);
 
     /**
      * Types the text and sends it, as a user would (the input's submit event), then waits for the server

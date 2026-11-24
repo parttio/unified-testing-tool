@@ -83,7 +83,7 @@ class LinkTest {
     @DisplayName("The user can't follow the disabled Users link")
     void disabledLinkCantBeFollowed(UnifiedPage page) {
         page.navigate(LinksView.class);
-        UnifiedLink users = (UnifiedLink) page.find(UnifiedLink.class).withText("Users")
+        UnifiedLink users = page.find(UnifiedLink.class).withText("Users")
                 .withTimeout(Duration.ofMillis(500));
 
         AssertionError e = assertThrows(AssertionError.class, users::click);

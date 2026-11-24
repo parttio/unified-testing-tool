@@ -5,11 +5,16 @@ import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
+import java.time.Duration;
 
 /** An {@link IntegerField}: the value is an {@link Integer}, {@code null} when empty. */
 @UnifiedComponent(IntegerField.class)
 public interface UnifiedIntegerField extends UnifiedField,
         CommonFilters<UnifiedIntegerField>, LabelFilter<UnifiedIntegerField>, PlaceholderFilter<UnifiedIntegerField> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedIntegerField withTimeout(Duration timeout);
 
     // actions (Auto-Wait)
     /** Types the value as a user would; {@code null} empties the field. */

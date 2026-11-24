@@ -83,7 +83,7 @@ Commit or stash your work first: the recipe changes files in place.
 | `addSelenium` | `false` | Also adds the Selenium adapter, `unified-test-selenium` |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 
-Up to 0.1.0-alpha4 the recipe ignores the options a `rewrite.yml` sets, without a warning, and runs with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). With those versions, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
+Releases up to alpha3 ignore the options a `rewrite.yml` sets, without a warning, and run the recipe with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)); alpha4 fixed it. With those releases, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
 
 Without another adapter the migrated suite keeps running on Playwright only, as before; adding one is the step that makes it run elsewhere (see **Running on the other Testing Tools**).
 

@@ -43,7 +43,7 @@ class WeekPickerTest {
     void aClosedHiddenPickerCantBeSet(UnifiedPage page) {
         page.navigate(WeekPickerView.class);
         // the picker stays hidden: no need to wait the full timeout for it
-        UnifiedDatePicker picker = (UnifiedDatePicker) page.find(UnifiedDatePicker.class).withLabel("Week")
+        UnifiedDatePicker picker = page.find(UnifiedDatePicker.class).withLabel("Week")
                 .withTimeout(Duration.ofSeconds(1));
 
         UnifiedAssertionError error = assertThrows(UnifiedAssertionError.class,
