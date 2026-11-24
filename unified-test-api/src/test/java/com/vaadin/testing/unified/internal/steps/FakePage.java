@@ -137,7 +137,12 @@ final class FakePage {
     private UnifiedElement elementProxy(Map<String, String> component) {
         return (UnifiedElement) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { UnifiedElement.class }, (proxy, method, args) -> switch (method.getName()) {
-                    case "isVisible" -> !"false".equals(component.get("visible"));
+                    case "isVisible" -> {
+                        if ("throws".equals(component.get("visible"))) {
+                            throw new IllegalStateException("the element went stale");
+                        }
+                        yield !"false".equals(component.get("visible"));
+                    }
                     case "isEnabled" -> !"false".equals(component.get("enabled"));
                     case "getText" -> component.getOrDefault("text", "");
                     case "getTag" -> component.get("tag");

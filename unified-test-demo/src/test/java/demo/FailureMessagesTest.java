@@ -64,6 +64,14 @@ class FailureMessagesTest {
         }
 
         @Test
+        @DisplayName("A button repeated in a hidden bar is ambiguous")
+        void ambiguousWithHidden(UnifiedPage page) {
+            page.navigate(NoteView.class);
+            page.find(UnifiedButton.class).withText("Restore").click(); // hides the bar, with its own Cancel
+            page.find(UnifiedButton.class).withText("Cancel").click();
+        }
+
+        @Test
         @DisplayName("A lookup without a filter matches every field of the view")
         void noFilter(UnifiedPage page) {
             page.navigate(ProfileView.class);
@@ -141,7 +149,7 @@ class FailureMessagesTest {
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
         TestExecutionSummary summary = listener.getSummary();
-        assertEquals(10, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+        assertEquals(11, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
         failures = summary.getFailures().stream().collect(Collectors.toMap(
                 f -> f.getTestIdentifier().getDisplayName(),
                 f -> assertInstanceOf(UnifiedAssertionError.class, f.getException(), f.getException()::toString)));
@@ -219,6 +227,16 @@ class FailureMessagesTest {
         assertEquals("2: text field “City” in container (test id “billing”), text field “City” in container"
                 + " (id “shipping”)", failure.getFound(), failure.getMessage());
         assertEquals(List.of(), failure.getNearMisses());
+        assertEquals(Optional.empty(), failure.getSuggestion());
+    }
+
+    @Test
+    void severalMatchesMarkTheHiddenOnes() {
+        UnifiedAssertionError failure = failures.get("A button repeated in a hidden bar is ambiguous");
+
+        assertEquals("exactly one button with text “Cancel”", failure.getExpected());
+        // the hidden bar's Cancel is found too, and marked
+        assertEquals("2: button “Cancel” (hidden), button “Cancel”", failure.getFound(), failure.getMessage());
         assertEquals(Optional.empty(), failure.getSuggestion());
     }
 
