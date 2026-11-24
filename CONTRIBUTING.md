@@ -57,6 +57,10 @@ The guide's rules of thumb are in `docs/snippets/rules-of-thumb.md`, included by
 
 Write an example inline only when it can't compile: a signature, a class skeleton, or a mistake to avoid.
 
+### Release notes
+
+A change a user of the Unified API would notice gets a release note: a file of its own in `docs/releases/unreleased/`, named `<issue>-<slug>.md`, with its section (`New`, `Changed behaviour`, `Fixed`, …) and the note as one bullet. [`docs/releases/unreleased/README.md`](docs/releases/unreleased/README.md) shows the format. Don't edit `docs/releases/unreleased.md`: the documentation build assembles the site's Unreleased page from the files, so that parallel pull requests don't conflict on one file.
+
 ### What is unreleased
 
 The site documents `main`, so mark what the latest release doesn't have, where a reader of that release meets it. Mark the item, not its surroundings: a row, a bullet or a sentence gets `*(unreleased)*` next to its name. Only a section whose every line is new gets the banner instead:
@@ -70,7 +74,13 @@ A section that keeps released content under a new heading, or a sentence that na
 ## Cutting a release
 
 1. Make sure the build passes locally and in the Tests workflow on `main`.
-2. Turn `docs/releases/unreleased.md` into the release's notes (`docs/releases/<version>.md`, and its entry in `mkdocs.yml`), start a new `unreleased.md`, and take out the marks of what the release now has: `grep -rni "unreleased" README.md docs/guide docs/spec scripts`.
+2. Write the release's notes from the notes in `docs/releases/unreleased/`:
+
+   ```
+   scripts/release_notes.py release <version>
+   ```
+
+   It writes `docs/releases/<version>.md`, adds it to `mkdocs.yml`'s nav and deletes the notes. Write what the release is about, its "Get it" section and its known limitations at the top, as in the previous release. Then take out the marks of what the release now has: `grep -rni "unreleased" README.md docs/guide docs/spec scripts`.
 3. Point the documentation at the new version, then commit and push the notes and the pages to `main`:
 
    ```
