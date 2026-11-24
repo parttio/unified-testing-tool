@@ -54,7 +54,7 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
         PlaywrightSession.TraceMode trace = PlaywrightSession.TraceMode.parse(context.configuration(TRACE).orElse("off"));
         if (trace != PlaywrightSession.TraceMode.OFF) {
             // screenshots and DOM snapshots per action, and the test's sources aren't needed: the steps say where
-            browserContext.tracing().start(new com.microsoft.playwright.Tracing.StartOptions().setScreenshots(trace == PlaywrightSession.TraceMode.ON)
+            browserContext.tracing().start(new com.microsoft.playwright.Tracing.StartOptions().setScreenshots(true)
                     .setSnapshots(true));
         }
         Page page = browserContext.newPage();
