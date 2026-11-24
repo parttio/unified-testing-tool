@@ -32,7 +32,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha4 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
       -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified
     ```
 
@@ -52,7 +52,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha4 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
       -Drewrite.activeRecipes=com.example.MigrateBrowserless
     ```
 
@@ -66,7 +66,7 @@ Commit or stash your work first: the recipe changes files in place.
         activeRecipe("org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified")
     }
     dependencies {
-        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha4")
+        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5")
     }
     ```
 
@@ -115,7 +115,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `$(TextField.class).withCaption("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
 | `withClassName("a", "b")`, or one name with a space | `withClassNames("a", "b")`: the Unified `withClassName` takes one class name, as Flow's `addClassName` does |
 | `test(component).setValue("x")`, `.click()`, `.check()` | `component.setValue("x")`, `.click()`, `.check()` |
-| `test(view.panel.search.newOrder).click()`, a getter on such a chain: a `LitTemplate`'s `@Id` field *(unreleased)* | `page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new").click()`: the id from the field's `@Id`, each Template bound with `@Id` entered from the one holding it ([Templates](guide/finding-components.md#templates)); `OrdersView view = navigate(..)` becomes `page.navigate(..)` when the view only starts such chains |
+| `test(view.panel.search.newOrder).click()`, a getter on such a chain: a `LitTemplate`'s `@Id` field | `page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new").click()`: the id from the field's `@Id`, each Template bound with `@Id` entered from the one holding it ([Templates](guide/finding-components.md#templates)); `OrdersView view = navigate(..)` becomes `page.navigate(..)` when the view only starts such chains |
 | component getters: `getValue()`, `getText()`, `isEnabled()`, Checkbox `getValue()`, Dialog `isOpened()` | Wrapper getters: `getValue()`, `getText()`, `isEnabled()`, `isChecked()`, `isOpen()` |
 | a local `TextField name = $(..)...` | `UnifiedTextField name = page.find(..)...` |
 | `first()`, `last()`, `atIndex(n)` | the same lookup, with a `was first()` Migration Marker: the lookup fails when several components match |
@@ -131,7 +131,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | ComboBox / RadioButtonGroup `selectItem`, MultiSelectComboBox `selectItem(..)`, TabSheet `select("tab")`, Details `openDetails()` | `selectItem`, `selectItems(..)`, `selectTab("tab")`, `open()` |
 | MessageInput `send(s)`, MessageList `size()` | `send(s)`, `getMessageCount()` |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, EmailField and PasswordField *(unreleased)*, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
+A lookup converts only when its Wrapper has every call the test makes on what it finds. The Wrappers the recipe knows today: TextField, TextArea, EmailField and PasswordField, NumberField, IntegerField, DatePicker, ComboBox, MultiSelectComboBox, RadioButtonGroup, Checkbox, Button, Notification, Dialog, TabSheet, Details, Grid, MessageInput and MessageList; other components stay behind the Escape Hatch. The full mapping between the Testing Tools is in [Appendix: mapping](spec/appendix-mapping.md).
 
 ### Context API and extension tests
 
@@ -173,7 +173,7 @@ Tests written with TestBench UI Unit 9.x for Vaadin 24 (`UIUnitTest`, `SpringUIU
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless, without a version of its own when the project's Vaadin BOM manages it. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left. *(unreleased)* It also gives each `maven-failsafe-plugin` its own evidence directory, `target/failsafe-reports/unified-evidence`, so Failsafe's run doesn't write over Surefire's ([Surefire and Failsafe in one build](guide/ci-setup.md#surefire-and-failsafe-in-one-build)).
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-browserless` as a test dependency, and `unified-test-spring` when the project has a direct Spring Boot dependency. It removes direct `browserless-test*` and `vaadin-testbench-unit*` dependencies (the Browserless adapter brings Browserless Test) and keeps `browserless-test-spring`, which Spring tests need on Browserless, without a version of its own when the project's Vaadin BOM manages it. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left. It also gives each `maven-failsafe-plugin` its own evidence directory, `target/failsafe-reports/unified-evidence`, so Failsafe's run doesn't write over Surefire's ([Surefire and Failsafe in one build](guide/ci-setup.md#surefire-and-failsafe-in-one-build)).
 
 ## What it leaves for you
 

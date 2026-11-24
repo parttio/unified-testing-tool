@@ -36,7 +36,7 @@ void looksRight(UnifiedPage page) {
 
 Network interception, tracing and browser contexts: Escape Hatch only.
 
-*(unreleased)* Entering a [Template](04-locating.md#templates) that renders its content in the browser (a web component, not a `LitTemplate`'s `@Id` components) needs `@RequiresBrowser`: Browserless has no such content.
+Entering a [Template](04-locating.md#templates) that renders its content in the browser (a web component, not a `LitTemplate`'s `@Id` components) needs `@RequiresBrowser`: Browserless has no such content.
 
 ### Browser-only steps in a test for every Testing Tool
 
@@ -84,7 +84,7 @@ Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 | Before the first `navigate(..)` | a blank page | a blank page | the view of the `""` route |
 | `navigate(..)` to the view already shown | a new page, new view instances | a new page, new view instances | the same view instance; `beforeEnter` and `setParameter` run again |
 | Back / forward history | Escape Hatch | Escape Hatch | ✗ |
-| Inside a Template: text, labels and attributes written in the template's HTML *(unreleased)* | ✓ | ✓ | ✗ (empty on the server; `withId(..)` works everywhere) |
+| Inside a Template: text, labels and attributes written in the template's HTML | ✓ | ✓ | ✗ (empty on the server; `withId(..)` works everywhere) |
 
 Differences in meaning are documented, not banned. Tests that depend on the browser meaning declare `@RequiresBrowser`.
 
@@ -96,7 +96,7 @@ Differences in meaning are documented, not banned. Tests that depend on the brow
 | Browserless | location and component tree as text: `failure.tree.txt`, the failed step's Step Target marked `← this step` |
 | every Testing Tool | the [Findable View](12-readable-tests.md#findable-view) of the page: `failure.view.txt` |
 
-Written into the test's evidence directory, `<vaadin.testing.evidence-dir>/<test class>/<test method>/` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes, next to the test's User Steps (`user-steps.txt` and `user-steps.json`) *(unreleased)*; a test that passes leaves no `failure.*` there, and an earlier run's are removed. The failure names the files (a suppressed exception), so they show in the test report, and so do its `Evidence` line, the test's directory followed by the files (`(failure.png, failure.view.txt)`), and `user-steps.json`'s `failure.evidence` ([12. Readable tests, Reports](12-readable-tests.md#reports)). The run writes `summary.md` at the evidence directory's root.
+Written into the test's evidence directory, `<vaadin.testing.evidence-dir>/<test class>/<test method>/` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes, next to the test's User Steps (`user-steps.txt` and `user-steps.json`); a test that passes leaves no `failure.*` there, and an earlier run's are removed. The failure names the files (a suppressed exception), so they show in the test report, and so do its `Evidence` line, the test's directory followed by the files (`(failure.png, failure.view.txt)`), and `user-steps.json`'s `failure.evidence` ([12. Readable tests, Reports](12-readable-tests.md#reports)). The run writes `summary.md` at the evidence directory's root.
 
 ## Requirements on Testing Tool adapters
 

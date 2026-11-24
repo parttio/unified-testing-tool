@@ -167,7 +167,7 @@ button “Archive” (disabled)             page.find(UnifiedButton.class).withT
 button “Change email”                   page.find(UnifiedButton.class).withText("Change email")
 ```
 
-It reads the same on every Testing Tool. Two components with the same name get a lookup through the container that tells them apart (`page.find(UnifiedContainer.class).withTestId("billing").find(..)`), *(unreleased)* or else through a `data-*` attribute only that one has (`withText("Pin").withAttribute("data-pin-date", "2026-11-23")`), or the line says `not unique`. A `(no name)` line is a field or button that users of a screen reader can't name either. *(unreleased)* Plain HTML (`div`, `span`, `article`, …) is listed when it says it is clickable, with a `role` such as `button` or `tab`, or `tabindex="0"`: `span “Week of 2026-11-16” (role button)`. A `<span>` with only a click listener is not listed, though `page.find(UnifiedSpan.class).withText(..).click()` finds and clicks it; give it a role, which screen readers need too. `describe()` is not a User Step, and its format may change: don't assert on it. A failed test writes the page's view next to its evidence ([Reading reports and failures](reports-and-failures.md#the-findable-view)). Spec: [12. Readable tests, Findable View](../spec/12-readable-tests.md#findable-view).
+It reads the same on every Testing Tool. Two components with the same name get a lookup through the container that tells them apart (`page.find(UnifiedContainer.class).withTestId("billing").find(..)`), or else through a `data-*` attribute only that one has (`withText("Pin").withAttribute("data-pin-date", "2026-11-23")`), or the line says `not unique`. A `(no name)` line is a field or button that users of a screen reader can't name either. Plain HTML (`div`, `span`, `article`, …) is listed when it says it is clickable, with a `role` such as `button` or `tab`, or `tabindex="0"`: `span “Week of 2026-11-16” (role button)`. A `<span>` with only a click listener is not listed, though `page.find(UnifiedSpan.class).withText(..).click()` finds and clicks it; give it a role, which screen readers need too. `describe()` is not a User Step, and its format may change: don't assert on it. A failed test writes the page's view next to its evidence ([Reading reports and failures](reports-and-failures.md#the-findable-view)). Spec: [12. Readable tests, Findable View](../spec/12-readable-tests.md#findable-view).
 
 ## Scopes
 
@@ -183,7 +183,7 @@ A page has many "City" fields, "Save" buttons and "Email" fields. Narrow the sea
 | `UnifiedDetails.content()` | `details.content()` | the Details content |
 | `UnifiedTabSheet.content()` | `tabs.content()` | the selected tab's content |
 | Grid cells, header, row details | `row.cell("Actions")`, `column.header()`, `row.details()` | see [Grid](grid.md) |
-| a Template *(unreleased)* | `page.findTemplate(SearchBar.class)`, or a Wrapper with `TemplateScope` | its shadow root and light DOM: see [Templates](#templates) |
+| a Template | `page.findTemplate(SearchBar.class)`, or a Wrapper with `TemplateScope` | its shadow root and light DOM: see [Templates](#templates) |
 
 A Scope is a Wrapper too: a lookup inside it finds the Scope again first, so a missing dialog fails with the dialogs that are there.
 
@@ -228,8 +228,6 @@ A TabSheet's `content()` follows the selected tab: the same Scope searches the n
 ```
 
 ## Templates
-
-> **Unreleased:** on `main`, not in `0.1.0-alpha4`. See [what is unreleased](../releases/unreleased.md).
 
 A `LitTemplate`'s `@Id` components live in its shadow root, and no lookup enters a shadow root by itself: `page.find(UnifiedButton.class).withId("new")` doesn't find the button of a search bar template. Enter the Template first, one at a time, with `findTemplate(..)` or with a Wrapper of your own that extends `TemplateScope`:
 

@@ -32,7 +32,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha4 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
       -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.MigrateTestBenchToUnified
     ```
 
@@ -52,7 +52,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha4 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
       -Drewrite.activeRecipes=com.example.MigrateTestBench
     ```
 
@@ -66,7 +66,7 @@ Commit or stash your work first: the recipe changes files in place.
         activeRecipe("org.vaadin.addons.unified.rewrite.MigrateTestBenchToUnified")
     }
     dependencies {
-        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha4")
+        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5")
     }
     ```
 
@@ -83,7 +83,7 @@ Commit or stash your work first: the recipe changes files in place.
 | `addPlaywright` | `false` | Also adds the Playwright adapter, `unified-test-playwright` |
 | `includePageObjects` | `false` | Also converts page objects (see below) |
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
-| `springBootTest` *(unreleased)* | `true` | In a Spring Boot app, a test class without `@SpringBootTest` starts the app itself (`@UnifiedSpringBootTest`) instead of testing a server the build starts; `false` keeps it on that server (see [A Spring Boot app tested against a server the build starts](#a-spring-boot-app-tested-against-a-server-the-build-starts)) |
+| `springBootTest` | `true` | In a Spring Boot app, a test class without `@SpringBootTest` starts the app itself (`@UnifiedSpringBootTest`) instead of testing a server the build starts; `false` keeps it on that server (see [A Spring Boot app tested against a server the build starts](#a-spring-boot-app-tested-against-a-server-the-build-starts)) |
 
 Releases up to alpha3 ignore the options a `rewrite.yml` sets, without a warning, and run the recipe with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)); alpha4 fixed it. With those releases, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
 
@@ -102,7 +102,7 @@ mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun \
 
 `target/rewrite/rewrite.patch` (one per module) marks every TestBench, Browserless and Dramafinder test class `/*~~(migrates)~~>*/`, and with `exportDatatables` the file `FindTestClassesToMigrate$TestClasses.csv`, in `target/rewrite/datatables/<date-time>/` under the directory you ran Maven in, lists them one row per class. A project with Browserless or Dramafinder tests too sees which of those their migrations would skip.
 
-*(unreleased)* A TestBench class also lists the application's page objects and custom elements it uses, each `converts with includePageObjects` or `stays TestBench (Escape Hatch)` with the reason, such as `LoginViewElement: stays TestBench (Escape Hatch), a custom element extending LoginOverlayElement: write a Wrapper (ADR 0003)`. A class that uses one staying TestBench is `migrates partly`: its tests that reach it run on Selenium only. In a Spring Boot app, the class that takes the test annotation without having `@SpringBootTest` names it in the `Annotation` column (and the patch): `@UnifiedSpringBootTest`, decided by the option `springBootTest`, `false` keeping `@UnifiedUITest`.
+A TestBench class also lists the application's page objects and custom elements it uses, each `converts with includePageObjects` or `stays TestBench (Escape Hatch)` with the reason, such as `LoginViewElement: stays TestBench (Escape Hatch), a custom element extending LoginOverlayElement: write a Wrapper (ADR 0003)`. A class that uses one staying TestBench is `migrates partly`: its tests that reach it run on Selenium only. In a Spring Boot app, the class that takes the test annotation without having `@SpringBootTest` names it in the `Annotation` column (and the patch): `@UnifiedSpringBootTest`, decided by the option `springBootTest`, `false` keeping `@UnifiedUITest`.
 
 On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch is `build/reports/rewrite/rewrite.patch`.
 
@@ -110,23 +110,23 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 
 | TestBench | Unified API |
 |---|---|
-| `extends BrowserTestBase`, `TestBenchTestCase` or `ParallelTest`; `@BrowserTest` | `@UnifiedSpringBootTest` (from `@SpringBootTest`, or, *(unreleased)* in a module with a `@SpringBootApplication`, without it) or `@UnifiedUITest`; `@Test` with a `UnifiedPage page` parameter |
+| `extends BrowserTestBase`, `TestBenchTestCase` or `ParallelTest`; `@BrowserTest` | `@UnifiedSpringBootTest` (from `@SpringBootTest`, or, in a module with a `@SpringBootApplication`, without it) or `@UnifiedUITest`; `@Test` with a `UnifiedPage page` parameter |
 | `getDriver().get("http://localhost:" + port + "/people")` | `page.navigate(PeopleView.class)` when one view has the route, else `page.navigate("people")` |
-| `driver.get(APP_URL + "people")` on any `WebDriver`, with `APP_URL` a constant `"http://localhost:8080/"` (or `127.0.0.1`) *(unreleased)* | the same; the constant goes when nothing else reads it. A base the recipe can't read (not a constant, not a local URL) keeps the call, with a Migration Marker |
+| `driver.get(APP_URL + "people")` on any `WebDriver`, with `APP_URL` a constant `"http://localhost:8080/"` (or `127.0.0.1`) | the same; the constant goes when nothing else reads it. A base the recipe can't read (not a constant, not a local URL) keeps the call, with a Migration Marker |
 | `$(TextFieldElement.class).withLabel("Name").single()` | `page.find(UnifiedTextField.class).withLabel("Name")`: the Wrapper, which checks on every use that exactly one component matches |
-| `$(EmailFieldElement.class)`, `$(PasswordFieldElement.class)` *(unreleased)* | `page.find(UnifiedEmailField.class)`, `page.find(UnifiedPasswordField.class)`, with the same filters and calls as a text field |
-| `$(ConfirmDialogElement.class).single()` *(unreleased)*, with `getConfirmButton().click()`, `getRejectButton().click()`, `getCancelButton().click()`, `getHeaderText()`, `getMessageText()` | `page.find(UnifiedConfirmDialog.class)`, with `confirm()`, `reject()`, `cancel()`, `getHeaderTitle()`, `getText()`: each button by its role, whatever its text ([Dialogs and notifications](guide/components.md#dialogs-and-notifications)) |
-| `$(LoginOverlayElement.class)`, `$(LoginFormElement.class)` *(unreleased)*, with `isOpened()`, `getTitle()`, `getDescription()`, `forgotPassword()` | `page.find(UnifiedLogin.class)`, with `isOpen()`, `getTitle()`, `getDescription()`, `forgotPassword()`. Signing in through `getUsernameField()`, `getPasswordField()` and `submit()` stays TestBench: write `login(username, password)` by hand ([Login](guide/components.md#login)) |
-| `$(AnchorElement.class).withText("Users").single()` *(unreleased)* | `page.find(UnifiedLink.class).withText("Users")`, which finds a `RouterLink` or an `Anchor`; its `click()` follows the link on every Testing Tool ([Links](guide/components.md#links)) |
+| `$(EmailFieldElement.class)`, `$(PasswordFieldElement.class)` | `page.find(UnifiedEmailField.class)`, `page.find(UnifiedPasswordField.class)`, with the same filters and calls as a text field |
+| `$(ConfirmDialogElement.class).single()`, with `getConfirmButton().click()`, `getRejectButton().click()`, `getCancelButton().click()`, `getHeaderText()`, `getMessageText()` | `page.find(UnifiedConfirmDialog.class)`, with `confirm()`, `reject()`, `cancel()`, `getHeaderTitle()`, `getText()`: each button by its role, whatever its text ([Dialogs and notifications](guide/components.md#dialogs-and-notifications)) |
+| `$(LoginOverlayElement.class)`, `$(LoginFormElement.class)`, with `isOpened()`, `getTitle()`, `getDescription()`, `forgotPassword()` | `page.find(UnifiedLogin.class)`, with `isOpen()`, `getTitle()`, `getDescription()`, `forgotPassword()`. Signing in through `getUsernameField()`, `getPasswordField()` and `submit()` stays TestBench: write `login(username, password)` by hand ([Login](guide/components.md#login)) |
+| `$(AnchorElement.class).withText("Users").single()` | `page.find(UnifiedLink.class).withText("Users")`, which finds a `RouterLink` or an `Anchor`; its `click()` follows the link on every Testing Tool ([Links](guide/components.md#links)) |
 | `withClassName("a", "b")`, or one name with a space | `withClassNames("a", "b")`: the Unified `withClassName` takes one class name, as Flow's `addClassName` does |
 | `first()`, `waitForFirst()` | the same lookup, with a `was first()` Migration Marker: the lookup fails when several components match |
-| `id("save")` *(unreleased)* | `withId("save")` |
-| `$(SearchBarElement.class)` or `$("search-bar")`, when a `LitTemplate` in the sources has `@Tag("search-bar")` *(unreleased)* | `page.findTemplate(SearchBar.class)`, and `bar.$(ButtonElement.class).id("new")` on it `bar.find(UnifiedButton.class).withId("new")` ([Templates](guide/finding-components.md#templates)); a text or label filter there gets a Migration Marker |
+| `id("save")` | `withId("save")` |
+| `$(SearchBarElement.class)` or `$("search-bar")`, when a `LitTemplate` in the sources has `@Tag("search-bar")` | `page.findTemplate(SearchBar.class)`, and `bar.$(ButtonElement.class).id("new")` on it `bar.find(UnifiedButton.class).withId("new")` ([Templates](guide/finding-components.md#templates)); a text or label filter there gets a Migration Marker |
 | `Assertions.assertEquals(x, el.getValue())`, `getText()`, `assertTrue(cb.isChecked())`, ... | retrying `assertThat(el).hasValue(x)`, `hasText(x)`, `isChecked()`, ... |
 | a local `TextFieldElement name = ...` | `UnifiedTextField name = ...` |
 | `@BeforeEach` and helper methods that use TestBench | helpers taking `UnifiedPage page` (`unifiedPage` when the method has a `page` already), passed by every call, a test's call to another test too; a `@BeforeEach` becomes a call at the start of each test, which declares its `throws` |
-| a project base class extending `BrowserTestBase` | a plain base class with `@UnifiedSpringBootTest`; its tests and helpers convert as above, an abstract helper along with its overrides *(unreleased)* |
-| an override of `getDriver()`, or another TestBench base method, and calls to it *(unreleased)* | the override without `@Override`, taking the page; it and the calls go through the TestBench Escape Hatch, with a Migration Marker |
+| a project base class extending `BrowserTestBase` | a plain base class with `@UnifiedSpringBootTest`; its tests and helpers convert as above, an abstract helper along with its overrides |
+| an override of `getDriver()`, or another TestBench base method, and calls to it | the override without `@Override`, taking the page; it and the calls go through the TestBench Escape Hatch, with a Migration Marker |
 | Grid `getCell("text")`, `getCell(row, col).getText()` | `row().withCellText("text")`, `row(row).getCellText(col)` |
 | ComboBox / RadioButtonGroup / MultiSelectComboBox `selectByText`, `getSelectedText`, ... | `selectItem`, `getSelectedItem`, ... |
 | DatePicker `setDate`, `getDate` | `setValue`, `getValue` |
@@ -144,11 +144,11 @@ The full mapping is in [Appendix: mapping](spec/appendix-mapping.md).
 
 With `includePageObjects`, a page object that holds the TestBench test (`HasElementQuery`, `TestBenchTestCase`, ...) takes the `UnifiedPage` instead: its lookups become `find(..)`, its methods return Wrappers, and tests pass `page` where they passed `this`. It converts only when every lookup in it, and every use its callers make of what it returns, converts. Otherwise, and without the option, `new LoginPage(this)` becomes `new LoginPage(testBench)` behind the Escape Hatch.
 
-A custom element, an application's own `TestBenchElement` subclass such as `@Element("order-card") OrderCardElement extends DivElement` or `LoginViewElement extends LoginOverlayElement`, stays TestBench, with or without the option. *(unreleased)* Each statement calling one gets a Migration Marker, and a test that reaches one, itself or through a helper of its class hierarchy, gets `@RequiresTestingTool(SELENIUM)`. So does a test whose only TestBench code is in an inherited helper going through the Escape Hatch.
+A custom element, an application's own `TestBenchElement` subclass such as `@Element("order-card") OrderCardElement extends DivElement` or `LoginViewElement extends LoginOverlayElement`, stays TestBench, with or without the option. Each statement calling one gets a Migration Marker, and a test that reaches one, itself or through a helper of its class hierarchy, gets `@RequiresTestingTool(SELENIUM)`. So does a test whose only TestBench code is in an inherited helper going through the Escape Hatch.
 
 ### A Spring Boot app tested against a server the build starts
 
-*(unreleased)* Vaadin's starters test the app as a server the build starts: an `it` profile runs `spring-boot:start` and `spring-boot:stop` around Failsafe, the `*IT` classes have no `@SpringBootTest`, and each test opens `http://localhost:8080/` and signs in through the login form. On Browserless such a test has no Spring context: the app's Spring views can't be built and `@WithMockUser` has no effect. So in a module with a `@SpringBootApplication` (main or test sources), a TestBench test class without `@SpringBootTest` becomes a `@UnifiedSpringBootTest` ([ADR 0013](adr/0013-migrated-spring-boot-tests-start-the-app.md)): each run starts the app from its Spring context on a random port, on every Testing Tool. The annotation goes on the base class that extended `BrowserTestBase`; its subclasses inherit it. A Migration Marker on it says the tests now start the app themselves.
+Vaadin's starters test the app as a server the build starts: an `it` profile runs `spring-boot:start` and `spring-boot:stop` around Failsafe, the `*IT` classes have no `@SpringBootTest`, and each test opens `http://localhost:8080/` and signs in through the login form. On Browserless such a test has no Spring context: the app's Spring views can't be built and `@WithMockUser` has no effect. So in a module with a `@SpringBootApplication` (main or test sources), a TestBench test class without `@SpringBootTest` becomes a `@UnifiedSpringBootTest` ([ADR 0013](adr/0013-migrated-spring-boot-tests-start-the-app.md)): each run starts the app from its Spring context on a random port, on every Testing Tool. The annotation goes on the base class that extended `BrowserTestBase`; its subclasses inherit it. A Migration Marker on it says the tests now start the app themselves.
 
 - The app now runs with its test configuration, not the configuration of the server the build started; a difference between the two can make a test behave differently.
 - The recipe leaves the pom alone. The `spring-boot:start`/`stop` executions, and their profile, now start a second server nobody tests: remove them by hand.
@@ -159,7 +159,7 @@ Set the option `springBootTest: false` when the tests must run against the prod-
 
 ### The build
 
-With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the project's Vaadin BOM manages its version, and the recipe removes a version the project already gave it), adds Spring Security's test support when the project depends on Spring Security and has none *(unreleased)* (`spring-boot-starter-security-test`, or `org.springframework.security:spring-security-test` on a Spring Boot without that starter), and removes direct `vaadin-testbench*` dependencies once no test source uses TestBench after the migration (the Selenium adapter brings TestBench core and some element jars). *(unreleased)* While one still does (a page object left on TestBench, an element class such as `DivElement`, a `TestBenchEscapeHatch`), it keeps them, and `vaadin-testbench-junit5` becomes `vaadin-testbench-junit6`, which brings every element jar. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine. *(unreleased)* It also gives each `maven-failsafe-plugin` its own evidence directory, `target/failsafe-reports/unified-evidence`, so Failsafe's run doesn't write over Surefire's ([Surefire and Failsafe in one build](guide/ci-setup.md#surefire-and-failsafe-in-one-build)).
+With Maven, the recipe imports `unified-test-bom`, adds `unified-test-spring`, `unified-test-browserless`, `unified-test-selenium` and `com.vaadin:browserless-test-spring` as test dependencies (a `@UnifiedSpringBootTest` fails at once on Browserless without `browserless-test-spring`, and the Browserless adapter doesn't bring it; the project's Vaadin BOM manages its version, and the recipe removes a version the project already gave it), adds Spring Security's test support when the project depends on Spring Security and has none (`spring-boot-starter-security-test`, or `org.springframework.security:spring-security-test` on a Spring Boot without that starter), and removes direct `vaadin-testbench*` dependencies once no test source uses TestBench after the migration (the Selenium adapter brings TestBench core and some element jars). While one still does (a page object left on TestBench, an element class such as `DivElement`, a `TestBenchEscapeHatch`), it keeps them, and `vaadin-testbench-junit5` becomes `vaadin-testbench-junit6`, which brings every element jar. It removes `junit:junit` and `junit-vintage-engine` only when no JUnit 4 test is left after the migration: JUnit 6 runs JUnit 4 tests only through the vintage engine. It also gives each `maven-failsafe-plugin` its own evidence directory, `target/failsafe-reports/unified-evidence`, so Failsafe's run doesn't write over Surefire's ([Surefire and Failsafe in one build](guide/ci-setup.md#surefire-and-failsafe-in-one-build)).
 
 ## What it leaves for you
 
@@ -181,14 +181,14 @@ void knowsTheArchiveButtonIsDisabled(UnifiedPage page) {
 |---|---|
 | `TestBench Escape Hatch: <call>` | Rewrite the call with the Unified API if it can express it, then drop the Escape Hatch and `@RequiresTestingTool` |
 | `..., a custom element: write a Wrapper for it (ADR 0003)` | Write a [Wrapper](spec/06-wrappers.md) for the component |
-| `inside a Template, text written in its HTML is empty on Browserless: find it by id to run on every Testing Tool` *(unreleased)* | If the text is set from Java, keep the filter. If the template's HTML writes it, find the component by its `@Id` with `withId(..)` instead, or keep the filter and declare `@RequiresBrowser` |
+| `inside a Template, text written in its HTML is empty on Browserless: find it by id to run on every Testing Tool` | If the text is set from Java, keep the filter. If the template's HTML writes it, find the component by its `@Id` with `withId(..)` instead, or keep the filter and declare `@RequiresBrowser` |
 | `was first(); the lookup fails when several components match` | Run the test. If it fails with "found 2", add the filter that picks the intended one; the failure lists both |
 | `was withCaption(..); use withAccessibleName(..) for a button without text` | Check the button has visible text |
 | `TestBench page object: new LoginPage(this)` | Convert the page object by hand, or rerun with `includePageObjects` |
-| `TestBench page object: LoginViewElement (custom element extending LoginOverlayElement): write a Wrapper or convert the page object` *(unreleased)* | Write a [Wrapper](spec/06-wrappers.md) for the component, or turn the page object into a plain class on the `UnifiedPage` |
-| `the tests ran against a server started outside the test; they now start the app themselves, ...` *(unreleased)* | Run the tests; fix what differs between the app's test configuration and the server's. Remove the build's `spring-boot:start`/`stop` executions, then delete the marker |
-| `a Spring Boot app tested against a server the build starts: ...; consider @UnifiedSpringBootTest` *(unreleased)* | Keep `@UnifiedUITest` if the tests need that server, and run them on browsers only; else switch to `@UnifiedSpringBootTest` |
-| `signs in through the login form: unless this test checks the login itself, consider @WithMockUser; to keep the form, page.find(UnifiedLogin.class).login(username, password)` *(unreleased)* | Put `@WithMockUser` (or `@WithUserDetails`) on the test or class and drop the login steps, unless the test checks the login itself; then sign in with `page.find(UnifiedLogin.class).login(username, password)`, and give a form that posts (Spring Security's `/login`) `@RequiresBrowser` |
+| `TestBench page object: LoginViewElement (custom element extending LoginOverlayElement): write a Wrapper or convert the page object` | Write a [Wrapper](spec/06-wrappers.md) for the component, or turn the page object into a plain class on the `UnifiedPage` |
+| `the tests ran against a server started outside the test; they now start the app themselves, ...` | Run the tests; fix what differs between the app's test configuration and the server's. Remove the build's `spring-boot:start`/`stop` executions, then delete the marker |
+| `a Spring Boot app tested against a server the build starts: ...; consider @UnifiedSpringBootTest` | Keep `@UnifiedUITest` if the tests need that server, and run them on browsers only; else switch to `@UnifiedSpringBootTest` |
+| `signs in through the login form: unless this test checks the login itself, consider @WithMockUser; to keep the form, page.find(UnifiedLogin.class).login(username, password)` | Put `@WithMockUser` (or `@WithUserDetails`) on the test or class and drop the login steps, unless the test checks the login itself; then sign in with `page.find(UnifiedLogin.class).login(username, password)`, and give a form that posts (Spring Security's `/login`) `@RequiresBrowser` |
 | `browser setup removed (@RunLocally, ...)` | Configure the Selenium adapter with `vaadin.testing.*` settings |
 | `the Unified API needs Vaadin 25.3 or newer`, at the top of `pom.xml` | Move the application to Vaadin 25.3, then delete the marker |
 
@@ -198,7 +198,7 @@ Each Spring context a run starts also starts the application's server. Keep the 
 
 ## The agent skill
 
-`resolve-migration-markers` is a [Claude Code](https://claude.com/claude-code) skill that works through the Migration Markers: it resolves each one into Unified API code, or keeps the Escape Hatch and replaces the marker with `// Escape Hatch kept: <reason>`. It proves each change on Browserless and Playwright, and on Selenium while a test still declares `@RequiresTestingTool(SELENIUM)` or uses a `TestBenchEscapeHatch`, then runs the whole suite on the same Testing Tools and the style rules (`UnifiedStyleRules.ALL`), and reports what it did. *(unreleased)* It runs the `*IT` classes the way the project does, through Failsafe: `mvn verify -Pit -Dit.test=<Class>` for one class, `mvn verify -Pit` for the suite (without `-Pit` when no profile binds Failsafe), each with `-Dvaadin.testing.tool=playwright` or `selenium` for those Testing Tools. A run that counted 0 UI tests fails the proof: `mvn test` alone runs none of the `*IT` classes.
+`resolve-migration-markers` is a [Claude Code](https://claude.com/claude-code) skill that works through the Migration Markers: it resolves each one into Unified API code, or keeps the Escape Hatch and replaces the marker with `// Escape Hatch kept: <reason>`. It proves each change on Browserless and Playwright, and on Selenium while a test still declares `@RequiresTestingTool(SELENIUM)` or uses a `TestBenchEscapeHatch`, then runs the whole suite on the same Testing Tools and the style rules (`UnifiedStyleRules.ALL`), and reports what it did. It runs the `*IT` classes the way the project does, through Failsafe: `mvn verify -Pit -Dit.test=<Class>` for one class, `mvn verify -Pit` for the suite (without `-Pit` when no profile binds Failsafe), each with `-Dvaadin.testing.tool=playwright` or `selenium` for those Testing Tools. A run that counted 0 UI tests fails the proof: `mvn test` alone runs none of the `*IT` classes.
 
 Add `addAgentSkill: true` to the recipe's options (see **Run it**): the migration then also writes `.claude/skills/resolve-migration-markers/SKILL.md`, the version matching your recipe's markers. In Claude Code, in the migrated project:
 

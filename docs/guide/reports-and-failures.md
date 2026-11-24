@@ -130,7 +130,7 @@ A component that is there but can't be used:
 
 ### The Findable View
 
-Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it. *(unreleased)* When the failed step was about a grid row or a chat message, the grid's columns and first rows, or the list's first messages, follow, each with the lookup that finds it, as `grid.describe()` lists them.
+Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it. When the failed step was about a grid row or a chat message, the grid's columns and first rows, or the list's first messages, follow, each with the lookup that finds it, as `grid.describe()` lists them.
 
 ```
 Findable view of “/checkout” on playwright (chromium): 6 components
@@ -150,7 +150,7 @@ The parts are getters on `UnifiedAssertionError`, for a test that checks a failu
 
 ## The CI log
 
-A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line, its `Did you mean` when it has one *(unreleased)*, and where it happened:
+A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line, its `Did you mean` when it has one, and where it happened:
 
 ```
 ✘ EditEmailTest › Changing a person's email updates the grid   browserless · 11.4 s
@@ -185,7 +185,7 @@ Every test that injects a `UnifiedPage` writes two files to `<evidence dir>/<tes
 }
 ```
 
-Next to them, a failed test leaves its failure evidence *(unreleased)*: `failure.png`, a screenshot, on Playwright and Selenium, or `failure.tree.txt`, the component tree as text, on Browserless; and `failure.view.txt` on every Testing Tool. The failure's `Evidence` line names the directory and these files, and `user-steps.json` lists them as `failure.evidence`. The evidence directory is `target/surefire-reports/unified-evidence` by default, so CI can upload it with the test reports.
+Next to them, a failed test leaves its failure evidence: `failure.png`, a screenshot, on Playwright and Selenium, or `failure.tree.txt`, the component tree as text, on Browserless; and `failure.view.txt` on every Testing Tool. The failure's `Evidence` line names the directory and these files, and `user-steps.json` lists them as `failure.evidence`. The evidence directory is `target/surefire-reports/unified-evidence` by default, so CI can upload it with the test reports.
 
 ### Reading a User Step
 
