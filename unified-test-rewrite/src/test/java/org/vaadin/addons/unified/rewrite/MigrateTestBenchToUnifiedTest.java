@@ -3819,6 +3819,274 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
         }
     }
 
+    // Navigation the recipe can't turn into page.navigate(..), and fixed-port URLs once the app starts in the test (#607)
+
+    @Test
+    void aBaseClassHelpersDriverGetOfAParameterIsMarked() {
+        rewriteRun(
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import com.vaadin.testbench.TestBenchElement;
+                        import org.openqa.selenium.WebDriver;
+
+                        public abstract class AbstractIT extends BrowserTestBase {
+
+                            protected TestBenchElement open(WebDriver driver, String url) {
+                                driver.get(url);
+                                return $("login-view").waitForFirst();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.openqa.selenium.WebDriver;
+
+                        @UnifiedUITest
+                        public abstract class AbstractIT {
+
+                            protected TestBenchElement open(UnifiedPage page, WebDriver driver, String url) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: navigation to url: not a local application URL the recipe can read; use page.navigate("<path>")
+                                driver.get(url);
+                                // TODO unified: TestBench Escape Hatch: $("login-view")
+                                return testBench.$("login-view").waitForFirst();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class LoginIT extends AbstractIT {
+
+                            @BrowserTest
+                            void opensLogin() {
+                                open(getDriver(), "http://localhost:8080/login");
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testing.unified.RequiresTestingTool;
+                        import com.vaadin.testing.unified.TestingTool;
+                        import com.vaadin.testing.unified.UnifiedPage;
+                        import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                        import org.junit.jupiter.api.Test;
+
+                        class LoginIT extends AbstractIT {
+
+                            @Test
+                            @RequiresTestingTool(TestingTool.SELENIUM)
+                            void opensLogin(UnifiedPage page) {
+                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: TestBench Escape Hatch: getDriver()
+                                open(page, testBench.getDriver(), "http://localhost:8080/login");
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void driverGetOfALocalVariableOrAMethodCallIsMarked() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class UsersIT extends BrowserTestBase {
+
+                    @BrowserTest
+                    void opensUsers() {
+                        String url = urlFor("users");
+                        getDriver().get(url);
+                        getDriver().get(urlFor("users"));
+                    }
+
+                    String urlFor(String path) {
+                        return "http://localhost:8080/" + path;
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class UsersIT {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void opensUsers(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        String url = urlFor("users");
+                        // TODO unified: navigation to url: not a local application URL the recipe can read; use page.navigate("<path>")
+                        // TODO unified: TestBench Escape Hatch: getDriver()
+                        testBench.getDriver().get(url);
+                        // TODO unified: navigation to urlFor("users"): not a local application URL the recipe can read; use page.navigate("<path>")
+                        // TODO unified: TestBench Escape Hatch: getDriver()
+                        testBench.getDriver().get(urlFor("users"));
+                    }
+
+                    String urlFor(String path) {
+                        return "http://localhost:8080/" + path;
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aDriverPassedToAMethodThatMakesNoTestBenchCallComesFromADeclaredEscapeHatch() {
+        rewriteRun(java(
+                """
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.openqa.selenium.WebDriver;
+
+                class UsersIT extends BrowserTestBase {
+
+                    public String APP_URL = "http://localhost:8080/";
+
+                    @BrowserTest
+                    void opensUsers() {
+                        open(getDriver(), APP_URL);
+                    }
+
+                    String open(WebDriver driver, String url) {
+                        driver.get(url);
+                        return url;
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+                import org.openqa.selenium.WebDriver;
+
+                @UnifiedUITest
+                class UsersIT {
+
+                    public String APP_URL = "http://localhost:8080/";
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void opensUsers(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: TestBench Escape Hatch: getDriver()
+                        open(testBench.getDriver(), APP_URL);
+                    }
+
+                    String open(WebDriver driver, String url) {
+                        // TODO unified: navigation to url: not a local application URL the recipe can read; use page.navigate("<path>")
+                        driver.get(url);
+                        return url;
+                    }
+                }
+                """));
+    }
+
+    private static final String ABSTRACT_IT_WITH_APP_URL = """
+            package com.example;
+
+            import com.vaadin.testbench.BrowserTestBase;
+
+            public abstract class AbstractIT extends BrowserTestBase {
+
+                public String APP_URL = "http://localhost:8080/";
+            }
+            """;
+
+    @Test
+    void aFixedPortUrlFieldIsMarkedWhenTheTestNowStartsTheApp() {
+        rewriteRun(java(SPRING_BOOT_APPLICATION), java(APPLICATION),
+                java(ABSTRACT_IT_WITH_APP_URL,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+
+                        // TODO unified: %s
+                        @UnifiedSpringBootTest
+                        public abstract class AbstractIT {
+
+                            // TODO unified: %s
+                            public String APP_URL = "http://localhost:8080/";
+                        }
+                        """.formatted(TestBenchSetupToUnified.STARTS_THE_APP, TestBenchSetupToUnified.FIXED_PORT_URL)),
+                java(USERS_IT, USERS_IT_MIGRATED));
+    }
+
+    @Test
+    void aFixedPortUrlFieldIsNotMarkedWhenTheTestKeepsTheServerTheBuildStarts() {
+        rewriteRun(spec -> spec.recipe(new MigrateTestBenchToUnified(null, null, null, false)),
+                java(SPRING_BOOT_APPLICATION), java(APPLICATION),
+                java(ABSTRACT_IT_WITH_APP_URL,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testing.unified.UnifiedUITest;
+
+                        // TODO unified: %s
+                        @UnifiedUITest
+                        public abstract class AbstractIT {
+
+                            public String APP_URL = "http://localhost:8080/";
+                        }
+                        """.formatted(TestBenchSetupToUnified.EXTERNAL_SERVER)),
+                java(USERS_IT, USERS_IT_MIGRATED));
+    }
+
+    @Test
+    void aUrlConstantTheMigrationRemovedLeavesNoFixedPortMarker() {
+        rewriteRun(java(SPRING_BOOT_APPLICATION), java(APPLICATION),
+                java(
+                        """
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        public abstract class AbstractIT extends BrowserTestBase {
+
+                            protected static final String APP_URL = "http://localhost:8080/";
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+
+                        // TODO unified: %s
+                        @UnifiedSpringBootTest
+                        public abstract class AbstractIT {
+                        }
+                        """.formatted(TestBenchSetupToUnified.STARTS_THE_APP)),
+                java(
+                        """
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class UsersIT extends AbstractIT {
+
+                            @BrowserTest
+                            void opensUsers() {
+                                getDriver().get(APP_URL + "users");
+                            }
+                        }
+                        """,
+                        USERS_IT_MIGRATED));
+    }
+
     private static final String SIGN_IN_VIEW_ELEMENT = """
             package com.example;
 
