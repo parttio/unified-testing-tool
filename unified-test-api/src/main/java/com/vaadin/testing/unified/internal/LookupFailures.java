@@ -358,8 +358,7 @@ final class LookupFailures {
             if (type == source.wrapperType() || tag == null || tag.equals(source.tag())) {
                 continue;
             }
-            List<Filter> filters = new ArrayList<>(annotation.selector().isBlank() ? List.of()
-                    : WrapperSelector.filters(annotation.selector(), type.getName()));
+            List<Filter> filters = new ArrayList<>(Wrappers.typeFilters(type, annotation, tag));
             filters.add(new Filter(namingKind(type), null, wanted, true));
             try {
                 for (UnifiedElement e : source.run().session().find(new QuerySpec(annotation.value(), tag,

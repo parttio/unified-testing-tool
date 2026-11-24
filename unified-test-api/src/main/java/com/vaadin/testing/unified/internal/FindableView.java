@@ -312,8 +312,7 @@ public final class FindableView {
         if (tag == null || tag.equals("*")) {
             return null;
         }
-        List<Filter> selector = annotation.selector().isBlank() ? List.of()
-                : WrapperSelector.filters(annotation.selector(), type.getName());
+        List<Filter> selector = Wrappers.typeFilters(type, annotation, tag);
         List<UnifiedElement> found = run.session().find(new QuerySpec(annotation.value(), tag, selector, scope,
                 inTemplate));
         if (found.isEmpty()) {

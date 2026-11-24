@@ -166,4 +166,21 @@ class WrappersTest {
 
         assertEquals("Cancel", cancel.getText());
     }
+
+    @Test
+    void findComponentTellsApartClassesThatShareATag() {
+        UnifiedPageImpl page = page();
+        UnifiedGenericComponent routerLinks = page.findComponent(com.vaadin.flow.router.RouterLink.class);
+        UnifiedGenericComponent anchors = page.findComponent(com.vaadin.flow.component.html.Anchor.class);
+
+        assertThat(routerLinks).doesNotExist();
+        assertEquals(List.of(new Filter(Filter.Kind.ATTRIBUTE, "router-link", null, true)), queried.get(0));
+        queried.clear();
+        assertThat(anchors.withText("Logout")).doesNotExist();
+        assertEquals(List.of(new Filter(Filter.Kind.WITHOUT_ATTRIBUTE, "router-link", null, true),
+                new Filter(Filter.Kind.TEXT, null, "Logout", true)), queried.get(0));
+        // the condition is the lookup's own, not the test's
+        assertEquals("UnifiedGenericComponent[findComponent(Anchor).withText(\"Logout\")]",
+                anchors.withText("Logout").toString());
+    }
 }

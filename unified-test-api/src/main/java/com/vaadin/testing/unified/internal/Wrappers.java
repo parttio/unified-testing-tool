@@ -64,8 +64,7 @@ public final class Wrappers {
         String tag = requireTag(annotation.value(), annotation.tag(), wrapperType.getSimpleName());
         requireBrowserInside(run, parent);
         run.steps().wrapperUsed(wrapperType);
-        List<Filter> filters = annotation.selector().isBlank() ? List.of()
-                : WrapperSelector.filters(annotation.selector(), wrapperType.getName());
+        List<Filter> filters = typeFilters(wrapperType, annotation, tag);
         ElementSource source = new ElementSource(run, wrapperType.getSimpleName(), wrapperType, annotation.value(),
                 tag, filters, filters.size(), List.of(), List.of(), parent,
                 TemplateScope.class.isAssignableFrom(wrapperType));
@@ -77,8 +76,10 @@ public final class Wrappers {
             LazyElement parent) {
         String name = "findComponent(" + componentType.getSimpleName() + ")";
         requireBrowserInside(run, parent);
-        ElementSource source = new ElementSource(run, name, null, componentType,
-                requireTag(componentType, "", name), List.of(), 0, List.of(), List.of(), parent, false);
+        String tag = requireTag(componentType, "", name);
+        List<Filter> filters = SharedTags.filters(componentType, tag);
+        ElementSource source = new ElementSource(run, name, null, componentType, tag, filters, filters.size(),
+                List.of(), List.of(), parent, false);
         return (UnifiedGenericComponent) newWrapper(UnifiedGenericComponent.class, new LazyElement(source, -1, run));
     }
 
@@ -131,6 +132,18 @@ public final class Wrappers {
                     + " search with UnifiedContainer.");
         }
         return tag;
+    }
+
+    /**
+     * The filters every lookup of a Wrapper type starts with, which are not the test's: what tells its component
+     * class apart from others with the same tag ({@link SharedTags}), then its {@code @UnifiedComponent(selector)}.
+     */
+    static List<Filter> typeFilters(Class<?> wrapperType, UnifiedComponent annotation, String tag) {
+        List<Filter> filters = new ArrayList<>(SharedTags.filters(annotation.value(), tag));
+        if (!annotation.selector().isBlank()) {
+            filters.addAll(WrapperSelector.filters(annotation.selector(), wrapperType.getName()));
+        }
+        return List.copyOf(filters);
     }
 
     static String tagOf(Class<? extends Component> componentType, String explicitTag) {
