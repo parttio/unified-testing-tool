@@ -1,0 +1,539 @@
+<title>One Vaadin Testing API</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single reading column with a sticky section rail on wide screens; data blocks break wider. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #17202c;
+  --muted: #5a6677;
+  --line: #dde2ea;
+  --accent: #1a5fd6;
+  --accent-soft: #e6efff;
+  --tb: #b4531c;      /* TestBench */
+  --uiu: #d4a017;     /* TestBench UI Unit */
+  --bl: #1a5fd6;      /* Browserless */
+  --df: #7a3fc4;      /* Dramafinder */
+  --un: #0f8a6a;      /* Unified API */
+  --ok: #0f8a6a;
+  --warn: #b26b00;
+  --bad: #b3261e;
+  --code-bg: #eef1f6;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --surface: #161d27; --fg: #e3e8ef; --muted: #98a4b5; --line: #2a3444;
+    --accent: #6ea2ff; --accent-soft: #1b2a45;
+    --tb: #ef8a4c; --uiu: #e8c04a; --bl: #6ea2ff; --df: #b48af0; --un: #3cc39d;
+    --ok: #3cc39d; --warn: #e0a640; --bad: #f2867f; --code-bg: #1c2532;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #161d27; --fg: #e3e8ef; --muted: #98a4b5; --line: #2a3444;
+  --accent: #6ea2ff; --accent-soft: #1b2a45;
+  --tb: #ef8a4c; --uiu: #e8c04a; --bl: #6ea2ff; --df: #b48af0; --un: #3cc39d;
+  --ok: #3cc39d; --warn: #e0a640; --bad: #f2867f; --code-bg: #1c2532;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 48px; padding-block: 48px 80px; }
+@media (max-width: 880px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 28px 56px; } .rail { display: none; } }
+.rail nav { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.rail a { color: var(--muted); text-decoration: none; padding: 4px 10px; border-left: 2px solid var(--line); }
+.rail a:hover, .rail a:focus-visible { color: var(--fg); border-left-color: var(--accent); outline: none; }
+main { min-width: 0; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+code { font-family: var(--mono); font-size: 0.88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+section { display: flex; flex-direction: column; gap: 18px; padding-block: 44px 8px; border-top: 1px solid var(--line); margin-top: 44px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 62ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.meta span b { color: var(--fg); font-weight: 500; }
+.head { display: flex; flex-direction: column; gap: 16px; }
+.op { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--warn); color: var(--warn); vertical-align: 2px; }
+
+/* verdict */
+.verdict { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; }
+.verdict p { font-size: 1.05rem; }
+.verdict strong { font-weight: 600; }
+
+/* findings */
+.findings { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0; }
+.findings li { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr); gap: 12px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+.findings li:last-child { border-bottom: 0; }
+.findings .n { font-family: var(--mono); color: var(--muted); font-size: 13px; padding-top: 3px; }
+
+/* bar chart */
+.chart { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 190px minmax(0, 1fr) 72px; gap: 12px; align-items: center; font-size: 14px; }
+.bar-row .lbl { color: var(--fg); }
+.bar-row .lbl small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
+.track { height: 22px; background: var(--code-bg); border-radius: 4px; overflow: hidden; }
+.fill { height: 100%; border-radius: 4px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; font-size: 13.5px; }
+.axis { display: grid; grid-template-columns: 190px minmax(0, 1fr) 72px; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.axis .ticks { position: relative; height: 14px; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); }
+.axis .ticks span:first-child { transform: none; }
+.total { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+@media (max-width: 560px) {
+  .bar-row, .axis { grid-template-columns: minmax(0, 1fr) 64px; }
+  .bar-row .lbl { grid-column: 1 / -1; }
+  .axis > :first-child { display: none; }
+}
+
+/* tables */
+.tscroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface); position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mono { font-family: var(--mono); font-size: 13px; }
+
+/* dup cards */
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 760px) { .duo { grid-template-columns: minmax(0, 1fr); } }
+.duo > div { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.dup { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; display: flex; flex-direction: column; gap: 4px; }
+.dup.acc { border-left-color: var(--bad); }
+.dup.con { border-left-color: var(--ok); }
+.dup b { font-weight: 600; }
+.dup p { font-size: 14.5px; color: var(--muted); }
+.tag { font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; }
+.tag.acc { color: var(--bad); }
+.tag.con { color: var(--ok); }
+
+/* coverage */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters button { font: inherit; font-size: 13.5px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.filters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cov td.c { text-align: center; width: 15%; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.dot.no { background: transparent; border: 1.5px solid var(--line); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 640px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.stat .v { font-family: var(--display); font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 13px; color: var(--muted); line-height: 1.35; }
+
+/* options */
+.opts { display: flex; flex-direction: column; gap: 10px; }
+.opt { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; gap: 14px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+.opt.top { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.opt .rk { font-family: var(--display); font-weight: 700; font-size: 1.6rem; color: var(--muted); line-height: 1; }
+.opt.top .rk { color: var(--accent); }
+.opt h3 { font-size: 1.02rem; }
+.opt p { font-size: 14.5px; color: var(--muted); }
+.pill { font-family: var(--mono); font-size: 11.5px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.pill.go { color: var(--ok); } .pill.mid { color: var(--warn); } .pill.no { color: var(--bad); }
+@media (max-width: 560px) { .opt { grid-template-columns: 2.2rem minmax(0, 1fr); } .opt .pill { grid-column: 2; justify-self: start; } }
+
+/* architecture */
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; }
+.diagram pre.mermaid { margin: 0; background: transparent; text-align: center; }
+.rules { counter-reset: r; list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.rules li { counter-increment: r; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font-size: 14.5px; }
+.rules li::before { content: "Rule " counter(r); display: block; font-family: var(--mono); font-size: 11.5px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+pre.code { background: var(--code-bg); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.55; margin: 0; }
+pre.code .c { color: var(--muted); }
+pre.code .k { color: var(--df); }
+pre.code .a { color: var(--tb); }
+
+/* roadmap */
+.phases { display: flex; flex-direction: column; gap: 0; }
+.phase { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 6.5rem; gap: 16px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+.phase:last-child { border-bottom: 0; }
+.phase .when { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.phase .when b { display: block; font-family: var(--display); font-size: 1.05rem; color: var(--fg); }
+.phase p { font-size: 14.5px; }
+.phase .eff { font-family: var(--mono); font-size: 12.5px; text-align: right; color: var(--muted); }
+.phase .eff b { display: block; color: var(--fg); font-size: 15px; }
+@media (max-width: 600px) { .phase { grid-template-columns: minmax(0, 1fr); gap: 4px; } .phase .eff { text-align: left; } }
+
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+.cols > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+ul.plain { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; }
+.lic { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .lic { grid-template-columns: minmax(0, 1fr); } }
+.lic > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.lic h3 { font-size: 1rem; }
+.foot { font-size: 13px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .fill { transition: width .5s ease; } }
+</style>
+
+<div class="wrap">
+  <aside class="rail" aria-label="Sections">
+    <nav>
+      <a href="#summary">Answer</a>
+      <a href="#duplication">Duplication</a>
+      <a href="#coverage">Coverage</a>
+      <a href="#options">Merge options</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#product">Product story</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#caveats">Not verified</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="head" id="summary">
+      <div class="eyebrow">Research note · 24 November 2026</div>
+      <h1>Merging Vaadin's testing tools</h1>
+      <p class="lede">Should TestBench, Browserless Test and Dramafinder become one library? How much of their code repeats the same work, and what would one official testing API look like?</p>
+      <div class="meta">
+        <span>testbench <b>4e1c923</b></span>
+        <span>browserless-test <b>f69a50d</b></span>
+        <span>dramafinder <b>f3c30db</b></span>
+        <span>unified-testing-tool <b>fdbe120</b></span>
+        <span>flow-components <b>d1a42ad</b></span>
+        <span>flow <b>32e7f0a</b></span>
+      </div>
+    </header>
+
+    <section style="border-top:0;margin-top:20px;padding-top:20px">
+      <div class="verdict">
+        <div class="eyebrow">Recommendation <span class="op">opinion</span></div>
+        <p><strong>Merge in stages into one official product with one API and two kinds of runtime, not one jar.</strong> Each component gets one wrapper interface with exactly two behaviour implementations: one for the server-side component tree (Browserless) and one for the DOM, shared by Playwright and Selenium. That component knowledge lives in <code>flow-components</code>, released with the component. Delete TestBench UI Unit now. Keep Selenium as a commercial driver.</p>
+      </div>
+
+      <ol class="findings">
+        <li><span class="n">01</span><p><strong>There are five component-wrapper libraries for one component set, not three tools.</strong> About 63,000 lines of main code do nothing but drive Vaadin components. 43 components are wrapped by all three tools, and a combo box has four names for the same act.</p></li>
+        <li><span class="n">02</span><p><strong>The largest duplication is accidental and already decided.</strong> TestBench UI Unit is a fork of Browserless: 60% of its code lines and 89% of its test lines appear unchanged there. It is deprecated, yet both repos still take the same fixes, such as the shortcut-filter fix on 2026-11-13 (<code>testbench@0adbfbb</code>, <code>browserless-test@4930397</code>).</p></li>
+        <li><span class="n">03</span><p><strong>The two browser libraries duplicate each other, mostly by accident.</strong> TestBench and Dramafinder drive the same web components; only the protocol differs. Both restate every tag, embed the same server-idle wait script, and call Grid's private JavaScript API from separate copies.</p></li>
+        <li><span class="n">04</span><p><strong>The Unified API proves one API over three runtimes works, but adds a fifth layer.</strong> Its adapters sit on top of the tools' own wrappers, and its driver interface names specific components (<code>GridAccess</code>, <code>LoginAccess</code>).</p></li>
+      </ol>
+    </section>
+
+    <section id="duplication">
+      <div class="eyebrow">Duplication, measured</div>
+      <h2>63,000 lines that all know how to drive the same components</h2>
+      <p>Main code in each library whose only job is wrapping Vaadin components. Lines are <code>wc -l</code> over <code>src/main</code>, comments included.</p>
+      <div class="chart" id="chart-wrappers" role="img" aria-label="Bar chart of component wrapper code lines per library"></div>
+      <div class="total" id="chart-total"></div>
+
+      <h3 style="margin-top:12px">The same component, written again in each tool</h3>
+      <p>Lines of the main wrapper file for some core components. The Unified column is the wrapper plus its driver-interface and adapter files.</p>
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>Component</th><th class="n">TestBench</th><th class="n">Browserless</th><th class="n">Dramafinder</th><th class="n">Unified</th></tr></thead>
+          <tbody id="percomp"></tbody>
+        </table>
+      </div>
+
+      <div class="duo" style="margin-top:12px">
+        <div>
+          <span class="tag acc">Accidental · could share code</span>
+          <div class="dup acc"><b>UI Unit is a fork of Browserless</b><p>Every one of UI Unit's 62 testers has a same-named Browserless tester. Fix: delete UI Unit; the <code>MigrateUIUnitToBrowserless</code> recipe moves users.</p></div>
+          <div class="dup acc"><b>The round-trip wait, three times</b><p>The script that polls <code>Vaadin.Flow.clients[..].isActive()</code> exists in TestBench, Dramafinder and the Unified API. Fix: one public "client is idle" API in Flow.</p></div>
+          <div class="dup acc"><b>Grid's private API, four copies</b><p><code>_scrollToFlatIndex</code>, <code>_flatSize</code>, <code>_getColumns</code> are called from TestBench, Dramafinder and both Unified browser adapters. Fix: a supported test hook on <code>&lt;vaadin-grid&gt;</code>.</p></div>
+          <div class="dup acc"><b>Tags restated</b><p>Flow's <code>@Tag</code> already names each element. TestBench repeats it 86 times, Dramafinder 57 times. Fix: read <code>@Tag</code>, as the Unified API does.</p></div>
+          <div class="dup acc"><b>Two browser element libraries</b><p>49 components are wrapped by both TestBench and Dramafinder, against the same DOM, with different vocabularies.</p></div>
+          <div class="dup acc"><b>Unified adapters repeat each other</b><p>25% of the Playwright adapter's lines also appear in the Selenium adapter.</p></div>
+          <div class="dup acc"><b>Spring test login, test runner glue, failure evidence</b><p>Each tool has its own login endpoint, JUnit extension, screenshot or tree dump, and (two of them) agent report.</p></div>
+        </div>
+        <div>
+          <span class="tag con">Conceptual · necessarily different</span>
+          <div class="dup con"><b>Component actions, server versus browser</b><p>A Browserless tester sets the value so the event reports <code>isFromClient()</code>; a browser element types and clicks. One side has a component tree and no DOM, the other a DOM and no server objects. This is the one split a merged product keeps.</p></div>
+          <div class="dup con"><b>Lookups</b><p>The traversal differs, but the vocabulary (<code>withLabel</code>, <code>withText</code>, <code>withId</code>) need not. The Unified API already has one filter set over all three.</p></div>
+          <div class="dup con"><b>Waiting</b><p>In the JVM an action is synchronous; in a browser it waits for actionability and the round trip. Same guarantee, implemented per runtime.</p></div>
+          <div class="dup con"><b>Users and sessions</b><p>Browserless switches thread-locals per simulated user; browsers need separate contexts and a real login.</p></div>
+          <p class="foot" style="margin-top:8px"><span class="op">opinion</span> About a third of the 63,000 lines is accidental and a merged product removes it outright: UI Unit, one of the two browser element libraries, and most of the Unified adapters' per-component code.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="coverage">
+      <div class="eyebrow">Component coverage</div>
+      <h2>Which tool wraps which component</h2>
+      <div class="stats" id="cov-stats"></div>
+      <div class="filters" role="group" aria-label="Filter components">
+        <button type="button" id="f-all" data-f="all" aria-pressed="true">All 74</button>
+        <button type="button" id="f-three" data-f="three" aria-pressed="false">Wrapped by all three tools</button>
+        <button type="button" id="f-blgap" data-f="blgap" aria-pressed="false">No Browserless tester</button>
+        <button type="button" id="f-single" data-f="single" aria-pressed="false">Only one tool</button>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--tb)"></i>TestBench element</span>
+        <span><i class="dot" style="background:var(--bl)"></i>Browserless tester</span>
+        <span><i class="dot" style="background:var(--df)"></i>Dramafinder element</span>
+        <span><i class="dot" style="background:var(--un)"></i>Unified wrapper</span>
+      </div>
+      <div class="tscroll" style="max-height:520px">
+        <table class="cov">
+          <thead><tr><th>Component</th><th style="text-align:center">TestBench</th><th style="text-align:center">Browserless</th><th style="text-align:center">Dramafinder</th><th style="text-align:center">Unified</th></tr></thead>
+          <tbody id="cov-body"></tbody>
+        </table>
+      </div>
+      <p class="foot">Sub-part elements (rows, cells, menu items, tabs) and plain HTML elements are left out. <code>AnchorElement</code> lives in <code>flow</code>, not <code>flow-components</code>. <span class="op">opinion</span> The gap that matters is Browserless's; most of its missing rows are layouts, but RichTextEditor, Crud, CustomField and Spreadsheet are real gaps.</p>
+    </section>
+
+    <section id="options">
+      <div class="eyebrow">Should they merge or move?</div>
+      <h2>Five options, ranked <span class="op">opinion</span></h2>
+      <p>Constraints any option must meet: Browserless already targets exactly one Flow version; TestBench is commercial and licence-checked while the others are Apache-2.0; existing suites in all three APIs must keep compiling during a transition.</p>
+      <div class="opts">
+        <div class="opt top"><span class="rk">1</span><div><h3>Shared component model in flow-components, pluggable drivers</h3><p>One wrapper per component, one server and one DOM behaviour, thin Browserless / Playwright / Selenium drivers. Removes most duplication: five wrapper libraries become one API and two behaviour sets. Medium migration cost, automated by existing recipes. 3–4 quarters.</p></div><span class="pill go">End state</span></div>
+        <div class="opt"><span class="rk">2</span><div><h3>One monorepo, separate artifacts</h3><p>One build, CI, BOM and release. Removes no code by itself, but makes deleting UI Unit and sharing the wait, tag and Spring code a normal refactor. No user migration.</p></div><span class="pill go">First step</span></div>
+        <div class="opt"><span class="rk">3</span><div><h3>Status quo with the Unified layer on top</h3><p>Available now and costs users nothing, but adds a fifth wrapper library. Every component change lands in up to four places.</p></div><span class="pill mid">Bridge only</span></div>
+        <div class="opt"><span class="rk">4</span><div><h3>Move each tool's wrappers into flow-components, nothing else</h3><p>Solves version coupling but moves three copies per component into one repo instead of one copy.</p></div><span class="pill mid">Only with 1</span></div>
+        <div class="opt"><span class="rk">5</span><div><h3>Deprecate Selenium in favour of Playwright</h3><p>Removes 12,670 element lines, but loses WebDriver/BiDi, real Safari, Grid and cloud vendors, Appium and the paying install base.</p></div><span class="pill no">No</span></div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="eyebrow">Proposed architecture <span class="op">opinion</span></div>
+      <h2>One API, two behaviour sets, thin drivers</h2>
+      <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  T["User test<br/>page.find(ComboBoxWrapper).withLabel(..)"] --> P
+  P["vaadin-testing-api<br/>lookups · assertions · Auto-Wait · reports"] --> W
+  W["Component wrapper interfaces<br/>in flow-components"] --> SB["Server behaviour<br/>(from Browserless testers)"]
+  W --> DB["DOM behaviour<br/>(one set for both browsers)"]
+  SB --> SPI["Driver SPI<br/>Driver · Session · Node"]
+  DB --> SPI
+  SPI --> BL["Browserless driver<br/>free"]
+  SPI --> PW["Playwright driver<br/>free"]
+  SPI --> SE["Selenium driver<br/>TestBench, commercial"]
+</pre>
+      </div>
+      <ol class="rules">
+        <li>Component knowledge exists once per runtime family. Playwright and Selenium contain no component code.</li>
+        <li>Drivers are thin: start, find nodes, run a user gesture, run a script, wait.</li>
+        <li>The driver interface names no component. An add-on adds a component without touching it.</li>
+        <li>Browser behaviour calls public test hooks on the web component, not private fields.</li>
+        <li>Everything versions with Vaadin, as Browserless already does.</li>
+      </ol>
+
+      <div class="cols">
+        <div>
+          <h3>Driver interface</h3>
+<pre class="code"><span class="k">public interface</span> Driver {
+  Runtime runtime();          <span class="c">// SERVER or DOM</span>
+  Set&lt;Capability&gt; capabilities();
+  Session open(DriverContext ctx);
+}
+<span class="k">public interface</span> Session <span class="k">extends</span> AutoCloseable {
+  List&lt;Node&gt; find(NodeQuery q); <span class="c">// no component types</span>
+  <span class="k">void</span> navigate(String path);
+  <span class="k">void</span> awaitIdle();           <span class="c">// one Flow API</span>
+  Session openAsUser(String user, String... roles);
+  &lt;T&gt; Optional&lt;T&gt; unwrap(Class&lt;T&gt; type); <span class="c">// escape hatch</span>
+}</pre>
+        </div>
+        <div>
+          <h3>Component knowledge, next to the component</h3>
+<pre class="code"><span class="a">@WrapperFor</span>(ComboBox.<span class="k">class</span>)   <span class="c">// tag read from @Tag</span>
+<span class="k">public interface</span> ComboBoxWrapper
+    <span class="k">extends</span> Wrapper&lt;ComboBoxWrapper&gt;,
+            LabelFilter&lt;ComboBoxWrapper&gt; {
+  <span class="k">default void</span> selectItem(String name) {
+    behaviour(ComboBoxBehaviour.<span class="k">class</span>)
+      .selectItem(node(), name);
+  }
+}
+<span class="a">@Behaviour</span>(runtime = SERVER) <span class="c">// from ComboBoxTester</span>
+<span class="a">@Behaviour</span>(runtime = DOM)    <span class="c">// Playwright AND Selenium</span></pre>
+        </div>
+      </div>
+
+      <div class="tscroll">
+        <table>
+          <thead><tr><th>Knowledge</th><th>Lives in</th><th>Owned by</th></tr></thead>
+          <tbody>
+            <tr><td>Wrapper interface, server and DOM behaviour</td><td>the component's <code>flow-components</code> module (HTML components: <code>flow</code>)</td><td>the component's team</td></tr>
+            <tr><td>JavaScript test hooks</td><td>the web component (<code>vaadin/web-components</code>)</td><td>the same team</td></tr>
+            <tr><td>Lookups, assertions, Auto-Wait, reports</td><td><code>vaadin-testing-api</code></td><td>testing team</td></tr>
+            <tr><td>Runtime mechanics (mocks, WebDriver, Playwright)</td><td>the three drivers</td><td>testing team</td></tr>
+            <tr><td>Add-on components</td><td>the add-on's own jar</td><td>add-on author</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Most of the Unified API's design decisions carry over: filters that follow component type, wrappers as interfaces in the component's jar, a test-runner-neutral lifecycle, the Findable View and the migration recipes. The design departs from it in three places: drivers per runtime instead of adapters per tool, no per-component <code>*Access</code> interfaces in the driver SPI, and drivers that sit on the runtime instead of on another wrapper library.</p>
+    </section>
+
+    <section id="product">
+      <div class="eyebrow">The official product <span class="op">opinion</span></div>
+      <h2>What a Vaadin developer would see</h2>
+      <div class="cols">
+        <div>
+          <h3>One name, one dependency</h3>
+          <ul class="plain">
+            <li>"Vaadin Testing", <code>com.vaadin:vaadin-testing-bom</code> managed by the platform BOM.</li>
+            <li>Starters: <code>vaadin-testing-spring</code> (API, JUnit 6, Browserless), plus <code>-playwright</code>, <code>-selenium</code>, <code>-quarkus</code>.</li>
+            <li>One "Testing" docs section replacing separate pages for browserless, TestBench and Playwright.</li>
+            <li>start.vaadin.com adds one example test that runs on Browserless and, with a flag, in Playwright.</li>
+            <li>One agent skill set and API reference in the jar; Browserless as the agent's millisecond loop.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Migration, mostly automated already</h3>
+          <div class="tscroll">
+            <table>
+              <thead><tr><th>From</th><th>Path</th></tr></thead>
+              <tbody>
+                <tr><td>TestBench UI Unit</td><td><code>MigrateUIUnitToBrowserless</code>, then Browserless path</td></tr>
+                <tr><td>Browserless Test</td><td><code>MigrateBrowserlessToUnified</code></td></tr>
+                <tr><td>TestBench</td><td><code>MigrateTestBenchToUnified</code></td></tr>
+                <tr><td>Dramafinder</td><td><code>MigrateDramafinderToUnified</code></td></tr>
+                <tr><td>Leftover markers</td><td><code>resolve-migration-markers</code> agent skill</td></tr>
+                <tr><td><code>org.vaadin.addons</code> → <code>com.vaadin</code></td><td>new rename recipe (not built yet)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <h3>A licensing split to decide explicitly</h3>
+      <div class="lic">
+        <div><h3 style="color:var(--ok)">Free</h3><p style="font-size:14.5px">The API, the Browserless and Playwright drivers, JUnit / Spring / Quarkus integration, migration recipes, agent skills.</p></div>
+        <div><h3 style="color:var(--tb)">Commercial (TestBench)</h3><p style="font-size:14.5px">Selenium driver with Grid, cloud vendors and real Safari; visual comparison on any driver; the k6 kit that turns UI tests into load tests; team reporting.</p></div>
+      </div>
+      <p class="foot">The in-JVM layer has already moved from commercial (UI Unit) to free (Browserless). An official free Playwright driver moves the paywall whatever Vaadin decides.</p>
+    </section>
+
+    <section id="roadmap">
+      <div class="eyebrow">Roadmap <span class="op">opinion</span></div>
+      <h2>Five phases</h2>
+      <p>Rough person-month ranges for a team that knows the code, before review and docs.</p>
+      <div class="phases">
+        <div class="phase"><div class="when"><b>Phase 0</b>next TestBench major</div><p><strong>Stop double work.</strong> Delete TestBench UI Unit and point its users at the recipe.</p><div class="eff"><b>≤ 1 pm</b>small</div></div>
+        <div class="phase"><div class="when"><b>Phase 1</b>next quarter</div><p><strong>One home.</strong> Move the Unified API and, by agreement, Dramafinder under <code>vaadin</code>; <code>com.vaadin</code> coordinates, platform versioning, one BOM; one CI running the demo on all three runtimes.</p><div class="eff"><b>2–4 pm</b>medium</div></div>
+        <div class="phase"><div class="when"><b>Phase 2</b>+1–2 quarters</div><p><strong>Shared browser layer.</strong> One Flow "client is idle" API; public test hooks for Grid, ComboBox, DatePicker, Upload; DOM behaviours for the 26 Unified components used by both browser drivers; drop the per-component <code>*Access</code> interfaces.</p><div class="eff"><b>6–9 pm</b>large</div></div>
+        <div class="phase"><div class="when"><b>Phase 3</b>+2–3 quarters</div><p><strong>Knowledge next to components.</strong> Move wrapper and behaviours into <code>flow-components</code> component by component; cover Browserless's gaps; freeze TestBench and Dramafinder elements as escape hatches.</p><div class="eff"><b>6–12 pm</b>large, spread</div></div>
+        <div class="phase"><div class="when"><b>Phase 4</b>parallel from phase 1</div><p><strong>Product and agents.</strong> One docs section, starters, Copilot generating against the API, one skill set, a CLI/MCP live session.</p><div class="eff"><b>M–L</b></div></div>
+      </div>
+      <h3 style="margin-top:8px">Open questions</h3>
+      <ul class="plain">
+        <li>Will Dramafinder's maintainer and Vaadin agree on moving it (namespace, governance, cadence)?</li>
+        <li>Will <code>vaadin/web-components</code> accept public test hooks as supported API?</li>
+        <li>Does the components team want to own wrapper and behaviour code in <code>flow-components</code>?</li>
+        <li>What should wrappers be called once <code>Unified*</code> no longer has to dodge three other libraries?</li>
+        <li>What does a TestBench subscription contain once Playwright is free?</li>
+      </ul>
+    </section>
+
+    <section id="caveats">
+      <div class="eyebrow">Not verified</div>
+      <h2>Limits of this note</h2>
+      <ul class="plain">
+        <li>Only the <code>*-testbench</code> modules of <code>flow-components</code> and <code>flow</code> were read; whether <code>flow-components</code> tests with Browserless or UI Unit was not checked.</li>
+        <li>That the platform BOM manages Browserless and TestBench versions comes from the Unified API README, not from <code>vaadin/platform</code>.</li>
+        <li>Licensing and pricing beyond code headers rely on an earlier reading of vaadin.com (2026-11-22).</li>
+        <li>Shared-line percentages are a lower bound: only same-named files were compared.</li>
+        <li>Line counts include comments and blank lines; Dramafinder is heavily documented and looks larger.</li>
+        <li><code>vaadin/web-components</code> was not read, so existing supported test hooks are unknown.</li>
+        <li>Effort estimates are judgement only.</li>
+      </ul>
+      <p class="foot">Full note with every citation: <code>docs/research/merging-vaadin-testing-tools.md</code> in <code>parttio/unified-testing-tool</code>, branch <code>ccr-ab1679a5-wcmpot</code>.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  var libs = [
+    { name: "Dramafinder elements", sub: "Playwright, Apache-2.0", v: 21166, c: "--df" },
+    { name: "Browserless testers", sub: "in-JVM, Apache-2.0", v: 15325, c: "--bl" },
+    { name: "TestBench elements", sub: "in flow-components and flow", v: 12670, c: "--tb" },
+    { name: "TestBench UI Unit testers", sub: "deprecated fork of Browserless", v: 7345, c: "--uiu" },
+    { name: "Unified wrappers + adapters", sub: "unified-testing-tool", v: 6538, c: "--un" }
+  ];
+  var max = 25000, fmt = function (n) { return n.toLocaleString("en-US"); };
+  var el = document.getElementById("chart-wrappers"), html = "";
+  libs.forEach(function (l) {
+    html += '<div class="bar-row"><div class="lbl">' + l.name + '<small>' + l.sub + '</small></div>' +
+      '<div class="track"><div class="fill" style="width:' + (l.v / max * 100).toFixed(2) + '%;background:var(' + l.c + ')"></div></div>' +
+      '<div class="num">' + fmt(l.v) + '</div></div>';
+  });
+  html += '<div class="axis"><div></div><div class="ticks">' +
+    [0, 5000, 10000, 15000, 20000, 25000].map(function (t) {
+      return '<span style="left:' + (t / max * 100) + '%">' + (t ? (t / 1000) + "k" : "0") + '</span>';
+    }).join("") + '</div><div></div></div>';
+  el.innerHTML = html;
+  var total = libs.reduce(function (s, l) { return s + l.v; }, 0);
+  document.getElementById("chart-total").textContent = "Total: " + fmt(total) + " lines of component-wrapper code.";
+
+  var per = [
+    ["Grid", 812, 1003, 2559, "104 + 981"],
+    ["ComboBox", 190, 202, 476, "36"],
+    ["MultiSelectComboBox", 226, 180, 592, "45"],
+    ["DatePicker", 254, 116, 264, "47"],
+    ["DateTimePicker", 294, 101, 421, "58 + 22"],
+    ["Upload", 219, 993, 294, "39 + 8"],
+    ["MenuBar", 123, 436, 208, "59 + 20"],
+    ["TabSheet", 114, 305, 192, "46 + 263"],
+    ["TextField", 60, 110, 304, "18"],
+    ["Button", 34, 40, 231, "20"]
+  ];
+  document.getElementById("percomp").innerHTML = per.map(function (r) {
+    return "<tr><td>" + r[0] + '</td><td class="n">' + fmt(r[1]) + '</td><td class="n">' + fmt(r[2]) +
+      '</td><td class="n">' + fmt(r[3]) + '</td><td class="n">' + r[4] + "</td></tr>";
+  }).join("");
+
+  // flags: TestBench, Browserless, Dramafinder, Unified
+  var cov = "Accordion:1110,Anchor / RouterLink:1101,AppLayout:1010,Avatar:1010,AvatarGroup:1110,Badge:1010,BigDecimalField:1111,Board:1000,Breadcrumbs:1110,Button:1111,Card:1110,Chart:1100,Checkbox:1111,CheckboxGroup:1110,ComboBox:1111,ConfirmDialog:1111,ContextMenu:1110,Crud:1000,CustomField:1010,Dashboard:1100,DatePicker:1111,DateTimePicker:1111,DecimalRangeSlider:1100,DecimalSlider:1100,Details:1111,Dialog:1111,EmailField:1111,FormLayout:1010,Grid:1111,GridContextMenu:0100,GridPro:1100,HorizontalLayout:1000,Icon:1000,IntegerField:1111,IntegerRangeSlider:1100,IntegerSlider / NumberSlider:1110,ListBox:1110,LoginForm / LoginOverlay:1111,Map:1000,Markdown:1110,MasterDetailLayout:1100,MenuBar:1111,MessageInput:1111,MessageList:1111,MultiSelectComboBox:1111,MultiSelectListBox:0100,Notification:1111,NumberField:1111,NumberRangeSlider:1000,PasswordField:1111,PdfViewer:1000,Popover:1110,ProgressBar:1010,RadioButtonGroup:1111,RichTextEditor:1000,Scroller:1000,Select:1110,SideNav:1110,SplitLayout:1110,Spreadsheet:1000,Switch:1110,Tabs:1111,TabSheet:1111,TextArea:1111,TextField:1111,TimePicker:1110,Tooltip:0010,TreeGrid:1110,Upload:1111,UploadButton:1100,UploadDropZone:1100,UploadFileList:1100,VerticalLayout:1000,VirtualList:1110"
+    .split(",").map(function (s) { var i = s.lastIndexOf(":"); return { n: s.slice(0, i), f: s.slice(i + 1).split("").map(Number) }; });
+  var colors = ["--tb", "--bl", "--df", "--un"], names = ["TestBench", "Browserless", "Dramafinder", "Unified"];
+  var sum = function (r) { return r.f[0] + r.f[1] + r.f[2]; };
+  var tests = {
+    all: function () { return true; },
+    three: function (r) { return sum(r) === 3; },
+    blgap: function (r) { return !r.f[1]; },
+    single: function (r) { return r.f.reduce(function (a, b) { return a + b; }, 0) === 1; }
+  };
+  var body = document.getElementById("cov-body");
+  function render(f) {
+    body.innerHTML = cov.filter(tests[f]).map(function (r) {
+      return "<tr><td>" + r.n + "</td>" + r.f.map(function (v, i) {
+        return '<td class="c">' + (v ? '<i class="dot" style="background:var(' + colors[i] + ')" title="' + names[i] + '"></i><span hidden>yes</span>'
+          : '<i class="dot no"></i><span hidden>no</span>') + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+  }
+  var three = cov.filter(tests.three);
+  document.getElementById("f-three").textContent = "Wrapped by all three tools (" + three.length + ")";
+  document.getElementById("f-blgap").textContent = "No Browserless tester (" + cov.filter(tests.blgap).length + ")";
+  document.getElementById("f-single").textContent = "Only one tool (" + cov.filter(tests.single).length + ")";
+  document.getElementById("f-all").textContent = "All " + cov.length;
+  var stats = [
+    [three.length, "components wrapped by all three tools"],
+    [three.filter(function (r) { return r.f[3]; }).length, "of those also have a Unified wrapper"],
+    [cov.filter(function (r) { return r.f[0] && r.f[2]; }).length, "wrapped by both browser libraries"],
+    ["≈9,200", "lines for Grid alone, across five libraries"]
+  ];
+  document.getElementById("cov-stats").innerHTML = stats.map(function (s) {
+    return '<div class="stat"><div class="v">' + s[0] + '</div><div class="k">' + s[1] + "</div></div>";
+  }).join("");
+  var btns = document.querySelectorAll(".filters button");
+  btns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      btns.forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      render(b.dataset.f);
+    });
+  });
+  render("all");
+})();
+</script>
