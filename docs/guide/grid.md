@@ -55,6 +55,12 @@ Row actions (`click()`, `select()`, `toggleDetails()`) are actions like any othe
 --8<-- "unified-test-demo/src/test/java/demo/GridInteractionTest.java:clicksAComponentInACell"
 ```
 
+`row.cell(1)` *(unreleased)* finds the cell by its index among the visible columns, as `getCellText(1)` reads it: for a column without header text, such as an action column. The reports name it `cell at index 1`. Prefer the header: an index breaks when columns are reordered.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/GridInteractionTest.java:clicksAComponentInACellByIndex"
+```
+
 ## Columns
 
 Find a column by its header text; `columnWithId("owner")` (`Column.setId`) or `column(1)` for a column without header text.

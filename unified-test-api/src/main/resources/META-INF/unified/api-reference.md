@@ -220,7 +220,7 @@ Grid, Flow's `Grid`. Guide: [Grid](https://parttio.github.io/unified-testing-too
 - **Filters:** `selected()`, `withCellText(String)`, `withCellText(String, String)`, `withCellTextContaining(String, String)`
 - **Actions:** `click()`, `deselect()`, `doubleClick()`, `select()`, `toggleDetails()`
 - **Reads:** `getCellText(String) → String`, `getCellText(int) → String`, `getIndex() → int`, `isDetailsOpen() → boolean`, `isSelected() → boolean`
-- **Also:** `all() → List<UnifiedGridRow>`, `cell(String) → Scope`, `details() → Scope`, `grid() → UnifiedGrid`
+- **Also:** `all() → List<UnifiedGridRow>`, `cell(String) → Scope`, `cell(int) → Scope`, `details() → Scope`, `grid() → UnifiedGrid`
 - **Checks, `assertThat(UnifiedGridRow)`:** `doesNotExist()`, `exists()`, `hasCellText(String, String)`, `hasCount(int)`, `hasDetailsClosed()`, `hasDetailsOpen()`, `isNotSelected()`, `isSelected()`
 
 ### `UnifiedHeader`

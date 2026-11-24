@@ -2,6 +2,8 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.testing.unified.RequiresBrowser;
@@ -11,6 +13,8 @@ import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+import com.vaadin.testing.unified.UnifiedAssertionError;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +45,35 @@ class GridInteractionTest {
         assertNotification(page, "Editing User 3");
     }
     // --8<-- [end:clicksAComponentInACell]
+
+    // --8<-- [start:clicksAComponentInACellByIndex]
+    @Test
+    @DisplayName("The user clicks Remove in Bob's row, in a column without header text")
+    void clicksAComponentInACellByIndex(UnifiedPage page) {
+        UnifiedGrid accounts = grid(page, "accounts");
+        UnifiedGrid.UnifiedGridRow bob = accounts.row().withCellText("Name", "Bob");
+
+        // the hidden Email column doesn't count: Name is at 0, the Remove column at 1
+        assertEquals("Bob", bob.getCellText(0));
+        bob.cell(1).find(UnifiedButton.class).withText("Remove").click();
+
+        assertNotification(page, "Removing Bob");
+    }
+    // --8<-- [end:clicksAComponentInACellByIndex]
+
+    @Test
+    @DisplayName("A cell index past the last visible column fails, naming the cell by its index and the column count")
+    void cellIndexOutOfRange(UnifiedPage page) {
+        UnifiedGrid accounts = grid(page, "accounts").withTimeout(Duration.ofMillis(500));
+
+        UnifiedAssertionError error = assertThrows(UnifiedAssertionError.class, () -> accounts.row()
+                .withCellText("Name", "Bob").cell(2).find(UnifiedButton.class).withText("Remove").click());
+
+        // the User Step names the cell by its index
+        assertTrue(error.getMessage().contains("click button “Remove” in cell at index 2 in row where Name is “Bob”"
+                + " in grid (test id “accounts”)"), error.getMessage());
+        assertEquals("No visible column at index 2 (2 columns)", error.getCause().getMessage());
+    }
 
     /** A page-wide find reaches components rendered in grid cells, as in a browser. */
     @Test
