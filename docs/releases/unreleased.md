@@ -111,6 +111,10 @@ page becomes the notes of the next alpha.
 
 ## Changed behaviour
 
+- **Dramafinder 2.2.2**: `unified-test-bom` manages Dramafinder 2.2.2 (was 2.2.1). Its `RouteNavigation.isAt` and
+  `assertAt` match each `@RouteAlias` of a view ([parttio/dramafinder#318](https://github.com/parttio/dramafinder/issues/318)),
+  so the Playwright adapter's `isAt` no longer falls back to its own matcher. A project that pins an older
+  Dramafinder keeps the Playwright `isAt` failing on an alias path.
 - **A Spring Boot app's TestBench tests start the app themselves** ([#528](https://github.com/parttio/unified-testing-tool/issues/528),
   [ADR 0013](../adr/0013-migrated-spring-boot-tests-start-the-app.md)): in a module with a `@SpringBootApplication`,
   the TestBench recipe turns a test class without `@SpringBootTest`, which ran against a server the build started,
