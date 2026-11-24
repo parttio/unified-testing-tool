@@ -6,6 +6,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.tabs.TabSheet;
@@ -81,6 +82,34 @@ final class PlaywrightComponents {
         }
     }
 
+    /**
+     * An overlay host (spec 04, "What a lookup sees"): an element with no box of its own, whose content its
+     * overlay shows, so Playwright's own visibility check never sees it. It is part of the page, and visible,
+     * while its overlay is open: its {@code opened} property, as Dramafinder's DialogElement.isOpen() reads it.
+     * Closed ones (the app's or the dev tools') are not part of the page. Another overlay component opts in by
+     * registering one.
+     */
+    static class OverlayHost implements Support {
+        @Override
+        public boolean include(Locator locator) {
+            return opened(locator);
+        }
+
+        @Override
+        public Optional<Boolean> visible(Locator locator) {
+            return Optional.of(opened(locator));
+        }
+
+        @Override
+        public Optional<Boolean> booleanProperty(Locator locator, String name) {
+            return "opened".equals(name) ? Optional.of(opened(locator)) : Optional.empty();
+        }
+
+        static boolean opened(Locator locator) {
+            return Boolean.TRUE.equals(locator.evaluate("e => e.opened === true"));
+        }
+    }
+
     static final Support DEFAULT = new Support() {};
     private static final Map<Class<? extends Component>, Support> REGISTRY = new LinkedHashMap<>();
 
@@ -136,18 +165,13 @@ final class PlaywrightComponents {
     }
 
     static {
-        register(Dialog.class, new Support() {
+        register(Dialog.class, new OverlayHost() {
             @Override
             public Class<? extends VaadinElement> dramafinderElement() {
                 return DialogElement.class;
             }
-
-            @Override
-            public Optional<Boolean> visible(Locator locator) {
-                // the dialog host has no box; its overlay is what the user sees
-                return Optional.of(new DialogElement(locator).isVisible());
-            }
         });
+        register(ConfirmDialog.class, new OverlayHost());
     }
 
     static {

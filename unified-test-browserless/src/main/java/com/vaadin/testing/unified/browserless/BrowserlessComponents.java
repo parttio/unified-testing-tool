@@ -6,6 +6,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.tabs.TabSheet;
@@ -63,11 +64,38 @@ final class BrowserlessComponents {
         }
     }
 
+    /**
+     * An overlay host (spec 04, "What a lookup sees"): a component whose content its overlay shows. It is part
+     * of the page, and visible, while its overlay is open, as in a browser adapter: its {@code opened}
+     * property, which Dialog, ConfirmDialog and Notification keep in sync with the browser. A closed one is not
+     * part of the page. Another overlay component opts in by registering one.
+     */
+    static class OverlayHost implements Support {
+        @Override
+        public boolean include(Component component) {
+            return opened(component);
+        }
+
+        @Override
+        public Optional<Boolean> visible(Component component) {
+            return Optional.of(opened(component));
+        }
+
+        @Override
+        public Optional<Boolean> booleanProperty(Component component, String name) {
+            return "opened".equals(name) ? Optional.of(opened(component)) : Optional.empty();
+        }
+
+        static boolean opened(Component component) {
+            return component.getElement().getProperty("opened", false);
+        }
+    }
+
     private static final Support DEFAULT = new Support() {};
     private static final Map<Class<? extends Component>, Support> REGISTRY = new LinkedHashMap<>();
 
     static {
-        register(Notification.class, new Support() {
+        register(Notification.class, new OverlayHost() {
             @Override
             public Optional<String> text(Component component, BrowserlessUIContext window) {
                 // the text is in a renderer: read it through the tester
@@ -78,43 +106,12 @@ final class BrowserlessComponents {
                     throw new IllegalStateException("NotificationTester.getText() not available", e);
                 }
             }
-
-            @Override
-            public Optional<Boolean> booleanProperty(Component component, String name) {
-                return "opened".equals(name) ? Optional.of(((Notification) component).isOpened()) : Optional.empty();
-            }
-
-            @Override
-            public Optional<Boolean> visible(Component component) {
-                return Optional.of(((Notification) component).isOpened());
-            }
-
-            /** Open notifications only: a browser adapter finds the open card. */
-            @Override
-            public boolean include(Component component) {
-                return ((Notification) component).isOpened();
-            }
         });
     }
 
     static {
-        register(Dialog.class, new Support() {
-            @Override
-            public Optional<Boolean> booleanProperty(Component component, String name) {
-                return "opened".equals(name) ? Optional.of(((Dialog) component).isOpened()) : Optional.empty();
-            }
-
-            @Override
-            public Optional<Boolean> visible(Component component) {
-                return Optional.of(((Dialog) component).isOpened());
-            }
-
-            /** Open dialogs only, as in a browser adapter: a closed dialog is not part of the page. */
-            @Override
-            public boolean include(Component component) {
-                return ((Dialog) component).isOpened();
-            }
-
+        register(ConfirmDialog.class, new OverlayHost());
+        register(Dialog.class, new OverlayHost() {
             @Override
             public boolean pressKey(Component component, String key, BrowserlessUIContext window) {
                 if (!"Escape".equals(key)) {
