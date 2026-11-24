@@ -189,7 +189,7 @@ class UserStepsFilesTest {
                 "   2  sign in as “barista@vaadin.com” in login",
                 "   3  see login with an error",
                 "   4  sign in as “barista@vaadin.com” in login",
-                "   5  open “”"), lines.subList(1, 6), String.join("\n", lines));
+                "   5  open “/”"), lines.subList(1, 6), String.join("\n", lines));
         // every file the run wrote (steps, failure, evidence, the run's summary), and the failure itself
         try (var files = Files.walk(dir)) {
             for (Path file : files.filter(Files::isRegularFile).toList()) {

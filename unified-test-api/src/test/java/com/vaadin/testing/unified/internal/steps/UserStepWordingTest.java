@@ -397,6 +397,25 @@ public class UserStepWordingTest {
         assertEquals(List.of("open People", "open “profile?tab=2”", "press “Escape”"), texts());
     }
 
+    @Test
+    void openingTheRootRouteReadsSlashHoweverItIsSpelled() {
+        fake.page.navigate("");
+        fake.page.navigate("/");
+        fake.page.navigate("users");
+
+        assertEquals(List.of("open “/”", "open “/”", "open “users”"), texts());
+    }
+
+    @Test
+    void aLinkClickBackToTheRootRouteReadsOpenSlash() {
+        fake.add("a", "text", "Home", "href", "");
+        fake.path = "users";
+        fake.onClick = () -> fake.path = "";
+        fake.page.find(UnifiedLink.class).withText("Home").click();
+
+        assertEquals(List.of("click link “Home”", "open “/”"), texts());
+    }
+
     static class PeopleView extends com.vaadin.flow.component.html.Div {}
 
     @Test

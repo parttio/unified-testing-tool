@@ -173,8 +173,12 @@ public final class Phrases {
                 List.of(String.valueOf(parameter)));
     }
 
+    /**
+     * {@code open “users”}: the path as given, except the root route, which reads {@code open “/”} whether it was
+     * spelled {@code ""} or {@code "/"}.
+     */
     public static Phrase open(String path) {
-        return Phrase.template("open", "open {value}", null, List.of(path));
+        return Phrase.template("open", "open {value}", null, List.of(path.isEmpty() ? "/" : path));
     }
 
     /** {@code PeopleView} → "People", {@code EditPersonView} → "Edit Person". */

@@ -80,6 +80,18 @@ class RunComparisonTest {
     }
 
     @Test
+    void theRootRouteIsOneStepHoweverEitherRunSpelledIt() {
+        assertEquals(Optional.empty(), RunComparison.parting(
+                List.of(Phrases.open("").render(), "   click button “Save”"),
+                List.of(Phrases.open("/").render(), "   click button “Save”")));
+        // a user-steps.json written before the root read “/”
+        assertEquals(Optional.empty(), RunComparison.parting(List.of("open “”", "[window 2] open “”"),
+                List.of("open “/”", "[window 2] open “/”")));
+        assertEquals(Optional.of(new RunComparison.Parting(1, "open “users”", "open “/”")),
+                RunComparison.parting(List.of("open “users”"), List.of("open “/”")));
+    }
+
+    @Test
     void oneComparisonPerOtherTestingTool() {
         List<RunComparison> comparisons = RunComparison.of("playwright", thisRun(), List.of(
                 on("selenium", RunSummaryTest.EDIT_PERSON, "EditPersonTest/editsAPerson"),
