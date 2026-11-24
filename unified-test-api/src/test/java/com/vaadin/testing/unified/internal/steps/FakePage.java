@@ -109,7 +109,7 @@ final class FakePage {
             });
             return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
                     e.getAttribute("in"), e.getAttribute("inId"), Boolean.parseBoolean(e.getAttribute("internalPart")),
-                    data);
+                    data, e.getAttribute("id"));
         }).toList();
     }
 

@@ -1,6 +1,7 @@
 package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -21,6 +22,7 @@ import demo.template.OrdersView;
 import demo.template.SearchBar;
 import org.junit.jupiter.api.DisplayName;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /** Components in a Template's shadow root, found by entering the Template (#347), on every Testing Tool. */
@@ -136,5 +138,30 @@ public class TemplateTest {
         String inside = page.findTemplate(OrdersPanel.class).describe();
         assertTrue(inside.contains("Template <demo-search-bar>"), inside);
         assertTrue(inside.contains("span (id “status”)") || inside.contains("button “New customer”"), inside);
+    }
+
+    @Test
+    @DisplayName("Inside a Template, the Findable View finds an @Id component by its id, even where a browser reads"
+            + " the text the template writes")
+    void findableViewSuggestsTheIdInsideATemplate(UnifiedPage page) {
+        page.navigate(OrdersView.class);
+
+        // --8<-- [start:describeTemplate]
+        String view = page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).describe();
+        // text field “Filter”     find(UnifiedTextField.class).withId("filter")
+        // button “New order”      find(UnifiedButton.class).withId("new")    (a browser reads the template's text)
+        // button (no name; id “new”)  find(UnifiedButton.class).withId("new")    (Browserless doesn't)
+        // --8<-- [end:describeTemplate]
+
+        List<String> lines = view.lines().skip(1).map(l -> l.replaceAll(" {2,}", "  ")).toList();
+        assertEquals(2, lines.size(), view);
+        assertTrue(lines.get(0).endsWith("  find(UnifiedTextField.class).withId(\"filter\")"), view);
+        assertTrue(lines.get(1).endsWith("  find(UnifiedButton.class).withId(\"new\")"), view);
+        if (view.contains(" on browserless")) {
+            assertEquals("button (no name; id “new”)  find(UnifiedButton.class).withId(\"new\")", lines.get(1));
+        }
+        String panel = page.findTemplate(OrdersPanel.class).describe();
+        assertTrue(panel.contains("find(UnifiedButton.class).withId(\"new\")"), panel);
+        assertTrue(panel.contains("find(UnifiedButton.class).withText(\"Help\")"), panel);
     }
 }

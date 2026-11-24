@@ -134,6 +134,7 @@ page.findTemplate(StorefrontView.class)                    // no Wrapper of its 
 | Ids | compared within the Template entered: the same id in two Templates is not ambiguous. |
 | Client-rendered web components | entered the same way in a browser. Browserless can't see inside them: a test that enters one declares `@RequiresBrowser` ([9. Capabilities](09-capabilities.md#browser-only-features-in-the-unified-api)). |
 | The Template's own text | `getText()` and `withText(..)` on a Template read its light DOM only, as on any component. |
+| The Template's element *(unreleased)* | `findTemplate(X.class).element()` is the Template's host. Its Unified Element methods, `findDescendants(..)` and `findChildren(..)` among them, stay in the light DOM, as on any element: they don't enter the shadow root. Template HTML without an `@Id` (an element with no `id`, and nothing the server knows) can't be found on any Testing Tool, through a lookup or the element; give it an `@Id` to reach it. |
 
 A failed lookup that would have found its component inside a Template says so, with the lookup that enters it ([12. Readable tests, Failures](12-readable-tests.md#failures)).
 

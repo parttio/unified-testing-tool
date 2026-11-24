@@ -3,8 +3,8 @@ package com.vaadin.testing.unified.spi;
 import com.vaadin.testing.unified.UnifiedElement;
 
 /**
- * What a component shows a user, read for a failure message only: the values the naming filters match on, and the
- * nearest ancestor with a test id or an id, which tells several matches apart. Any part can be null.
+ * What a component shows a user, read for a failure message only: the values the naming filters match on, its own
+ * id, and the nearest ancestor with a test id or an id, which tells several matches apart. Any part can be null.
  *
  * @param label the {@code label} property ({@link Filter.Kind#LABEL})
  * @param text the text, as {@link UnifiedElement#getText()} ({@link Filter.Kind#TEXT})
@@ -19,12 +19,21 @@ import com.vaadin.testing.unified.UnifiedElement;
  *        so none of its elements is one.
  * @param data the element's own {@code data-*} attributes but {@code data-testid}, by name: what tells alike
  *        components apart when nothing else does (#547); empty when the adapter doesn't read them
+ * @param id the element's own {@code id}, as a browser reads it ({@link Filter.Kind#ID}): on Browserless also the id
+ *        an {@code @Id} binding gave it in its Template (#609); null when it has none or the adapter doesn't read it
  */
 public record ElementFacts(String label, String text, String placeholder, String testId, String accessibleName,
-        String ancestorTestId, String ancestorId, boolean internalPart, java.util.Map<String, String> data) {
+        String ancestorTestId, String ancestorId, boolean internalPart, java.util.Map<String, String> data,
+        String id) {
 
     public ElementFacts {
         data = data == null ? java.util.Map.of() : java.util.Map.copyOf(data);
+    }
+
+    /** Facts without the element's own id. */
+    public ElementFacts(String label, String text, String placeholder, String testId, String accessibleName,
+            String ancestorTestId, String ancestorId, boolean internalPart, java.util.Map<String, String> data) {
+        this(label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId, internalPart, data, null);
     }
 
     /** Facts without {@code data-*} attributes. */
@@ -47,6 +56,7 @@ public record ElementFacts(String label, String text, String placeholder, String
             case PLACEHOLDER -> placeholder;
             case TEST_ID -> testId;
             case ACCESSIBLE_NAME -> accessibleName;
+            case ID -> id;
             default -> null;
         };
     }

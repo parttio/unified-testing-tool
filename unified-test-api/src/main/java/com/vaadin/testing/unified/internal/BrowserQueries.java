@@ -317,8 +317,8 @@ public final class BrowserQueries {
 
     /**
      * Browser function
-     * {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId, internalPart, data]}:
-     * what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages; the text is
+     * {@code e => [label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId, internalPart, data,
+     * id]}: what {@link com.vaadin.testing.unified.spi.ElementFacts} holds, for failure messages; the text is
      * {@link #TEXT}'s, without a tooltip. The ancestor is the
      * nearest one with a {@code data-testid} or an {@code id}, crossing shadow roots to their hosts. Whether it is
      * an internal part is {@link #INTERNAL_PART}'s.
@@ -337,7 +337,8 @@ public final class BrowserQueries {
                   a ? a.getAttribute('data-testid') : null, a && !a.getAttribute('data-testid') ? a.getAttribute('id') : null,
                   internalPart(e),
                   Object.fromEntries([...e.attributes].filter(x => x.name.startsWith('data-') && x.name !== 'data-testid')
-                      .map(x => [x.name, x.value]))];
+                      .map(x => [x.name, x.value])),
+                  e.getAttribute('id')];
             }""".formatted(TEXT, ACCESSIBLE_NAME, LABEL, INTERNAL_PART);
 
     /** {@link #FACTS}' result as {@link com.vaadin.testing.unified.spi.ElementFacts}. */
@@ -351,8 +352,9 @@ public final class BrowserQueries {
         if (values.size() > 8 && values.get(8) instanceof java.util.Map<?, ?> m) {
             m.forEach((k, v) -> data.put(String.valueOf(k), v == null ? "" : String.valueOf(v)));
         }
+        String id = values.size() > 9 && values.get(9) != null ? String.valueOf(values.get(9)) : null;
         return new com.vaadin.testing.unified.spi.ElementFacts(s[0], s[1], s[2], s[3], s[4], s[5], s[6],
-                Boolean.parseBoolean(s[7]), data);
+                Boolean.parseBoolean(s[7]), data, id);
     }
 
     /**
