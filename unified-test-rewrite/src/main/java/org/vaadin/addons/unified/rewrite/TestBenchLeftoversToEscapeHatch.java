@@ -224,7 +224,7 @@ public class TestBenchLeftoversToEscapeHatch extends ScanningRecipe<TestBenchLef
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 AtomicBoolean pageObjects = getCursor().getNearestMessage(PAGE_OBJECTS);
                 JavaType.FullyQualified element = CustomElements.receiver(method);
-                if (pageObjects != null && element != null && !MigrationMarkers.marked(getCursor())
+                if (pageObjects != null && element != null && !MigrationMarkers.marked(getCursor(), CustomElements::marks)
                         && MigrationMarkers.add(getCursor(), CustomElements.marker(element))) {
                     // a custom element stays TestBench as it is: one marker on the statement, the first of its chain
                     pageObjects.set(true);
@@ -232,7 +232,7 @@ public class TestBenchLeftoversToEscapeHatch extends ScanningRecipe<TestBenchLef
                 AtomicBoolean escapes = getCursor().getNearestMessage(LEFTOVERS);
                 if (escapes == null || m.getSelect() != null && !Helpers.isSuper(m.getSelect()) || !isTestBaseCall(m)
                         || !MigrationMarkers.add(getCursor(), "TestBench Escape Hatch: " + MigrationMarkers.code(method, getCursor().getParentTreeCursor())
-                                + (isCustomElementLookup(method) ? ", a custom element: write a Wrapper for it (ADR 0003)" : ""))) {
+                                + (isCustomElementLookup(method) ? CustomElements.LOOKUP_SUFFIX : ""))) {
                     return m;
                 }
                 escapes.set(true);
@@ -249,7 +249,7 @@ public class TestBenchLeftoversToEscapeHatch extends ScanningRecipe<TestBenchLef
                 || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element)) {
             return false;
         }
-        return !element.getFullyQualifiedName().startsWith("com.vaadin.") && element.getAnnotations().stream()
+        return !CustomElements.shippedByTestBench(element) && element.getAnnotations().stream()
                 .anyMatch(a -> a.getFullyQualifiedName().equals("com.vaadin.testbench.elementsbase.Element"));
     }
 

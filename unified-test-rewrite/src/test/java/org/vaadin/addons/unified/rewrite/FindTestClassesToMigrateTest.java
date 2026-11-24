@@ -310,6 +310,101 @@ class FindTestClassesToMigrateTest implements RewriteTest {
                         """));
     }
 
+    /** Issue #606: Bakery's page objects are in {@code com.vaadin.starter.bakery}, not a package TestBench ships. */
+    @Test
+    void customElementsInAnApplicationPackageUnderComVaadinAreListed() {
+        String loginView = "LoginViewElement: stays TestBench (Escape Hatch), a custom element extending "
+                + "LoginOverlayElement: write a Wrapper (ADR 0003)";
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactlyInAnyOrder(
+                                new FindTestClassesToMigrate.TestClasses.Row("com/vaadin/starter/bakery/testbench/AbstractIT.java",
+                                        "com.vaadin.starter.bakery.testbench.AbstractIT", "TestBench", "migrates partly", "",
+                                        loginView),
+                                new FindTestClassesToMigrate.TestClasses.Row("com/vaadin/starter/bakery/testbench/LoginIT.java",
+                                        "com.vaadin.starter.bakery.testbench.LoginIT", "TestBench", "migrates partly", "",
+                                        loginView),
+                                new FindTestClassesToMigrate.TestClasses.Row("com/vaadin/starter/bakery/testbench/StorefrontIT.java",
+                                        "com.vaadin.starter.bakery.testbench.StorefrontIT", "TestBench", "migrates partly", "",
+                                        "OrderCardElement: stays TestBench (Escape Hatch), a custom element extending "
+                                                + "DivElement: write a Wrapper (ADR 0003); StorefrontViewElement: stays "
+                                                + "TestBench (Escape Hatch), a custom element extending TestBenchElement: "
+                                                + "write a Wrapper (ADR 0003)"))),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("login-view")
+                        public class LoginViewElement extends LoginOverlayElement {
+                            public void login(String user, String password) {
+                            }
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.flow.component.html.testbench.DivElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("order-card")
+                        public class OrderCardElement extends DivElement {
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("storefront-view")
+                        public class StorefrontViewElement extends TestBenchElement {
+                            public OrderCardElement getOrderCard(int index) {
+                                return $(OrderCardElement.class).get(index);
+                            }
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        public abstract class AbstractIT extends BrowserTestBase {
+
+                            protected LoginViewElement openLoginView() {
+                                return $(LoginViewElement.class).waitForFirst();
+                            }
+                        }
+                        """, spec -> spec.after(after -> after)),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        public class LoginIT extends AbstractIT {
+
+                            @BrowserTest
+                            void logsIn() {
+                                openLoginView().login("barista", "barista");
+                            }
+                        }
+                        """, spec -> spec.after(after -> after)),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        public class StorefrontIT extends AbstractIT {
+
+                            @BrowserTest
+                            void opensAnOrder() {
+                                StorefrontViewElement storefront = $(StorefrontViewElement.class).first();
+                                storefront.getOrderCard(0).click();
+                            }
+                        }
+                        """, spec -> spec.after(after -> after)));
+    }
+
     @Test
     void aTestBenchClassUsingOnlyPageObjectsThatConvertMigrates() {
         rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)

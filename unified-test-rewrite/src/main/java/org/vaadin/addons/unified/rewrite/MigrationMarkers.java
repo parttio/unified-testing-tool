@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 import org.openrewrite.Cursor;
 import org.openrewrite.java.tree.Comment;
 import org.openrewrite.java.tree.J;
@@ -47,16 +48,21 @@ final class MigrationMarkers {
         return true;
     }
 
-    /** Whether the method-body statement the cursor is in has a marker already, collected or written. */
-    static boolean marked(Cursor cursor) {
+    /**
+     * Whether the method-body statement the cursor is in has a marker the test accepts already, collected or written:
+     * other markers on the statement don't count. The test gets the text after {@code TODO unified: }.
+     */
+    static boolean marked(Cursor cursor, Predicate<String> marker) {
         Map<UUID, List<String>> markers = cursor.getNearestMessage(KEY);
         Cursor statement = statementInMethodBody(cursor);
         if (markers == null || statement == null) {
             return false;
         }
         Statement s = (Statement) statement.getValue();
-        return markers.containsKey(s.getId()) || s.getPrefix().getComments().stream()
-                .anyMatch(c -> c instanceof TextComment t && t.getText().startsWith(" TODO unified:"));
+        String written = " TODO unified: ";
+        return markers.getOrDefault(s.getId(), List.of()).stream().anyMatch(marker)
+                || s.getPrefix().getComments().stream().anyMatch(c -> c instanceof TextComment t
+                        && t.getText().startsWith(written) && marker.test(t.getText().substring(written.length())));
     }
 
     /** The code a marker quotes: the tree printed without its prefix, so without the comments above its statement. */
