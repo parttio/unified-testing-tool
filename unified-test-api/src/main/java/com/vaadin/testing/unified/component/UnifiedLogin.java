@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.login.LoginSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
+import java.time.Duration;
 
 /**
  * A {@code LoginOverlay} or a {@code LoginForm}: there is normally one per page, so no filter is needed. A
@@ -21,6 +22,10 @@ import com.vaadin.testing.unified.query.CommonFilters;
  */
 @UnifiedComponent(value = AbstractLogin.class, tag = "vaadin-login-overlay, vaadin-login-form")
 public interface UnifiedLogin extends UnifiedWrapper, CommonFilters<UnifiedLogin> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedLogin withTimeout(Duration timeout);
 
     /** The overlay's title ({@link #getTitle()}), exactly. A custom filter built from {@code where(..)}. */
     default UnifiedLogin withTitle(String title) {

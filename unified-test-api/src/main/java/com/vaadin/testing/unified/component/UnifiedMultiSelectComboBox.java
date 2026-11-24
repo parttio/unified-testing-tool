@@ -6,12 +6,17 @@ import com.vaadin.testing.unified.internal.selection.SelectionSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
+import java.time.Duration;
 import java.util.List;
 
 /** A {@link MultiSelectComboBox}. Items are identified by the label the user sees. */
 @UnifiedComponent(MultiSelectComboBox.class)
 public interface UnifiedMultiSelectComboBox extends UnifiedField, CommonFilters<UnifiedMultiSelectComboBox>,
         LabelFilter<UnifiedMultiSelectComboBox>, PlaceholderFilter<UnifiedMultiSelectComboBox> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedMultiSelectComboBox withTimeout(Duration timeout);
 
     // actions (Auto-Wait)
     /** Adds the items to the selection; already selected items stay selected. */

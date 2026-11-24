@@ -99,7 +99,7 @@ class SignUpTest {
     @DisplayName("A failed check on the password field doesn't show the password")
     void failureHidesThePassword(UnifiedPage page) {
         page.navigate(EmailSignUpView.class);
-        UnifiedPasswordField password = (UnifiedPasswordField) page.find(UnifiedPasswordField.class)
+        UnifiedPasswordField password = page.find(UnifiedPasswordField.class)
                 .withLabel("Password").withTimeout(Duration.ofMillis(500));
         password.setValue("correct horse");
 

@@ -6,12 +6,17 @@ import com.vaadin.testing.unified.internal.datepicker.DatePickerSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
+import java.time.Duration;
 import java.time.LocalDate;
 
 /** A {@link DatePicker}: the value is a {@link LocalDate}, {@code null} when empty. */
 @UnifiedComponent(DatePicker.class)
 public interface UnifiedDatePicker extends UnifiedField,
         CommonFilters<UnifiedDatePicker>, LabelFilter<UnifiedDatePicker>, PlaceholderFilter<UnifiedDatePicker> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedDatePicker withTimeout(Duration timeout);
 
     // actions (Auto-Wait)
     /**

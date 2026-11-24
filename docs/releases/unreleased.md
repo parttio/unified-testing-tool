@@ -118,6 +118,12 @@ page becomes the notes of the next alpha.
 
 ## Changed behaviour
 
+- **`withTimeout(..)` keeps the Wrapper's type** ([#593](https://github.com/parttio/unified-testing-tool/issues/593)):
+  every Core Set Wrapper re-declares it with its own return type, so
+  `page.find(UnifiedGrid.class).withTimeout(Duration.ofSeconds(30)).getRowCount()` compiles without a cast. A
+  project Wrapper returns `UnifiedWrapper` as before, unless it re-declares `withTimeout` with its own type
+  ([Wrappers for your own components](../guide/custom-wrappers.md#a-wrapper-is-an-interface)). Existing casts still
+  compile.
 - **Dramafinder 2.2.2**: `unified-test-bom` manages Dramafinder 2.2.2 (was 2.2.1). Its `RouteNavigation.isAt` and
   `assertAt` match each `@RouteAlias` of a view ([parttio/dramafinder#318](https://github.com/parttio/dramafinder/issues/318)),
   so the Playwright adapter's `isAt` no longer falls back to its own matcher. A project that pins an older

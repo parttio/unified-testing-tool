@@ -49,7 +49,7 @@ class LinkKindsTest {
     @DisplayName("A failed RouterLink lookup doesn't offer the Logout anchor as a router link")
     void nearMissesAreOfTheClass(UnifiedPage page) {
         page.navigate(LinkKindsView.class);
-        UnifiedGenericComponent logout = (UnifiedGenericComponent) page.findComponent(RouterLink.class)
+        UnifiedGenericComponent logout = page.findComponent(RouterLink.class)
                 .withText("Logout").withTimeout(Duration.ofMillis(500));
 
         AssertionError e = assertThrows(AssertionError.class, () -> logout.element().click());

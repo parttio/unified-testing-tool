@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.internal.LazyScope;
 import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.DetailsAccess;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -19,6 +20,10 @@ import java.util.List;
  */
 @UnifiedComponent(Details.class)
 public interface UnifiedDetails extends UnifiedWrapper, Scope, CommonFilters<UnifiedDetails> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedDetails withTimeout(Duration timeout);
 
     /** Details whose summary is this text, exactly. */
     default UnifiedDetails withSummaryText(String text) {

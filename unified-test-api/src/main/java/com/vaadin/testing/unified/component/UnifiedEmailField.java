@@ -5,6 +5,7 @@ import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
+import java.time.Duration;
 
 /**
  * An {@link EmailField}: text, as a {@link UnifiedTextField}. Whether the address is well formed is the field's
@@ -13,4 +14,8 @@ import com.vaadin.testing.unified.query.PlaceholderFilter;
 @UnifiedComponent(EmailField.class)
 public interface UnifiedEmailField extends UnifiedTextInput,
         CommonFilters<UnifiedEmailField>, LabelFilter<UnifiedEmailField>, PlaceholderFilter<UnifiedEmailField> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedEmailField withTimeout(Duration timeout);
 }

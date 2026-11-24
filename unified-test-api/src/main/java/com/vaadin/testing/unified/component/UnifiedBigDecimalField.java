@@ -6,12 +6,17 @@ import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
 import java.math.BigDecimal;
+import java.time.Duration;
 
 /** A {@link BigDecimalField}: the value is a {@link BigDecimal}, {@code null} when empty. */
 @UnifiedComponent(BigDecimalField.class)
 public interface UnifiedBigDecimalField extends UnifiedField,
         CommonFilters<UnifiedBigDecimalField>, LabelFilter<UnifiedBigDecimalField>,
         PlaceholderFilter<UnifiedBigDecimalField> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedBigDecimalField withTimeout(Duration timeout);
 
     // actions (Auto-Wait)
     /** Types the value as a user would; {@code null} empties the field. */

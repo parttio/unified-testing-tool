@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -13,6 +14,10 @@ import java.time.LocalDateTime;
 @UnifiedComponent(DateTimePicker.class)
 public interface UnifiedDateTimePicker extends UnifiedField,
         CommonFilters<UnifiedDateTimePicker>, LabelFilter<UnifiedDateTimePicker> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedDateTimePicker withTimeout(Duration timeout);
 
     // actions (Auto-Wait)
     /** Enters the date and time as a user would; {@code null} empties the field. */

@@ -5,9 +5,14 @@ import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
+import java.time.Duration;
 
 @UnifiedComponent(Checkbox.class)
 public interface UnifiedCheckbox extends UnifiedWrapper, CommonFilters<UnifiedCheckbox>, LabelFilter<UnifiedCheckbox> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedCheckbox withTimeout(Duration timeout);
 
     // actions (Auto-Wait); no-ops when already in that state
     default void check() { setChecked(true); }

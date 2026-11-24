@@ -65,7 +65,7 @@ final class CommonMistakes {
 
     static void timeoutBad(UnifiedPage page) {
         // --8<-- [start:timeoutBad]
-        UnifiedNotification saved = (UnifiedNotification) page.find(UnifiedNotification.class)
+        UnifiedNotification saved = page.find(UnifiedNotification.class)
                 .withTimeout(Duration.ofSeconds(60));    // it failed once at 10 s
         assertThat(saved).hasText("Saved Alice");
         // --8<-- [end:timeoutBad]

@@ -8,6 +8,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.GridAccess;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -17,6 +18,10 @@ import java.util.List;
  */
 @UnifiedComponent(Grid.class)
 public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedGrid withTimeout(Duration timeout);
 
     // rows
     /**

@@ -112,7 +112,7 @@ public class TemplateTest {
         page.navigate(OrdersView.class);
         page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).describe(); // the test knows both classes
 
-        UnifiedTextField filter = (UnifiedTextField) page.find(UnifiedTextField.class).withId("filter")
+        UnifiedTextField filter = page.find(UnifiedTextField.class).withId("filter")
                 .withTimeout(Duration.ofMillis(200));
         UnifiedAssertionError failure = assertThrows(UnifiedAssertionError.class, () -> filter.setValue("x"));
 

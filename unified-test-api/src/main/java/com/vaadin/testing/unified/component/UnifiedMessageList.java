@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.messages.MessageSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.MessageListAccess;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -14,6 +15,10 @@ import java.util.List;
  */
 @UnifiedComponent(MessageList.class)
 public interface UnifiedMessageList extends UnifiedWrapper, CommonFilters<UnifiedMessageList> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedMessageList withTimeout(Duration timeout);
 
     /** One message of the list: who wrote it and its text. */
     record Message(String userName, String text) {}
