@@ -4,6 +4,7 @@ import com.microsoft.playwright.Locator;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import java.util.List;
+import java.util.Optional;
 import org.vaadin.addons.dramafinder.element.TabSheetElement;
 import org.vaadin.addons.dramafinder.element.TabsElement;
 
@@ -40,6 +41,11 @@ final class PlaywrightTabSheetAccess implements TabSheetAccess {
     @Override
     public void select(String label) {
         PlaywrightCoreSetAccess.Tabs.select(session, bar(), label);
+    }
+
+    @Override
+    public Optional<UnifiedElement> link(String label) {
+        return PlaywrightCoreSetAccess.Tabs.link(session, bar(), label);
     }
 
     /** The selected tab's panel, not the panels of a TabSheet nested in it. */

@@ -138,6 +138,19 @@ Tool: `profile` for a `RouterLink` to the profile view, not the absolute URL a b
 
 A tab holding a `RouterLink` is named by the link's text.
 
+A `Tabs` used as a navigation menu, with a `RouterLink` or an `Anchor` in each tab, navigates: `selectTab` follows
+the tab's link, as a user's click on the tab does and as [`UnifiedLink.click()`](#links) does, then waits for the new
+page:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/MenuTest.java:followsATabsLink"
+```
+
+A tab that navigated isn't checked for its selection: the tabs may be gone, or rendered again by the new view. A
+tab without a link is selected and checked, as before. On Browserless, a tab whose link leaves the application
+fails, saying the test needs `@RequiresBrowser`. The User Steps read `select tab “Profile” in tabs`, then
+`open “profile”`.
+
 ## Dialogs and notifications
 
 Only open dialogs and notifications are found. A dialog is a [Scope](finding-components.md#scopes):

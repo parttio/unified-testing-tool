@@ -18,6 +18,7 @@ import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedLink;
+import com.vaadin.testing.unified.component.UnifiedTabs;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
 import com.vaadin.testing.unified.component.UnifiedMessageInput;
 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
@@ -109,6 +110,21 @@ public class UserStepWordingTest {
                 "click link (href “users”)",
                 "open “users”"), texts());
         assertEquals(List.of("click a", "click a"), fake.actions);
+    }
+
+    @Test
+    void aTabHoldingALinkIsFollowedAndTheOpenStepFollows() {
+        fake.add("vaadin-tabs", "tabs", "Orders,Users", "links", "Users", "selected", "Orders");
+
+        fake.page.find(UnifiedTabs.class).selectTab("Orders"); // a plain tab: selected, stays on the page
+        fake.onClick = () -> fake.path = "users";
+        fake.page.find(UnifiedTabs.class).selectTab("Users"); // the browser clicks the tab's link
+
+        assertEquals(List.of(
+                "select tab “Orders” in tabs",
+                "select tab “Users” in tabs",
+                "open “users”"), texts());
+        assertEquals(List.of("select Orders", "click a"), fake.actions);
     }
 
     @Test

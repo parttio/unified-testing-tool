@@ -7,15 +7,22 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.ElementResolver;
 import com.vaadin.testing.unified.internal.LazyElement;
 import com.vaadin.testing.unified.internal.LazyScope;
+import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.Wrappers;
+import com.vaadin.testing.unified.internal.links.LinkSupport;
 import com.vaadin.testing.unified.spi.StaleElementException;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.internal.failures.FailureParts;
 import com.vaadin.testing.unified.internal.failures.ItemFailures;
 import com.vaadin.testing.unified.internal.steps.StepTarget;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
-/** TabSheet behaviour: Auto-Wait and verified tab selection, the selected content as a lazy Scope. */
+/**
+ * TabSheet behaviour: Auto-Wait and verified tab selection, the selected content as a lazy Scope. A tab holding a
+ * link is followed, as a user's click on it does (#531).
+ */
 public final class TabSheetSupport {
     private TabSheetSupport() {}
 
@@ -25,6 +32,8 @@ public final class TabSheetSupport {
 
     public static void select(UnifiedWrapper tabSheet, String label) {
         LazyElement element = Wrappers.lazyElementOf(tabSheet);
+        TestRun run = element.run();
+        String before = run.session().currentPath();
         element.act("select tab \"" + label + "\" in", e -> {
             TabSheetAccess access = e.unwrap(TabSheetAccess.class);
             List<String> tabs = access.tabs();
@@ -35,7 +44,19 @@ public final class TabSheetSupport {
             // Auto-Wait for the tab itself
             element.run().pollFor(() -> e.unwrap(TabSheetAccess.class).isEnabled(label) ? Boolean.TRUE : null,
                     () -> FailureParts.of("an enabled tab “" + label + "” in " + sheet, "1, but the tab is disabled"));
-            access.select(label);
+            Optional<UnifiedElement> link = access.link(label);
+            if (link.isPresent()) {
+                // a user's click on a tab holding a link lands on the link: it selects the tab and follows the link
+                // (#531), as UnifiedLink.click() does; without a browser, selecting the tab is done first
+                LinkSupport.follow(run, "the link of tab “" + label + "” in " + sheet, link.get(),
+                        () -> access.select(label));
+                run.session().settle();
+                if (!Objects.equals(before, run.session().currentPath())) {
+                    return; // it navigated: the test checks where (isAt), the tabs may be re-rendered or gone
+                }
+            } else {
+                access.select(label);
+            }
             // the tab's listener may navigate away (Page.setLocation, #554): when the check can't read the selection,
             // tabs the lookup no longer finds have nothing to check, as a select's field the app replaced (#377)
             String selected;
@@ -55,6 +76,7 @@ public final class TabSheetSupport {
                 throw notSelected(element, label, selected, null);
             }
         });
+        LinkSupport.recordNavigation(run, before);
     }
 
     /** {@code Expected  tab “Security” selected in tab sheet “Account”}, {@code Found  “Profile”}. */
