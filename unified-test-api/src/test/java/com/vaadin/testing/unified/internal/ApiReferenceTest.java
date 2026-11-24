@@ -68,6 +68,7 @@ class ApiReferenceTest {
                     "components.md#selection-combobox-radiobuttongroup-multiselectcombobox"),
             entry("UnifiedButton", "components.md#buttons-and-menus"),
             entry("UnifiedMenuBar", "components.md#buttons-and-menus"),
+            entry("UnifiedLink", "components.md#links"),
             entry("UnifiedTabSheet", "components.md#tabs-and-details"),
             entry("UnifiedTabs", "components.md#tabs-and-details"),
             entry("UnifiedDetails", "components.md#tabs-and-details"),
@@ -170,8 +171,12 @@ class ApiReferenceTest {
         for (Class<?> wrapper : wrappers()) {
             UnifiedComponent component = wrapper.getAnnotation(UnifiedComponent.class);
             String title = "### `" + wrapper.getSimpleName() + "`";
-            String about = StepTarget.kindOf(wrapper) + (component == null ? "" : ", Flow's `"
-                    + component.value().getSimpleName() + "`");
+            // a Wrapper of Component.class bound to a tag (UnifiedLink: tag "a") wraps whatever renders that tag
+            boolean byTag = component != null && component.value() == com.vaadin.flow.component.Component.class
+                    && !component.tag().isEmpty() && !"*".equals(component.tag());
+            String about = StepTarget.kindOf(wrapper) + (component == null ? ""
+                    : byTag ? ", any Flow component rendered as `<" + component.tag() + ">`"
+                    : ", Flow's `" + component.value().getSimpleName() + "`");
             // a Wrapper that is a Scope lists find(..) and findComponent(..): components are searched inside it
             section(md, title, about, methods(wrapper, Set.of(Object.class, CommonFilters.class, UnifiedWrapper.class,
                     HasEscapeHatch.class)), wrapper);

@@ -78,6 +78,11 @@ final class Wrappers {
                     // withLabel and withCaption become withText (ADR 0001), see FILTER_RENAMES
                     with(COMMON_FILTERS, "withText", "withLabel", "withCaption"),
                     Set.of("click", "getText", "isEnabled"))),
+            // a RouterLink or an Anchor: TestBench finds both as AnchorElement (<a>), as UnifiedLink does
+            Map.entry("com.vaadin.flow.component.html.testbench.AnchorElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedLink",
+                    with(COMMON_FILTERS, "withText"),
+                    Set.of("click", "getText", "isEnabled"))),
             Map.entry("com.vaadin.flow.component.notification.testbench.NotificationElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedNotification",
                     with(COMMON_FILTERS, "withText"),
                     Set.of("getText", "isOpen"))),

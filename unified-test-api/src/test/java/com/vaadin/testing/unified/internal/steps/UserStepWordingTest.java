@@ -17,6 +17,7 @@ import com.vaadin.testing.unified.component.UnifiedCheckbox;
 import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedLink;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
 import com.vaadin.testing.unified.component.UnifiedMessageInput;
 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
@@ -93,6 +94,21 @@ public class UserStepWordingTest {
                 "check checkbox “Terms”",
                 "uncheck checkbox “Terms”",
                 "click button “Save”"), texts());
+    }
+
+    @Test
+    void aLinkClickThatNavigatesIsFollowedByTheOpenStep() {
+        fake.add("a", "text", "Top", "href", "#top").add("a", "text", "Users", "href", "users");
+
+        fake.page.find(UnifiedLink.class).withText("Top").click(); // stays on the page
+        fake.onClick = () -> fake.path = "users";
+        fake.page.find(UnifiedLink.class).withHref("users").click();
+
+        assertEquals(List.of(
+                "click link “Top”",
+                "click link (href “users”)",
+                "open “users”"), texts());
+        assertEquals(List.of("click a", "click a"), fake.actions);
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.vaadin.testing.unified.component.UnifiedContainer;
 import com.vaadin.testing.unified.component.UnifiedDatePicker;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
 import com.vaadin.testing.unified.component.UnifiedDetails;
+import com.vaadin.testing.unified.component.UnifiedLink;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.component.UnifiedNav;
@@ -92,9 +93,9 @@ public final class FindableView {
             UnifiedTextField.class, UnifiedTextArea.class, UnifiedNumberField.class, UnifiedIntegerField.class,
             UnifiedBigDecimalField.class, UnifiedComboBox.class, UnifiedMultiSelectComboBox.class,
             UnifiedDatePicker.class, UnifiedDateTimePicker.class, UnifiedRadioButtonGroup.class,
-            UnifiedCheckbox.class, UnifiedButton.class, UnifiedGrid.class, UnifiedTabs.class, UnifiedTabSheet.class,
-            UnifiedMenuBar.class, UnifiedDetails.class, UnifiedUpload.class, UnifiedMessageList.class,
-            UnifiedMessageInput.class);
+            UnifiedCheckbox.class, UnifiedButton.class, UnifiedLink.class, UnifiedGrid.class, UnifiedTabs.class,
+            UnifiedTabSheet.class, UnifiedMenuBar.class, UnifiedDetails.class, UnifiedUpload.class,
+            UnifiedMessageList.class, UnifiedMessageInput.class);
 
     /**
      * Plain HTML Wrappers listed only for the components that say they are clickable (#523): a role a user

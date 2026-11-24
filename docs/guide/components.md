@@ -108,6 +108,28 @@ click it:
 
 `getItems(..)` and `isItemEnabled(..)` read the same now, without waiting.
 
+## Links
+
+`UnifiedLink` finds a `RouterLink`, an `Anchor`, or any other `<a>`: by its text, its accessible name, or where it
+goes with `withHref(..)`. `click()` follows the link as a user's click does and waits for the new page:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/LinkTest.java:followsALink"
+```
+
+In a browser the click is a real click on the `<a>`. Browserless has no browser: a link to a route of the
+application navigates to that route. A link out of the application (another host, a servlet path such as
+`/logout`, a download) or one that opens another window (`target="_blank"`) fails on Browserless, saying the test
+needs `@RequiresBrowser`. A disabled link fails the click, as a disabled button does. The User Steps read
+`click link “Profile”`, then `open “profile”` when the click navigated.
+
+`getHref()` and `assertThat(link).hasHref(..)` read the `href` as the application set it, the same on every Testing
+Tool: `profile` for a `RouterLink` to the profile view, not the absolute URL a browser resolves it to.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/LinkTest.java:readsALink"
+```
+
 ## Tabs and Details
 
 ```java

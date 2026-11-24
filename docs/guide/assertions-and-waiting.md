@@ -19,6 +19,7 @@ Each assertion retries until it holds or the timeout (10 s by default) passes, t
 | `UnifiedCheckbox` | `isChecked()`, `isNotChecked()`, `isIndeterminate()`, `hasLabel(..)` |
 | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | `hasSelectedItem(..)`, `hasNoSelectedItem()`, `hasItems(..)` |
 | `UnifiedMultiSelectComboBox` | `hasSelectedItems(..)`, `hasNoSelectedItems()`, `hasItems(..)` |
+| `UnifiedLink` | `hasHref(..)` |
 | `UnifiedDialog` | `isOpen()`, `isClosed()`, `hasHeaderTitle(..)` |
 | `UnifiedNotification` | `isOpen()`, `hasText(..)` |
 | `UnifiedTabSheet`, `UnifiedTabs` | `hasSelectedTab(..)`, `hasTabs(..)` |

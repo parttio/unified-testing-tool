@@ -70,6 +70,7 @@ public final class UnifiedAssertions {
     public static DetailsAssert assertThat(com.vaadin.testing.unified.component.UnifiedDetails details) { return new DetailsAssert(details); }
     public static MenuBarAssert assertThat(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { return new MenuBarAssert(menuBar); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
+    public static LinkAssert assertThat(com.vaadin.testing.unified.component.UnifiedLink link) { return new LinkAssert(link); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
     public static GridAssert assertThat(UnifiedGrid grid) { return new GridAssert(grid); }
@@ -429,6 +430,17 @@ public final class UnifiedAssertions {
         @Override
         public ButtonAssert hasText(String expected) {
             return check("to have text", expected, button::getText, v -> Objects.equals(v, expected));
+        }
+    }
+
+    public static final class LinkAssert extends WrapperAssert<LinkAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedLink link;
+
+        LinkAssert(com.vaadin.testing.unified.component.UnifiedLink link) { super(link); this.link = link; }
+
+        /** The {@code href} as the application set it ({@code UnifiedLink.getHref()}), exactly. */
+        public LinkAssert hasHref(String expected) {
+            return check("to have href", expected, link::getHref, v -> Objects.equals(v, expected));
         }
     }
 

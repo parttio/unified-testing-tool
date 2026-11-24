@@ -134,7 +134,8 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
             case ID -> "id";
             case CLASS_NAME -> "class name";
             case THEME -> "theme";
-            case ATTRIBUTE -> "attribute " + f.name();
+            // UnifiedLink.withHref(..): where the link goes reads as such
+            case ATTRIBUTE -> "href".equals(f.name()) ? "href" : "attribute " + f.name();
         };
         return what + (f.exact() ? " " : " containing ") + Phrase.quote(f.value());
     }

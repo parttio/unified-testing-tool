@@ -215,6 +215,39 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void anchorLookupsFindTheUnifiedLink() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.html.testbench.AnchorElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class NavigationTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void opensUsers() {
+                        $(AnchorElement.class).withText("Users").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedLink;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class NavigationTest {
+
+                    @Test
+                    void opensUsers(UnifiedPage page) {
+                        page.find(UnifiedLink.class).withText("Users").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void assertEqualsOnValueOrTextBecomesARetryingAssertion() {
         rewriteRun(java(
                 """
