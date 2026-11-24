@@ -80,6 +80,8 @@ final class SeleniumSession implements AdapterSession {
 
     private final Browser browser;
     private final java.util.function.Supplier<TestBenchDriverProxy> browsers;
+    /** What the Escape Hatch answers for {@code getRunLocallyBrowser()}. */
+    private final LocalBrowser local;
     private final List<SeleniumSession> children = new ArrayList<>();
     private final TestBenchDriverProxy driver;
     private final String baseUrl;
@@ -90,24 +92,26 @@ final class SeleniumSession implements AdapterSession {
     private final Runnable release;
 
     /** A page in a new browser from {@code browsers}; {@code openAsUser} starts its own browser the same way. */
-    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, String baseUrl, Duration timeout) {
-        this(browsers, new Browser(browsers.get()), baseUrl, timeout, true, null);
+    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local, String baseUrl,
+            Duration timeout) {
+        this(browsers, local, new Browser(browsers.get()), baseUrl, timeout, true, null);
     }
 
     /** A page in a browser shared by the run's tests: {@code release} gives it back when the test ends. */
-    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, TestBenchDriverProxy shared,
-            Runnable release, String baseUrl, Duration timeout) {
-        this(browsers, new Browser(shared), baseUrl, timeout, true, release);
+    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local,
+            TestBenchDriverProxy shared, Runnable release, String baseUrl, Duration timeout) {
+        this(browsers, local, new Browser(shared), baseUrl, timeout, true, release);
     }
 
-    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
-            String baseUrl, Duration timeout, boolean ownsDriver, Runnable release) {
-        this(browsers, browser, baseUrl, timeout, browser.current, ownsDriver, release);
+    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local,
+            Browser browser, String baseUrl, Duration timeout, boolean ownsDriver, Runnable release) {
+        this(browsers, local, browser, baseUrl, timeout, browser.current, ownsDriver, release);
     }
 
-    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
-            String baseUrl, Duration timeout, String handle, boolean ownsDriver, Runnable release) {
+    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local,
+            Browser browser, String baseUrl, Duration timeout, String handle, boolean ownsDriver, Runnable release) {
         this.browsers = browsers;
+        this.local = local;
         this.browser = browser;
         this.driver = browser.driver;
         this.baseUrl = baseUrl;
@@ -356,14 +360,14 @@ final class SeleniumSession implements AdapterSession {
     public AdapterSession openWindow() {
         driver().switchTo().newWindow(WindowType.TAB);
         browser.current = driver.getWindowHandle();
-        return new SeleniumSession(browsers, browser, baseUrl, timeout, browser.current, false, null);
+        return new SeleniumSession(browsers, local, browser, baseUrl, timeout, browser.current, false, null);
     }
 
     /** A browser of its own (own cookies, own session), logged in through the test-only endpoint. */
     @Override
     public AdapterSession openAsUser(String username, String... roles) {
         String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
-        SeleniumSession session = new SeleniumSession(browsers, new Browser(browsers.get()), baseUrl, timeout, true,
+        SeleniumSession session = new SeleniumSession(browsers, local, new Browser(browsers.get()), baseUrl, timeout, true,
                 null);
         children.add(session);
         session.logIn(loginUrl);
@@ -472,6 +476,9 @@ final class SeleniumSession implements AdapterSession {
 
     @Override
     public <T> Optional<T> unwrap(Class<T> type) {
+        if (type == LocalBrowser.class) { // package-private: for the TestBench Escape Hatch only
+            return Optional.of(type.cast(local));
+        }
         if (type.isInstance(driver())) {
             return Optional.of(type.cast(driver()));
         }

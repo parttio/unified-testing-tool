@@ -46,6 +46,7 @@ public final class SeleniumAdapter implements TestingToolAdapter {
     @Override
     public AdapterSession open(AdapterContext context) {
         String baseUrl = baseUrl(context);
+        LocalBrowser local = LocalBrowser.of(context.configuration(BROWSER));
         java.util.function.Supplier<TestBenchDriverProxy> browsers = () -> {
             TestBenchDriverProxy driver = TestBench.createDriver(newBrowser(context));
             driver.manage().timeouts().scriptTimeout(context.timeout());
@@ -56,11 +57,11 @@ public final class SeleniumAdapter implements TestingToolAdapter {
             SharedBrowser shared = context.runScoped(SharedBrowser.class, () -> new SharedBrowser(browsers));
             TestBenchDriverProxy driver = shared.acquire(baseUrl);
             if (driver != null) { // null: in use by a test running in parallel
-                session = new SeleniumSession(browsers, driver, shared::release, baseUrl, context.timeout());
+                session = new SeleniumSession(browsers, local, driver, shared::release, baseUrl, context.timeout());
             }
         }
         if (session == null) {
-            session = new SeleniumSession(browsers, baseUrl, context.timeout());
+            session = new SeleniumSession(browsers, local, baseUrl, context.timeout());
         }
         // @WithMockUser / @WithUserDetails: log the browser in before the test body
         if (LoginSupport.isAvailable()) {
