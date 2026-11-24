@@ -208,7 +208,7 @@ An app built on Vaadin's AI components has a `MessageInput` and a `MessageList`.
 
 A message's text is the text the application gave it: with Markdown on, the Markdown source (`**Pancakes**`), not the rendered text, so that it reads the same on every Testing Tool. `getMessages()` gives each message's user name and text, `getMessageTexts()` the texts only. `hasMessageTexts(..)` checks every message, in order; `isEmpty()` checks there are none.
 
-*(unreleased)* One message is a lazy lookup, as a [grid row](grid.md) is: `message(i)` by its index among all messages, from 0, or `message()` narrowed by `withUserName(..)`, `withText(..)` and `withTextContaining(..)`, with `last()` taking the last of the matches so far. Its checks wait for a reply that comes later:
+*(unreleased)* One message is a lazy lookup, as a [grid row](grid.md) is: `message(i)` by its index among all messages, from 0, or `message()` narrowed by `withUserName(..)`, `withText(..)` and `withTextContaining(..)`, with `last()` taking the last of the matches so far. Its checks wait for a reply that comes later: `chat.describe()` *(unreleased)* lists the first 20 messages with the lookup that finds each.
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ChatTest.java:checksOneMessage"

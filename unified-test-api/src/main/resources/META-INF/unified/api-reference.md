@@ -205,7 +205,7 @@ Grid, Flow's `Grid`. Guide: [Grid](https://parttio.github.io/unified-testing-too
   - `deselectAll()`: deselect all rows in grid “…”
   - `selectAll()`: select all rows in grid “…”
 - **Reads:** `getColumnHeaders() → List<String>`, `getRowCount() → int`
-- **Also:** `column(String) → UnifiedGridColumn`, `column(int) → UnifiedGridColumn`, `columnWithId(String) → UnifiedGridColumn`, `row() → UnifiedGridRow`, `row(int) → UnifiedGridRow`
+- **Also:** `column(String) → UnifiedGridColumn`, `column(int) → UnifiedGridColumn`, `columnWithId(String) → UnifiedGridColumn`, `describe() → String`, `row() → UnifiedGridRow`, `row(int) → UnifiedGridRow`
 - **Checks:** those of every Wrapper, and `doesNotHaveColumn(String)`, `hasColumn(String)`, `hasColumnHeaders(String...)`, `hasRowCount(int)`, `isEmpty()`
 
 #### `UnifiedGrid.UnifiedGridColumn`
@@ -300,7 +300,7 @@ Message input, Flow's `MessageInput`. Guide: [Working with components, Chat](htt
 Message list, Flow's `MessageList`. Guide: [Working with components, Chat](https://parttio.github.io/unified-testing-tool/guide/components/#chat).
 
 - **Reads:** `getMessageCount() → int`, `getMessageTexts() → List<String>`, `getMessages() → List<Message>`
-- **Also:** `message() → UnifiedMessage`, `message(int) → UnifiedMessage`
+- **Also:** `describe() → String`, `message() → UnifiedMessage`, `message(int) → UnifiedMessage`
 - **Checks:** those of every Wrapper, and `hasMessageContaining(String)`, `hasMessageCount(int)`, `hasMessageTexts(String...)`, `isEmpty()`
 
 #### `UnifiedMessageList.UnifiedMessage`

@@ -6,6 +6,10 @@ page becomes the notes of the next alpha.
 
 ## New
 
+- **`describe()` on a grid or a message list** ([#534](https://github.com/parttio/unified-testing-tool/issues/534)):
+  the grid's columns and first 20 rows, the list's first 20 messages, each with the lookup on it that finds it,
+  `row().withCellText("Name", "User 1")` or `message().withUserName("Assistant").last()`, the same on every Testing
+  Tool.
 - **Login** ([#564](https://github.com/parttio/unified-testing-tool/issues/564)): `page.find(UnifiedLogin.class)`
   finds Flow's `LoginOverlay` (while open) or `LoginForm`; `withTitle(..)` filters by the overlay's title.
   `login(username, password)` signs in: in a browser it types into the form's fields and presses submit, which also
