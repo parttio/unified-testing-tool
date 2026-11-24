@@ -93,6 +93,19 @@ Combo box, Flow's `ComboBox`. Guide: [Working with components, Selection: ComboB
 - **Reads:** `getErrorMessage() → String`, `getHelperText() → String`, `getItems() → List<String>`, `getLabel() → String`, `getPlaceholder() → String`, `getSelectedItem() → String`, `isInvalid() → boolean`, `isRequired() → boolean`
 - **Checks:** those of every Wrapper, and `hasErrorMessage(String)`, `hasItems(String...)`, `hasLabel(String)`, `hasNoSelectedItem()`, `hasSelectedItem(String)`, `isInvalid()`, `isRequired()`, `isValid()`
 
+### `UnifiedConfirmDialog`
+
+Confirm dialog, Flow's `ConfirmDialog`. Guide: [Working with components, Dialogs and notifications](https://parttio.github.io/unified-testing-tool/guide/components/#dialogs-and-notifications).
+
+- **Filters:** `withHeaderTitle(String)`, `withTextContaining(String)`
+- **Actions**, each with the User Step it reports:
+  - `cancel()`: cancel “…”
+  - `close()`: close confirm dialog “…”
+  - `confirm()`: confirm “…”
+  - `reject()`: reject “…”
+- **Reads:** `getCancelText() → String`, `getConfirmText() → String`, `getHeaderTitle() → String`, `getRejectText() → String`, `getText() → String`, `isOpen() → boolean`
+- **Checks:** those of every Wrapper, and `hasHeaderTitle(String)`, `isClosed()`, `isOpen()`
+
 ### `UnifiedContainer`
 
 Container, Flow's `Component`. Guide: [Finding components, Scopes](https://parttio.github.io/unified-testing-tool/guide/finding-components/#scopes).

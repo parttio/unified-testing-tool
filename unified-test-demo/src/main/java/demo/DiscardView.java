@@ -19,7 +19,7 @@ public class DiscardView extends VerticalLayout {
             ConfirmDialog confirm = new ConfirmDialog();
             confirm.setHeader("Discard draft?");
             confirm.setText("The draft can't be restored.");
-            // a Flow button, so that every Testing Tool can click it (UnifiedConfirmDialog is #532)
+            // the application's own button: UnifiedConfirmDialog.confirm() presses it on every Testing Tool
             confirm.setConfirmButton(new Button("Discard", confirmed -> {
                 status.setText("Draft discarded");
                 confirm.close();

@@ -4,7 +4,9 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
+import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedOverlayDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
 import com.vaadin.testing.unified.internal.messages.MessageSupport;
@@ -76,6 +78,7 @@ public final class UnifiedAssertions {
     public static LinkAssert assertThat(com.vaadin.testing.unified.component.UnifiedLink link) { return new LinkAssert(link); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
+    public static ConfirmDialogAssert assertThat(UnifiedConfirmDialog dialog) { return new ConfirmDialogAssert(dialog); }
     public static GridAssert assertThat(UnifiedGrid grid) { return new GridAssert(grid); }
     public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { return new GridRowAssert(row); }
     public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { return new GridColumnAssert(column); }
@@ -496,24 +499,46 @@ public final class UnifiedAssertions {
         }
     }
 
-    public static final class DialogAssert extends WrapperAssert<DialogAssert> {
-        private final UnifiedDialog dialog;
+    /** The checks of every {@link UnifiedOverlayDialog}: open or closed, and its header. */
+    public abstract static class OverlayDialogAssert<SELF extends OverlayDialogAssert<SELF>> extends WrapperAssert<SELF> {
+        private final UnifiedOverlayDialog<?> dialog;
 
-        DialogAssert(UnifiedDialog dialog) { super(dialog); this.dialog = dialog; }
+        OverlayDialogAssert(UnifiedOverlayDialog<?> dialog) { super(dialog); this.dialog = dialog; }
 
-        public DialogAssert isOpen() {
+        public SELF isOpen() {
             return check("to be open", null, dialog::isOpen, Boolean.TRUE::equals);
         }
 
         /** Passes when the dialog is closed or no longer on the page (Flow removes closed dialogs). */
-        public DialogAssert isClosed() {
+        public SELF isClosed() {
             return check("to be closed", null,
                     () -> element.tryConcrete().map(e -> Boolean.TRUE.equals(e.getPropertyBoolean("opened"))).orElse(false),
                     Boolean.FALSE::equals);
         }
 
-        public DialogAssert hasHeaderTitle(String expected) {
+        public SELF hasHeaderTitle(String expected) {
             return check("to have header title", expected, dialog::getHeaderTitle, v -> java.util.Objects.equals(v, expected));
+        }
+    }
+
+    public static final class DialogAssert extends OverlayDialogAssert<DialogAssert> {
+        DialogAssert(UnifiedDialog dialog) { super(dialog); }
+    }
+
+    /** {@code hasText(..)} and {@code hasTextContaining(..)} check the message ({@link UnifiedConfirmDialog#getText()}). */
+    public static final class ConfirmDialogAssert extends OverlayDialogAssert<ConfirmDialogAssert> {
+        private final UnifiedConfirmDialog dialog;
+
+        ConfirmDialogAssert(UnifiedConfirmDialog dialog) { super(dialog); this.dialog = dialog; }
+
+        @Override
+        public ConfirmDialogAssert hasText(String expected) {
+            return check("to have text", expected, dialog::getText, v -> Objects.equals(v, expected));
+        }
+
+        @Override
+        public ConfirmDialogAssert hasTextContaining(String part) {
+            return check("to have text containing", part, dialog::getText, v -> v != null && v.toString().contains(part));
         }
     }
 

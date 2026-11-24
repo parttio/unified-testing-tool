@@ -937,6 +937,61 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void confirmDialogsBecomeTheirWrapper() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.ConfirmDialogElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class OrderTest extends SpringPlaywrightIT {
+                    @Test
+                    void deletesTheOrder() {
+                        navigate(PeopleView.class);
+                        ConfirmDialogElement dialog = ConfirmDialogElement.getByHeaderText(page, "Delete order?");
+                        dialog.assertOpen();
+                        dialog.assertMessage("The order can't be restored.");
+                        String header = dialog.getHeaderText();
+                        dialog.confirm();
+                        dialog.assertClosed();
+                        ConfirmDialogElement.getByHeaderText(page, "Leave page?").reject();
+                        ConfirmDialogElement.getByHeaderText(page, "Discard draft?").cancel();
+                        ConfirmDialogElement.getByHeaderText(page, "Discard draft?").closeWithEscape();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class OrderTest {
+                    @Test
+                    void deletesTheOrder(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedConfirmDialog dialog = page.find(UnifiedConfirmDialog.class).withHeaderTitle("Delete order?");
+                        assertThat(dialog).isOpen();
+                        assertThat(dialog).hasText("The order can't be restored.");
+                        String header = dialog.getHeaderTitle();
+                        dialog.confirm();
+                        assertThat(dialog).isClosed();
+                        page.find(UnifiedConfirmDialog.class).withHeaderTitle("Leave page?").reject();
+                        page.find(UnifiedConfirmDialog.class).withHeaderTitle("Discard draft?").cancel();
+                        page.find(UnifiedConfirmDialog.class).withHeaderTitle("Discard draft?").close();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aLookupWithACallTheWrapperLacksStaysBehindTheEscapeHatch() {
         rewriteRun(java(VIEW), java(
                 """

@@ -18,6 +18,7 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedCheckbox;
 import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
+import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedLink;
 import com.vaadin.testing.unified.component.UnifiedTabs;
@@ -163,6 +164,41 @@ public class UserStepWordingTest {
                 "fill text field (placeholder “you@example.com”) with “a@b.c” in dialog “Edit person”",
                 "click button (text containing “Sav”)",
                 "click the 1st button"), texts());
+    }
+
+    @Test
+    void aConfirmDialogsAnswerNamesTheDialogByItsHeaderOrItsText() {
+        fake.add("vaadin-confirm-dialog", "header", "Delete order?", "message", "It can't be restored.",
+                "opened", "true", "buttons", "CONFIRM=Delete,REJECT=Keep,CANCEL=Back");
+        fake.add("vaadin-confirm-dialog", "message", "Leave the page?", "opened", "true", "buttons", "CONFIRM=Leave",
+                "testId", "leave");
+
+        fake.page.find(UnifiedConfirmDialog.class).withHeaderTitle("Delete order?").confirm();
+        fake.page.find(UnifiedConfirmDialog.class).withTextContaining("restored").reject();
+        fake.page.find(UnifiedConfirmDialog.class).withHeaderTitle("Delete order?").cancel();
+        fake.page.find(UnifiedConfirmDialog.class).withTestId("leave").confirm();
+
+        assertEquals(List.of(
+                "confirm “Delete order?”",
+                "reject “Delete order?” (text containing “restored”)",
+                "cancel “Delete order?”",
+                "confirm “Leave the page?” (test id “leave”)"), texts());
+        assertEquals(List.of("press CONFIRM", "press REJECT", "press CANCEL", "press CONFIRM"), fake.actions);
+    }
+
+    @Test
+    void aConfirmDialogWithoutTheButtonFailsListingTheButtonsItHas() {
+        fake.add("vaadin-confirm-dialog", "header", "Discard draft?", "opened", "true",
+                "buttons", "CONFIRM=Discard,CANCEL=Keep editing");
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> fake.page.find(UnifiedConfirmDialog.class).withHeaderTitle("Discard draft?").reject());
+
+        assertTrue(error.getMessage().contains("to press the Reject button of confirm dialog “Discard draft?”"),
+                error.getMessage());
+        assertTrue(error.getMessage().contains("no Reject button; its buttons: Confirm “Discard”, Cancel “Keep editing”"),
+                error.getMessage());
+        assertEquals(List.of(), fake.actions);
     }
 
     @Test

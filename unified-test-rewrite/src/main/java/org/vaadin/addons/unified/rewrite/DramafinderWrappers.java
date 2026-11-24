@@ -103,7 +103,14 @@ final class DramafinderWrappers {
             ELEMENT + "EmailFieldElement", new Wrapper(COMPONENT + "UnifiedEmailField",
                     union(COMMON_FILTERS, LABEL_FILTERS, Set.of("withPlaceholder")), TEXT_FIELD_METHODS, FIELD_ASSERTIONS),
             ELEMENT + "PasswordFieldElement", new Wrapper(COMPONENT + "UnifiedPasswordField",
-                    union(COMMON_FILTERS, LABEL_FILTERS, Set.of("withPlaceholder")), TEXT_FIELD_METHODS, FIELD_ASSERTIONS)))
+                    union(COMMON_FILTERS, LABEL_FILTERS, Set.of("withPlaceholder")), TEXT_FIELD_METHODS, FIELD_ASSERTIONS),
+            // a confirm dialog: confirm(), reject() and cancel() press the button of that role (#532)
+            ELEMENT + "ConfirmDialogElement", new Wrapper(COMPONENT + "UnifiedConfirmDialog",
+                    union(COMMON_FILTERS, Set.of("withHeaderTitle")),
+                    with(same("isOpen", "confirm", "reject", "cancel"),
+                            Map.of("getHeaderText", "getHeaderTitle", "getMessage", "getText", "closeWithEscape", "close")),
+                    Map.of("assertOpen", "isOpen", "assertClosed", "isClosed", "assertHeaderText", "hasHeaderTitle",
+                            "assertMessage", "hasText"))))
             .flatMap(m -> m.entrySet().stream()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     /** Elements whose {@code get(page)} finds the first one on the page: the Wrapper finds it, and a second one fails loudly. */

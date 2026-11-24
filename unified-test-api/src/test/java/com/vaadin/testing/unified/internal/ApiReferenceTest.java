@@ -75,6 +75,7 @@ class ApiReferenceTest {
             entry("UnifiedTabs", "components.md#tabs-and-details"),
             entry("UnifiedDetails", "components.md#tabs-and-details"),
             entry("UnifiedDialog", "components.md#dialogs-and-notifications"),
+            entry("UnifiedConfirmDialog", "components.md#dialogs-and-notifications"),
             entry("UnifiedNotification", "components.md#dialogs-and-notifications"),
             entry("UnifiedUpload", "components.md#upload"),
             entry("UnifiedMessageInput", "components.md#chat"),
@@ -219,9 +220,12 @@ class ApiReferenceTest {
     }
 
     private static String kind(Method m, Class<?> type) {
-        // a filter returns its own type (a Wrapper, a grid row); the page's methods that return a page open another
+        // a filter returns its own type (a Wrapper, a grid row), or SELF of a shared mixin (UnifiedOverlayDialog); the
+        // page's methods that return a page open another
         if (m.getDeclaringClass().getPackageName().endsWith(".query")
-                || (m.getReturnType() == type && type != UnifiedPage.class)) {
+                || (m.getReturnType() == type && type != UnifiedPage.class)
+                || m.getGenericReturnType() instanceof java.lang.reflect.TypeVariable<?> self
+                        && self.getGenericDeclaration() instanceof Class<?>) {
             return "Filters";
         }
         if (m.getReturnType() == void.class) {

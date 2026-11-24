@@ -110,7 +110,24 @@ final class BrowserlessComponents {
     }
 
     static {
-        register(ConfirmDialog.class, new OverlayHost());
+        register(ConfirmDialog.class, new OverlayHost() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return type == com.vaadin.testing.unified.spi.ConfirmDialogAccess.class
+                        ? Optional.of(new BrowserlessCoreSetAccess.ConfirmDialogAccessImpl(session, (ConfirmDialog) component))
+                        : Optional.empty();
+            }
+
+            /** Escape cancels, as the web component does: the cancel event, then the dialog closes. */
+            @Override
+            public boolean pressKey(Component component, String key, BrowserlessUIContext window) {
+                if (!"Escape".equals(key)) {
+                    return false;
+                }
+                BrowserlessCoreSetAccess.ConfirmDialogAccessImpl.escape((ConfirmDialog) component);
+                return true;
+            }
+        });
         register(Dialog.class, new OverlayHost() {
             @Override
             public boolean pressKey(Component component, String key, BrowserlessUIContext window) {

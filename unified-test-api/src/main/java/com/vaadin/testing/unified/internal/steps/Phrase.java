@@ -14,9 +14,10 @@ import java.util.stream.Collectors;
  * @param valueLabel the words before the values when the template doesn't place them: "with", "with value"
  * @param trailing words after the target, e.g. "checked", or null
  * @param plural whether the target's kind reads in the plural ("see 3 buttons")
+ * @param nameOnly whether a named target reads by its name alone, without its kind ({@code confirm “Delete order?”})
  */
 public record Phrase(String verb, String template, StepTarget target, List<String> values, String valueLabel,
-        String trailing, boolean plural) {
+        String trailing, boolean plural, boolean nameOnly) {
 
     /** Values longer than this are cut with "…". */
     public static final int MAX_VALUE_LENGTH = 80;
@@ -33,7 +34,7 @@ public record Phrase(String verb, String template, StepTarget target, List<Strin
     }
 
     public static Phrase of(String verb, StepTarget target, List<String> values) {
-        return new Phrase(verb, null, target, values, null, null, false);
+        return new Phrase(verb, null, target, values, null, null, false, false);
     }
 
     public static Phrase of(String verb, StepTarget target) {
@@ -42,19 +43,28 @@ public record Phrase(String verb, String template, StepTarget target, List<Strin
 
     /** {@code template} with {@code {value}} where the values go: {@code press {value} on}. */
     public static Phrase template(String verb, String template, StepTarget target, List<String> values) {
-        return new Phrase(verb, template, target, values, null, null, false);
+        return new Phrase(verb, template, target, values, null, null, false, false);
     }
 
     public Phrase withTrailing(String words) {
-        return new Phrase(verb, template, target, values, valueLabel, words, plural);
+        return new Phrase(verb, template, target, values, valueLabel, words, plural, nameOnly);
     }
 
     public Phrase withValueLabel(String label) {
-        return new Phrase(verb, template, target, values, label, trailing, plural);
+        return new Phrase(verb, template, target, values, label, trailing, plural, nameOnly);
     }
 
     public Phrase inPlural() {
-        return new Phrase(verb, template, target, values, valueLabel, trailing, true);
+        return new Phrase(verb, template, target, values, valueLabel, trailing, true, nameOnly);
+    }
+
+    /** A named target reads by its name alone: {@code confirm “Delete order?”}, not {@code confirm confirm dialog …}. */
+    public Phrase byNameOnly() {
+        return new Phrase(verb, template, target, values, valueLabel, trailing, plural, true);
+    }
+
+    public Phrase withTarget(StepTarget newTarget) {
+        return new Phrase(verb, template, newTarget, values, valueLabel, trailing, plural, nameOnly);
     }
 
     /** The step as one line, before secrets are masked. */
@@ -63,7 +73,7 @@ public record Phrase(String verb, String template, StepTarget target, List<Strin
         boolean placed = template != null && template.contains("{value}");
         StringBuilder sb = new StringBuilder(template == null ? verb : template.replace("{value}", quoted));
         if (target != null) {
-            sb.append(' ').append(target.render(plural));
+            sb.append(' ').append(nameOnly && target.name() != null ? target.renderWithoutKind() : target.render(plural));
         }
         if (!placed && !values.isEmpty()) {
             sb.append(' ');

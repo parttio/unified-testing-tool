@@ -101,6 +101,7 @@ Every Wrapper action and every retrying assertion records one User Step, on ever
   | check, uncheck | `setChecked` |
   | select, deselect | selection in grids and multi-select fields |
   | sort, expand, upload, press | `sort`, `toggleDetails`/`expand`, `upload`, `pressKey` |
+  | confirm, reject, cancel | a confirm dialog's answer, named without its kind: `confirm “Delete order?”`, by the dialog's header, else its message |
   | see / see no | retrying assertions, `doesNotExist` |
 - **Component kind:** the Wrapper type in plain words (`UnifiedComboBox` → “combo box”).
 - **Name:** the main filter (label, text or accessible name). Other filters go in brackets: `(test id “billing”)`.

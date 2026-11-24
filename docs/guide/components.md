@@ -170,6 +170,14 @@ Only open dialogs and notifications are found. A dialog is a [Scope](finding-com
 
 When several notifications can be open at once, filter by text: an unfiltered `find(UnifiedNotification.class)` fails with "found 2".
 
+*(unreleased)* A `ConfirmDialog` is a `UnifiedConfirmDialog`, found by `withHeaderTitle(..)` or `withTextContaining(..)` (its message). `confirm()`, `reject()` and `cancel()` press the button of that role, whatever text the application or its translation gave it, and wait for the server; the User Step reads `confirm “Delete order?”`, naming the dialog by its header, or its message when it has none:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ConfirmDialogTest.java:confirms"
+```
+
+`reject()` or `cancel()` on a dialog that doesn't show that button fails, listing the buttons it has. `getHeaderTitle()`, `getText()`, `getConfirmText()`, `getRejectText()` and `getCancelText()` read what the user sees (null for a button the dialog doesn't show); `hasText(..)` and `hasTextContaining(..)` check the message. `close()` presses Escape, which fires the dialog's cancel event, as in a browser.
+
 ## Upload
 
 `upload` returns once the server has received the file:

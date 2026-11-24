@@ -181,7 +181,14 @@ final class SeleniumComponents {
             }
         });
         register(Dialog.class, new OverlayHost());
-        register(ConfirmDialog.class, new OverlayHost());
+        register(ConfirmDialog.class, new OverlayHost() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, WebElement element, SeleniumSession session) {
+                return type == com.vaadin.testing.unified.spi.ConfirmDialogAccess.class
+                        ? Optional.of(new SeleniumCoreSetAccess.ConfirmDialogAccessImpl(session, element))
+                        : Optional.empty();
+            }
+        });
     }
 
     static {
