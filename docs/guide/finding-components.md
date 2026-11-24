@@ -243,8 +243,15 @@ A `LitTemplate`'s `@Id` components live in its shadow root, and no lookup enters
 - **Ids are per Template.** The same id in two Templates is not ambiguous: the lookup only sees the Template it entered.
 - **Slotted content** (what the view adds to the Template) is found inside it, and on the page, once.
 - **A web component that renders its content in the browser** (not a `LitTemplate`) is entered the same way, but Browserless has nothing inside it: such a test declares `@RequiresBrowser`.
+- **The Template's element is its host** *(unreleased)*. `findTemplate(X.class).element()` is the `<x-tag>` element, and its `findDescendants(..)` and `findChildren(..)` stay in the light DOM, as on any element: they don't enter the shadow root. Plain HTML in the template, with no `@Id`, can't be found on any Testing Tool. Give it an `@Id` (and an `id` in the template) to reach it.
 
-When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. Spec: [4. Locating, Templates](../spec/04-locating.md#templates).
+When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. `describe()` on a Template lists what is inside it, by `withId(..)` first *(unreleased)*:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:describeTemplate"
+```
+
+Spec: [4. Locating, Templates](../spec/04-locating.md#templates).
 
 ## Components without a Wrapper
 

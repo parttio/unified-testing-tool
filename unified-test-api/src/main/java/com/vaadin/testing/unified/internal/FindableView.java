@@ -202,9 +202,9 @@ public final class FindableView {
             return method + "(" + javaString(value) + ")";
         }
 
-        /** Shown as the component's name: not placeholders and test ids, which say "(no name)". */
+        /** Shown as the component's name: not placeholders, test ids and ids, which say "(no name)". */
         boolean names() {
-            return kind != Filter.Kind.PLACEHOLDER && kind != Filter.Kind.TEST_ID;
+            return kind != Filter.Kind.PLACEHOLDER && kind != Filter.Kind.TEST_ID && kind != Filter.Kind.ID;
         }
     }
 
@@ -329,7 +329,7 @@ public final class FindableView {
         }
         found = found.subList(0, Math.min(found.size(), MAX_PER_TYPE));
         List<ElementFacts> facts = LookupFailures.facts(run, found);
-        List<Namer> namers = namers(type);
+        List<Namer> namers = namers(type, inTemplate);
         TestRun quick = run.withTimeout(Duration.ZERO);
         List<Read> reads = new ArrayList<>();
         for (int i = 0; i < found.size(); i++) {
@@ -408,10 +408,16 @@ public final class FindableView {
 
     /**
      * The filters a lookup of this type can single a component out by, best first: the Wrapper's own naming
-     * filters, then label, text, accessible name, placeholder and test id, as far as the type has them.
+     * filters, then label, text, accessible name, placeholder, test id and id, as far as the type has them. Inside a
+     * Template the id comes first: text written in the template's HTML is empty on Browserless, so {@code withId}
+     * is the lookup that works on every Testing Tool there (ADR 0012, #609).
      */
-    private static List<Namer> namers(Class<?> type) {
+    private static List<Namer> namers(Class<?> type, boolean inTemplate) {
         List<Namer> namers = new ArrayList<>();
+        Namer id = new Namer(Filter.Kind.ID, null, null);
+        if (inTemplate) {
+            namers.add(id);
+        }
         for (Method filter : type.getMethods()) {
             Method getter = namingGetter(type, filter);
             if (getter != null) {
@@ -430,6 +436,9 @@ public final class FindableView {
             namers.add(new Namer(Filter.Kind.PLACEHOLDER, null, null));
         }
         namers.add(new Namer(Filter.Kind.TEST_ID, null, null));
+        if (!inTemplate) {
+            namers.add(id);
+        }
         return namers;
     }
 
@@ -462,7 +471,8 @@ public final class FindableView {
     // ---------------------------------------------------------------- one line
 
     /**
-     * {@code text field “Name” = “Alan”}, {@code button (no name; test id “close”)}, {@code grid, 3 rows},
+     * {@code text field “Name” = “Alan”}, {@code button (no name; test id “close”)},
+     * {@code button (no name; id “save”)}, {@code grid, 3 rows},
      * {@code message list, 2 messages}.
      */
     private static String description(OfType t, Read r) {
@@ -472,8 +482,10 @@ public final class FindableView {
                 || TextFilter.class.isAssignableFrom(t.type()))) {
             String placeholder = normalize(r.facts().placeholder());
             String testId = normalize(r.facts().testId());
+            String id = normalize(r.facts().id());
             state.add(placeholder != null ? "no name; placeholder " + quote(placeholder)
-                    : testId != null ? "no name; test id " + quote(testId) : "no name");
+                    : testId != null ? "no name; test id " + quote(testId)
+                    : id != null ? "no name; id " + quote(id) : "no name");
         }
         if (r.value() != null && !r.value().isEmpty()) {
             sb.append(UnifiedCheckbox.class.isAssignableFrom(t.type()) ? " (checked)" : " = " + quote(r.value()));
@@ -542,7 +554,7 @@ public final class FindableView {
         }
         found = found.subList(0, Math.min(found.size(), MAX_PER_TYPE));
         List<ElementFacts> facts = LookupFailures.facts(run, found);
-        List<Namer> namers = namers(type);
+        List<Namer> namers = namers(type, inTemplate);
         TestRun quick = run.withTimeout(Duration.ZERO);
         List<Read> reads = new ArrayList<>();
         for (int i = 0; i < found.size(); i++) {

@@ -87,6 +87,11 @@ public interface UnifiedElement extends HasEscapeHatch {
      * Every element below this one with this tag ({@code *}: any), in document order. Light DOM only, as
      * {@link #findChildren}. Note that web components add light DOM of their own in a browser (a text field's
      * input and label), which Browserless doesn't have.
+     * <p>
+     * On a Template's element ({@code findTemplate(X.class).element()}, its host) this doesn't enter the Template's
+     * shadow root either, on any Testing Tool: plain HTML written in the template, with no {@code @Id}, can't be
+     * found this way or by a lookup. Give it an {@code @Id} and find it inside the Template with
+     * {@code withId(..)} (spec 04, "Templates").
      */
     List<UnifiedElement> findDescendants(String tag);
 }

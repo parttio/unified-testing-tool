@@ -228,7 +228,8 @@ final class BrowserlessSession implements AdapterSession {
     }
 
     /**
-     * In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id.
+     * In the JVM, so no round trips to save: the element's values, its own id as a browser reads it (that of its
+     * {@code @Id} binding too), and its nearest ancestor with a test id or id.
      * Every element found is a component of the application's, so none is an internal part.
      */
     @Override
@@ -249,13 +250,15 @@ final class BrowserlessSession implements AdapterSession {
             String label = own.label() != null && !own.label().isBlank() || !(e instanceof BrowserlessElement b2)
                     ? own.label() : formItemLabel(b2.component());
             java.util.Map<String, String> data = new java.util.HashMap<>();
+            String ownId = null;
             if (e instanceof BrowserlessElement b3) {
                 com.vaadin.flow.dom.Element el = b3.component().getElement();
                 el.getAttributeNames().filter(n -> n.startsWith("data-") && !n.equals("data-testid"))
                         .forEach(n -> data.put(n, el.getAttribute(n)));
+                ownId = idOf(el);
             }
             return new com.vaadin.testing.unified.spi.ElementFacts(label, own.text(), own.placeholder(),
-                    own.testId(), own.accessibleName(), testId, testId == null ? id : null, false, data);
+                    own.testId(), own.accessibleName(), testId, testId == null ? id : null, false, data, ownId);
         }).toList();
     }
 

@@ -67,6 +67,62 @@ public class FindableViewTest {
     }
 
     @Test
+    void aComponentWhoseOnlyUniqueValueIsItsIdIsFoundByIt() {
+        fake.add("vaadin-button", "id", "save")
+                .add("vaadin-button", "id", "cancel")
+                .add("vaadin-button", "text", "Edit", "id", "edit")
+                .add("vaadin-button", "text", "Edit", "id", "edit-2");
+
+        assertEquals(List.of(
+                "button (no name; id “save”)  page.find(UnifiedButton.class).withId(\"save\")",
+                "button (no name; id “cancel”)  page.find(UnifiedButton.class).withId(\"cancel\")",
+                "button “Edit”  page.find(UnifiedButton.class).withId(\"edit\")",
+                "button “Edit”  page.find(UnifiedButton.class).withId(\"edit-2\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
+    void anIdComesAfterTheNamesAndTheTestIdOutsideATemplate() {
+        fake.add("vaadin-button", "text", "Save", "id", "save")
+                .add("vaadin-button", "data-testid", "close", "id", "close-button");
+
+        assertEquals(List.of(
+                "button “Save”  page.find(UnifiedButton.class).withText(\"Save\")",
+                "button (no name; test id “close”)  page.find(UnifiedButton.class).withTestId(\"close\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
+    void flowsRootIdIsNeverSuggested() {
+        fake.add("vaadin-button", "id", "ROOT-2521314").add("vaadin-button", "id", "save");
+
+        assertEquals(List.of(
+                "button (no name)  not unique: 2 alike",
+                "button (no name; id “save”)  page.find(UnifiedButton.class).withId(\"save\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Tag("order-details")
+    public static class OrderDetails extends Component {
+    }
+
+    @Test
+    void insideATemplateTheIdComesFirst() {
+        // the fake page ignores scopes but for a test id: the template's components are "in" it
+        fake.add("order-details", "testId", "details")
+                .add("vaadin-button", "text", "Save", "id", "save", "in", "details")
+                .add("vaadin-button", "id", "cancel", "in", "details")
+                .add("vaadin-button", "text", "Help", "in", "details");
+
+        assertEquals(List.of(
+                "button “Save”  find(UnifiedButton.class).withId(\"save\")",
+                "button (no name; id “cancel”)  find(UnifiedButton.class).withId(\"cancel\")",
+                "button “Help”  find(UnifiedButton.class).withText(\"Help\")"),
+                lines(page.findTemplate(OrderDetails.class).describe()).stream()
+                        .map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
     void twoAlikeAreToldApartByAnotherFilterOrShownAsNotUnique() {
         fake.add("vaadin-button", "text", "Save", "data-testid", "billing-save")
                 .add("vaadin-button", "text", "Save", "data-testid", "shipping-save")

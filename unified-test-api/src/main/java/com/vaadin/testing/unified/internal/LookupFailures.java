@@ -319,7 +319,7 @@ final class LookupFailures {
     /**
      * The adapter's facts for the elements, one each; read one by one when the adapter gives none. An ancestor
      * that is Flow's root ({@code id="ROOT-2521314"}, in a browser) counts as none: it holds every component, so
-     * it tells none apart, and Browserless has no such element.
+     * it tells none apart, and Browserless has no such element. Nor is that id an element's own (#609).
      */
     static List<ElementFacts> facts(TestRun run, List<UnifiedElement> elements) {
         List<ElementFacts> facts = null;
@@ -345,11 +345,16 @@ final class LookupFailures {
     }
 
     private static ElementFacts withoutFlowRoot(ElementFacts f) {
-        if (f == null || f.ancestorId() == null || !FLOW_ROOT.matcher(f.ancestorId()).matches()) {
+        if (f == null || !isFlowRoot(f.ancestorId()) && !isFlowRoot(f.id())) {
             return f;
         }
         return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
-                f.ancestorTestId(), null, f.internalPart(), f.data());
+                f.ancestorTestId(), isFlowRoot(f.ancestorId()) ? null : f.ancestorId(), f.internalPart(), f.data(),
+                isFlowRoot(f.id()) ? null : f.id());
+    }
+
+    private static boolean isFlowRoot(String id) {
+        return id != null && FLOW_ROOT.matcher(id).matches();
     }
 
     private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent,
