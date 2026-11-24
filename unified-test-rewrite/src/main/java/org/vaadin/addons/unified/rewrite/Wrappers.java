@@ -138,6 +138,17 @@ final class Wrappers {
                     Set.copyOf(ConfirmDialogs.PRESSES.values()),
                     Map.of("getHeaderText", "getHeaderTitle", "getMessageText", "getText"),
                     ConfirmDialogs::converts)),
+            // a login overlay or form: UnifiedLogin (#564); signing in through its fields stays TestBench, as
+            // TestBench has no single call for it
+            Map.entry("com.vaadin.flow.component.login.testbench.LoginOverlayElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedLogin",
+                    COMMON_FILTERS,
+                    Set.of("forgotPassword", "getTitle", "getDescription", "isEnabled"),
+                    Map.of("isOpened", "isOpen"))),
+            Map.entry("com.vaadin.flow.component.login.testbench.LoginFormElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedLogin",
+                    COMMON_FILTERS,
+                    Set.of("forgotPassword", "isEnabled"))),
             Map.entry("com.vaadin.flow.component.tabs.testbench.TabSheetElement", new Wrapper(
                     TabSheets.TAB_SHEET,
                     COMMON_FILTERS,

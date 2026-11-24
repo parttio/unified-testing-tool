@@ -9,6 +9,7 @@ import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedGrid;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.nio.file.Files;
@@ -46,6 +47,27 @@ class UserStepsFilesTest {
                 page.find(UnifiedTextField.class).withLabel("Nmae").setValue("Alan M. Turing");
             });
             page.find(UnifiedButton.class).withText("Save").click();
+        }
+    }
+
+    /**
+     * Signs in with a wrong password, then with the right one, and fails a check after: its User Steps, its
+     * failure and its evidence must not show either password (#564).
+     */
+    @UnifiedSpringBootTest
+    @Tag("launched-only")
+    static class SigningIn {
+        static final String WRONG_PASSWORD = "tea-leaves";
+
+        @Test
+        @DisplayName("The barista signs in after a wrong password, then a check fails")
+        void fails(UnifiedPage page) {
+            page.navigate(SignInFormView.class);
+            UnifiedLogin login = page.find(UnifiedLogin.class);
+            login.login(SignInFormView.USERNAME, WRONG_PASSWORD);
+            com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat(login).hasError();
+            login.login(SignInFormView.USERNAME, SignInFormView.PASSWORD);
+            com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat(page).isAt(PeopleView.class);
         }
     }
 
@@ -153,5 +175,30 @@ class UserStepsFilesTest {
         assertTrue(codePath.get(0).get("line").asInt() < codePath.get(1).get("line").asInt(),
                 "the step's call site first, then the line inside it: " + codePath);
         assertEquals("failed", json.get("steps").get(1).get("status").asString());
+    }
+
+    @Test
+    void signingInNamesTheUserAndNeverShowsThePassword(@TempDir Path dir) throws Exception {
+        TestExecutionSummary summary = run(SigningIn.class, dir);
+        assertEquals(1, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+
+        Path test = dir.resolve("UserStepsFilesTest$SigningIn").resolve("fails");
+        List<String> lines = Files.readString(test.resolve("user-steps.txt")).lines().toList();
+        assertEquals(List.of(
+                "   1  open Sign In Form",
+                "   2  sign in as “barista@vaadin.com” in login",
+                "   3  see login with an error",
+                "   4  sign in as “barista@vaadin.com” in login",
+                "   5  open “”"), lines.subList(1, 6), String.join("\n", lines));
+        // every file the run wrote (steps, failure, evidence, the run's summary), and the failure itself
+        try (var files = Files.walk(dir)) {
+            for (Path file : files.filter(Files::isRegularFile).toList()) {
+                String content = new String(Files.readAllBytes(file), java.nio.charset.StandardCharsets.ISO_8859_1);
+                assertFalse(content.contains(SignInFormView.PASSWORD), "the password in " + file);
+                assertFalse(content.contains(SigningIn.WRONG_PASSWORD), "the wrong password in " + file);
+            }
+        }
+        String failure = summary.getFailures().get(0).getException().toString();
+        assertFalse(failure.contains(SignInFormView.PASSWORD), failure);
     }
 }

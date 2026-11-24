@@ -181,6 +181,40 @@ final class PlaywrightComponents {
         });
     }
 
+    /**
+     * UnifiedLogin's lookup, over a LoginOverlay and a LoginForm: an overlay is an overlay host, part of the page
+     * and visible while it is open; a form is found and seen as any other component.
+     */
+    static {
+        register(com.vaadin.flow.component.login.AbstractLogin.class, new OverlayHost() {
+            @Override
+            public boolean include(Locator locator) {
+                return isForm(locator) || opened(locator);
+            }
+
+            @Override
+            public Optional<Boolean> visible(Locator locator) {
+                return isForm(locator) ? Optional.empty() : Optional.of(opened(locator));
+            }
+
+            @Override
+            public Optional<Boolean> booleanProperty(Locator locator, String name) {
+                return isForm(locator) ? Optional.empty() : super.booleanProperty(locator, name);
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Locator locator, PlaywrightSession session) {
+                return type == com.vaadin.testing.unified.spi.LoginAccess.class
+                        ? Optional.of(new PlaywrightCoreSetAccess.LoginAccessImpl(session, locator))
+                        : Optional.empty();
+            }
+
+            private static boolean isForm(Locator locator) {
+                return "vaadin-login-form".equals(locator.evaluate("e => e.localName"));
+            }
+        });
+    }
+
     static {
         register(ComboBox.class, selection(ComboBoxElement.class, PlaywrightSelectionAccess.Kind.COMBO_BOX));
         register(MultiSelectComboBox.class, selection(MultiSelectComboBoxElement.class,

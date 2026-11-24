@@ -16,6 +16,7 @@ import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
+import com.vaadin.testing.unified.spi.LoginAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.MessageInputAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
@@ -31,7 +32,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
 /**
- * Access to ConfirmDialog, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Selenium, through TestBench's element classes; a bare Tabs bar
+ * Access to LoginOverlay and LoginForm, ConfirmDialog, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Selenium, through TestBench's element classes; a bare Tabs bar
  * uses {@link SeleniumTabSheetAccess}.
  */
 final class SeleniumCoreSetAccess {
@@ -50,6 +51,48 @@ final class SeleniumCoreSetAccess {
             SeleniumSession.stale(() -> element.findElement(By.cssSelector(BrowserQueries.confirmDialogButton(role))))
                     .click();
             session.waitForVaadin();
+        }
+    }
+
+    /**
+     * Through TestBench's LoginOverlayElement and LoginFormElement: the form's fields and buttons, inside the
+     * overlay for a LoginOverlay. A form post loads another page, which waiting for Vaadin waits for.
+     */
+    record LoginAccessImpl(SeleniumSession session, WebElement element) implements LoginAccess {
+        @Override
+        public boolean postsForms() {
+            return true;
+        }
+
+        @Override
+        public void login(String username, String password) {
+            TestBenchElement host = session.testBench(element);
+            if (isOverlay(host)) {
+                var login = host.wrap(com.vaadin.flow.component.login.testbench.LoginOverlayElement.class);
+                login.getUsernameField().setValue(username);
+                login.getPasswordField().setValue(password);
+                login.getSubmitButton().click();
+            } else {
+                var login = host.wrap(com.vaadin.flow.component.login.testbench.LoginFormElement.class);
+                login.getUsernameField().setValue(username);
+                login.getPasswordField().setValue(password);
+                login.getSubmitButton().click();
+            }
+            session.waitForVaadin();
+        }
+
+        @Override
+        public void forgotPassword() {
+            TestBenchElement host = session.testBench(element);
+            (isOverlay(host) ? host.wrap(com.vaadin.flow.component.login.testbench.LoginOverlayElement.class)
+                    .getForgotPasswordButton()
+                    : host.wrap(com.vaadin.flow.component.login.testbench.LoginFormElement.class)
+                            .getForgotPasswordButton()).click();
+            session.waitForVaadin();
+        }
+
+        private static boolean isOverlay(TestBenchElement host) {
+            return "vaadin-login-overlay".equalsIgnoreCase(host.getTagName());
         }
     }
 

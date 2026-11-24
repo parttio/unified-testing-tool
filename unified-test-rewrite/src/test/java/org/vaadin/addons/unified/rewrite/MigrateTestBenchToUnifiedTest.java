@@ -327,6 +327,46 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void loginElementsBecomeUnifiedLogin() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.login.testbench.LoginFormElement;
+                import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class LoginTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void readsTheLogin() {
+                        boolean open = $(LoginOverlayElement.class).single().isOpened();
+                        String title = $(LoginOverlayElement.class).single().getTitle();
+                        String description = $(LoginOverlayElement.class).single().getDescription();
+                        $(LoginFormElement.class).single().forgotPassword();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedLogin;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LoginTest {
+
+                    @Test
+                    void readsTheLogin(UnifiedPage page) {
+                        boolean open = page.find(UnifiedLogin.class).isOpen();
+                        String title = page.find(UnifiedLogin.class).getTitle();
+                        String description = page.find(UnifiedLogin.class).getDescription();
+                        page.find(UnifiedLogin.class).forgotPassword();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void assertEqualsOnValueOrTextBecomesARetryingAssertion() {
         rewriteRun(java(
                 """

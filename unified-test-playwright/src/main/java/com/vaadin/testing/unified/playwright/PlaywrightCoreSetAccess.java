@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
+import com.vaadin.testing.unified.spi.LoginAccess;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
@@ -31,7 +32,7 @@ import org.vaadin.addons.dramafinder.element.TabsElement;
 import org.vaadin.addons.dramafinder.element.UploadElement;
 
 /**
- * Access to ConfirmDialog, Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Playwright, through
+ * Access to LoginOverlay and LoginForm, ConfirmDialog, Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Playwright, through
  * Dramafinder's elements.
  * Dramafinder's element actions wait for the server round-trip themselves; only actions on raw locators
  * wait here.
@@ -136,6 +137,42 @@ final class PlaywrightCoreSetAccess {
                 case REJECT -> dialog.getRejectButton().click();
                 case CANCEL -> dialog.getCancelButton().click();
             }
+        }
+    }
+
+    /**
+     * Through Dramafinder's login elements: the form's fields and buttons, inside the overlay for a LoginOverlay.
+     * A form that posts is submitted with a plain click, without Dramafinder's wait after it: the post loads
+     * another page, which the session's settle after the action waits for, as for any other click.
+     */
+    record LoginAccessImpl(PlaywrightSession session, Locator locator) implements LoginAccess {
+        private org.vaadin.addons.dramafinder.element.AbstractLoginElement login() {
+            return "vaadin-login-overlay".equals(locator.evaluate("e => e.localName"))
+                    ? new org.vaadin.addons.dramafinder.element.LoginOverlayElement(locator)
+                    : new org.vaadin.addons.dramafinder.element.LoginFormElement(locator);
+        }
+
+        @Override
+        public boolean postsForms() {
+            return true;
+        }
+
+        @Override
+        public void login(String username, String password) {
+            org.vaadin.addons.dramafinder.element.AbstractLoginElement login = login();
+            if (!Boolean.TRUE.equals(locator.evaluate("e => !!e.action"))) {
+                // the LoginEvent: Dramafinder types, presses submit and waits for the round trip it starts
+                login.login(username, password);
+                return;
+            }
+            login.getUsernameField().setValue(username);
+            login.getPasswordField().setValue(password);
+            login.getSubmitButton().getLocator().click();
+        }
+
+        @Override
+        public void forgotPassword() {
+            login().getForgotPasswordButton().getLocator().click();
         }
     }
 

@@ -59,7 +59,7 @@ public final class BrowserQueries {
 
     /** The selector with every filter CSS can express. */
     public static String selector(String tag, List<Filter> filters) {
-        StringBuilder selector = new StringBuilder(tag);
+        StringBuilder selector = new StringBuilder(tagSelector(tag));
         for (Filter f : filters) {
             String part = selectorPart(f);
             if (part != null) {
@@ -67,6 +67,25 @@ public final class BrowserQueries {
             }
         }
         return selector.toString();
+    }
+
+    /**
+     * Whether {@code tag} lists several tags, comma-separated, as a Wrapper bound to several components declares
+     * it ({@code UnifiedLogin}: {@code "vaadin-login-overlay, vaadin-login-form"}).
+     */
+    public static boolean isTagList(String tag) {
+        return tag != null && tag.indexOf(',') >= 0;
+    }
+
+    /** The tags of {@code tag}: itself, or those it lists ({@link #isTagList}). */
+    public static List<String> tags(String tag) {
+        return isTagList(tag) ? java.util.Arrays.stream(tag.split(",")).map(String::strip).filter(t -> !t.isEmpty())
+                .toList() : List.of(tag);
+    }
+
+    /** The CSS selector for {@code tag}: itself, or {@code :is(a,b)} for a tag list, so filters can follow it. */
+    public static String tagSelector(String tag) {
+        return isTagList(tag) ? ":is(" + String.join(",", tags(tag)) + ")" : tag;
     }
 
     /** The filters the selector can't express, as {@link #MATCH} takes them. */

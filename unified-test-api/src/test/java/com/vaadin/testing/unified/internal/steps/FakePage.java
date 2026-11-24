@@ -80,7 +80,8 @@ final class FakePage {
 
     private List<UnifiedElement> find(QuerySpec spec) {
         return components.stream()
-                .filter(c -> spec.tag().equals("*") || spec.tag().equals(c.get("tag")))
+                .filter(c -> spec.tag().equals("*")
+                        || com.vaadin.testing.unified.internal.BrowserQueries.tags(spec.tag()).contains(c.get("tag")))
                 .filter(c -> spec.parent() == null || spec.parent().getProperty("testId") == null
                         || spec.parent().getProperty("testId").equals(c.get("in")))
                 .filter(c -> spec.filters().stream().allMatch(f -> f.kind() == Filter.Kind.WITHOUT_ATTRIBUTE
@@ -126,7 +127,8 @@ final class FakePage {
                             : args[0] == MessageListAccess.class ? Optional.of(messageList(component)) : Optional.empty();
                     case "unwrap" -> args[0] == MessageListAccess.class ? messageList(component)
                             : args[0] == TabSheetAccess.class ? tabs(component)
-                            : args[0] == ConfirmDialogAccess.class ? confirmDialog(component) : null;
+                            : args[0] == ConfirmDialogAccess.class ? confirmDialog(component)
+                            : args[0] == com.vaadin.testing.unified.spi.LoginAccess.class ? login(component) : null;
                     case "setValueAsUser" -> {
                         component.put("value", String.valueOf(args[0]));
                         component.put("checked", String.valueOf(args[0]));
@@ -149,6 +151,32 @@ final class FakePage {
                     case "equals" -> proxy == args[0];
                     default -> null;
                 });
+    }
+
+    /**
+     * A login form or overlay: it posts forms unless {@code "postsForms"} is {@code "false"}; signing in records
+     * the username and the password, as the application receives them; a password {@code "boom"} fails with it.
+     */
+    private com.vaadin.testing.unified.spi.LoginAccess login(Map<String, String> component) {
+        return new com.vaadin.testing.unified.spi.LoginAccess() {
+            @Override
+            public boolean postsForms() {
+                return !"false".equals(component.get("postsForms"));
+            }
+
+            @Override
+            public void login(String username, String password) {
+                actions.add("login " + username + " " + password);
+                if ("boom".equals(password)) {
+                    throw new IllegalStateException("the form rejected " + username + "/" + password);
+                }
+            }
+
+            @Override
+            public void forgotPassword() {
+                actions.add("forgot password");
+            }
+        };
     }
 
     /**

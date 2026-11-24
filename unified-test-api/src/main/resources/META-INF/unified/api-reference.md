@@ -255,6 +255,17 @@ Link, any Flow component rendered as `<a>`. Guide: [Working with components, Lin
 - **Reads:** `getHref() → String`, `getText() → String`
 - **Checks:** those of every Wrapper, and `hasHref(String)`
 
+### `UnifiedLogin`
+
+Login, Flow's `AbstractLogin`. Guide: [Working with components, Login](https://parttio.github.io/unified-testing-tool/guide/components/#login).
+
+- **Filters:** `withTitle(String)`
+- **Actions**, each with the User Step it reports:
+  - `forgotPassword()`: press “Forgot password” in login “…”
+  - `login(String, String)`: sign in as “…” in login “…”
+- **Reads:** `getDescription() → String`, `getTitle() → String`, `isError() → boolean`, `isForgotPasswordButtonVisible() → boolean`, `isOpen() → boolean`
+- **Checks:** those of every Wrapper, and `hasError()`, `hasNoError()`, `hasTitle(String)`, `isClosed()`, `isOpen()`
+
 ### `UnifiedMain`
 
 Main, Flow's `Main`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).

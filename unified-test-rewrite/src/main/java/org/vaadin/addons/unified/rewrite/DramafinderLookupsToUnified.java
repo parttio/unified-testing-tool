@@ -472,6 +472,8 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 Object parent = parentCursor.getValue();
                 if (identifier.getSimpleName().equals(name)
                         && !(parent instanceof J.VariableDeclarations.NamedVariable)
+                        // a method of the same name, as in login.login(..), is no use of the variable
+                        && !(parent instanceof J.MethodInvocation named && named.getName() == identifier)
                         && !(parent instanceof J.MethodInvocation call && call.getSelect() == identifier
                                 && supportedCall(wrapper, call, parentCursor.getParentTreeCursor().getValue() instanceof J.Block))
                         && !isPlaywrightCheck(parentCursor, identifier, wrapper)

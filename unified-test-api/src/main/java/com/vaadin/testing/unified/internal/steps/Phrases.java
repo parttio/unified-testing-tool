@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.internal.steps;
 import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UserStepVerb;
 import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.internal.LazyElement;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -57,11 +58,22 @@ public final class Phrases {
             // a confirm dialog's answer reads as the user gives it: confirm “Delete order?”
             case "confirm", "reject", "cancel" -> UnifiedConfirmDialog.class.isAssignableFrom(wrapperType)
                     ? Phrase.of(name, target).byNameOnly() : Phrase.of(name, target);
-            default -> {
-                String verb = String.join(" ", StepTarget.splitWords(name)).toLowerCase(Locale.ROOT);
-                yield Phrase.of(verb, target, values(args));
-            }
+            // signing in names the user, never the password: sign in as “barista@vaadin.com” in login
+            case "login" -> UnifiedLogin.class.isAssignableFrom(wrapperType)
+                    ? Phrase.template("sign in", "sign in as {value} in", target,
+                            values(args == null || args.length == 0 ? null : new Object[] { args[0] }))
+                    : inWords(name, target, args);
+            case "forgotPassword" -> UnifiedLogin.class.isAssignableFrom(wrapperType)
+                    ? Phrase.template("press", "press “Forgot password” in", target, List.of())
+                    : inWords(name, target, args);
+            default -> inWords(name, target, args);
         };
+    }
+
+    /** The method name in words, with its arguments as values: {@code toggleDetails} → "toggle details". */
+    private static Phrase inWords(String name, StepTarget target, Object[] args) {
+        String verb = String.join(" ", StepTarget.splitWords(name)).toLowerCase(Locale.ROOT);
+        return Phrase.of(verb, target, values(args));
     }
 
     /**

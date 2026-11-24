@@ -75,6 +75,12 @@ final class DramafinderWrappers {
     private static final Map<String, String> TEXT_FIELD_METHODS = same("setValue", "getValue", "clear", "getLabel",
             "getPlaceholder", "getHelperText", "isEnabled", "isVisible");
 
+    /** A LoginFormElement or a LoginOverlayElement: {@code UnifiedLogin} (#564). */
+    private static final Wrapper LOGIN = new Wrapper(COMPONENT + "UnifiedLogin", union(COMMON_FILTERS, Set.of("withTitle")),
+            with(same("login", "isOpen", "isVisible"), Map.of("isErrorVisible", "isError")),
+            with(VISIBILITY, Map.of("assertOpen", "isOpen", "assertClosed", "isClosed", "assertErrorVisible", "hasError",
+                    "assertNoError", "hasNoError", "assertHeaderTitle", "hasTitle")));
+
     private static final Map<String, Wrapper> BY_ELEMENT = Stream.of(Map.of(
             ELEMENT + "TextFieldElement", new Wrapper(COMPONENT + "UnifiedTextField",
                     union(COMMON_FILTERS, LABEL_FILTERS, Set.of("withPlaceholder")), TEXT_FIELD_METHODS, FIELD_ASSERTIONS),
@@ -110,11 +116,15 @@ final class DramafinderWrappers {
                     with(same("isOpen", "confirm", "reject", "cancel"),
                             Map.of("getHeaderText", "getHeaderTitle", "getMessage", "getText", "closeWithEscape", "close")),
                     Map.of("assertOpen", "isOpen", "assertClosed", "isClosed", "assertHeaderText", "hasHeaderTitle",
-                            "assertMessage", "hasText"))))
+                            "assertMessage", "hasText")),
+            // a login form or overlay: one Wrapper for both, login(..) signs in as the element's does (#564)
+            ELEMENT + "LoginFormElement", LOGIN,
+            ELEMENT + "LoginOverlayElement", LOGIN))
             .flatMap(m -> m.entrySet().stream()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     /** Elements whose {@code get(page)} finds the first one on the page: the Wrapper finds it, and a second one fails loudly. */
-    private static final Set<String> GET_FIRST = Set.of(ELEMENT + "GridElement", ELEMENT + "MessageInputElement",
+    private static final Set<String> GET_FIRST = Set.of(ELEMENT + "GridElement", ELEMENT + "LoginFormElement",
+            ELEMENT + "LoginOverlayElement", ELEMENT + "MessageInputElement",
             ELEMENT + "MessageListElement");
 
     /**
@@ -130,13 +140,13 @@ final class DramafinderWrappers {
     /** Static factories: the Unified filter each one is. {@code getByLabel} on a button is its accessible name. */
     private static final Map<String, String> FACTORIES = Map.of("getByLabel", "withLabel", "getByLabelContaining",
             "withLabelContaining", "getByText", "withText", "getByTextContaining", "withTextContaining", "getById",
-            "withId", "getByTestId", "withTestId", "getByHeaderText", "withHeaderTitle");
+            "withId", "getByTestId", "withTestId", "getByHeaderText", "withHeaderTitle", "getByTitle", "withTitle");
 
     /** Dramafinder 1.x label and text factories, and the Unified filter that matches at least as much. */
     private static final Map<String, String> VERSION_1_FACTORIES = Map.of("getByLabel", "withAccessibleNameContaining",
             "getByText", "withTextContaining");
     /** Dramafinder 1.x substring factories with no substring filter in the Unified API. */
-    private static final Set<String> VERSION_1_UNMAPPED = Set.of("getByHeaderText");
+    private static final Set<String> VERSION_1_UNMAPPED = Set.of("getByHeaderText", "getByTitle");
 
     /** Factories that match a substring and take the first match even in Dramafinder 2.x. */
     private static final Set<String> FIRST_MATCH = Set.of(ELEMENT + "NotificationElement#getByText");

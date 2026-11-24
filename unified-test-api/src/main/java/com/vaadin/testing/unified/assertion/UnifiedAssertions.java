@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.component.UnifiedOverlayDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
@@ -79,6 +80,7 @@ public final class UnifiedAssertions {
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
     public static ConfirmDialogAssert assertThat(UnifiedConfirmDialog dialog) { return new ConfirmDialogAssert(dialog); }
+    public static LoginAssert assertThat(UnifiedLogin login) { return new LoginAssert(login); }
     public static GridAssert assertThat(UnifiedGrid grid) { return new GridAssert(grid); }
     public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { return new GridRowAssert(row); }
     public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { return new GridColumnAssert(column); }
@@ -539,6 +541,38 @@ public final class UnifiedAssertions {
         @Override
         public ConfirmDialogAssert hasTextContaining(String part) {
             return check("to have text containing", part, dialog::getText, v -> v != null && v.toString().contains(part));
+        }
+    }
+
+    /** A login overlay or form: open or closed, its error state and its title. */
+    public static final class LoginAssert extends WrapperAssert<LoginAssert> {
+        private final UnifiedLogin login;
+
+        LoginAssert(UnifiedLogin login) { super(login); this.login = login; }
+
+        /** A {@code LoginOverlay} is open; a {@code LoginForm} is on the page. */
+        public LoginAssert isOpen() {
+            return check("to be open", null, login::isOpen, Boolean.TRUE::equals);
+        }
+
+        /** Passes when the overlay is closed or no longer on the page. */
+        public LoginAssert isClosed() {
+            return check("to be closed", null,
+                    () -> element.tryConcrete().map(e -> Boolean.TRUE.equals(e.getPropertyBoolean("opened"))).orElse(false),
+                    Boolean.FALSE::equals);
+        }
+
+        /** Shows its error message: the application called {@code setError(true)}, e.g. for a wrong password. */
+        public LoginAssert hasError() {
+            return check("to have an error", null, login::isError, Boolean.TRUE::equals);
+        }
+
+        public LoginAssert hasNoError() {
+            return check("not to have an error", null, login::isError, Boolean.FALSE::equals);
+        }
+
+        public LoginAssert hasTitle(String expected) {
+            return check("to have title", expected, login::getTitle, v -> Objects.equals(v, expected));
         }
     }
 

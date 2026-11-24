@@ -58,7 +58,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
             + "option springBootTest)";
     /** On a statement signing in through a login page object, in a Spring Security module. */
     static final String SIGNS_IN = "signs in through the login form: unless this test checks the login itself, "
-            + "consider @WithMockUser";
+            + "consider @WithMockUser; to keep the form, page.find(UnifiedLogin.class).login(username, password)";
     private static final Set<String> LOGIN_ELEMENTS = Set.of("com.vaadin.flow.component.login.testbench.LoginOverlayElement",
             "com.vaadin.flow.component.login.testbench.LoginFormElement");
     static final String BROWSER_TEST = "com.vaadin.testbench.BrowserTest";

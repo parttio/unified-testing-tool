@@ -76,6 +76,7 @@ class ApiReferenceTest {
             entry("UnifiedDetails", "components.md#tabs-and-details"),
             entry("UnifiedDialog", "components.md#dialogs-and-notifications"),
             entry("UnifiedConfirmDialog", "components.md#dialogs-and-notifications"),
+            entry("UnifiedLogin", "components.md#login"),
             entry("UnifiedNotification", "components.md#dialogs-and-notifications"),
             entry("UnifiedUpload", "components.md#upload"),
             entry("UnifiedMessageInput", "components.md#chat"),

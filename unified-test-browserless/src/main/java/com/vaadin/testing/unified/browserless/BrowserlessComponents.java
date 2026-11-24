@@ -109,6 +109,35 @@ final class BrowserlessComponents {
         });
     }
 
+    /** A LoginOverlay or a LoginForm: signs in through {@link BrowserlessCoreSetAccess.LoginAccessImpl}. */
+    private static Optional<Object> loginAccess(Class<?> type, Component component, BrowserlessSession session) {
+        return type == com.vaadin.testing.unified.spi.LoginAccess.class
+                ? Optional.of(new BrowserlessCoreSetAccess.LoginAccessImpl(session,
+                        (com.vaadin.flow.component.login.AbstractLogin) component))
+                : Optional.empty();
+    }
+
+    static {
+        // UnifiedLogin's lookup, over both: an overlay counts while it is open, a form always
+        register(com.vaadin.flow.component.login.AbstractLogin.class, new Support() {
+            @Override
+            public boolean include(Component component) {
+                return !(component instanceof com.vaadin.flow.component.login.LoginOverlay) || OverlayHost.opened(component);
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return loginAccess(type, component, session);
+            }
+        });
+        register(com.vaadin.flow.component.login.LoginOverlay.class, new OverlayHost() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return loginAccess(type, component, session);
+            }
+        });
+    }
+
     static {
         register(ConfirmDialog.class, new OverlayHost() {
             @Override
