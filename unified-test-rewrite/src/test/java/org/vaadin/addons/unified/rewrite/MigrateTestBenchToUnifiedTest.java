@@ -3299,6 +3299,7 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
 
                             protected TestBenchElement openLoginView(UnifiedPage page, WebDriver driver, String url) {
                                 TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                                // TODO unified: navigation to url: not a local application URL the recipe can read; use page.navigate("<path>")
                                 driver.get(url);
                                 // TODO unified: TestBench Escape Hatch: $("login-view")
                                 return testBench.$("login-view").first();
