@@ -85,7 +85,7 @@ Commit or stash your work first: the recipe changes files in place.
 | `addAgentSkill` | `false` | Also writes the agent skill that resolves Migration Markers (see below) |
 | `springBootTest` *(unreleased)* | `true` | In a Spring Boot app, a test class without `@SpringBootTest` starts the app itself (`@UnifiedSpringBootTest`) instead of testing a server the build starts; `false` keeps it on that server (see [A Spring Boot app tested against a server the build starts](#a-spring-boot-app-tested-against-a-server-the-build-starts)) |
 
-Up to 0.1.0-alpha4 the recipe ignores the options a `rewrite.yml` sets, without a warning, and runs with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)). With those versions, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
+Releases up to alpha3 ignore the options a `rewrite.yml` sets, without a warning, and run the recipe with the defaults ([#353](https://github.com/parttio/unified-testing-tool/issues/353)); alpha4 fixed it. With those releases, add the adapter dependencies by hand, and copy the skill from `META-INF/unified/skills/resolve-migration-markers/SKILL.md` in the `unified-test-rewrite` jar to `.claude/skills/resolve-migration-markers/SKILL.md`.
 
 Then run your tests on each Testing Tool (`-Dvaadin.testing.tool=browserless`, `playwright` or `selenium`) and work through the Migration Markers, by hand or with the agent skill.
 
