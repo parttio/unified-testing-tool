@@ -107,7 +107,16 @@ public class UsersView extends VerticalLayout {
         staff.prependHeaderRow().join(staffName, staffRole).setText("Person");
         staff.setAllRowsVisible(true);
 
-        add(users, roles, archived, archivedOn, tasks, staff);
+        // a hidden column first, and an action column without header text: reached by index (#614)
+        Grid<User> accounts = new Grid<>();
+        accounts.setTestId("accounts");
+        accounts.addColumn(User::email).setHeader("Email").setVisible(false);
+        accounts.addColumn(User::name).setHeader("Name");
+        accounts.addComponentColumn(u -> new Button("Remove", e -> Notification.show("Removing " + u.name())));
+        accounts.setItems(List.of(new User("Ada", "ada@example.com", ""), new User("Bob", "bob@example.com", "")));
+        accounts.setAllRowsVisible(true);
+
+        add(users, roles, archived, archivedOn, tasks, staff, accounts);
     }
 
     private java.util.stream.Stream<User> filtered() {

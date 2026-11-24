@@ -78,6 +78,11 @@ public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> 
         String getCellText(int columnIndex);
         /** Components inside the cell, e.g. an Edit button. */
         Scope cell(String columnHeader);
+        /**
+         * Components inside the cell, by index among the visible columns: for columns without header text, e.g.
+         * an action column; prefer the header.
+         */
+        Scope cell(int columnIndex);
         void select();
         void deselect();
         boolean isSelected();

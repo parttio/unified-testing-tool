@@ -42,7 +42,7 @@ flowchart TD
 |---|---|
 | `UnifiedGrid` | `row()`, `row(i)`, `getRowCount()`, `column(header)`, `columnWithId(id)`, `column(index)`, `getColumnHeaders()`, `selectAll()`, `deselectAll()` |
 | `UnifiedGridRow` filters | `withCellText(column, text)`, `withCellText(text)` (any column; reads every column, so slower on large lazy Grids), `withCellTextContaining(..)`, `selected()`; each returns a new row and leaves this one unchanged. `all()`: every matching row now, by index, only for loops |
-| `UnifiedGridRow` | `grid()`, `getIndex()`, `getCellText(column)`, `getCellText(index)` (columns without header text), `cell(column)` (Scope), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `isDetailsOpen()`, `details()` (Scope) |
+| `UnifiedGridRow` | `grid()`, `getIndex()`, `getCellText(column)`, `getCellText(index)` (columns without header text), `cell(column)` (Scope), `cell(index)` (Scope, columns without header text) *(unreleased)*, `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `isDetailsOpen()`, `details()` (Scope) |
 | `UnifiedGridColumn` | `header()` (Scope), `sort(direction)`, `getSortDirection()`, `getCellTexts()` |
 
 | Retrying assertion | On |

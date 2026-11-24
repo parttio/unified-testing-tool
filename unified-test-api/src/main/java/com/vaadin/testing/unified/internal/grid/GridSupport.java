@@ -127,6 +127,14 @@ public final class GridSupport {
         return index;
     }
 
+    static int columnIndex(GridAccess access, int index) {
+        int columns = access.columnHeaders().size();
+        if (index < 0 || index >= columns) {
+            throw new IllegalArgumentException("No visible column at index " + index + " (" + columns + " columns)");
+        }
+        return index;
+    }
+
     /** {@code at index 2}: the API's own 0-based index, so the report matches the code. */
     static String ordinalWords(int index) {
         return "at index " + index;
@@ -276,6 +284,14 @@ public final class GridSupport {
                     access -> access.cell(getIndex(), columnIndex(access, columnHeader)));
         }
 
+        @Override
+        public Scope cell(int columnIndex) {
+            return scope(grid, this + ".cell(" + columnIndex + ")",
+                    StepTarget.of("cell").withQualifier(ordinalWords(columnIndex))
+                            .withScope(target().renderWithScope()),
+                    access -> access.cell(getIndex(), columnIndex(access, columnIndex)));
+        }
+
         @Override public boolean isSelected() { return access(grid).isSelected(getIndex()); }
         @Override public boolean isDetailsOpen() { return access(grid).isDetailsOpen(getIndex()); }
 
@@ -315,13 +331,7 @@ public final class GridSupport {
                     }
                     yield found;
                 }
-                case INDEX -> {
-                    int columns = access.columnHeaders().size();
-                    if (index < 0 || index >= columns) {
-                        throw new IllegalArgumentException("No visible column at index " + index + " (" + columns + " columns)");
-                    }
-                    yield index;
-                }
+                case INDEX -> columnIndex(access, index);
             };
         }
 
