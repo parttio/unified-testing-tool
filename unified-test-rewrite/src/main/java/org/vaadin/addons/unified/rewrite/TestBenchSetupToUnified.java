@@ -52,6 +52,12 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     static final String STARTS_THE_APP = "the tests ran against a server started outside the test; they now start "
             + "the app themselves, on a random port and with its test configuration (@UnifiedSpringBootTest); the "
             + "build's spring-boot:start/stop executions can be removed (recipe option springBootTest)";
+    /**
+     * On a field of such a class holding a local application URL with a fixed port, which the migration kept.
+     */
+    static final String FIXED_PORT_URL = "a local application URL with a fixed port: the app now runs on a random "
+            + "port (@UnifiedSpringBootTest), so navigation through this URL reaches the server the build starts, not "
+            + "the app the test starts; use page.navigate(\"<path>\")";
     /** On such a class kept a {@code @UnifiedUITest} by {@code springBootTest: false}. */
     static final String EXTERNAL_SERVER = "a Spring Boot app tested against a server the build starts: Browserless "
             + "can't build its Spring views and @WithMockUser has no effect; consider @UnifiedSpringBootTest (recipe "
@@ -424,6 +430,7 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                                 .build()
                                 .apply(updateCursor(c), c.getCoordinates().addAnnotation((a, b) -> 0));
                         c = MigrationMarkers.onClass(c, STARTS_THE_APP);
+                        c = c.withBody(c.getBody().withStatements(withFixedPortUrlsMarked(c)));
                     } else {
                         maybeAddImport(UNIFIED_UI_TEST);
                         c = JavaTemplate.builder("@UnifiedUITest")
@@ -504,21 +511,24 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
                     }
                     return m.withArguments(arguments);
                 }
-                if (!DRIVER_GET.matches(m) || m.getSelect() == null
-                        || !(m.getSelect() instanceof J.MethodInvocation select && GET_DRIVER.matches(select)) && !bearsPage()) {
+                if (!DRIVER_GET.matches(m) || m.getSelect() == null) {
                     return m;
                 }
                 Expression url = m.getArguments().get(0);
-                String path = Urls.pathOf(url, scanned::constant);
+                boolean navigates = m.getSelect() instanceof J.MethodInvocation select && GET_DRIVER.matches(select)
+                        || bearsPage();
+                String path = navigates ? Urls.pathOf(url, scanned::constant) : null;
                 if (path == null) {
-                    Expression pathExpression = Urls.pathExpression(url);
+                    Expression pathExpression = navigates ? Urls.pathExpression(url) : null;
                     if (pathExpression != null) {
                         return JavaTemplate.builder("#{any(" + UNIFIED_PAGE + ")}.navigate(#{any(String)})")
                                 .javaParser(Stubs.parser())
                                 .build()
                                 .apply(getCursor(), m.getCoordinates().replace(), page(), pathExpression);
                     }
-                    if (Urls.hasBase(url)) {
+                    J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                    if (navigates || c != null && isTestBenchClass(c)) {
+                        // whatever the URL's form: a parameter or a local may still hold the server the build started
                         MigrationMarkers.add(getCursor(), "navigation to " + MigrationMarkers.code(url, getCursor())
                                 + ": not a local application URL the recipe can read; use page.navigate(\"<path>\")");
                     }
@@ -674,6 +684,23 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
             kept.add(s);
         }
         return kept;
+    }
+
+    /**
+     * The class's statements with a marker on each field holding a local application URL with a fixed port, which
+     * reaches the server the build starts, not the app the test now starts on a random port.
+     */
+    private static List<Statement> withFixedPortUrlsMarked(J.ClassDeclaration c) {
+        List<Statement> statements = new ArrayList<>();
+        for (Statement s : c.getBody().getStatements()) {
+            if (s instanceof J.VariableDeclarations v && v.getVariables().stream().anyMatch(var ->
+                    var.getInitializer() instanceof J.Literal literal && literal.getValue() instanceof String value
+                            && Urls.localPath(value) != null)) {
+                s = MigrationMarkers.above(v, FIXED_PORT_URL);
+            }
+            statements.add(s);
+        }
+        return statements;
     }
 
     private static boolean isRead(J.ClassDeclaration c, String name) {

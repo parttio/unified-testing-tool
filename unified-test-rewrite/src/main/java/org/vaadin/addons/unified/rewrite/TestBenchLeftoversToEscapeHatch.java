@@ -2,6 +2,7 @@ package org.vaadin.addons.unified.rewrite;
 
 import static java.util.Collections.emptyList;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JRightPadded;
 import org.openrewrite.java.tree.JavaType;
 import org.openrewrite.java.tree.Space;
+import org.openrewrite.java.tree.Statement;
 import org.openrewrite.java.tree.TypeUtils;
 import org.openrewrite.marker.Markers;
 
@@ -145,13 +147,20 @@ public class TestBenchLeftoversToEscapeHatch extends ScanningRecipe<TestBenchLef
                 }
                 m = MigrationMarkers.write(m, markers);
                 maybeAddImport(ESCAPE_HATCH);
-                m = JavaTemplate.builder("TestBenchEscapeHatch " + VARIABLE + " = TestBenchEscapeHatch.of(#{any("
+                // built in an empty body: inserted before a statement passing testBench.getDriver() to a method that
+                // isn't a helper, such as open(testBench.getDriver(), url), the template left the body unchanged (#607)
+                List<Statement> statements = m.getBody().getStatements();
+                J.MethodDeclaration empty = m.withBody(m.getBody().withStatements(emptyList()));
+                empty = JavaTemplate.builder("TestBenchEscapeHatch " + VARIABLE + " = TestBenchEscapeHatch.of(#{any("
                                 + TestBenchSetupToUnified.UNIFIED_PAGE + ")});")
                         .imports(ESCAPE_HATCH)
                         .javaParser(Stubs.parser())
                         .build()
-                        .apply(updateCursor(m), m.getBody().getStatements().get(0).getCoordinates().before(),
+                        .apply(updateCursor(empty), empty.getBody().getCoordinates().lastStatement(),
                                 Stubs.page(Pages.parameterName(m)));
+                List<Statement> withEscapeHatch = new ArrayList<>(empty.getBody().getStatements());
+                withEscapeHatch.addAll(statements);
+                m = m.withBody(m.getBody().withStatements(withEscapeHatch));
                 if (!Helpers.isBrowserTest(m)) {
                     return m;
                 }

@@ -59,17 +59,6 @@ final class Urls {
         return full == null ? null : localPath(full);
     }
 
-    /**
-     * A URL with a base the recipe reads, which a reviewer must turn into a path when the recipe can't: a literal, a
-     * field, or one of them followed by a literal path. A parameter or local variable on its own is none.
-     */
-    static boolean hasBase(Expression url) {
-        if (url instanceof J.Binary b && b.getOperator() == J.Binary.Type.Addition && b.getRight() instanceof J.Literal) {
-            return !(b.getLeft() instanceof J.Binary);
-        }
-        return url instanceof J.Literal || field(url) != null;
-    }
-
     /** The field an identifier or field access reads, else {@code null}. */
     static JavaType.Variable field(Expression e) {
         JavaType.Variable v = e instanceof J.Identifier id ? id.getFieldType()

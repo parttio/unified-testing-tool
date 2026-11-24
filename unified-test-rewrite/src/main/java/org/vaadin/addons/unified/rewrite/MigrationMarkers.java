@@ -113,6 +113,12 @@ final class MigrationMarkers {
         return c.withPrefix(withClassMarker(c.getPrefix(), c.getPrefix().getIndent(), text));
     }
 
+    /** The declaration with a marker above it, such as a field; unchanged when it has the marker. */
+    static <T extends J> T above(T declaration, String text) {
+        Space prefix = withClassMarker(declaration.getPrefix(), declaration.getPrefix().getIndent(), text);
+        return prefix == declaration.getPrefix() ? declaration : declaration.withPrefix(prefix);
+    }
+
     private static Space withClassMarker(Space prefix, String indent, String text) {
         List<Comment> comments = new ArrayList<>(prefix.getComments());
         if (comments.stream().anyMatch(c -> c instanceof TextComment t && t.getText().endsWith(text))) {
