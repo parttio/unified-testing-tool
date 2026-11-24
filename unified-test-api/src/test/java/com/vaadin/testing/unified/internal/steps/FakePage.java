@@ -8,11 +8,13 @@ import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.ElementFacts;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
+import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.time.Duration;
 import java.util.HashMap;
@@ -92,14 +94,26 @@ final class FakePage {
     }
 
     /** Each element's facts as read through it, and whether it is an internal part ({@code "internalPart"}). */
-    private static List<ElementFacts> facts(List<?> elements) {
+    private List<ElementFacts> facts(List<?> elements) {
         return elements.stream().map(o -> {
             UnifiedElement e = (UnifiedElement) o;
             ElementFacts f = ElementFacts.read(e);
+            // its data-* attributes but the test id, which the view reads as a name of its own
+            Map<String, String> data = new java.util.TreeMap<>();
+            componentOf.getOrDefault(e, Map.of()).forEach((k, v) -> {
+                if (k.startsWith("data-") && !k.equals("data-testid")) {
+                    data.put(k, v);
+                }
+            });
             return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
-                    e.getAttribute("in"), null, Boolean.parseBoolean(e.getAttribute("internalPart")));
+                    e.getAttribute("in"), e.getAttribute("inId"), Boolean.parseBoolean(e.getAttribute("internalPart")),
+                    data);
         }).toList();
     }
+
+    /** Each element handed out, with the component it stands for. */
+    private final Map<Object, Map<String, String>> componentOf = java.util.Collections.synchronizedMap(
+            new java.util.IdentityHashMap<>());
 
     private static String property(Filter f) {
         return switch (f.kind()) {
@@ -115,6 +129,12 @@ final class FakePage {
     }
 
     private UnifiedElement element(Map<String, String> component) {
+        UnifiedElement e = elementProxy(component);
+        componentOf.put(e, component);
+        return e;
+    }
+
+    private UnifiedElement elementProxy(Map<String, String> component) {
         return (UnifiedElement) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { UnifiedElement.class }, (proxy, method, args) -> switch (method.getName()) {
                     case "isVisible" -> !"false".equals(component.get("visible"));
@@ -124,8 +144,11 @@ final class FakePage {
                     case "getProperty", "getAttribute" -> component.get((String) args[0]);
                     case "getPropertyBoolean" -> Boolean.valueOf(component.get((String) args[0]));
                     case "tryUnwrap" -> args[0] == MenuBarAccess.class ? Optional.of(menuBar(component))
-                            : args[0] == MessageListAccess.class ? Optional.of(messageList(component)) : Optional.empty();
+                            : args[0] == MessageListAccess.class ? Optional.of(messageList(component))
+                            : args[0] == GridAccess.class && isGrid(component) ? Optional.of(grid(component))
+                            : Optional.empty();
                     case "unwrap" -> args[0] == MessageListAccess.class ? messageList(component)
+                            : args[0] == GridAccess.class && isGrid(component) ? grid(component)
                             : args[0] == TabSheetAccess.class ? tabs(component)
                             : args[0] == ConfirmDialogAccess.class ? confirmDialog(component)
                             : args[0] == com.vaadin.testing.unified.spi.LoginAccess.class ? login(component) : null;
@@ -277,6 +300,29 @@ final class FakePage {
                             m.substring(m.indexOf(':') + 1)))
                     .toList();
         };
+    }
+
+    /**
+     * A grid's rows from its {@code "headers"} ({@code "Name,Email"}) and {@code "rows"} ({@code "Alan|alan@x;Ada|ada@x"})
+     * properties; it reads cells only, as the Findable View does.
+     */
+    private static boolean isGrid(Map<String, String> component) {
+        return component.containsKey("headers") || component.containsKey("rows");
+    }
+
+    private static GridAccess grid(Map<String, String> component) {
+        List<String> headers = List.of(component.getOrDefault("headers", "").split(","));
+        String rows = component.getOrDefault("rows", "");
+        List<String[]> cells = rows.isEmpty() ? List.of()
+                : java.util.Arrays.stream(rows.split(";")).map(r -> r.split("\\|", -1)).toList();
+        return (GridAccess) Proxy.newProxyInstance(FakePage.class.getClassLoader(), new Class<?>[] { GridAccess.class },
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "rowCount" -> cells.size();
+                    case "columnHeaders" -> headers;
+                    case "cellText" -> cells.get((Integer) args[0])[(Integer) args[1]];
+                    case "columnTexts" -> cells.stream().map(r -> r[(Integer) args[0]]).toList();
+                    default -> method.isDefault() ? InvocationHandler.invokeDefault(proxy, method, args) : null;
+                });
     }
 
     /** The recorded steps as text, one line each, without the header line. */

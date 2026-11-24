@@ -66,7 +66,7 @@ A change a user of the Unified API would notice gets a release note: a file of i
 The site documents `main`, so mark what the latest release doesn't have, where a reader of that release meets it. Mark the item, not its surroundings: a row, a bullet or a sentence gets `*(unreleased)*` next to its name. Only a section whose every line is new gets the banner instead:
 
 ```markdown
-> **Unreleased:** on `main`, not in `0.1.0-alpha4`. See [what is unreleased](../releases/unreleased.md).
+> **Unreleased:** on `main`, not in `0.1.0-alpha5`. See [what is unreleased](../releases/unreleased.md).
 ```
 
 A section that keeps released content under a new heading, or a sentence that names a released and an unreleased item, is marked per item, so a reader of the release can tell which half they have.
@@ -92,7 +92,7 @@ A section that keeps released content under a new heading, or a sentence that na
 4. From an up-to-date `main` with push rights:
 
    ```
-   mvn release:prepare release:clean -DreleaseVersion=<version> -DdevelopmentVersion=0.1.0-SNAPSHOT
+   mvn release:prepare release:clean -DreleaseVersion=<version> -DdevelopmentVersion=0.1.0-SNAPSHOT "-DpreparationGoals=clean install"
    ```
 
-   This runs the tests, sets the version in every module, commits, tags `unified-test-<version>`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
+   This sets the version in every module, runs the tests, commits, tags `unified-test-<version>`, moves to the next snapshot and pushes. The preparation build installs the release version: the Migration Recipes' tests resolve the `unified-test-*` artifacts at that version, which are on neither Central nor the local repository yet, and fail with `Unable to download POM` under the default `verify`. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.

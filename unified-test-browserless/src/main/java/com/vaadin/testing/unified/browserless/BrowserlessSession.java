@@ -248,8 +248,14 @@ final class BrowserlessSession implements AdapterSession {
             }
             String label = own.label() != null && !own.label().isBlank() || !(e instanceof BrowserlessElement b2)
                     ? own.label() : formItemLabel(b2.component());
+            java.util.Map<String, String> data = new java.util.HashMap<>();
+            if (e instanceof BrowserlessElement b3) {
+                com.vaadin.flow.dom.Element el = b3.component().getElement();
+                el.getAttributeNames().filter(n -> n.startsWith("data-") && !n.equals("data-testid"))
+                        .forEach(n -> data.put(n, el.getAttribute(n)));
+            }
             return new com.vaadin.testing.unified.spi.ElementFacts(label, own.text(), own.placeholder(),
-                    own.testId(), own.accessibleName(), testId, testId == null ? id : null, false);
+                    own.testId(), own.accessibleName(), testId, testId == null ? id : null, false, data);
         }).toList();
     }
 

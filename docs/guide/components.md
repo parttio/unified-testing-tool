@@ -45,7 +45,7 @@ Number and date fields take and return Java types, `null` when empty:
 ```
 
 `setValue(LocalDate)` is the way to choose a date, whether the user types it or picks it in the calendar: the
-calendar is the date picker's own business, tested in Vaadin. *(unreleased)* It also works on a picker whose field
+calendar is the date picker's own business, tested in Vaadin. It also works on a picker whose field
 is hidden, such as a week picker the application opens from a badge of its own, as long as its calendar is open:
 the date is set as a pick sets it, and the calendar closes. A hidden picker whose calendar is closed can't be set,
 as the user can't reach it. Browserless sees no CSS, so there the field counts as visible.
@@ -170,7 +170,7 @@ Only open dialogs and notifications are found. A dialog is a [Scope](finding-com
 
 When several notifications can be open at once, filter by text: an unfiltered `find(UnifiedNotification.class)` fails with "found 2".
 
-*(unreleased)* A `ConfirmDialog` is a `UnifiedConfirmDialog`, found by `withHeaderTitle(..)` or `withTextContaining(..)` (its message). `confirm()`, `reject()` and `cancel()` press the button of that role, whatever text the application or its translation gave it, and wait for the server; the User Step reads `confirm “Delete order?”`, naming the dialog by its header, or its message when it has none:
+A `ConfirmDialog` is a `UnifiedConfirmDialog`, found by `withHeaderTitle(..)` or `withTextContaining(..)` (its message). `confirm()`, `reject()` and `cancel()` press the button of that role, whatever text the application or its translation gave it, and wait for the server; the User Step reads `confirm “Delete order?”`, naming the dialog by its header, or its message when it has none:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ConfirmDialogTest.java:confirms"
@@ -180,7 +180,7 @@ When several notifications can be open at once, filter by text: an unfiltered `f
 
 ## Login
 
-*(unreleased)* A `LoginOverlay` or a `LoginForm` is a `UnifiedLogin`. There is normally one per page, so `page.find(UnifiedLogin.class)` needs no filter; `withTitle(..)` filters by an overlay's title. An overlay is found while it is open. `login(username, password)` signs in as a user does and waits for the server, or for the page a form post opened; the User Step reads `sign in as “barista@vaadin.com” in login`:
+A `LoginOverlay` or a `LoginForm` is a `UnifiedLogin`. There is normally one per page, so `page.find(UnifiedLogin.class)` needs no filter; `withTitle(..)` filters by an overlay's title. An overlay is found while it is open. `login(username, password)` signs in as a user does and waits for the server, or for the page a form post opened; the User Step reads `sign in as “barista@vaadin.com” in login`:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/LoginTest.java:signsIn"
@@ -208,7 +208,7 @@ An app built on Vaadin's AI components has a `MessageInput` and a `MessageList`.
 
 A message's text is the text the application gave it: with Markdown on, the Markdown source (`**Pancakes**`), not the rendered text, so that it reads the same on every Testing Tool. `getMessages()` gives each message's user name and text, `getMessageTexts()` the texts only. `hasMessageTexts(..)` checks every message, in order; `isEmpty()` checks there are none.
 
-*(unreleased)* One message is a lazy lookup, as a [grid row](grid.md) is: `message(i)` by its index among all messages, from 0, or `message()` narrowed by `withUserName(..)`, `withText(..)` and `withTextContaining(..)`, with `last()` taking the last of the matches so far. Its checks wait for a reply that comes later:
+One message is a lazy lookup, as a [grid row](grid.md) is: `message(i)` by its index among all messages, from 0, or `message()` narrowed by `withUserName(..)`, `withText(..)` and `withTextContaining(..)`, with `last()` taking the last of the matches so far. Its checks wait for a reply that comes later: `chat.describe()` lists the first 20 messages with the lookup that finds each.
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ChatTest.java:checksOneMessage"

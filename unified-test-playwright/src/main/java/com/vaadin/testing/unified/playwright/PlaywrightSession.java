@@ -10,7 +10,6 @@ import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.internal.CurrentView;
-import com.vaadin.testing.unified.internal.RoutePaths;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
@@ -470,8 +469,8 @@ final class PlaywrightSession implements AdapterSession {
         if (!CurrentView.hasRoute(view)) {
             return CurrentView.shows(currentViews(), view);
         }
-        // Dramafinder matches the @Route only: an @RouteAlias of the view counts too (#530)
-        return RouteNavigation.isAt(page, baseUrl, view) || RoutePaths.matches(view, currentPath());
+        // the route's template and each @RouteAlias of the view (Dramafinder 2.2.2+, #530)
+        return RouteNavigation.isAt(page, baseUrl, view);
     }
 
     /** The current-view endpoint's answer for the page's UI, or null (no Vaadin UI, or no endpoint). */
@@ -538,9 +537,9 @@ final class PlaywrightSession implements AdapterSession {
     }
 
     /**
-     * After a page load: waits for the new page's {@code load}, then until Flow has started the page's UI. Before
-     * that, only Flow's TypeScript client is registered, or none, and the page reads as idle while it shows nothing
-     * yet (#397).
+     * After a page load: waits for the new page's {@code load}. Dramafinder's idle wait, which {@link #settle()} runs
+     * next, then waits until Flow has started the page's UI (Dramafinder 2.2.1+, parttio/dramafinder#305): before
+     * that, only Flow's TypeScript client is registered and the page would read as idle while it shows nothing (#397).
      */
     private void waitForFlowStart() {
         pageLoaded = false;
@@ -550,20 +549,7 @@ final class PlaywrightSession implements AdapterSession {
             // the navigation loaded no page (a 204, a cancelled one): the page in place is the one to wait for
         }
         page.waitForLoadState(com.microsoft.playwright.options.LoadState.LOAD);
-        try {
-            page.waitForFunction(FLOW_STARTED, null, new Page.WaitForFunctionOptions().setTimeout(FLOW_START_CAP_MS));
-        } catch (com.microsoft.playwright.TimeoutError e) {
-            // Flow runs in the page but shows no Flow UI (a Hilla view): nothing more to wait for
-        }
     }
-
-    /** How long {@link #FLOW_STARTED} may take after a page load, in ms: a page with no Flow UI never passes it. */
-    private static final int FLOW_START_CAP_MS = 5000;
-
-    /** True once Flow has registered the UI's client next to its TypeScript one, or when the page doesn't run Flow. */
-    private static final String FLOW_STARTED = """
-            () => { const clients = window.Vaadin?.Flow?.clients;
-                    return !clients || Object.keys(clients).some(id => id !== 'TypeScript'); }""";
 
     /** How long {@link #SETTLE_AND_IDLE} waits for Flow to be idle before Dramafinder's wait takes over, in ms. */
     private static final int SETTLE_IDLE_MS = 5000;

@@ -9,13 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.QuerySpec;
+import java.io.File;
 import java.lang.reflect.Proxy;
+import java.net.URL;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
@@ -182,5 +186,43 @@ class WrappersTest {
         // the condition is the lookup's own, not the test's
         assertEquals("UnifiedGenericComponent[findComponent(Anchor).withText(\"Logout\")]",
                 anchors.withText("Logout").toString());
+    }
+
+    @Test
+    void withTimeoutKeepsTheWrapperTypeForChaining() {
+        buttons.add("Save");
+
+        page().find(UnifiedButton.class).withText("Save").withTimeout(Duration.ofSeconds(5)).click();
+        UnifiedAssertionError missing = assertThrows(UnifiedAssertionError.class,
+                () -> page().find(UnifiedButton.class).withText("Export").withTimeout(Duration.ofMillis(50)).click());
+
+        assertEquals(List.of("Save"), clicked);
+        assertTrue(missing.getMessage().contains("withTimeout"), missing.getMessage());
+    }
+
+    /**
+     * Every Wrapper interface of the {@code component} package re-declares {@code withTimeout} with its own type,
+     * so a Wrapper's methods chain after it. A generic base (one with a type parameter) is left to its subtypes.
+     */
+    @Test
+    void everyCoreSetWrapperDeclaresWithTimeoutWithItsOwnType() throws Exception {
+        String pkg = "com.vaadin.testing.unified.component";
+        URL dir = UnifiedWrapper.class.getClassLoader().getResource(pkg.replace('.', '/'));
+        List<String> wrong = new ArrayList<>();
+        int checked = 0;
+        for (File file : new File(dir.toURI()).listFiles((d, n) -> n.endsWith(".class") && !n.contains("$"))) {
+            Class<?> type = Class.forName(pkg + "." + file.getName().replace(".class", ""));
+            if (!type.isInterface() || !UnifiedWrapper.class.isAssignableFrom(type)
+                    || type.getTypeParameters().length > 0) {
+                continue;
+            }
+            checked++;
+            Class<?> returned = type.getMethod("withTimeout", Duration.class).getReturnType();
+            if (returned != type) {
+                wrong.add(type.getSimpleName() + " returns " + returned.getSimpleName());
+            }
+        }
+        assertTrue(checked > 30, "found only " + checked + " Wrappers in " + dir);
+        assertEquals(List.of(), wrong, "re-declare withTimeout(Duration) with the Wrapper's own return type");
     }
 }

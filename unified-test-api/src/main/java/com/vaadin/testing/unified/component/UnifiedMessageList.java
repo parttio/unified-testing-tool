@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.messages.MessageSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.MessageListAccess;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -15,6 +16,10 @@ import java.util.List;
 @UnifiedComponent(MessageList.class)
 public interface UnifiedMessageList extends UnifiedWrapper, CommonFilters<UnifiedMessageList> {
 
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedMessageList withTimeout(Duration timeout);
+
     /** One message of the list: who wrote it and its text. */
     record Message(String userName, String text) {}
 
@@ -22,6 +27,12 @@ public interface UnifiedMessageList extends UnifiedWrapper, CommonFilters<Unifie
     default List<Message> getMessages() { return element().unwrap(MessageListAccess.class).messages(); }
     default List<String> getMessageTexts() { return getMessages().stream().map(Message::text).toList(); }
     default int getMessageCount() { return getMessages().size(); }
+
+    /**
+     * The Findable View of the list: its messages, each with the lookup on this list that finds it
+     * ({@code message().withUserName("Assistant").last()}). The first messages only; print it, don't assert on it.
+     */
+    default String describe() { return com.vaadin.testing.unified.internal.ItemsView.ofMessageList(this); }
 
     // messages
     /**

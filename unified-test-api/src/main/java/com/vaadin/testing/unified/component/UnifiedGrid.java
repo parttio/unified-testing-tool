@@ -8,6 +8,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.GridAccess;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -18,6 +19,10 @@ import java.util.List;
 @UnifiedComponent(Grid.class)
 public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> {
 
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedGrid withTimeout(Duration timeout);
+
     // rows
     /**
      * A lazy row found by what it shows: {@code row().withCellText("Name", "Alan Turing")}. Every use finds the
@@ -26,6 +31,11 @@ public interface UnifiedGrid extends UnifiedWrapper, CommonFilters<UnifiedGrid> 
     default UnifiedGridRow row() { return GridSupport.row(this); }
     /** The row at this index. */
     default UnifiedGridRow row(int index) { return GridSupport.row(this, index); }
+    /**
+     * The Findable View of the grid: its columns and rows, each with the lookup on this grid that finds it
+     * ({@code row().withCellText("Name", "Alan Turing")}). The first rows only; print it, don't assert on it.
+     */
+    default String describe() { return com.vaadin.testing.unified.internal.ItemsView.ofGrid(this); }
     /** All rows, not only the rendered ones. Immediate; use assertThat(grid).hasRowCount(n) to wait. */
     default int getRowCount() { return element().unwrap(GridAccess.class).rowCount(); }
 

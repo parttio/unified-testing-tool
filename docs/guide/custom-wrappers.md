@@ -17,6 +17,7 @@ No implementation class: the Unified API implements the interface at run time, o
 | `CommonFilters<UnifiedRating>` | makes it findable with `page.find(UnifiedRating.class)`, with the filters every Wrapper has: `withAccessibleName`, `withTestId`, `withId`, `visible()`, `where(..)`, `all()`, … |
 | `LabelFilter<UnifiedRating>` | the filter mixins it accepts besides those: `LabelFilter`, `TextFilter`, `PlaceholderFilter` |
 | default methods | your own filters, actions and getters, written on `element()` |
+| `UnifiedRating withTimeout(Duration)` | optional: re-declared with the Wrapper's own type, so its methods chain after `withTimeout(..)`. Without it, `withTimeout(..)` returns a `UnifiedWrapper` |
 
 Each filter mixin takes the Wrapper itself as its type parameter, so `withLabel("Food")` returns a `UnifiedRating`. You list the mixins and write no filter code: the Unified API implements them.
 
@@ -79,7 +80,7 @@ When that doesn't read like what a user does, name the kind with `@UnifiedCompon
 
 ## A Template
 
-*(unreleased)* A Wrapper for a `LitTemplate` (or another component with a shadow root of its own) extends `TemplateScope`: lookups on it then search inside the Template ([Finding components, Templates](finding-components.md#templates)).
+A Wrapper for a `LitTemplate` (or another component with a shadow root of its own) extends `TemplateScope`: lookups on it then search inside the Template ([Finding components, Templates](finding-components.md#templates)).
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:wrapper"

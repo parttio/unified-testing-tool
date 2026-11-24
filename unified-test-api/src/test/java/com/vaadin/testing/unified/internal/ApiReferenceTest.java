@@ -342,7 +342,7 @@ class ApiReferenceTest {
         Map<String, Method> bySignature = new TreeMap<>();
         for (Method m : type.getMethods()) {
             if (m.isBridge() || m.isSynthetic() || Modifier.isStatic(m.getModifiers())
-                    || excluded.contains(m.getDeclaringClass())) {
+                    || excluded.contains(m.getDeclaringClass()) || overridesOneOf(m, excluded)) {
                 continue;
             }
             // an override with a narrower return type wins over the one it overrides
@@ -350,6 +350,19 @@ class ApiReferenceTest {
                     .isAssignableFrom(b.getReturnType()) ? b : a);
         }
         return new ArrayList<>(bySignature.values());
+    }
+
+    /** A re-declaration, such as a Wrapper's {@code withTimeout} with its own type, of a method listed elsewhere. */
+    private static boolean overridesOneOf(Method m, Set<Class<?>> types) {
+        for (Class<?> type : types) {
+            try {
+                type.getMethod(m.getName(), m.getParameterTypes());
+                return true;
+            } catch (NoSuchMethodException e) {
+                // not one of its methods
+            }
+        }
+        return false;
     }
 
     private static List<String> signatures(List<Method> methods, boolean withReturnType) {

@@ -1,9 +1,15 @@
 package com.vaadin.testing.unified.component;
 
 import com.vaadin.testing.unified.UnifiedWrapper;
+import java.time.Duration;
 
 /** Getters shared by input fields: label, helper text and validation state. Immediate, no retry. */
 public interface UnifiedField extends UnifiedWrapper {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedField withTimeout(Duration timeout);
+
     default String getLabel() { return element().getProperty("label"); }
     default String getHelperText() { return element().getProperty("helperText"); }
     default boolean isInvalid() { return Boolean.TRUE.equals(element().getPropertyBoolean("invalid")); }

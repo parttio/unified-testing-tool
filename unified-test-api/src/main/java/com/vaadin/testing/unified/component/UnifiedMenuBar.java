@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.Wrappers;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -16,6 +17,10 @@ import java.util.List;
  */
 @UnifiedComponent(MenuBar.class)
 public interface UnifiedMenuBar extends UnifiedWrapper, CommonFilters<UnifiedMenuBar> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedMenuBar withTimeout(Duration timeout);
 
     /** Menu bars with a top-level item of this Item Name. */
     default UnifiedMenuBar withItem(String text) {

@@ -6,6 +6,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.links.LinkSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.TextFilter;
+import java.time.Duration;
 
 /**
  * A link: a {@code RouterLink} or an {@code Anchor}, or any other {@code <a>}. Found by its text or accessible
@@ -18,6 +19,10 @@ import com.vaadin.testing.unified.query.TextFilter;
  */
 @UnifiedComponent(value = Component.class, tag = "a")
 public interface UnifiedLink extends UnifiedWrapper, CommonFilters<UnifiedLink>, TextFilter<UnifiedLink> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedLink withTimeout(Duration timeout);
 
     /** Links whose {@code href} is this, exactly, as the application set it ({@link #getHref()}). */
     default UnifiedLink withHref(String href) { return withAttribute("href", href); }

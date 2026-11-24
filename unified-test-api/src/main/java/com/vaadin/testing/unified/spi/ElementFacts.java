@@ -17,9 +17,21 @@ import com.vaadin.testing.unified.UnifiedElement;
  *        itself and the application did not create: in a browser, the {@code <vaadin-text-area>} a
  *        {@code <vaadin-message-input>} puts in its light DOM. Browserless finds only the application's components,
  *        so none of its elements is one.
+ * @param data the element's own {@code data-*} attributes but {@code data-testid}, by name: what tells alike
+ *        components apart when nothing else does (#547); empty when the adapter doesn't read them
  */
 public record ElementFacts(String label, String text, String placeholder, String testId, String accessibleName,
-        String ancestorTestId, String ancestorId, boolean internalPart) {
+        String ancestorTestId, String ancestorId, boolean internalPart, java.util.Map<String, String> data) {
+
+    public ElementFacts {
+        data = data == null ? java.util.Map.of() : java.util.Map.copyOf(data);
+    }
+
+    /** Facts without {@code data-*} attributes. */
+    public ElementFacts(String label, String text, String placeholder, String testId, String accessibleName,
+            String ancestorTestId, String ancestorId, boolean internalPart) {
+        this(label, text, placeholder, testId, accessibleName, ancestorTestId, ancestorId, internalPart, null);
+    }
 
     /** Facts of an element the application created. */
     public ElementFacts(String label, String text, String placeholder, String testId, String accessibleName,

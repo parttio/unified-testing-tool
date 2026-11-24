@@ -251,7 +251,7 @@ public final class TestLifecycle {
             if (tool.problem() != null) {
                 failure.addSuppressed(new FailureEvidence(tool.problem()));
             }
-            findableView(directory).ifPresent(files::add);
+            findableView(directory, failure).ifPresent(files::add);
             if (!files.isEmpty()) {
                 failure.addSuppressed(new FailureEvidence("Failure evidence: " + describe(files)));
             }
@@ -271,9 +271,12 @@ public final class TestLifecycle {
         }
 
         /** The Findable View of the test's first window, {@code failure.view.txt}; none if it can't be read. */
-        private Optional<Path> findableView(Path directory) {
+        private Optional<Path> findableView(Path directory, Throwable failure) {
             try {
-                return Optional.of(FindableView.write(((UnifiedPageImpl) page).run(), directory, FAILURE_EVIDENCE));
+                TestRun run = ((UnifiedPageImpl) page).run();
+                // the items of the grid or message list a failed row or message step was about, after it (#590)
+                String items = ItemsView.ofFailedStep(run, steps, failure);
+                return Optional.of(FindableView.write(run, directory, FAILURE_EVIDENCE, items));
             } catch (Exception | LinkageError e) {
                 return Optional.empty();
             }

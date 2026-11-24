@@ -167,7 +167,12 @@ public final class FindableView {
      * @return the file written
      */
     static Path write(TestRun run, Path directory, String name) throws IOException {
-        String view = ofPage(run);
+        return write(run, directory, name, null);
+    }
+
+    /** {@link #write(TestRun, Path, String)}, followed by {@code more} (a view of items) when not null. */
+    static Path write(TestRun run, Path directory, String name, String more) throws IOException {
+        String view = ofPage(run) + (more == null ? "" : "\n" + more);
         Files.createDirectories(directory);
         Path file = directory.resolve(name + ".view.txt");
         Files.writeString(file, view, StandardCharsets.UTF_8);
@@ -644,7 +649,9 @@ public final class FindableView {
                         + new Namer(kind, null, null).code(value) + inner;
             }
             if (inside > 1) {
-                return notUnique + "; " + inside + " in container (" + StepTarget.words(filter) + ")";
+                String byData = byDataAttribute(run, t, best, r, scope, inTemplate, prefix);
+                return byData != null ? byData
+                        : notUnique + "; " + inside + " in container (" + StepTarget.words(filter) + ")";
             }
         }
         for (Container container : containers) {
@@ -652,7 +659,38 @@ public final class FindableView {
                 return notUnique + "; one in " + container.words() + ": " + container.lookup() + inner;
             }
         }
-        return notUnique;
+        String byData = byDataAttribute(run, t, best, r, scope, inTemplate, prefix);
+        return byData != null ? byData : notUnique;
+    }
+
+    /**
+     * The last resort for alike components (#547): the name, then the first of the component's {@code data-*}
+     * attributes, by name, whose value none of the alike has, once run and found to match exactly one.
+     */
+    private static String byDataAttribute(TestRun run, OfType t, Namer best, Read r, UnifiedElement scope,
+            boolean inTemplate, String prefix) {
+        String name = r.valueOf(best);
+        if (best.kind() == null || name == null) {
+            return null;
+        }
+        List<Read> alike = t.reads().stream().filter(o -> name.equals(o.valueOf(best))).toList();
+        for (Map.Entry<String, String> attribute : new java.util.TreeMap<>(r.facts().data()).entrySet()) {
+            String value = attribute.getValue();
+            if (value == null || alike.stream().filter(o -> value.equals(o.facts().data().get(attribute.getKey())))
+                    .count() != 1) {
+                continue;
+            }
+            List<Filter> filters = new ArrayList<>(t.selector());
+            filters.add(new Filter(best.kind(), null, name, true));
+            filters.add(new Filter(Filter.Kind.ATTRIBUTE, attribute.getKey(), value, true));
+            int found = safely(() -> run.session().find(new QuerySpec(t.annotation().value(), t.tag(),
+                    List.copyOf(filters), scope, inTemplate)).size(), 0);
+            if (found == 1) {
+                return prefix + "find(" + t.type().getSimpleName() + ".class)." + best.code(name)
+                        + ".withAttribute(\"" + attribute.getKey() + "\", \"" + value + "\")";
+            }
+        }
+        return null;
     }
 
     /** How many components the lookup by {@code namer} finds inside {@code container}; 0 when it can't be run. */
@@ -683,17 +721,22 @@ public final class FindableView {
         }
         sb.append(lines.size()).append(lines.size() == 1 ? " component\n" : " components\n");
         List<Line> shown = lines.subList(0, Math.min(MAX_LINES, lines.size()));
-        int width = Math.min(COLUMN, shown.stream().mapToInt(l -> l.description().length()).max().orElse(0));
-        for (Line line : shown) {
-            sb.append(line.description());
-            sb.append(" ".repeat(Math.max(2, width + 2 - line.description().length())));
-            sb.append(line.lookup()).append('\n');
-        }
+        appendLines(sb, shown);
         if (lines.size() > shown.size()) {
             sb.append("… and ").append(lines.size() - shown.size())
                     .append(" more: describe a container to see them\n");
         }
         return sb.toString();
+    }
+
+    /** The lines, each description padded so the lookups line up. */
+    static void appendLines(StringBuilder sb, List<Line> lines) {
+        int width = Math.min(COLUMN, lines.stream().mapToInt(l -> l.description().length()).max().orElse(0));
+        for (Line line : lines) {
+            sb.append(line.description());
+            sb.append(" ".repeat(Math.max(2, width + 2 - line.description().length())));
+            sb.append(line.lookup()).append('\n');
+        }
     }
 
     // ---------------------------------------------------------------- helpers

@@ -5,11 +5,16 @@ import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.internal.tabs.TabSheetSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
+import java.time.Duration;
 import java.util.List;
 
 /** A bare {@link Tabs} bar (no content panels: for those, {@link UnifiedTabSheet}). Tabs by their label. */
 @UnifiedComponent(Tabs.class)
 public interface UnifiedTabs extends UnifiedWrapper, CommonFilters<UnifiedTabs> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedTabs withTimeout(Duration timeout);
 
     /** Tab bars having a tab with this label. A custom filter built from {@code where(..)}. */
     default UnifiedTabs withTab(String label) {

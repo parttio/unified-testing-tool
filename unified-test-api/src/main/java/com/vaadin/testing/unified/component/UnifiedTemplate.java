@@ -3,6 +3,7 @@ package com.vaadin.testing.unified.component;
 import com.vaadin.testing.unified.TemplateScope;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.query.CommonFilters;
+import java.time.Duration;
 
 /**
  * Wrapper for a Template found with {@code findTemplate(..)}, for one without a Wrapper of its own: the shared
@@ -13,4 +14,8 @@ import com.vaadin.testing.unified.query.CommonFilters;
  * }</pre>
  */
 public interface UnifiedTemplate extends UnifiedWrapper, TemplateScope, CommonFilters<UnifiedTemplate> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedTemplate withTimeout(Duration timeout);
 }
