@@ -25,7 +25,13 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
 
    For every test class you changed: a test passes, or is skipped because it still declares `@RequiresTestingTool` for another Testing Tool. When one fails, fix it or put the Escape Hatch back with an explanation. Remove a `@RequiresTestingTool(TestingTool.PLAYWRIGHT)` only once the test passes on Browserless and Playwright. Done when every changed class passes on each Testing Tool it runs on.
    Last, run the whole suite on each of those Testing Tools: a per-class run can't show test data one class leaves behind for the next. Then run the style rules (`UnifiedStyleRules.ALL`) the way the `write-unified-ui-tests` skill says, adding its `UnifiedStyleTest` when the project has none. Fix the violations in code you changed, and keep the rules and classes the check covers as they are. Done when every suite run passes and counts the UI tests, and the style rules ran.
-4. **Report** a table: marker, outcome (resolved or kept), what you changed. Under it, the command and `Tests run:` count of each suite run, and each style rule violation left, with its class and rule.
+4. **Drop TestBench once no test uses it.** The migration kept the direct `com.vaadin:vaadin-testbench-*` dependencies of each pom whose module's tests still used TestBench; your conversions may have removed the last use. For each such module, search its test sources for a TestBench reference, the same rule the migration applied:
+   - a name starting with `com.vaadin.testbench.` (an import or a qualified name);
+   - a class in any package containing `.testbench.`: a component's element class (`com.vaadin.flow.component.button.testbench.ButtonElement`), or the project's own page objects in such a package;
+   - `TestBenchEscapeHatch`.
+
+   When one is left, the module keeps its dependencies: the Selenium adapter brings only some element jars. When none is left, remove the module's direct `vaadin-testbench-*` dependencies, then run step 3's whole-suite runs again: they compile the tests and run them. When the compilation or a test fails because of the removal, put the dependencies back as they were. Done when every module that had them has either lost them with its suite runs passing, or has them back with the reference or failure that keeps them.
+5. **Report** a table: marker, outcome (resolved or kept), what you changed. Under it, the command and `Tests run:` count of each suite run, each style rule violation left, with its class and rule, and the `vaadin-testbench-*` dependencies step 4 removed, or why it kept them.
 
 ## Reference: the Unified API
 
