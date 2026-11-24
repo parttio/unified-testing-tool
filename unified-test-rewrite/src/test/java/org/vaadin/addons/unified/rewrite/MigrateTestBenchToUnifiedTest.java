@@ -2269,6 +2269,124 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         """));
     }
 
+    private static final String BAKERY_LOGIN_VIEW_ELEMENT = """
+            package com.vaadin.starter.bakery.testbench;
+
+            import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+            import com.vaadin.testbench.elementsbase.Element;
+
+            @Element("login-view")
+            public class LoginViewElement extends LoginOverlayElement {
+                public String getUsernameLabel() {
+                    return "";
+                }
+
+                public void login(String user, String password) {
+                }
+            }
+            """;
+
+    private static final String BAKERY_ABSTRACT_IT = """
+            package com.vaadin.starter.bakery.testbench;
+
+            import com.vaadin.testbench.BrowserTestBase;
+
+            public abstract class AbstractIT extends BrowserTestBase {
+
+                protected LoginViewElement openLoginView() {
+                    return $(LoginViewElement.class).waitForFirst();
+                }
+            }
+            """;
+
+    private static final String BAKERY_LOGIN_IT = """
+            package com.vaadin.starter.bakery.testbench;
+
+            import com.vaadin.testbench.BrowserTest;
+            import org.junit.jupiter.api.Assertions;
+
+            public class LoginIT extends AbstractIT {
+
+                @BrowserTest
+                void loginWorks() {
+                    LoginViewElement loginView = openLoginView();
+                    Assertions.assertEquals("Email", loginView.getUsernameLabel());
+                    loginView.login("barista@vaadin.com", "barista");
+                }
+            }
+            """;
+
+    /** Issue #606: Bakery's page objects are in {@code com.vaadin.starter.bakery}, not a package TestBench ships. */
+    @Test
+    void aCustomElementInAnApplicationPackageUnderComVaadinIsMarkedAndRequiresSelenium() {
+        String marker = "// TODO unified: TestBench page object: LoginViewElement (custom element extending "
+                + "LoginOverlayElement): write a Wrapper or convert the page object\n        ";
+        rewriteRun(
+                java(BAKERY_LOGIN_VIEW_ELEMENT),
+                java(BAKERY_ABSTRACT_IT, spec -> spec.after(after -> {
+                    org.assertj.core.api.Assertions.assertThat(after).contains("// TODO unified: TestBench Escape Hatch: "
+                            + "$(LoginViewElement.class), a custom element: write a Wrapper for it (ADR 0003)");
+                    return after;
+                })),
+                java(BAKERY_LOGIN_IT, spec -> spec.after(after -> {
+                    org.assertj.core.api.Assertions.assertThat(after)
+                            .contains("@RequiresTestingTool(TestingTool.SELENIUM)")
+                            .containsOnlyOnce(marker + "Assertions.assertEquals(\"Email\", loginView.getUsernameLabel());")
+                            .containsOnlyOnce(marker + "loginView.login(\"barista@vaadin.com\", \"barista\");");
+                    return after;
+                })));
+    }
+
+    @Test
+    void aCustomElementReachedThroughAPageObjectInAnApplicationPackageUnderComVaadinIsMarked() {
+        rewriteRun(
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.flow.component.html.testbench.DivElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("order-card")
+                        public class OrderCardElement extends DivElement {
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("storefront-view")
+                        public class StorefrontViewElement extends TestBenchElement {
+                            public OrderCardElement getOrderCard(int index) {
+                                return $(OrderCardElement.class).get(index);
+                            }
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        public class StorefrontIT extends BrowserTestBase {
+
+                            @BrowserTest
+                            void opensAnOrder() {
+                                StorefrontViewElement storefront = $(StorefrontViewElement.class).first();
+                                storefront.getOrderCard(0).click();
+                            }
+                        }
+                        """, spec -> spec.after(after -> {
+                    org.assertj.core.api.Assertions.assertThat(after)
+                            .contains("@RequiresTestingTool(TestingTool.SELENIUM)")
+                            .containsOnlyOnce("// TODO unified: TestBench page object: StorefrontViewElement (custom "
+                                    + "element extending TestBenchElement): write a Wrapper or convert the page object"
+                                    + "\n        storefront.getOrderCard(0).click();");
+                    return after;
+                })));
+    }
+
     @Test
     void aTestCallingOnlyAnInheritedHelperThatStaysTestBenchRequiresSelenium() {
         rewriteRun(
@@ -3739,7 +3857,9 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 java(SIGN_IN_VIEW_ELEMENT), java(ORDERS_IT, spec -> spec.after(after -> {
                     org.assertj.core.api.Assertions.assertThat(after)
                             .contains("@UnifiedSpringBootTest")
-                            .containsOnlyOnce("// TODO unified: " + TestBenchSetupToUnified.SIGNS_IN + "\n        login.signIn(");
+                            .containsOnlyOnce("// TODO unified: " + TestBenchSetupToUnified.SIGNS_IN + "\n        "
+                                    + "// TODO unified: TestBench page object: LoginViewElement (custom element extending "
+                                    + "LoginOverlayElement): write a Wrapper or convert the page object\n        login.signIn(");
                     return after;
                 })));
     }
