@@ -129,7 +129,7 @@ jobs:
           -Dexec.args="install-deps chromium"
       - name: Demo tests on Playwright
         # a failed test keeps Playwright's trace, grouped by User Step, in the evidence artifact
-        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=off -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
+        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v7
