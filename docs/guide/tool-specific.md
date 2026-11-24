@@ -50,6 +50,31 @@ Without the annotation, `unwrap(..)` on a tool that doesn't have the type fails 
 !!! warning
     Inside the Escape Hatch, the Unified API guarantees stop: no Auto-Wait, no lazy lookup, no retrying assertions, no User Steps. Go back to Wrappers and `assertThat` as soon as you can.
 
+### After an Escape Hatch action
+
+An Escape Hatch action that reaches the server, such as a click through Playwright's own `Locator`, returns before the server has answered. The next Unified action can act while that answer is still on its way, and the answer then overwrites it. Here the click opens Alan Turing in the editor; the name is typed first, then the server loads the person into the form and restores the old name, and Save stores it:
+
+```java
+page.unwrap(Page.class).getByText("Alan Turing").click();   // the server loads the person into the form...
+name.setValue("Alan M. Turing");                             // ...possibly after this: the old name is back
+```
+
+On Selenium this rarely shows, because TestBench waits for the server around its own commands; on Playwright it does. Two ways to make the next Unified action wait:
+
+- **Check the state the server produces before acting.** An assertion retries until the server's answer is there, on every Testing Tool. Prefer this wherever the answer changes something the user sees:
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/EscapeHatchRoundTripTest.java:assertTheServersValue"
+    ```
+
+- **Wait for the server inside the Escape Hatch**, with Dramafinder's `AutoWait.waitForVaadinIdle(Page)`, when the answer has nothing to check. It is Playwright's code, so the test declares `@RequiresTestingTool(TestingTool.PLAYWRIGHT)`:
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/EscapeHatchRoundTripTest.java:waitForVaadinIdle"
+    ```
+
+Playwright's `Locator.waitFor()` waits for an element's state, not for the server: it doesn't help here.
+
 The reports can't see what runs inside the Escape Hatch, so they show a gap line where the test used it, instead of User Steps:
 
 ```

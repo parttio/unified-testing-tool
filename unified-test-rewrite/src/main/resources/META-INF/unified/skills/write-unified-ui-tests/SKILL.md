@@ -255,10 +255,21 @@ void showsTheRetryBanner(UnifiedPage page) {
 }
 ```
 
-Escape Hatch code gets none of the Unified API's waiting, so it waits with its Testing Tool's own API
-(`waitForFirst()`, `waitUntil(..)`, `Locator.waitFor()`). The style rules accept that wait where the test, its class,
-or every test reaching the helper declares that Testing Tool; `Thread.sleep(..)` and another Testing Tool's waits
-still fail.
+Escape Hatch code gets none of the Unified API's waiting, so it waits with its Testing Tool's own API: TestBench's
+`waitForFirst()` and `waitUntil(..)`; on Playwright, Dramafinder's `AutoWait.waitForVaadinIdle(Page)` for the server
+and `Locator.waitFor()` for an element. The style rules accept that wait where the test, its class, or every test
+reaching the helper declares that Testing Tool; `Thread.sleep(..)` and another Testing Tool's waits still fail.
+
+An Escape Hatch action that reaches the server (a Playwright `Locator.click()`) returns before the server answers,
+so the next Unified action can act first and the server's answer overwrites it: the click opens a person in the
+editor, `setValue("Alan M. Turing")` types, then the form loads and the old name is back. Before the next Unified
+action, make it wait, in this order of preference:
+
+1. **Check the state the server produces**, on every Testing Tool: `assertThat(name).hasValue("Alan Turing");`
+   before `name.setValue("Alan M. Turing");`. The assertion retries until the answer is there.
+2. **Wait for the server in the Escape Hatch** when the answer has nothing to check, in a test with
+   `@RequiresTestingTool(TestingTool.PLAYWRIGHT)`:
+   `AutoWait.waitForVaadinIdle(page.unwrap(Page.class));` (`org.vaadin.addons.dramafinder.AutoWait`).
 
 For an extra check that only some Testing Tools can make, use `tryUnwrap(..)`; the test keeps running everywhere:
 `name.tryUnwrap(TextField.class).ifPresent(field -> assertEquals("Name", field.getLabel()));`.
