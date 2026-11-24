@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
+import com.vaadin.testing.unified.spi.TabSheetAccess;
 import java.lang.reflect.Proxy;
 import java.time.Duration;
 import java.util.HashMap;
@@ -122,7 +123,8 @@ final class FakePage {
                     case "getPropertyBoolean" -> Boolean.valueOf(component.get((String) args[0]));
                     case "tryUnwrap" -> args[0] == MenuBarAccess.class ? Optional.of(menuBar(component))
                             : args[0] == MessageListAccess.class ? Optional.of(messageList(component)) : Optional.empty();
-                    case "unwrap" -> args[0] == MessageListAccess.class ? messageList(component) : null;
+                    case "unwrap" -> args[0] == MessageListAccess.class ? messageList(component)
+                            : args[0] == TabSheetAccess.class ? tabs(component) : null;
                     case "setValueAsUser" -> {
                         component.put("value", String.valueOf(args[0]));
                         component.put("checked", String.valueOf(args[0]));
@@ -165,6 +167,46 @@ final class FakePage {
             @Override
             public boolean isEnabled(List<String> path) {
                 return !List.of(component.getOrDefault("disabled", "").split(",")).contains(String.join("/", path));
+            }
+        };
+    }
+
+    /**
+     * A tab bar's tabs from its {@code "tabs"} property ({@code "Orders,Users"}), the selected one in
+     * {@code "selected"}, and the tabs holding a link in {@code "links"}: a link a browser follows by clicking it.
+     */
+    private TabSheetAccess tabs(Map<String, String> component) {
+        return new TabSheetAccess() {
+            @Override
+            public List<String> tabs() {
+                return List.of(component.getOrDefault("tabs", "").split(","));
+            }
+
+            @Override
+            public String selectedTab() {
+                return component.get("selected");
+            }
+
+            @Override
+            public boolean isEnabled(String label) {
+                return true;
+            }
+
+            @Override
+            public void select(String label) {
+                component.put("selected", label);
+                actions.add("select " + label);
+            }
+
+            @Override
+            public Optional<UnifiedElement> link(String label) {
+                return List.of(component.getOrDefault("links", "").split(",")).contains(label)
+                        ? Optional.of(element(new HashMap<>(Map.of("tag", "a", "text", label)))) : Optional.empty();
+            }
+
+            @Override
+            public UnifiedElement content() {
+                return null;
             }
         };
     }

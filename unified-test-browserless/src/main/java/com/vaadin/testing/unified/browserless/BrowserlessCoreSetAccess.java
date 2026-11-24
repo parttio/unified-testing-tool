@@ -74,6 +74,11 @@ final class BrowserlessCoreSetAccess {
         }
 
         @Override
+        public Optional<UnifiedElement> link(String label) {
+            return BrowserlessLinks.heldBy(session, ItemNames.find(all(), label, "tab \"" + label + "\""));
+        }
+
+        @Override
         public UnifiedElement content() {
             throw new UnsupportedOperationException("A Tabs bar has no content; use UnifiedTabSheet for a TabSheet");
         }

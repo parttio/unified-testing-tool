@@ -6,7 +6,10 @@ import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteConfiguration;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.testing.unified.spi.LinkAccess;
+import com.vaadin.testing.unified.UnifiedElement;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -59,6 +62,26 @@ record BrowserlessLinks(BrowserlessSession session, Component link) implements L
             // what RouterLinkTester.navigate() and AnchorTester.navigate() do, with an absolute path ("/users") too
             session.window().getUI().navigate(path(uri), QueryParameters.fromString(uri.getRawQuery()));
             session.window().roundTrip();
+        });
+    }
+
+    /**
+     * The link {@code holder} holds, which a user's click on it lands on: its only {@code <a>} (a {@code RouterLink},
+     * an {@code Anchor}), at any depth. Empty when it has none, or several.
+     */
+    static Optional<UnifiedElement> heldBy(BrowserlessSession session, Component holder) {
+        List<Component> links = new ArrayList<>();
+        collectLinks(holder, links);
+        return links.size() == 1 ? Optional.of(new BrowserlessElement(session, links.get(0))) : Optional.empty();
+    }
+
+    private static void collectLinks(Component parent, List<Component> links) {
+        parent.getChildren().forEach(child -> {
+            if ("a".equals(child.getElement().getTag())) {
+                links.add(child);
+            } else {
+                collectLinks(child, links);
+            }
         });
     }
 

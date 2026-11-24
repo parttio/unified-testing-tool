@@ -15,6 +15,7 @@ import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.element.DateTimePickerElement;
 import org.vaadin.addons.dramafinder.element.DetailsElement;
@@ -70,6 +71,14 @@ final class PlaywrightCoreSetAccess {
             tab(bar, label).select();
             AutoWait.waitForVaadinIdle(session.page());
         }
+
+        /** The tab's only {@code <a>}, which a user's click on the tab lands on (#531); the core clicks it. */
+        static Optional<UnifiedElement> link(PlaywrightSession session, TabsElement bar, String label) {
+            Locator links = tab(bar, label).getLocator().locator("a");
+            return links.count() == 1
+                    ? Optional.of(new PlaywrightElement(session, links, null, PlaywrightComponents.DEFAULT))
+                    : Optional.empty();
+        }
     }
 
     /** A bare Tabs bar through Dramafinder's TabsElement: TabSheetAccess without content. */
@@ -96,6 +105,11 @@ final class PlaywrightCoreSetAccess {
         @Override
         public void select(String label) {
             Tabs.select(session, bar(), label);
+        }
+
+        @Override
+        public Optional<UnifiedElement> link(String label) {
+            return Tabs.link(session, bar(), label);
         }
 
         @Override
