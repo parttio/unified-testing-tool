@@ -103,7 +103,7 @@ Keep it, `// Escape Hatch kept: <reason>`, only for what has no Unified meaning:
 
 ## Reference: marker kinds of the TestBench recipe
 
-**`TestBench Escape Hatch: <call>`.** Say the same thing with the Unified API when it can: a lookup becomes `page.find(..)`, a read becomes a Wrapper method or a retrying assertion, a script that checks the URL becomes `assertThat(page).hasPath(..)`. Keep it when it needs what only a real browser driver gives (arbitrary JavaScript, raw WebDriver, Selenium-only APIs).
+**`TestBench Escape Hatch: <call>`.** Say the same thing with the Unified API when it can: a lookup becomes `page.find(..)`, a read becomes a Wrapper method or a retrying assertion, a script that checks the URL becomes `assertThat(page).hasPath(..)`, or `hasPathMatching("products/\\d+")` when part of the path, such as a new id, isn't known. Keep it when it needs what only a real browser driver gives (arbitrary JavaScript, raw WebDriver, Selenium-only APIs).
 
 **`TestBench page object: new X(this)`.** Convert the page object when every call in it has a Unified form: its TestBench field and constructor parameter become `UnifiedPage`, its `$(XElement.class)` lookups become `find(UnifiedX.class)`, its element return types become Wrappers. Then pass `page` instead of `testBench`. Keep it otherwise.
 
