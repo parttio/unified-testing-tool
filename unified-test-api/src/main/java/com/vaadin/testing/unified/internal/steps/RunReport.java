@@ -248,6 +248,11 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             h.append(s.escapeHatch() ? " <span class=\"badge escape-hatch\">Escape Hatch</span>"
                     : " <span class=\"badge unchecked\">no check</span>");
         }
+        int findings = layoutFindings(s.steps());
+        if (findings > 0) {
+            h.append(" <span class=\"badge findings\">").append(findings)
+                    .append(findings == 1 ? " Layout Finding" : " Layout Findings").append("</span>");
+        }
         if (s.durationMs() > 0) {
             h.append(" <span class=\"dur\">").append(duration(s.durationMs())).append("</span>");
         }
@@ -286,7 +291,7 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
         if (s.steps().isEmpty()) {
             h.append("<li class=\"gap\">(no User Steps)</li>\n");
         }
-        entries(h, s.steps(), evidenceDir(s));
+        entries(h, s.steps(), evidenceDir(s), s.viewport());
         h.append("</ol>\n<p class=\"files\"><a href=\"").append(href(evidenceDir(s) + UserStepsReport.TEXT_FILE))
                 .append("\">user-steps.txt</a> · <a href=\"").append(href(evidenceDir(s) + UserStepsReport.JSON_FILE))
                 .append("\">user-steps.json</a>");
@@ -371,7 +376,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
     }
 
     /** The entries as a tree; {@code dir} is the scenario's evidence directory, for the snapshots' links. */
-    private static void entries(StringBuilder h, List<Map<String, Object>> entries, String dir) {
+    private static void entries(StringBuilder h, List<Map<String, Object>> entries, String dir,
+            com.vaadin.testing.unified.ViewportSize viewport) {
         for (Map<String, Object> entry : entries) {
             String type = ScenarioResult.string(entry, "type");
             boolean failed = "failed".equals(ScenarioResult.string(entry, "status"));
@@ -386,7 +392,7 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 h.append("</summary>\n");
                 logs(h, entry);
                 h.append("<ol>\n");
-                entries(h, ScenarioResult.entries(entry.get("steps")), dir);
+                entries(h, ScenarioResult.entries(entry.get("steps")), dir, viewport);
                 h.append("</ol></details></li>\n");
             } else if ("gap".equals(type)) {
                 h.append("<li class=\"gap\">");
@@ -407,10 +413,62 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 if (failed && error != null) {
                     h.append("<div class=\"error\">").append(esc(error)).append("</div>");
                 }
+                layoutFindings(h, entry, dir, viewport);
                 logs(h, entry);
                 h.append("</li>\n");
             }
         }
+    }
+
+    /** The amber lines of a measured step's Layout Findings, each linking its screenshot with its box (ADR 0011). */
+    private static void layoutFindings(StringBuilder h, Map<String, Object> entry, String dir,
+            com.vaadin.testing.unified.ViewportSize viewport) {
+        if (!(entry.get("layout") instanceof Map<?, ?> layout)) {
+            return;
+        }
+        String screenshot = layout.get("screenshot") instanceof String file ? file : null;
+        for (Map<String, Object> finding : ScenarioResult.entries(layout.get("findings"))) {
+            String kind = orEmpty(ScenarioResult.string(finding, "kind"));
+            String icon = switch (kind) {
+                case "scroll" -> "⇿";
+                case "clipped" -> "▭";
+                case "overlap" -> "⧉";
+                default -> "•";
+            };
+            h.append("<div class=\"finding\">").append(icon).append(' ')
+                    .append(esc(orEmpty(ScenarioResult.string(finding, "text"))));
+            if (screenshot != null && dir != null) {
+                h.append(" <a class=\"snap\" href=\"").append(href(dir + screenshot)).append("\" data-image")
+                        .append(boxAttribute(finding.get("box"), viewport)).append(">screenshot</a>");
+            }
+            h.append("</div>");
+        }
+    }
+
+    /** A box in CSS pixels as the screenshot's highlight: fractions of the Viewport; none without one. */
+    private static String boxAttribute(Object box, com.vaadin.testing.unified.ViewportSize viewport) {
+        if (viewport == null || !(box instanceof List<?> b) || b.size() != 4) {
+            return "";
+        }
+        double[] scale = { viewport.width(), viewport.height(), viewport.width(), viewport.height() };
+        StringBuilder attribute = new StringBuilder(" data-highlight=\"");
+        for (int i = 0; i < 4; i++) {
+            double value = b.get(i) instanceof Number n ? n.doubleValue() / scale[i] : 0;
+            attribute.append(i == 0 ? "" : " ").append(java.math.BigDecimal.valueOf(Math.round(value * 10_000) / 10_000.0)
+                    .stripTrailingZeros().toPlainString());
+        }
+        return attribute.append('"').toString();
+    }
+
+    /** How many Layout Findings a scenario's measured steps have. */
+    private static int layoutFindings(List<Map<String, Object>> entries) {
+        int[] count = { 0 };
+        visit(entries, entry -> {
+            if (entry.get("layout") instanceof Map<?, ?> layout && layout.get("findings") instanceof List<?> f) {
+                count[0] += f.size();
+            }
+        });
+        return count[0];
     }
 
     /** The lines logged during or after the entry: the application's warnings and errors, the console's errors. */
@@ -600,6 +658,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             .diffstat .add,pre.diff .add{color:var(--pass)}.diffstat .del,pre.diff .del{color:var(--fail)}
             .log{margin:2px 0 2px 28px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}\
             .log.error-line{color:var(--fail)}\
+            .finding{margin:2px 0 2px 28px;font-size:12px;color:#9a6700;overflow-wrap:anywhere}\
+            .badge.findings{background:#fff8e1;color:#9a6700}\
             .difference{margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px}\
             .difference p{margin:0 0 4px}\
             .why{margin:0 0 8px;color:var(--muted);font-size:13px;overflow-wrap:anywhere}

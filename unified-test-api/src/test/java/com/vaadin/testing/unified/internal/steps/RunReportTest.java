@@ -49,6 +49,28 @@ class RunReportTest {
     }
 
     @Test
+    void aMeasuredStepShowsItsLayoutFindingsEachWithItsBoxOnTheScreenshot() {
+        String measured = RunSummaryTest.EDIT_PERSON
+                .replaceFirst("\"tool\": \"([a-z]+)\",", "\"tool\": \"$1\", \"viewport\": {\"name\": \"phone\", "
+                        + "\"width\": 375, \"height\": 667, \"fixed\": true},")
+                .replaceFirst("\"text\": \"open People\", \"verb\": \"open\",", "\"text\": \"open People\", "
+                        + "\"verb\": \"open\", \"layout\": {\"point\": 1, \"screenshot\": \"layout/001.png\", \"findings\": ["
+                        + "{\"kind\": \"scroll\", \"text\": \"the page scrolls sideways by 40 px\", \"box\": [0, 0, 375, 667]},"
+                        + "{\"kind\": \"clipped\", \"text\": \"the 1st button is clipped by div#box\", "
+                        + "\"box\": [37.5, 66.7, 75, 66.7]}]},");
+        String html = new RunReport(new RunSummary("Playwright", List.of(scenario(measured, "EditPersonTest/editsAPerson")),
+                0, null), s -> List.of()).html();
+
+        assertTrue(html.contains("<div class=\"finding\">⇿ the page scrolls sideways by 40 px <a class=\"snap\" "
+                + "href=\"EditPersonTest/editsAPerson/layout/001.png\" data-image data-highlight=\"0 0 1 1\">screenshot</a>"
+                + "</div>"), html);
+        assertTrue(html.contains("<div class=\"finding\">▭ the 1st button is clipped by div#box <a class=\"snap\" "
+                + "href=\"EditPersonTest/editsAPerson/layout/001.png\" data-image data-highlight=\"0.1 0.1 0.2 0.1\">"
+                + "screenshot</a></div>"), html);
+        assertTrue(html.contains("<span class=\"badge findings\">2 Layout Findings</span>"), html);
+    }
+
+    @Test
     void sectionsComeInSummaryOrderWithPassingHidden() {
         String html = report(CHANGES);
 
