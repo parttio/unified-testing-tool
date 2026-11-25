@@ -46,6 +46,8 @@ class TestLifecycleTest {
         List<Path> evidence;
         IOException evidenceFailure;
         boolean traces;
+        /** What find returns: nothing by default. */
+        List<com.vaadin.testing.unified.UnifiedElement> found = List.of();
         /** What measureLayout returns, as the layout script's JSON; null when the Testing Tool can't measure. */
         String layout;
         /** Why this Testing Tool can't set a Viewport; null when it can. */
@@ -80,7 +82,7 @@ class TestLifecycleTest {
                                 }
                                 yield null;
                             }
-                            case "find" -> List.of();
+                            case "find" -> found;
                             // another window records into the same list
                             case "openWindow", "openAsUser" -> proxy;
                             case "isAt" -> false;

@@ -150,6 +150,14 @@ public final class UnifiedAssertions {
         return ((Matches) matches).count();
     }
 
+    /** A component's Reach as a failure shows it: {@code after scroll}, {@code clipped by div#box}. */
+    record ReachShown(LayoutMeasurement.Reach reach) {
+        @Override
+        public String toString() {
+            return reach.reach() + (reach.by() == null ? "" : " by " + reach.by());
+        }
+    }
+
     /** Layout Findings as a failure shows them: one after the other, or none. */
     record LayoutFindings(List<LayoutMeasurement.Finding> findings) {
         boolean none() {
@@ -341,6 +349,30 @@ public final class UnifiedAssertions {
         /** Exactly this many components match the lookup. */
         public SELF hasCount(int expected) {
             return check("to have count", expected, element::countNow, v -> Objects.equals(v, expected));
+        }
+
+        /**
+         * On screen at the current Viewport without scrolling, whether or not something covers it (ADR 0011). Retries
+         * until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public SELF isInViewport() {
+            run.requireBrowser("isInViewport");
+            return check("to be in the viewport", null, this::reach,
+                    v -> Set.of("visible", "behind").contains(((ReachShown) v).reach().reach()));
+        }
+
+        /**
+         * Not cut off: neither a box with hidden overflow nor the page keeps a user from it, though they may have to
+         * scroll to it (ADR 0011). Retries until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public SELF isNotClipped() {
+            run.requireBrowser("isNotClipped");
+            return check("not to be clipped", null, this::reach,
+                    v -> !Set.of("clipped", "hidden").contains(((ReachShown) v).reach().reach()));
+        }
+
+        private ReachShown reach() {
+            return new ReachShown(LayoutMeasurement.measure(run, element.concrete()).subject());
         }
 
         public SELF isVisible() { return check("to be visible", null, wrapper::isVisible, Boolean.TRUE::equals); }

@@ -16,13 +16,13 @@ Guide: [Navigation, users and windows](https://parttio.github.io/unified-testing
 - **Actions:** `navigate(Class<? extends Component>)`, `navigate(Class<? extends Component>, QueryParameters)`, `navigate(Class<? extends Component>, RouteParameters)`, `navigate(Class<? extends Component>, RouteParameters, QueryParameters)`, `navigate(Class<C>, T)`, `navigate(String)`, `pressKey(String)`, `reload()`, `screenshot(Path)`, `setViewport(ViewportSize)`, `setViewport(int, int)`, `step(String, Runnable)`, `waitUntil(BooleanSupplier)`
 - **Reads:** `hasRealBrowser() → boolean`
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`, `openAsUser(String, String...) → UnifiedPage`, `openWindow() → UnifiedPage`, `secret(String) → String`, `tryUnwrap(Class<T>) → Optional<T>`, `unwrap(Class<T>) → T`, `viewport() → ViewportSize`
-- **Checks, `assertThat(UnifiedPage)`:** `hasNoErrors()`, `hasPath(String)`, `hasPathMatching(Pattern)`, `hasPathMatching(String)`, `hasQueryParameter(String, String)`, `hasTitle(String)`, `isAt(Class<? extends Component>)`
+- **Checks, `assertThat(UnifiedPage)`:** `hasNoErrors()`, `hasNoHorizontalScroll()`, `hasNoLayoutFindings()`, `hasPath(String)`, `hasPathMatching(Pattern)`, `hasPathMatching(String)`, `hasQueryParameter(String, String)`, `hasTitle(String)`, `isAt(Class<? extends Component>)`
 
 ## Every Wrapper
 
 - **Filters:** `all()`, `visible()`, `where(Predicate<UnifiedElement>)`, `withAccessibleName(String)`, `withAccessibleNameContaining(String)`, `withAttribute(String, String)`, `withClassName(String)`, `withClassNames(String...)`, `withId(String)`, `withProperty(String, Object)`, `withTestId(String)`, `withTheme(String)`
 - **Methods:** `element() → UnifiedElement`, `isEnabled() → boolean`, `isVisible() → boolean`, `tryUnwrap(Class<T>) → Optional<T>`, `unwrap(Class<T>) → T`, `withTimeout(Duration) → UnifiedWrapper`
-- **Checks, `assertThat(UnifiedWrapper)`:** `doesNotExist()`, `exists()`, `hasCount(int)`, `hasCssValue(String, String)`, `hasProperty(String, Object)`, `hasText(String)`, `hasTextContaining(String)`, `isDisabled()`, `isEnabled()`, `isHidden()`, `isVisible()`
+- **Checks, `assertThat(UnifiedWrapper)`:** `doesNotExist()`, `exists()`, `hasCount(int)`, `hasCssValue(String, String)`, `hasProperty(String, Object)`, `hasText(String)`, `hasTextContaining(String)`, `isDisabled()`, `isEnabled()`, `isHidden()`, `isInViewport()`, `isNotClipped()`, `isVisible()`
 
 ## Wrappers
 

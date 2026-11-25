@@ -87,4 +87,53 @@ class LayoutAssertionsTest {
 
         assertTrue(e.getMessage().startsWith("hasNoLayoutFindings needs a real browser"), e.getMessage());
     }
+
+    /** A button the fake Testing Tool finds: every read answers as a visible, enabled button would. */
+    private static com.vaadin.testing.unified.UnifiedElement aButton() {
+        return (com.vaadin.testing.unified.UnifiedElement) java.lang.reflect.Proxy.newProxyInstance(
+                LayoutAssertionsTest.class.getClassLoader(), new Class<?>[] { com.vaadin.testing.unified.UnifiedElement.class },
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isVisible", "isEnabled" -> true;
+                    case "getTagName" -> "vaadin-button";
+                    case "toString" -> "a button";
+                    case "hashCode" -> 1;
+                    case "equals" -> proxy == args[0];
+                    case "tryUnwrap" -> java.util.Optional.empty();
+                    case "findDescendants", "getChildren" -> java.util.List.of();
+                    default -> null;
+                });
+    }
+
+    private static String withSubject(String reach, String by) {
+        return "{\"findings\":[],\"matches\":[],\"appLayouts\":[],\"menuBars\":[],\"subject\":{\"box\":[0,0,10,10],"
+                + "\"reach\":\"" + reach + "\"" + (by == null ? "" : ",\"by\":\"" + by + "\"") + "}}";
+    }
+
+    @Test
+    void aComponentIsInTheViewportOnlyWhenAUserSeesItWithoutScrolling() throws Exception {
+        UnifiedPage page = page("playwright");
+        session.found = java.util.List.of(aButton());
+        com.vaadin.testing.unified.component.UnifiedButton save = page.find(com.vaadin.testing.unified.component.UnifiedButton.class);
+
+        session.layout = withSubject("visible", null);
+        assertThat(save).isInViewport();
+
+        session.layout = withSubject("after scroll", null);
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class, () -> assertThat(save).isInViewport());
+        assertEquals("after scroll", e.getFound());
+    }
+
+    @Test
+    void aComponentIsNotClippedUnlessABoxOrThePageCutsItOff() throws Exception {
+        UnifiedPage page = page("playwright");
+        session.found = java.util.List.of(aButton());
+        com.vaadin.testing.unified.component.UnifiedButton save = page.find(com.vaadin.testing.unified.component.UnifiedButton.class);
+
+        session.layout = withSubject("after scroll", null);
+        assertThat(save).isNotClipped();
+
+        session.layout = withSubject("clipped", "div#box");
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class, () -> assertThat(save).isNotClipped());
+        assertEquals("clipped by div#box", e.getFound());
+    }
 }
