@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.Viewport;
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
 import com.vaadin.testing.unified.spi.TestingToolAdapter;
@@ -47,9 +48,21 @@ class ViewportTest {
 
     // ---------------------------------------------------------------- sample tests (plain classes, never run)
 
+    static class Plain {
+        void anything() {}
+    }
+
     @Viewport(width = 375, height = 667, name = "phone")
     static class OnAPhone {
         void anything() {}
+    }
+
+    private static TestLifecycleTest.PlainContext context(Class<?> test) throws Exception {
+        return new TestLifecycleTest.PlainContext(test, test.getDeclaredMethod("anything"));
+    }
+
+    private List<String> sizesAsked() {
+        return session.calls.stream().filter(c -> c.startsWith("setViewport")).toList();
     }
 
     // ---------------------------------------------------------------- tests
@@ -60,5 +73,19 @@ class ViewportTest {
                 .decide(OnAPhone.class.getDeclaredMethod("anything"), OnAPhone.class);
 
         assertEquals(new TestLifecycle.Decision(false, "Requires a real browser, this run uses BROWSERLESS"), decision);
+    }
+
+    @Test
+    void aNewPageGetsTheDefaultViewportBeforeAnythingElse() throws Exception {
+        lifecycle("playwright", Map.of()).open(context(Plain.class), new StepRecorder());
+
+        assertEquals("setViewport[1280 × 720]", session.calls.get(0));
+    }
+
+    @Test
+    void browserlessIsNeverAskedForAViewport() throws Exception {
+        lifecycle("browserless", Map.of()).open(context(Plain.class), new StepRecorder());
+
+        assertEquals(List.of(), sizesAsked());
     }
 }

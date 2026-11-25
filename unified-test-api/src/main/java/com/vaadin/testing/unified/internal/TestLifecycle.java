@@ -161,6 +161,9 @@ public final class TestLifecycle {
         steps.applicationPackages(ApplicationPackages.of(context));
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
+        if (tool.hasRealBrowser()) {
+            session.setViewport(settings.viewport());
+        }
         steps.session(null, session);
         if (test != null && settings.userStepsSnapshots()) {
             Path snapshots = testEvidenceDir(test).resolve(StepRecorder.SNAPSHOT_DIR);

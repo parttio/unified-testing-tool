@@ -193,7 +193,7 @@ class TestLifecycleTest {
 
         assertEquals(List.of(), test.close(null, SAVES));
         // the console is read after each User Step, and once more when the test ends
-        assertEquals(List.of("tracesSteps", "navigate[profile]", "consoleErrors", "consoleErrors",
+        assertEquals(List.of("setViewport[1280 × 720]", "tracesSteps", "navigate[profile]", "consoleErrors", "consoleErrors",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", false]", "close"), session.calls);
         // a passing test still gets its User Steps report
         assertTrue(Files.exists(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("user-steps.txt")));
@@ -221,7 +221,7 @@ class TestLifecycleTest {
         assertTrue(Files.readString(saves.resolve("user-steps.json"))
                 .contains("\"evidence\": [\n      \"failure.png\",\n      \"failure.view.txt\"\n    ]"),
                 Files.readString(saves.resolve("user-steps.json")));
-        assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + saves + ", failure, null]",
+        assertEquals(List.of("setViewport[1280 × 720]", "consoleErrors", "writeFailureEvidence[" + saves + ", failure, null]",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"),
                 session.calls.stream().filter(call -> !call.startsWith("find[") && !call.startsWith("findTemplates[")
                         && !call.equals("currentPath")
