@@ -190,6 +190,21 @@ public final class UnifiedAssertions {
             return this;
         }
 
+        /**
+         * No Layout Finding on the page at the current Viewport: nothing scrolls sideways
+         * ({@link #hasNoHorizontalScroll()}), no component is clipped out of reach, and no component a user acts on
+         * overlaps another (ADR 0011). Retries until the timeout. Needs
+         * {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public PageAssert hasNoLayoutFindings() {
+            run.requireBrowser("hasNoLayoutFindings");
+            check(run, () -> Phrases.page("see", "see no Layout Findings"), () -> "the page",
+                    "to have no Layout Findings", null,
+                    () -> new LayoutFindings(LayoutMeasurement.measure(run, null).findings()),
+                    v -> ((LayoutFindings) v).none());
+            return this;
+        }
+
         public PageAssert hasPath(String path) {
             String expected = path.startsWith("/") ? path.substring(1) : path;
             check(run, () -> Phrase.template("see", "see path {value}", null, List.of(expected)), () -> "the page",

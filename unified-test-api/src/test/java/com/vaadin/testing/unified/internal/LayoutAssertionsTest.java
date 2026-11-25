@@ -59,4 +59,32 @@ class LayoutAssertionsTest {
                 e.getFound());
         assertTrue(e.getMessage().contains("to have no sideways scroll"), e.getMessage());
     }
+
+    @Test
+    void everyLayoutFindingIsListedInTheFailure() throws Exception {
+        UnifiedPage page = page("selenium");
+        session.layout = NOTHING;
+        assertThat(page).hasNoLayoutFindings();
+
+        // the script's targets are the Findable View's built-in Wrapper types, in that order: the 18th is the button
+        int button = LayoutMeasurement.TYPES.indexOf(com.vaadin.testing.unified.component.UnifiedButton.class);
+        session.layout = "{\"findings\":[{\"kind\":\"scroll\",\"container\":\"the page\",\"by\":40},"
+                + "{\"kind\":\"clipped\",\"target\":" + button + ",\"index\":0,\"by\":\"div#box\"},"
+                + "{\"kind\":\"overlap\",\"target\":" + button + ",\"index\":1,\"byTarget\":" + button
+                + ",\"byIndex\":2}],\"matches\":[],\"appLayouts\":[],\"menuBars\":[]}";
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class, () -> assertThat(page).hasNoLayoutFindings());
+
+        assertEquals("the page scrolls sideways by 40 px; the 1st button is clipped by div#box; "
+                + "the 2nd button is overlapped by the 3rd button", e.getFound());
+    }
+
+    @Test
+    void withoutABrowserTheLayoutCantBeCheckedAndSaysSo() throws Exception {
+        UnifiedPage page = page("browserless");
+
+        UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class,
+                () -> assertThat(page).hasNoLayoutFindings());
+
+        assertTrue(e.getMessage().startsWith("hasNoLayoutFindings needs a real browser"), e.getMessage());
+    }
 }
