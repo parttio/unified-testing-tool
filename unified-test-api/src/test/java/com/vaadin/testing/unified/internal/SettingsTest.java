@@ -44,6 +44,26 @@ class SettingsTest {
     }
 
     @Test
+    void layoutChecksAreOffReportOnlyAndWithoutScreenshotsByDefault() {
+        assertEquals(false, settings(Map.of()).layoutChecks());
+        assertEquals(true, settings(Map.of(Settings.LAYOUT_CHECKS, " ON ")).layoutChecks());
+        assertEquals(false, settings(Map.of(Settings.LAYOUT_CHECKS, "off")).layoutChecks());
+        assertEquals(Settings.LayoutFindings.REPORT, settings(Map.of()).layoutFindings());
+        assertEquals(Settings.LayoutFindings.FAIL, settings(Map.of(Settings.LAYOUT_FINDINGS, "fail")).layoutFindings());
+        assertEquals(false, settings(Map.of()).layoutChecksScreenshots());
+        assertEquals(true, settings(Map.of(Settings.LAYOUT_CHECKS_SCREENSHOTS, "on")).layoutChecksScreenshots());
+    }
+
+    @Test
+    void aMistypedLayoutSettingSaysWhatIsExpected() {
+        assertEquals(Settings.LAYOUT_CHECKS + ": expected on or off, got yes", assertThrows(IllegalArgumentException.class,
+                () -> settings(Map.of(Settings.LAYOUT_CHECKS, "yes")).layoutChecks()).getMessage());
+        assertEquals(Settings.LAYOUT_FINDINGS + ": expected report or fail, got warn",
+                assertThrows(IllegalArgumentException.class,
+                        () -> settings(Map.of(Settings.LAYOUT_FINDINGS, "warn")).layoutFindings()).getMessage());
+    }
+
+    @Test
     void githubSummaryIsOnUnlessFalse() {
         assertEquals(true, settings(Map.of()).userStepsGithubSummary());
         assertEquals(true, settings(Map.of(Settings.USER_STEPS_GITHUB_SUMMARY, "true")).userStepsGithubSummary());
