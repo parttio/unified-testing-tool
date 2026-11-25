@@ -207,4 +207,20 @@ class ViewportTest {
         assertEquals(CANT, e.getMessage());
         assertEquals(StepRecorder.Status.FAILED, ((StepRecorder.Step) steps.entries().get(0)).status());
     }
+
+    @Test
+    void theReportsGetTheViewportTheTestRanAt() throws Exception {
+        StepRecorder onAPhone = new StepRecorder();
+        lifecycle("playwright", Map.of()).open(context(OnAPhone.class), onAPhone);
+        StepRecorder plain = new StepRecorder();
+        lifecycle("playwright", Map.of(Settings.VIEWPORT, "tablet:768x1024")).open(context(Plain.class), plain);
+        StepRecorder browserless = new StepRecorder();
+        lifecycle("browserless", Map.of()).open(context(Plain.class), browserless);
+
+        assertEquals(new ViewportSize("phone", 375, 667), onAPhone.viewport());
+        assertTrue(onAPhone.viewportFixed());
+        assertEquals(new ViewportSize("tablet", 768, 1024), plain.viewport());
+        assertEquals(false, plain.viewportFixed());
+        assertEquals(null, browserless.viewport());
+    }
 }

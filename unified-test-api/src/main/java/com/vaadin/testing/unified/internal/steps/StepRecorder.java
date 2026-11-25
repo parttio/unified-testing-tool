@@ -680,6 +680,28 @@ public final class StepRecorder {
      * Names the test the recorder belongs to, for the failures it completes: the scenario, and the test's evidence
      * directory as the failure shows it.
      */
+    private com.vaadin.testing.unified.ViewportSize viewport;
+    private boolean viewportFixed;
+
+    /**
+     * The Viewport the test ran at, for its reports: {@code fixed} when the test declares it with {@code @Viewport},
+     * so a Viewport Comparison leaves it out. Not called without a browser.
+     */
+    public void viewport(com.vaadin.testing.unified.ViewportSize size, boolean fixed) {
+        this.viewport = size;
+        this.viewportFixed = fixed;
+    }
+
+    /** The Viewport the test ran at; null without a browser. */
+    public com.vaadin.testing.unified.ViewportSize viewport() {
+        return viewport;
+    }
+
+    /** Whether the test declares its Viewport. */
+    public boolean viewportFixed() {
+        return viewportFixed;
+    }
+
     public void describeTest(String scenario, String evidenceDir) {
         describeTest(scenario, false, evidenceDir);
     }

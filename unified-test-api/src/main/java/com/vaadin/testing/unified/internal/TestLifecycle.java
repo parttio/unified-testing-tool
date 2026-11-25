@@ -166,6 +166,8 @@ public final class TestLifecycle {
         ViewportSize viewport = viewport(context);
         String skipReason = null;
         if (tool.hasRealBrowser()) {
+            steps.viewport(viewport, find(context.testMethod().orElse(null), context.testClass().orElse(null),
+                    Viewport.class).isPresent());
             try {
                 session.setViewport(viewport);
             } catch (UnsupportedOperationException e) {
