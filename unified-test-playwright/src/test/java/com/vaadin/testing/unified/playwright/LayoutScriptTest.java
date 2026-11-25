@@ -243,6 +243,23 @@ class LayoutScriptTest {
         assertEquals("[0,1]", save.get("byMatch").toString());
     }
 
+    @Test
+    void componentsOverlapOnceAndADialogOverAButtonIsNoOverlap() {
+        JsonObject components = measure(component("x-button", "<button style='width:100%;height:100%'><slot></slot></button>")
+                + "<x-button style='position:absolute;display:block;left:10px;top:10px;width:120px;height:40px'>Save</x-button>"
+                + "<x-button style='position:absolute;display:block;left:70px;top:20px;width:120px;height:40px'>Delete</x-button>",
+                LayoutScript.Target.interactive("x-button"));
+        JsonObject dialog = measure("""
+                <button style="position:absolute;left:10px;top:10px;width:120px;height:40px">Under the dialog</button>
+                <dialog id="d" style="margin:0;padding:0;left:0;top:0;width:300px;height:200px"><button style="width:300px;height:200px">OK</button></dialog>
+                <script>document.getElementById('d').showModal()</script>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals(1, components.getAsJsonArray("findings").size(), components.toString());
+        assertEquals("[]", dialog.getAsJsonArray("findings").toString());
+        assertEquals("behind", matches(dialog, 0).get(0).getAsJsonObject().get("reach").getAsString());
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));

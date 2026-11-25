@@ -239,6 +239,17 @@
   elements.forEach((list, target) => list.forEach((e, index) => matchedAt.set(e, { target, index })));
   const matches = elements.map((list) => list.map(measure));
 
+  // an element in an open overlay (a modal dialog, a popover, a Vaadin overlay): what it covers is meant to be covered
+  const OVERLAY = ':popover-open, dialog[open], [aria-modal="true"], [opened][role="dialog"]';
+  const inOverlay = (element) => {
+    for (let n = element; n; n = flatParent(n)) {
+      if (n.matches && n.matches(OVERLAY)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   // overlap: an interactive match on which two or more of five points (its centre and its corners, inset) land on
   // another interactive match, so that a 1 px touch is not one (#491)
   const INSET = 2;
@@ -256,7 +267,7 @@
     for (const [x, y] of points) {
       const hit = hitTarget(x, y);
       const other = hit && !reaches(hit, element) ? matchedAround(hit, true) : null;
-      if (other && !reaches(element, other)) {
+      if (other && !reaches(element, other) && !inOverlay(other)) {
         covers.set(other, (covers.get(other) || 0) + 1);
       }
     }
