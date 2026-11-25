@@ -69,4 +69,31 @@ class LayoutChecksTest {
         assertEquals("[{\"kind\":\"scroll\",\"text\":\"the page scrolls sideways by 40 px\",\"box\":[0,0,415,667]}]",
                 layout.get("findings").toString());
     }
+
+    @Test
+    void withChecksOffNothingIsMeasured() throws Exception {
+        UnifiedPage page = page(Map.of());
+        session.layout = SCROLLS;
+
+        page.navigate("profile");
+        page.reload();
+        page.setViewport(375, 667);
+
+        assertEquals(0, measurements());
+    }
+
+    @Test
+    void aReloadAndAViewportChangeAreMeasurementPointsToo() throws Exception {
+        UnifiedPage page = page(Map.of(Settings.LAYOUT_CHECKS, "on"));
+        session.layout = SCROLLS;
+
+        page.navigate("profile");
+        page.reload();
+        page.setViewport(375, 667);
+
+        assertEquals(3, measurements());
+        JsonNode steps = json().get("steps");
+        assertEquals("[1,2,3]", "[" + steps.get(0).get("layout").get("point") + "," + steps.get(1).get("layout").get("point")
+                + "," + steps.get(2).get("layout").get("point") + "]");
+    }
 }
