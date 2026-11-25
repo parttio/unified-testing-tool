@@ -147,8 +147,10 @@ public final class FindableView {
         } catch (RuntimeException e) {
             where = "the page";
         }
-        return run.steps().mask(render("Findable view of " + where + " on " + run.toolName(),
-                components(run, null, false, "page.")));
+        com.vaadin.testing.unified.ViewportSize viewport = run.tool().hasRealBrowser()
+                ? run.steps().currentViewport(run.window()) : null;
+        return run.steps().mask(render("Findable view of " + where + " on " + run.toolName()
+                + (viewport == null ? "" : " at Viewport " + viewport), components(run, null, false, "page.")));
     }
 
     /**

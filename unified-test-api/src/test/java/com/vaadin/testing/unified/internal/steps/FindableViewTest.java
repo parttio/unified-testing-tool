@@ -20,6 +20,26 @@ public class FindableViewTest {
     private final FakePage fake = new FakePage();
     private final UnifiedPage page = fake.page;
 
+    // ---------------------------------------------------------------- Reach, in a browser (ADR 0011)
+
+    private static final com.vaadin.testing.unified.ViewportSize PHONE =
+            new com.vaadin.testing.unified.ViewportSize("phone", 375, 667);
+
+    /** The layout script's result with these matches for the first target, the Findable View's first type. */
+    private static String layout(String matchesOfEveryTarget) {
+        return "{\"findings\":[],\"matches\":" + matchesOfEveryTarget + ",\"appLayouts\":[],\"menuBars\":[]}";
+    }
+
+    @Test
+    void inABrowserTheViewSaysWhichViewportItDescribes() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save");
+        browser.layout = layout("[]");
+
+        assertEquals("Findable view of “/people” on playwright at Viewport phone 375 × 667: 1 component",
+                browser.page.describe().lines().findFirst().orElseThrow());
+    }
+
     @Test
     void eachComponentWithItsNameStateAndLookup() {
         fake.add("vaadin-text-field", "label", "Name", "value", "Alan Turing")

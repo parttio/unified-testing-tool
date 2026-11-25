@@ -204,6 +204,7 @@ public final class UnifiedPageImpl implements UnifiedPage {
             pause(RESIZE_HEARD_AFTER);
             run.session().settle();
             viewport = size;
+            run.steps().viewportChanged(run.window(), size);
             LayoutChecks.measure(run);
         });
     }

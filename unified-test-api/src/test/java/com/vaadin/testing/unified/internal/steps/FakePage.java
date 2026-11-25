@@ -46,7 +46,17 @@ final class FakePage {
     final java.util.concurrent.atomic.AtomicInteger adapterCalls = new java.util.concurrent.atomic.AtomicInteger();
     final UnifiedPageImpl page;
 
+    /** What the layout script returns in a browser (ADR 0011); null when it can't measure. */
+    volatile String layout;
+    /** What a click throws, e.g. a browser's "intercepts pointer events"; null for none. */
+    volatile RuntimeException clickError;
+
     FakePage() {
+        this(TestingTool.BROWSERLESS, null);
+    }
+
+    /** A fake page on this Testing Tool, at this Viewport (a browser's) or none. */
+    FakePage(TestingTool tool, com.vaadin.testing.unified.ViewportSize viewport) {
         AdapterSession session = (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { AdapterSession.class }, counted((proxy, method, args) -> switch (method.getName()) {
                     case "find" -> find((QuerySpec) args[0]);
@@ -65,12 +75,21 @@ final class FakePage {
                         console.clear();
                         yield errors;
                     }
+                    case "measureLayout" -> {
+                        if (layout == null) {
+                            throw new UnsupportedOperationException("this fake can't measure the layout");
+                        }
+                        yield layout;
+                    }
                     case "hashCode" -> 1;
                     default -> null;
                 }));
         steps.session(null, session);
-        page = new UnifiedPageImpl(new TestRun(TestingTool.BROWSERLESS, session, Duration.ofMillis(200), steps,
-                null));
+        if (viewport != null) {
+            steps.viewport(viewport, false);
+        }
+        page = new UnifiedPageImpl(new TestRun(tool, session, Duration.ofMillis(200), steps, null, false,
+                viewport == null ? com.vaadin.testing.unified.internal.Settings.DEFAULT_VIEWPORT : viewport));
     }
 
     /** Adds a component: {@code add("vaadin-text-field", "label", "Name")}. */
@@ -182,6 +201,9 @@ final class FakePage {
                     case "click", "focus", "pressKey" -> {
                         actions.add(method.getName() + " " + component.get("tag"));
                         if (method.getName().equals("click")) {
+                            if (clickError != null) {
+                                throw clickError;
+                            }
                             onClick.run();
                         }
                         yield null;
