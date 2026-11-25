@@ -6,13 +6,12 @@ import com.vaadin.testing.unified.spi.SideNavAccess;
 import com.vaadin.testing.unified.spi.SideNavItemAccess;
 import java.util.List;
 import java.util.Map;
-import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
 /**
  * SideNav and SideNavItem on Selenium (#658), as on Playwright: read in one round trip each
  * ({@link BrowserQueries#SIDE_NAV_ITEM}), expanded and collapsed by the item's toggle button, clicked on the item's own
- * {@code <a>} in its shadow root. TestBench's {@code SideNavItemElement} clicks both with a script, not as a user.
+ * {@code <a>} in its shadow root. TestBench's {@code SideNavItemElement} clicks both with a script, not as a user; here only finding them is.
  */
 final class SeleniumSideNav {
     private SeleniumSideNav() {}
@@ -90,14 +89,24 @@ final class SeleniumSideNav {
 
         @Override
         public UnifiedElement link() {
-            WebElement link = SeleniumSession.stale(() -> element.getShadowRoot().findElement(By.cssSelector("#link")));
-            return new SeleniumElement(session, link, SeleniumComponents.DEFAULT);
+            return new SeleniumElement(session, shadowPart(session, element, "#link"), SeleniumComponents.DEFAULT);
         }
 
-        private static WebElement toggleOf(WebElement item) {
-            return SeleniumSession.stale(() -> item.getShadowRoot()
-                    .findElement(By.cssSelector("button[part='toggle-button']")));
+        private WebElement toggleOf(WebElement item) {
+            return shadowPart(session, item, "button[part='toggle-button']");
         }
+    }
+
+    /**
+     * A part in the item's own shadow root, by script: the adapter's elements don't support
+     * {@code getShadowRoot()}. Clicked afterwards as a user would.
+     */
+    private static WebElement shadowPart(SeleniumSession session, WebElement item, String css) {
+        Object part = session.js("return arguments[0].shadowRoot.querySelector(arguments[1]);", item, css);
+        if (!(part instanceof WebElement e)) {
+            throw new IllegalStateException("No " + css + " in the side nav item's shadow root");
+        }
+        return e;
     }
 
     private static List<String> strings(Object list) {
