@@ -552,13 +552,14 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
 
             /**
              * A call on a TestBench login element, or a page object extending one, in a test of a Spring Security
-             * module that starts the app: {@code @WithMockUser} could sign in instead.
+             * module that starts the app: {@code @WithMockUser} could sign in instead. Not in a method that asserts on
+             * a login element: it checks the login itself.
              */
             private boolean signsIn(J.MethodInvocation m) {
                 J.ClassDeclaration c = getCursor().firstEnclosing(J.ClassDeclaration.class);
-                return startsTheApp() && m.getSelect() != null && c != null && isTestBenchClass(c)
-                        && LOGIN_ELEMENTS.stream().anyMatch(login -> TypeUtils.isAssignableTo(login, m.getSelect().getType()))
-                        && scanned.spring.usesSecurity(getCursor().firstEnclosingOrThrow(SourceFile.class));
+                return startsTheApp() && isLoginCall(m) && c != null && isTestBenchClass(c)
+                        && scanned.spring.usesSecurity(getCursor().firstEnclosingOrThrow(SourceFile.class))
+                        && !checksTheLogin(getCursor().firstEnclosing(J.MethodDeclaration.class));
             }
 
             /** Whether the method the cursor is in has or gains the Unified Page: a test or a helper of a TestBench class. */
@@ -587,6 +588,49 @@ public class TestBenchSetupToUnified extends ScanningRecipe<TestBenchSetupToUnif
     @Override
     public int hashCode() {
         return Objects.hashCode(springBootTest);
+    }
+
+    /** A call on a TestBench login element, or a page object extending one. */
+    private static boolean isLoginCall(J.MethodInvocation m) {
+        return m.getSelect() != null
+                && LOGIN_ELEMENTS.stream().anyMatch(login -> TypeUtils.isAssignableTo(login, m.getSelect().getType()));
+    }
+
+    /**
+     * A method that checks the login itself: an assertion ({@code assert*}: JUnit, AssertJ, Hamcrest) has a call on a
+     * login element among its arguments, such as {@code assertEquals("Email", loginView.getUsernameLabel())}.
+     */
+    private static boolean checksTheLogin(J.@Nullable MethodDeclaration method) {
+        if (method == null) {
+            return false;
+        }
+        AtomicBoolean checks = new AtomicBoolean();
+        new JavaIsoVisitor<AtomicBoolean>() {
+            @Override
+            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, AtomicBoolean found) {
+                if (m.getSimpleName().startsWith("assert") && m.getArguments().stream()
+                        .anyMatch(TestBenchSetupToUnified::hasLoginCall)) {
+                    found.set(true);
+                }
+                return super.visitMethodInvocation(m, found);
+            }
+        }.visit(method, checks);
+        return checks.get();
+    }
+
+    /** An expression that is, or contains, a call on a login element. */
+    private static boolean hasLoginCall(Expression expression) {
+        AtomicBoolean has = new AtomicBoolean();
+        new JavaIsoVisitor<AtomicBoolean>() {
+            @Override
+            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, AtomicBoolean found) {
+                if (isLoginCall(m)) {
+                    found.set(true);
+                }
+                return super.visitMethodInvocation(m, found);
+            }
+        }.visit(expression, has);
+        return has.get();
     }
 
     /** A call that already passes a Unified Page, rewritten on an earlier cycle. */
