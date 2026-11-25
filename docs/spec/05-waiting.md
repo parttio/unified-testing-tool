@@ -71,7 +71,7 @@ assertThat(users.row().withCellTextContaining("Email", "user11")).hasCount(11);
 
 A lookup that finds no component or several, an action on a component that stays disabled or hidden, and an assertion that times out all throw `UnifiedAssertionError`, an `AssertionError`. Its message is the same on every Testing Tool: the User Step that failed, what was expected and found, the Near Misses, how long it waited and where the timeout came from ([12. Readable tests, Failures](12-readable-tests.md#failures)). An assertion timeout lists the distinct values it saw while waiting (`Found “Saving…”, then “Saved Alan Turing”`).
 
-**What can't pass by waiting** *(unreleased)*. An attempt that throws counts as "not yet" and is tried again until the timeout, but for an `UnsupportedOperationException`: the Testing Tool can't do that, so the wait ends at the first attempt, without a `Waited` line. Either way, the failure names the error its last attempt threw in its `Cause` line ([ADR 0017](../adr/0017-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md)).
+**What can't pass by waiting** *(unreleased)*. An attempt that throws counts as "not yet" and is tried again until the timeout, but for an `UnsupportedOperationException`: the Testing Tool can't do that, so the wait ends at the first attempt, without a `Waited` line. Either way, the failure names the error its last attempt threw in its `Cause` line ([ADR 0019](../adr/0019-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md)).
 
 ## Background work
 

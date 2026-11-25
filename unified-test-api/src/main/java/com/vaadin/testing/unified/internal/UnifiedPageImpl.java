@@ -57,6 +57,7 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public void navigate(Class<? extends Component> view) {
+        run.steps().routeUsed(view);
         record(() -> Phrases.open(view, null), () -> {
             requireNoRouteParameters(view);
             run.session().navigate(view);
@@ -81,11 +82,13 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public <T, C extends Component & HasUrlParameter<T>> void navigate(Class<C> view, T parameter) {
+        run.steps().routeUsed(view);
         record(() -> Phrases.open(view, parameter), () -> run.session().navigate(view, parameter));
     }
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
+        run.steps().routeUsed(view);
         record(() -> Phrases.open(view, named(parameters, QueryParameters.empty())),
                 () -> run.session().navigate(view, parameters));
     }
@@ -97,6 +100,7 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        run.steps().routeUsed(view);
         record(() -> Phrases.open(view, named(parameters, query)),
                 () -> run.session().navigate(view, parameters, query));
     }

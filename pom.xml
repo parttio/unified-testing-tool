@@ -55,6 +55,7 @@
         <vaadin.version>25.3.5</vaadin.version>
         <spring-boot.version>4.1.1</spring-boot.version>
         <archunit.version>1.5.1</archunit.version>
+        <classgraph.version>4.8.184</classgraph.version>
     </properties>
 
     <dependencyManagement>
@@ -85,6 +86,12 @@
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit</artifactId>
                 <version>${archunit.version}</version>
+            </dependency>
+            <!-- reads the application's classes for a Template's tag (ADR 0018); Browserless brings the same -->
+            <dependency>
+                <groupId>io.github.classgraph</groupId>
+                <artifactId>classgraph</artifactId>
+                <version>${classgraph.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

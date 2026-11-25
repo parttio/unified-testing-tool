@@ -8,4 +8,4 @@ section: Changed behaviour
   failure names the error its last attempt threw in a new `Cause` line (`Cause  UnsupportedOperationException: …`),
   and `user-steps.json` has it as `failure.cause`. The Findable View ends with `Not listed: link (…)` for a kind whose
   lookup threw, instead of leaving it out. The same on every Testing Tool
-  ([ADR 0017](../adr/0017-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md)).
+  ([ADR 0019](../adr/0019-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md)).
