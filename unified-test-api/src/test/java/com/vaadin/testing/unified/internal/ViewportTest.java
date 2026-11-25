@@ -155,4 +155,56 @@ class ViewportTest {
         assertEquals("settle", calls.get(set + 1));
         assertTrue(System.nanoTime() - start >= 300_000_000L);
     }
+
+    // ---------------------------------------------------------------- a Testing Tool that can't
+
+    static final String CANT = "Viewport control needs Firefox 132 or later, this is 128";
+
+    @Test
+    void onTheDefaultViewportATestThatCantHaveItRunsWithAWarning() throws Exception {
+        session.cannotSetViewport = CANT;
+        StepRecorder steps = new StepRecorder();
+
+        TestLifecycle.OpenTest test = lifecycle("selenium", Map.of()).open(context(Plain.class), steps);
+
+        assertEquals(java.util.Optional.empty(), test.skipReason());
+        assertEquals(List.of("unified WARN: Runs at the browser's own size, not at 1280 × 720: " + CANT),
+                steps.logsBeforeFirstEntry().stream().map(StepRecorder.LogLine::text).toList());
+    }
+
+    @Test
+    void aTestThatNeedsItsViewportIsSkippedWhenTheTestingToolCantSetIt() throws Exception {
+        session.cannotSetViewport = CANT;
+
+        TestLifecycle.OpenTest onAPhone = lifecycle("selenium", Map.of()).open(context(OnAPhone.class),
+                new StepRecorder());
+
+        assertEquals(java.util.Optional.of("Can't set the Viewport phone 375 × 667 exactly: " + CANT),
+                onAPhone.skipReason());
+    }
+
+    @Test
+    void aRunsViewportIsNeededTooSoAViewportComparisonNeverComparesTheWrongSize() throws Exception {
+        session.cannotSetViewport = CANT;
+
+        TestLifecycle.OpenTest test = lifecycle("selenium", Map.of(Settings.VIEWPORT, "phone:375x667"))
+                .open(context(Plain.class), new StepRecorder());
+
+        assertEquals(java.util.Optional.of("Can't set the Viewport phone 375 × 667 exactly: " + CANT),
+                test.skipReason());
+    }
+
+    @Test
+    void settingAViewportTheTestingToolCantSetFailsThatUserStep() throws Exception {
+        StepRecorder steps = new StepRecorder();
+        com.vaadin.testing.unified.UnifiedPage page = lifecycle("selenium", Map.of()).open(context(Plain.class), steps)
+                .page();
+        session.cannotSetViewport = CANT;
+
+        UnsupportedOperationException e = org.junit.jupiter.api.Assertions.assertThrows(
+                UnsupportedOperationException.class, () -> page.setViewport(375, 667));
+
+        assertEquals(CANT, e.getMessage());
+        assertEquals(StepRecorder.Status.FAILED, ((StepRecorder.Step) steps.entries().get(0)).status());
+    }
 }

@@ -46,6 +46,8 @@ class TestLifecycleTest {
         List<Path> evidence;
         IOException evidenceFailure;
         boolean traces;
+        /** Why this Testing Tool can't set a Viewport; null when it can. */
+        String cannotSetViewport;
 
         AdapterSession proxy() {
             return (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -64,6 +66,12 @@ class TestLifecycleTest {
                             case "testEnded" -> traces ? List.of(((Path) args[0]).resolve("trace.zip")) : List.of();
                             case "tracesSteps" -> traces;
                             case "unwrap", "queryParameter" -> Optional.empty();
+                            case "setViewport" -> {
+                                if (cannotSetViewport != null) {
+                                    throw new UnsupportedOperationException(cannotSetViewport);
+                                }
+                                yield null;
+                            }
                             case "find" -> List.of();
                             // another window records into the same list
                             case "openWindow", "openAsUser" -> proxy;
