@@ -8,9 +8,22 @@
  *       "appLayouts": [...], "menuBars": [...], "subject": {"box": ..., "reach": ...}}, as a JSON string: matches per target, in document order, outside
  *       shadow roots, as find() searches.
  */
-(input) => {
+async (input) => {
   const [argument, subject] = Array.isArray(input) ? input : [input, null];
   const { targets } = JSON.parse(argument);
+
+  // never measure while AppLayout's drawer slides: wait for its animations, at most a second (#491). Playwright's
+  // evaluate and WebDriver's Execute Script both await the promise this function returns.
+  const DRAWER_PARTS = '[part~="drawer"], [part~="backdrop"]';
+  const drawerAnimations = () => Array.from(document.querySelectorAll('vaadin-app-layout'))
+      .flatMap((layout) => Array.from(layout.shadowRoot ? layout.shadowRoot.querySelectorAll(DRAWER_PARTS) : []))
+      .flatMap((part) => part.getAnimations());
+  const running = drawerAnimations();
+  if (running.length) {
+    await Promise.race([Promise.all(running.map((a) => a.finished.catch(() => null))),
+        new Promise((done) => setTimeout(done, 1000))]);
+  }
+  const animating = drawerAnimations().some((a) => a.playState === 'running');
   const round = (n) => Math.round(n * 10) / 10;
 
 
@@ -205,6 +218,9 @@
     if (!hit || reaches(hit, element)) {
       return null;
     }
+    if (inAppLayoutDrawer(hit)) {
+      return { by: APP_LAYOUT_DRAWER };
+    }
     const match = matchedAround(hit, false);
     if (match) {
       const at = matchedAt.get(match);
@@ -213,11 +229,49 @@
     return { by: describe(hit) };
   };
 
+  // Vaadin's own disclosures, named the same way everywhere (#491): AppLayout's drawer and MenuBar's overflow menu
+  const APP_LAYOUT_DRAWER = 'the AppLayout drawer';
+  const MENU_BAR_OVERFLOW = 'the MenuBar overflow';
+
+  // whether n is in an AppLayout's drawer: its drawer or backdrop part, or content slotted into the drawer
+  const inAppLayoutDrawer = (n) => {
+    for (; n; n = flatParent(n)) {
+      if (n.getAttribute && n.getAttribute('slot') === 'drawer' && n.parentElement
+          && n.parentElement.tagName.toLowerCase() === 'vaadin-app-layout') {
+        return true;
+      }
+      const root = n.getRootNode && n.getRootNode();
+      if (root instanceof ShadowRoot && root.host.tagName.toLowerCase() === 'vaadin-app-layout' && n.matches
+          && n.matches(DRAWER_PARTS)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // why a hidden element is hidden, when Vaadin hides it on purpose: in a closed overlay drawer, or collapsed
+  // into MenuBar's overflow button (inline visibility: hidden on the button, as Vaadin's MenuBar does)
+  const hiddenIn = (element) => {
+    if (inAppLayoutDrawer(element)) {
+      return APP_LAYOUT_DRAWER;
+    }
+    for (let n = element; n; n = flatParent(n)) {
+      if (n.tagName && n.tagName.toLowerCase() === 'vaadin-menu-bar-button' && n.style.visibility === 'hidden') {
+        return MENU_BAR_OVERFLOW;
+      }
+    }
+    return null;
+  };
+
   const measure = (element) => {
     const r = element.getBoundingClientRect();
     const match = { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
     if (!element.checkVisibility({ visibilityProperty: true })) {
       match.reach = 'hidden';
+      const why = hiddenIn(element);
+      if (why) {
+        match.by = why;
+      }
       return match;
     }
     const x = r.left + r.width / 2;
@@ -292,6 +346,9 @@
     }
   }));
   const result = { findings, matches, appLayouts: [], menuBars: [] };
+  if (animating) {
+    result.animating = true;
+  }
   if (subject) {
     result.subject = measure(subject);
   }
