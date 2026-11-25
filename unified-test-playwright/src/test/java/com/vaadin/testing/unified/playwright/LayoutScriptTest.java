@@ -113,6 +113,25 @@ class LayoutScriptTest {
                 result.getAsJsonArray("findings").toString());
     }
 
+    /** A custom element whose shadow root holds {@code inner}, defined before it is used. */
+    private static String component(String tag, String inner) {
+        return "<script>customElements.define('" + tag + "', class extends HTMLElement { constructor() { super(); "
+                + "this.attachShadow({mode: 'open'}).innerHTML = `" + inner + "`; } });</script>";
+    }
+
+    @Test
+    void aScrollerInAShadowRootIsNamedByItsHostAndPart() {
+        JsonObject result = measure(component("x-layout", "<div part='content' style='overflow-x:auto;width:300px'>"
+                + "<div style='width:500px;height:20px'>x</div></div>")
+                + component("x-old-layout", "<div content style='overflow-x:auto;width:300px'>"
+                + "<div style='width:400px;height:20px'>x</div></div>")
+                + "<x-layout></x-layout><x-old-layout></x-old-layout>");
+
+        assertEquals("[{\"kind\":\"scroll\",\"container\":\"x-layout [part=content]\",\"by\":200},"
+                + "{\"kind\":\"scroll\",\"container\":\"x-old-layout [content]\",\"by\":100}]",
+                result.getAsJsonArray("findings").toString());
+    }
+
     /** x, y, width of a box, rounded, and 0 for the height so fonts don't matter. */
     private static String roundedXyW(JsonObject match) {
         JsonArray box = match.getAsJsonArray("box");

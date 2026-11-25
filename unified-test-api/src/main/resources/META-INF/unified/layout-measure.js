@@ -50,8 +50,14 @@
 
   // how a finding names an element: its tag and id; in a shadow root, its host and its part
   const describe = (e) => {
-    const own = e.tagName.toLowerCase() + (e.id ? '#' + e.id : '');
-    return own;
+    const root = e.getRootNode();
+    if (root instanceof ShadowRoot) {
+      const part = e.getAttribute('part');
+      const attribute = part ? '[part=' + part + ']'
+          : e.attributes.length ? '[' + e.attributes[0].name + ']' : e.tagName.toLowerCase();
+      return root.host.tagName.toLowerCase() + ' ' + attribute;
+    }
+    return e.tagName.toLowerCase() + (e.id ? '#' + e.id : '');
   };
 
   // sideways scroll of a container: something a user must scroll sideways in
