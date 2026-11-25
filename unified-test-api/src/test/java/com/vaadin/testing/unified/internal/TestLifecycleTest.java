@@ -46,6 +46,8 @@ class TestLifecycleTest {
         List<Path> evidence;
         IOException evidenceFailure;
         boolean traces;
+        /** Why this Testing Tool can't set a Viewport; null when it can. */
+        String cannotSetViewport;
 
         AdapterSession proxy() {
             return (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -64,7 +66,15 @@ class TestLifecycleTest {
                             case "testEnded" -> traces ? List.of(((Path) args[0]).resolve("trace.zip")) : List.of();
                             case "tracesSteps" -> traces;
                             case "unwrap", "queryParameter" -> Optional.empty();
+                            case "setViewport" -> {
+                                if (cannotSetViewport != null) {
+                                    throw new UnsupportedOperationException(cannotSetViewport);
+                                }
+                                yield null;
+                            }
                             case "find" -> List.of();
+                            // another window records into the same list
+                            case "openWindow", "openAsUser" -> proxy;
                             case "isAt" -> false;
                             default -> null;
                         };
@@ -193,7 +203,7 @@ class TestLifecycleTest {
 
         assertEquals(List.of(), test.close(null, SAVES));
         // the console is read after each User Step, and once more when the test ends
-        assertEquals(List.of("tracesSteps", "navigate[profile]", "consoleErrors", "consoleErrors",
+        assertEquals(List.of("setViewport[1280 × 720]", "tracesSteps", "navigate[profile]", "consoleErrors", "consoleErrors",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", false]", "close"), session.calls);
         // a passing test still gets its User Steps report
         assertTrue(Files.exists(evidenceDir.resolve("ProfileTest").resolve("saves").resolve("user-steps.txt")));
@@ -221,7 +231,7 @@ class TestLifecycleTest {
         assertTrue(Files.readString(saves.resolve("user-steps.json"))
                 .contains("\"evidence\": [\n      \"failure.png\",\n      \"failure.view.txt\"\n    ]"),
                 Files.readString(saves.resolve("user-steps.json")));
-        assertEquals(List.of("consoleErrors", "writeFailureEvidence[" + saves + ", failure, null]",
+        assertEquals(List.of("setViewport[1280 × 720]", "consoleErrors", "writeFailureEvidence[" + saves + ", failure, null]",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"),
                 session.calls.stream().filter(call -> !call.startsWith("find[") && !call.startsWith("findTemplates[")
                         && !call.equals("currentPath")

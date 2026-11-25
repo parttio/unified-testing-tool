@@ -409,6 +409,24 @@ final class SeleniumSession implements AdapterSession {
         waitForVaadin();
     }
 
+    /**
+     * Exact, for this tab only, any size, through WebDriver BiDi's {@code browsingContext.setViewport}: the page sees
+     * an emulated Viewport inside the browser's window (ADR 0011). A window handle is its BiDi browsing context.
+     */
+    @Override
+    public void setViewport(com.vaadin.testing.unified.ViewportSize size) {
+        Object raw = driver().getWrappedDriver();
+        if (!(raw instanceof org.openqa.selenium.chrome.ChromeDriver chrome)) {
+            throw new UnsupportedOperationException("The Selenium adapter sets exact Viewports on Chrome only, so far"
+                    + " (Firefox: #490)");
+        }
+        if (!(chrome.getCapabilities().getCapability("webSocketUrl") instanceof String)) {
+            throw new UnsupportedOperationException("This Chrome has no WebDriver BiDi (webSocketUrl)");
+        }
+        new org.openqa.selenium.bidi.browsingcontext.BrowsingContext(chrome, handle)
+                .setViewport(size.width(), size.height());
+    }
+
     @Override
     public void screenshot(Path file) {
         try {

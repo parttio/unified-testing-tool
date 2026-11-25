@@ -133,6 +133,16 @@ public interface AdapterSession extends AutoCloseable {
         return List.of();
     }
 
+    /**
+     * Sets this page's Viewport exactly, and returns once the browser has applied it, without waiting for the
+     * server (ADR 0011). The core calls it as soon as a page opens, before its first navigation, and for
+     * {@code UnifiedPage.setViewport}. A Testing Tool that can't set an exact size throws
+     * {@link UnsupportedOperationException} saying why, as the default does: the core then skips, warns or fails.
+     */
+    default void setViewport(com.vaadin.testing.unified.ViewportSize size) {
+        throw new UnsupportedOperationException(getClass().getSimpleName() + " can't set a Viewport");
+    }
+
     /** Another window of the same user and session. This session closes it when it closes. */
     AdapterSession openWindow();
 

@@ -7,6 +7,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteParameters;
 import com.vaadin.testing.unified.internal.failures.FailureParts;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
 import com.vaadin.testing.unified.component.UnifiedTemplate;
@@ -26,9 +27,12 @@ public final class UnifiedPageImpl implements UnifiedPage {
     static final String WAIT_UNTIL = "waitUntil";
 
     private final TestRun run;
+    /** This window's Viewport: the test's until {@link #setViewport} changes it. */
+    private ViewportSize viewport;
 
     public UnifiedPageImpl(TestRun run) {
         this.run = run;
+        this.viewport = run.viewport();
     }
 
     public TestRun run() {
@@ -176,6 +180,33 @@ public final class UnifiedPageImpl implements UnifiedPage {
     @Override
     public boolean hasRealBrowser() {
         return run.tool().hasRealBrowser();
+    }
+
+    @Override
+    public void setViewport(ViewportSize size) {
+        record(() -> Phrases.page("set", "set viewport to " + size), () -> {
+            run.requireBrowser("setViewport");
+            run.session().setViewport(size);
+            pause(RESIZE_HEARD_AFTER);
+            run.session().settle();
+            viewport = size;
+        });
+    }
+
+    @Override
+    public ViewportSize viewport() {
+        return viewport;
+    }
+
+    /** Flow sends a window resize to the server this long after the browser's last resize event (debounced). */
+    private static final java.time.Duration RESIZE_HEARD_AFTER = java.time.Duration.ofMillis(300);
+
+    private static void pause(java.time.Duration duration) {
+        try {
+            Thread.sleep(duration.toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override

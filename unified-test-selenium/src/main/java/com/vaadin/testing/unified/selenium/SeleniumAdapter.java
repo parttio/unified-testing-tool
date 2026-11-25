@@ -90,6 +90,8 @@ public final class SeleniumAdapter implements TestingToolAdapter {
         org.openqa.selenium.logging.LoggingPreferences logs = new org.openqa.selenium.logging.LoggingPreferences();
         logs.enable(org.openqa.selenium.logging.LogType.BROWSER, java.util.logging.Level.SEVERE);
         options.setCapability("goog:loggingPrefs", logs);
+        // WebDriver BiDi, for an exact Viewport per tab (browsingContext.setViewport, ADR 0011)
+        options.setCapability("webSocketUrl", true);
         executable.ifPresent(options::setBinary);
         return new ChromeDriver(options);
     }

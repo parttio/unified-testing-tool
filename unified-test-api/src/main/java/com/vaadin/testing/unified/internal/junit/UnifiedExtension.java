@@ -4,6 +4,7 @@ import com.vaadin.testing.unified.internal.Settings;
 import com.vaadin.testing.unified.internal.TestLifecycle;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.UnifiedPage;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -12,6 +13,9 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.InvocationInterceptor;
+import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
+import org.opentest4j.TestAbortedException;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 
@@ -20,7 +24,8 @@ import org.junit.jupiter.api.extension.ParameterResolver;
  * {@link TestLifecycle}, which skips tests whose Capabilities the run lacks, opens the test's
  * {@link UnifiedPage} for injection, and after the test reports its User Steps and closes it.
  */
-public final class UnifiedExtension implements ExecutionCondition, ParameterResolver, AfterEachCallback {
+public final class UnifiedExtension implements ExecutionCondition, ParameterResolver, AfterEachCallback,
+        InvocationInterceptor {
 
     private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace.create(UnifiedExtension.class);
     private static final String OPEN_TEST = "open-test";
@@ -54,6 +59,32 @@ public final class UnifiedExtension implements ExecutionCondition, ParameterReso
                 context.getTestMethod().isPresent() && context.getTestClass().isPresent() ? testId(context) : null);
         context.getStore(NAMESPACE).put(OPEN_TEST, test);
         return test.page();
+    }
+
+    /**
+     * A test whose page opened but which must not run, such as one whose Viewport the Testing Tool can't set, is
+     * skipped here, before its body: JUnit reports it aborted with the core's reason, and {@link #afterEach} closes it.
+     */
+    @Override
+    public void interceptTestMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext context) throws Throwable {
+        skipIfAsked(invocation, context);
+        invocation.proceed();
+    }
+
+    @Override
+    public void interceptTestTemplateMethod(Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext, ExtensionContext context) throws Throwable {
+        skipIfAsked(invocation, context);
+        invocation.proceed();
+    }
+
+    private static void skipIfAsked(Invocation<Void> invocation, ExtensionContext context) {
+        TestLifecycle.OpenTest test = context.getStore(NAMESPACE).get(OPEN_TEST, TestLifecycle.OpenTest.class);
+        if (test != null && test.skipReason().isPresent()) {
+            invocation.skip();
+            throw new TestAbortedException(test.skipReason().get());
+        }
     }
 
     @Override

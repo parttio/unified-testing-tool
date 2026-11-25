@@ -8,6 +8,7 @@ Decided in [#11](https://github.com/parttio/unified-testing-tool/issues/11) and 
 |---|---|---|
 | `@RequiresBrowser` | real browser: CSS, layout, client JS, real focus and keyboard, screenshots | Browserless |
 | `@RequiresTestingTool(X)` | uses a tool-specific Escape Hatch | every tool except X |
+| `@Viewport(width, height, name)` | runs at this exact Viewport ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)); implies `@RequiresBrowser` | Browserless; also skipped, with the Testing Tool's reason, when its page opens and the Testing Tool can't set an exact Viewport |
 
 ```mermaid
 flowchart TD
@@ -35,6 +36,8 @@ void looksRight(UnifiedPage page) {
 ```
 
 Network interception, tracing and browser contexts: Escape Hatch only.
+
+`page.setViewport(width, height)` resizes the Viewport mid-test, as a User Step that waits until the server has heard of it; `page.viewport()` reads it. The size a test starts at is `@Viewport` or the run's `vaadin.testing.viewport` ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)).
 
 Entering a [Template](04-locating.md#templates) that renders its content in the browser (a web component, not a `LitTemplate`'s `@Id` components) needs `@RequiresBrowser`: Browserless has no such content.
 
@@ -103,3 +106,4 @@ Written into the test's evidence directory, `<vaadin.testing.evidence-dir>/<test
 - Report missing Capabilities as skipped tests.
 - Unsupported calls without the annotation fail with a message naming it.
 - Capture failure evidence as in the table, for the failed User Step.
+- Set an exact Viewport in `AdapterSession.setViewport(ViewportSize)`, for that page only, returning once the browser has applied it; the core calls it as soon as each page opens and for `page.setViewport`. A Testing Tool that can't set it exactly throws `UnsupportedOperationException` saying why (the default), never sizes approximately.

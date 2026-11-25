@@ -5,6 +5,8 @@ import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.Viewport;
+import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.internal.logs.ServerLogs;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
@@ -161,6 +163,22 @@ public final class TestLifecycle {
         steps.applicationPackages(ApplicationPackages.of(context));
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
+        ViewportSize viewport = viewport(context);
+        String skipReason = null;
+        if (tool.hasRealBrowser()) {
+            steps.viewport(viewport, find(context.testMethod().orElse(null), context.testClass().orElse(null),
+                    Viewport.class).isPresent());
+            try {
+                session.setViewport(viewport);
+            } catch (UnsupportedOperationException e) {
+                if (needsItsViewport(context)) {
+                    skipReason = "Can't set the Viewport " + viewport + " exactly: " + e.getMessage();
+                } else {
+                    steps.logged(new StepRecorder.LogLine(UNIFIED, "WARN", null,
+                            "Runs at the browser's own size, not at " + viewport + ": " + e.getMessage(), null));
+                }
+            }
+        }
         steps.session(null, session);
         if (test != null && settings.userStepsSnapshots()) {
             Path snapshots = testEvidenceDir(test).resolve(StepRecorder.SNAPSHOT_DIR);
@@ -169,8 +187,30 @@ public final class TestLifecycle {
         }
         ServerLogs.Listening logs = settings.userStepsServerLog().map(level -> ServerLogs.start(steps, level))
                 .orElse(null);
-        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)),
-                logs);
+        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null, false, viewport)),
+                logs, skipReason);
+    }
+
+    /**
+     * The Viewport the test runs at: its method's {@link Viewport}, else its class's, else the run's
+     * {@code vaadin.testing.viewport}, else 1280 × 720 (ADR 0011).
+     */
+    /** Where the Unified API's own warnings come from, in the reports' log lines. */
+    static final String UNIFIED = "unified";
+
+    /**
+     * Whether the test must run at its Viewport or not at all: one it declares, or the run's, which a Viewport
+     * Comparison compares. Only the implicit 1280 × 720 may be missed, with a warning.
+     */
+    private boolean needsItsViewport(AdapterContext context) {
+        return find(context.testMethod().orElse(null), context.testClass().orElse(null), Viewport.class).isPresent()
+                || settings.get(Settings.VIEWPORT).isPresent();
+    }
+
+    ViewportSize viewport(AdapterContext context) {
+        return find(context.testMethod().orElse(null), context.testClass().orElse(null), Viewport.class)
+                .map(v -> new ViewportSize(v.name(), v.width(), v.height()))
+                .orElseGet(settings::viewport);
     }
 
     /** One open test. Close it exactly once, when the test ends. */
@@ -179,12 +219,23 @@ public final class TestLifecycle {
         private final StepRecorder steps;
         private final UnifiedPage page;
         private final ServerLogs.Listening logs;
+        private final String skipReason;
 
-        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page, ServerLogs.Listening logs) {
+        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page, ServerLogs.Listening logs,
+                String skipReason) {
             this.session = session;
             this.steps = steps;
             this.page = page;
             this.logs = logs;
+            this.skipReason = skipReason;
+        }
+
+        /**
+         * Why the test must not run although its page opened, such as a Viewport the Testing Tool can't set: the Test
+         * Runner integration skips it with this reason before the test's body, and still closes it.
+         */
+        public java.util.Optional<String> skipReason() {
+            return java.util.Optional.ofNullable(skipReason);
         }
 
         public UnifiedPage page() {

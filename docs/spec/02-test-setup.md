@@ -28,6 +28,7 @@ One Testing Tool per **run**. Test code never names it.
 | `vaadin.testing.tool` | `browserless`, `playwright`, `selenium` | `browserless` |
 | `vaadin.testing.base-url` | URL of the running app (browser Testing Tools) | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | Auto-Wait and assertion timeout | `10s` |
+| `vaadin.testing.viewport` | the Viewport of every test without `@Viewport`, `[name:]WIDTHxHEIGHT` such as `phone:375x667` (browser Testing Tools) | `1280x720` |
 
 On JUnit, set them as JUnit configuration parameters, in `src/test/resources/junit-platform.properties`, or as system properties with `-D` from Maven, Gradle or the IDE.
 

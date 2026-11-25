@@ -201,6 +201,7 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `testMethod` | string | `editsAPersonInTheDialog` |
 | `displayName` | string | the scenario: `@DisplayName`, or the method name |
 | `tool` | string | `browserless`, `playwright` or `selenium` |
+| `viewport` | object, optional | in a browser, the Viewport the test ran at: `name` (string, empty without one), `width`, `height` (numbers, CSS pixels), `fixed` (boolean: the test declares it with `@Viewport`) |
 | `status` | string | `passed`, `failed` or `aborted` (an assumption failed) |
 | `startedAt` | string | ISO-8601 instant, UTC |
 | `durationMs` | number | from injecting the `UnifiedPage` to the end of the test |

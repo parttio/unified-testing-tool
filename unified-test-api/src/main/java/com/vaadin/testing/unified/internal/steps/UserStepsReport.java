@@ -209,6 +209,14 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         json.field("testMethod", testMethod);
         json.field("displayName", steps.maskScenario(displayName));
         json.field("tool", tool);
+        if (steps.viewport() != null) {
+            json.key("viewport").open('{');
+            json.field("name", steps.viewport().name());
+            json.field("width", steps.viewport().width());
+            json.field("height", steps.viewport().height());
+            json.bool("fixed", steps.viewportFixed());
+            json.close('}');
+        }
         json.field("status", status);
         json.field("startedAt", steps.startedAt().toString());
         json.field("durationMs", steps.durationNanos() / 1_000_000);
@@ -423,6 +431,12 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         }
 
         void field(String key, long value) {
+            key(key);
+            beforeValue();
+            sb.append(value);
+        }
+
+        void bool(String key, boolean value) {
             key(key);
             beforeValue();
             sb.append(value);

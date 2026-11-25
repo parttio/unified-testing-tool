@@ -16,6 +16,7 @@ Charted on the map [Responsive: run Unified UI Tests at chosen viewport sizes an
 - **Setting the size** ([How does a Unified UI Test set the viewport?](https://github.com/parttio/unified-testing-tool/issues/477)):
   - `@Viewport(width, height, name)` on a class or method gives one size, set before the page opens. It is not repeatable, and it implies the browser Capability.
   - `page.setViewport(w, h)` resizes one page mid-test. It is a User Step, and it Auto-Waits Vaadin's 300 ms resize debounce, then server idle. `page.viewport()` reads the size.
+  - Sizes are values of the public record `ViewportSize(name, width, height)`, returned by `page.viewport()`. The annotation keeps the glossary word `@Viewport`, and Java can't have both in one package. _Amended 2026-11-25 in the Viewport issue (#489)._
   - The size is exactly 1280 × 720 by default on every browser Testing Tool, or the run-wide `vaadin.testing.viewport=[name:]WxH`. Precedence: method `@Viewport` > class `@Viewport` > `vaadin.testing.viewport` > 1280 × 720.
   - New windows start at the declared size, and every test starts at its own size.
   - Pixels only, with no shipped presets. The screen size is not promised.
@@ -34,7 +35,7 @@ Charted on the map [Responsive: run Unified UI Tests at chosen viewport sizes an
   - It writes `viewport-comparison.html`: a matrix of scenarios against Viewports, a detail panel per cell, and a User Steps toggle. It also writes `viewport-comparison.json`, and prints the matrix as Markdown for the GitHub job summary. All of it is report-only.
   - A test with its own `@Viewport` is not compared.
 - **Adapter SPI** ([What does the adapter SPI gain for Viewports and layout checks?](https://github.com/parttio/unified-testing-tool/issues/485)):
-  - `AdapterSession` gains only `setViewport(Viewport)` and `String measureLayout(List<String> selectors)`. The second runs the one layout script the core ships, given the Wrapper types' selectors.
+  - `AdapterSession` gains only `setViewport(ViewportSize)` and `String measureLayout(List<String> selectors)`. The second runs the one layout script the core ships, given the Wrapper types' selectors.
   - Both default to throwing. There is **no generic JavaScript through the SPI**: running scripts is browser-only and can never work on Browserless.
   - The core owns everything else: which size and when (right after every page opens), the debounce wait, skip/warn/fail, turning the script's facts into Findable View lines, and `page.viewport()`.
 - **Reach** ([Does the Findable View show each component's reach at the current Viewport?](https://github.com/parttio/unified-testing-tool/issues/487)):

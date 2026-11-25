@@ -141,6 +141,21 @@ public class UserStepsReportTest {
     }
 
     @Test
+    void jsonGivesTheViewportTheTestRanAt() throws Exception {
+        fake.steps.viewport(new com.vaadin.testing.unified.ViewportSize("phone", 375, 667), true);
+        fake.steps.finish();
+        JsonNode viewport = new ObjectMapper().readTree(new UserStepsReport("demo.EditPersonTest", "editsAPerson",
+                "Editing a person", "playwright", "passed", null, fake.steps).json()).get("viewport");
+
+        assertEquals("{\"name\":\"phone\",\"width\":375,\"height\":667,\"fixed\":true}", viewport.toString());
+    }
+
+    @Test
+    void jsonHasNoViewportWithoutABrowser() throws Exception {
+        assertEquals(null, new ObjectMapper().readTree(report(runFailingScenario()).json()).get("viewport"));
+    }
+
+    @Test
     void jsonFollowsSchemaVersion1() throws Exception {
         AssertionError failure = runFailingScenario();
         JsonNode json = new ObjectMapper().readTree(report(failure).json());
