@@ -94,6 +94,24 @@ public class FindableViewTest {
     }
 
     @Test
+    void withLayoutChecksAMeasuredStepListsThePagesComponentsWithTheirReach() throws Exception {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.steps.layoutChecks(false, null);
+        browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Menu", "visible", "false");
+        browser.reaches.put("vaadin-button", List.of("behind#vaadin-button@1", "hidden:the AppLayout drawer"));
+
+        browser.page.navigate("people");
+
+        browser.steps.finish();
+        tools.jackson.databind.JsonNode components = new tools.jackson.databind.ObjectMapper().readTree(
+                new UserStepsReport("demo.PeopleTest", "opens", "opens", "playwright", "passed", null, browser.steps)
+                        .json()).get("steps").get(0).get("layout").get("components");
+        assertEquals("[{\"line\":\"button “Save”\",\"reach\":\"behind\",\"by\":\"button “Menu”\"},"
+                + "{\"line\":\"button “Menu”\",\"reach\":\"hidden\",\"by\":\"the AppLayout drawer\"}]",
+                components.toString());
+    }
+
+    @Test
     void eachComponentWithItsNameStateAndLookup() {
         fake.add("vaadin-text-field", "label", "Name", "value", "Alan Turing")
                 .add("vaadin-text-field", "label", "Email")

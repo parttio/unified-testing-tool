@@ -202,8 +202,22 @@ public final class StepRecorder {
      * @param point the measurement's number in the test, from 1
      * @param findings the Layout Findings
      * @param screenshot its screenshot, relative to the test's evidence directory; null without one
+     * @param components the page's components then, with their Reach: what a Viewport Comparison compares
      */
-    public record Layout(int point, List<LayoutFinding> findings, String screenshot) {}
+    public record Layout(int point, List<LayoutFinding> findings, String screenshot, List<LayoutComponent> components) {
+        public Layout(int point, List<LayoutFinding> findings, String screenshot) {
+            this(point, findings, screenshot, List.of());
+        }
+    }
+
+    /**
+     * One component of a measured page, as its Findable View line names it.
+     *
+     * @param line its kind and name: {@code button “Save”}
+     * @param reach {@code visible}, {@code after scroll}, {@code clipped}, {@code behind} or {@code hidden}
+     * @param by what clips, covers or hides it; null otherwise
+     */
+    public record LayoutComponent(String line, String reach, String by) {}
 
     /**
      * One Layout Finding, as the reports show it.

@@ -242,43 +242,50 @@ public final class FindableView {
 
     // ---------------------------------------------------------------- reading
 
+    /** The components of every Wrapper type in the scope; the types whose lookup threw go to {@code notListed}. */
+    private static List<OfType> listTypes(TestRun run, UnifiedElement scope, boolean inTemplate, List<String> notListed,
+            Set<String> listed) {
+        List<OfType> all = new ArrayList<>();
+        Set<Class<?>> types = new LinkedHashSet<>(BUILT_IN);
+        types.addAll(run.steps().wrapperTypes());
+        for (Class<?> type : types) {
+            UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
+            if (annotation == null || !listed.add(Wrappers.tagOf(annotation.value(), annotation.tag()) + " "
+                    + annotation.selector().strip())) {
+                continue; // a custom Wrapper of the same components as one listed already
+            }
+            try {
+                OfType found = ofType(run, type, annotation, scope, inTemplate);
+                if (found != null) {
+                    all.add(found);
+                }
+            } catch (RuntimeException | AssertionError e) {
+                notListed.add(notListed(type, e));
+            }
+        }
+        for (Class<?> type : CLICKABLE_PLAIN) {
+            UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
+            if (types.contains(type) || !listed.add(Wrappers.tagOf(annotation.value(), annotation.tag()) + " "
+                    + annotation.selector().strip())) {
+                continue; // the test looked this type up: listed in full above
+            }
+            try {
+                OfType found = clickable(run, type, annotation, scope, inTemplate);
+                if (found != null) {
+                    all.add(found);
+                }
+            } catch (RuntimeException | AssertionError e) {
+                notListed.add(notListed(type, e));
+            }
+        }
+        return all;
+    }
+
     static Listing components(TestRun run, UnifiedElement scope, boolean inTemplate, String prefix) {
         return run.steps().unrecorded(() -> {
-            List<OfType> all = new ArrayList<>();
             List<String> notListed = new ArrayList<>();
             Set<String> listed = new HashSet<>();
-            Set<Class<?>> types = new LinkedHashSet<>(BUILT_IN);
-            types.addAll(run.steps().wrapperTypes());
-            for (Class<?> type : types) {
-                UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
-                if (annotation == null || !listed.add(Wrappers.tagOf(annotation.value(), annotation.tag()) + " "
-                        + annotation.selector().strip())) {
-                    continue; // a custom Wrapper of the same components as one listed already
-                }
-                try {
-                    OfType found = ofType(run, type, annotation, scope, inTemplate);
-                    if (found != null) {
-                        all.add(found);
-                    }
-                } catch (RuntimeException | AssertionError e) {
-                    notListed.add(notListed(type, e));
-                }
-            }
-            for (Class<?> type : CLICKABLE_PLAIN) {
-                UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
-                if (types.contains(type) || !listed.add(Wrappers.tagOf(annotation.value(), annotation.tag()) + " "
-                        + annotation.selector().strip())) {
-                    continue; // the test looked this type up: listed in full above
-                }
-                try {
-                    OfType found = clickable(run, type, annotation, scope, inTemplate);
-                    if (found != null) {
-                        all.add(found);
-                    }
-                } catch (RuntimeException | AssertionError e) {
-                    notListed.add(notListed(type, e));
-                }
-            }
+            List<OfType> all = listTypes(run, scope, inTemplate, notListed, listed);
             List<Container> containers = new ArrayList<>();
             Map<Read, String> lookups = new IdentityHashMap<>();
             for (OfType t : all) {
@@ -535,24 +542,60 @@ public final class FindableView {
      * read only in part, gets none: a read never fails the view.
      */
     private static Map<Read, String> reach(TestRun run, List<OfType> all) {
-        List<OfType> measured = all.stream().filter(t -> !t.partial()).toList();
+        Map<Read, String> words = new IdentityHashMap<>();
+        rawReach(run, all).forEach((r, reach) -> {
+            String word = switch (reach.reach()) {
+                case "clipped" -> "clipped";
+                case "behind" -> reach.by() == null ? "behind" : "behind " + reach.by();
+                case "hidden" -> reach.by() == null ? null : "hidden in " + reach.by();
+                default -> null;
+            };
+            if (word != null) {
+                words.put(r, word);
+            }
+        });
+        return words;
+    }
+
+    /**
+     * Each component's Reach as the layout script reports it, with a cover that is itself listed named as its line
+     * names it ({@code button “Menu”}); none for a type whose count disagrees, or that was read only in part.
+     */
+    private static Map<Read, LayoutMeasurement.Reach> rawReach(TestRun run, List<OfType> all) {
+        List<OfType> measured = measured(all);
         List<List<LayoutMeasurement.Reach>> matches;
         try {
-            matches = LayoutMeasurement.matches(run, measured.stream().map(t -> com.vaadin.testing.unified.spi
-                    .LayoutScript.Target.of(BrowserQueries.selector(t.tag(), t.selector()))).toList());
+            matches = LayoutMeasurement.matches(run, targets(measured));
         } catch (RuntimeException e) {
             return Map.of();
         }
-        Map<Read, String> words = new IdentityHashMap<>();
-        // a cover that is itself listed is named as its line names it: "button “Menu”"
-        java.util.function.Function<int[], String> named = at -> {
-            if (at == null || at[0] < 0 || at[0] >= measured.size()) {
-                return null;
-            }
-            OfType t = measured.get(at[0]);
-            return t.reads().stream().filter(r -> r.position() == at[1]).findFirst().map(r -> words(t, r))
-                    .orElse(null);
-        };
+        return rawReach(measured, matches);
+    }
+
+    /** The types the layout script measures: those read in full, in document order. */
+    private static List<OfType> measured(List<OfType> all) {
+        return all.stream().filter(t -> !t.partial()).toList();
+    }
+
+    /** The layout script's targets for these types: each one's own lookup. */
+    private static List<com.vaadin.testing.unified.spi.LayoutScript.Target> targets(List<OfType> measured) {
+        return measured.stream().map(t -> new com.vaadin.testing.unified.spi.LayoutScript.Target(
+                BrowserQueries.selector(t.tag(), t.selector()), LayoutMeasurement.interactive(t.type()))).toList();
+    }
+
+    /** A match of {@code measured}'s target {@code at[0]}, position {@code at[1]}, as its line names it; or null. */
+    private static String named(List<OfType> measured, int target, int position) {
+        if (target < 0 || target >= measured.size()) {
+            return null;
+        }
+        OfType t = measured.get(target);
+        return t.reads().stream().filter(r -> r.position() == position).findFirst().map(r -> words(t, r)).orElse(null);
+    }
+
+    private static Map<Read, LayoutMeasurement.Reach> rawReach(List<OfType> measured,
+            List<List<LayoutMeasurement.Reach>> matches) {
+        java.util.function.Function<int[], String> named = at -> at == null ? null : named(measured, at[0], at[1]);
+        Map<Read, LayoutMeasurement.Reach> reaches = new IdentityHashMap<>();
         for (int k = 0; k < measured.size() && k < matches.size(); k++) {
             OfType t = measured.get(k);
             List<LayoutMeasurement.Reach> list = matches.get(k);
@@ -561,21 +604,52 @@ public final class FindableView {
             }
             for (Read r : t.reads()) {
                 LayoutMeasurement.Reach reach = list.get(r.position());
-                String word = switch (reach.reach()) {
-                    case "clipped" -> "clipped";
-                    case "behind" -> {
-                        String cover = named.apply(reach.byMatch());
-                        yield cover != null ? "behind " + cover : reach.by() == null ? "behind" : "behind " + reach.by();
-                    }
-                    case "hidden" -> reach.by() == null ? null : "hidden in " + reach.by();
-                    default -> null;
-                };
-                if (word != null) {
-                    words.put(r, word);
-                }
+                String cover = named.apply(reach.byMatch());
+                reaches.put(r, cover == null ? reach : new LayoutMeasurement.Reach(reach.reach(), cover, null));
             }
         }
-        return words;
+        return reaches;
+    }
+
+    /**
+     * The page's components with their Reach, for a step the layout checks measured (ADR 0011): what a Viewport
+     * Comparison compares across sizes. In a browser only; empty when nothing can be read.
+     */
+    static List<com.vaadin.testing.unified.internal.steps.StepRecorder.LayoutComponent> measuredComponents(TestRun run) {
+        return measurePoint(run).components();
+    }
+
+    /** A measurement point's findings and components, from one run of the layout script (ADR 0011). */
+    record Point(List<LayoutMeasurement.Finding> findings,
+            List<com.vaadin.testing.unified.internal.steps.StepRecorder.LayoutComponent> components) {}
+
+    /**
+     * Measures the page for the layout checks: the Findable View's types, one run of the layout script for their
+     * findings and Reach, and each finding's components named as their lines name them. Needs a real browser.
+     */
+    static Point measurePoint(TestRun run) {
+        run.requireBrowser("Checking the layout");
+        return run.steps().unrecorded(() -> {
+            List<OfType> all = listTypes(run, null, false, new ArrayList<>(), new HashSet<>());
+            List<OfType> measured = measured(all);
+            String json = run.session().measureLayout(targets(measured), null);
+            List<LayoutMeasurement.Finding> findings = LayoutMeasurement.parse(json, (t, i) -> {
+                String name = t instanceof Number n && i instanceof Number p ? named(measured, n.intValue(),
+                        p.intValue()) : null;
+                return name != null ? name : "a component";
+            }).findings();
+            Map<Read, LayoutMeasurement.Reach> reaches = rawReach(measured, LayoutMeasurement.matches(json));
+            List<com.vaadin.testing.unified.internal.steps.StepRecorder.LayoutComponent> components = new ArrayList<>();
+            for (OfType t : all) {
+                for (Read r : t.reads()) {
+                    LayoutMeasurement.Reach reach = reaches.get(r);
+                    String raw = reach != null ? reach.reach() : r.hidden() ? "hidden" : "visible";
+                    components.add(new com.vaadin.testing.unified.internal.steps.StepRecorder.LayoutComponent(
+                            words(t, r), raw, reach == null ? null : reach.by()));
+                }
+            }
+            return new Point(findings, components);
+        });
     }
 
     /** The kind and name: {@code dialog “Edit person”}. */

@@ -346,6 +346,17 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             json.close('}');
         }
         json.close(']');
+        if (!layout.components().isEmpty()) {
+            json.key("components").open('[');
+            for (StepRecorder.LayoutComponent component : layout.components()) {
+                json.open('{');
+                json.field("line", steps.mask(component.line()));
+                json.field("reach", component.reach());
+                json.optional("by", component.by() == null ? null : steps.mask(component.by()));
+                json.close('}');
+            }
+            json.close(']');
+        }
         json.close('}');
     }
 
