@@ -10,6 +10,9 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | `10s` |
 | `vaadin.testing.viewport` | `1280x720`; `[name:]WIDTHxHEIGHT` such as `phone:375x667`: the exact Viewport of every test without `@Viewport`, in a browser ([Viewports](#viewports)) |
+| `vaadin.testing.layout-checks` | `off`; `on` measures the layout after every navigation, reload and `setViewport`, in a browser, and shows its Layout Findings on that User Step ([Layout](assertions-and-waiting.md#layout)) |
+| `vaadin.testing.layout-findings` | `report`; `fail` fails the User Step that measured a Layout Finding |
+| `vaadin.testing.layout-checks.screenshots` | `off`; `on` keeps a screenshot of the Viewport per measurement, with each finding's box |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 | `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`): whose User Steps go to the CI log |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary |

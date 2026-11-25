@@ -46,6 +46,13 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
     void setViewport(ViewportSize size);
 
     /**
+     * Measures the layout now, as the User Step "check the layout": its Layout Findings show on that step in the
+     * reports, for a moment the automatic layout checks don't measure, such as after opening the drawer (ADR 0011).
+     * With {@code vaadin.testing.layout-findings=fail}, a finding fails the step. Needs {@link RequiresBrowser}.
+     */
+    void checkLayout();
+
+    /**
      * This window's Viewport: the test's ({@link Viewport @Viewport}, the run's {@code vaadin.testing.viewport},
      * else 1280 × 720) until {@link #setViewport(int, int)} changes it.
      */

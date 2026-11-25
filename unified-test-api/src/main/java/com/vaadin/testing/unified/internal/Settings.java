@@ -25,6 +25,12 @@ public final class Settings {
     public static final String USER_STEPS_SERVER_LOG = "vaadin.testing.user-steps.server-log";
     public static final String USER_STEPS_SNAPSHOTS = "vaadin.testing.user-steps.snapshots";
     public static final String VIEWPORT = "vaadin.testing.viewport";
+    public static final String LAYOUT_CHECKS = "vaadin.testing.layout-checks";
+    public static final String LAYOUT_FINDINGS = "vaadin.testing.layout-findings";
+    public static final String LAYOUT_CHECKS_SCREENSHOTS = "vaadin.testing.layout-checks.screenshots";
+
+    /** What a Layout Finding of the automatic layout checks does: shows in the reports, or fails its User Step. */
+    public enum LayoutFindings { REPORT, FAIL }
 
     /** Which tests print their User Steps to stdout, the CI log. */
     public enum UserStepsLog { ALL, FAILED, NONE }
@@ -73,6 +79,36 @@ public final class Settings {
 
     /** The Viewport when neither the test nor the run sets one: the same on every browser Testing Tool. */
     public static final com.vaadin.testing.unified.ViewportSize DEFAULT_VIEWPORT = com.vaadin.testing.unified.ViewportSize.of(1280, 720);
+
+    /**
+     * {@code vaadin.testing.layout-checks}: {@code on} measures the layout after every navigation, Viewport change and
+     * {@code checkLayout()} in a browser (ADR 0011); {@code off} (the default) measures nothing.
+     */
+    public boolean layoutChecks() {
+        return onOff(LAYOUT_CHECKS);
+    }
+
+    /** {@code vaadin.testing.layout-findings}: {@code report} (the default) or {@code fail}. */
+    public LayoutFindings layoutFindings() {
+        return get(LAYOUT_FINDINGS).map(v -> switch (v.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "report" -> LayoutFindings.REPORT;
+            case "fail" -> LayoutFindings.FAIL;
+            default -> throw new IllegalArgumentException(LAYOUT_FINDINGS + ": expected report or fail, got " + v);
+        }).orElse(LayoutFindings.REPORT);
+    }
+
+    /** {@code vaadin.testing.layout-checks.screenshots}: {@code on} keeps a screenshot per measurement; {@code off}. */
+    public boolean layoutChecksScreenshots() {
+        return onOff(LAYOUT_CHECKS_SCREENSHOTS);
+    }
+
+    private boolean onOff(String key) {
+        return get(key).map(v -> switch (v.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "on" -> true;
+            case "off" -> false;
+            default -> throw new IllegalArgumentException(key + ": expected on or off, got " + v);
+        }).orElse(false);
+    }
 
     /** Where failure evidence goes: next to the Surefire reports, so CI uploads it with them. */
     public Path evidenceDir() {

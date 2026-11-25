@@ -39,7 +39,8 @@ async (input) => {
       : getComputedStyle(document.body).overflowX;
   const pageScrolls = pageOverflowX !== 'hidden' && pageOverflowX !== 'clip';
   if (pageScrolls && root.scrollWidth > root.clientWidth + TOLERANCE) {
-    findings.push({ kind: 'scroll', container: 'the page', by: root.scrollWidth - root.clientWidth });
+    findings.push({ kind: 'scroll', container: 'the page', by: root.scrollWidth - root.clientWidth,
+      box: [0, 0, root.clientWidth, root.clientHeight] });
   }
 
   // every element of the document and of each open shadow root, one TreeWalker each (as Lighthouse's
@@ -87,7 +88,9 @@ async (input) => {
     const overflowX = getComputedStyle(e).overflowX;
     if ((overflowX === 'auto' || overflowX === 'scroll') && e.scrollWidth > e.clientWidth + TOLERANCE
         && e.checkVisibility() && !scrollsByDesign(e)) {
-      findings.push({ kind: 'scroll', container: describe(e), by: e.scrollWidth - e.clientWidth });
+      const r = e.getBoundingClientRect();
+      findings.push({ kind: 'scroll', container: describe(e), by: e.scrollWidth - e.clientWidth,
+        box: [round(r.left), round(r.top), round(r.width), round(r.height)] });
     }
   }
 
@@ -299,6 +302,11 @@ async (input) => {
   const elements = targets.map((t) => Array.from(document.querySelectorAll(t.css)));
   elements.forEach((list, target) => list.forEach((e, index) => matchedAt.set(e, { target, index })));
   const matches = elements.map((list) => list.map(measure));
+  matches.forEach((list, target) => list.forEach((m, index) => {
+    if (m.reach === 'clipped') {
+      findings.push({ kind: 'clipped', target, index, by: m.by, box: m.box });
+    }
+  }));
 
   // an element in an open overlay (a modal dialog, a popover, a Vaadin overlay): what it covers is meant to be covered
   const OVERLAY = ':popover-open, dialog[open], [aria-modal="true"], [opened][role="dialog"]';
@@ -335,16 +343,13 @@ async (input) => {
     for (const [other, count] of covers) {
       if (count >= 2) {
         const by = matchedAt.get(other);
-        findings.push({ kind: 'overlap', target: at.target, index: at.index, byTarget: by.target, byIndex: by.index });
+        findings.push({ kind: 'overlap', target: at.target, index: at.index, byTarget: by.target, byIndex: by.index,
+          box: matches[at.target][at.index].box });
         break;
       }
     }
   }
-  matches.forEach((list, target) => list.forEach((m, index) => {
-    if (m.reach === 'clipped') {
-      findings.push({ kind: 'clipped', target, index, by: m.by });
-    }
-  }));
+
   const result = { findings, matches, appLayouts: [], menuBars: [] };
   if (animating) {
     result.animating = true;

@@ -29,6 +29,9 @@ One Testing Tool per **run**. Test code never names it.
 | `vaadin.testing.base-url` | URL of the running app (browser Testing Tools) | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | Auto-Wait and assertion timeout | `10s` |
 | `vaadin.testing.viewport` | the Viewport of every test without `@Viewport`, `[name:]WIDTHxHEIGHT` such as `phone:375x667` (browser Testing Tools) | `1280x720` |
+| `vaadin.testing.layout-checks` | `on`: measure the layout after every navigation, reload and Viewport change, in a browser ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)) | `off` |
+| `vaadin.testing.layout-findings` | `report`, or `fail`: a Layout Finding fails the User Step that measured it | `report` |
+| `vaadin.testing.layout-checks.screenshots` | `on`: a screenshot of the Viewport per measurement | `off` |
 
 On JUnit, set them as JUnit configuration parameters, in `src/test/resources/junit-platform.properties`, or as system properties with `-D` from Maven, Gradle or the IDE.
 

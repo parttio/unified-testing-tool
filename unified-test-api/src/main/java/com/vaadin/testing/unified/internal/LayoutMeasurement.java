@@ -36,8 +36,9 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
      *
      * @param kind {@code scroll}, {@code clipped} or {@code overlap}
      * @param text what it says, in the failures' words
+     * @param box where it is in the Viewport, in CSS pixels: x, y, width, height; empty when the script gave none
      */
-    public record Finding(String kind, String text) {
+    public record Finding(String kind, String text, List<Double> box) {
         @Override
         public String toString() {
             return text;
@@ -82,6 +83,8 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
         for (Object f : (List<Object>) root.getOrDefault("findings", List.of())) {
             Map<String, Object> finding = (Map<String, Object>) f;
             String kind = String.valueOf(finding.get("kind"));
+            List<Double> box = finding.get("box") instanceof List<?> b
+                    ? b.stream().map(n -> n instanceof Number num ? num.doubleValue() : 0d).toList() : List.of();
             findings.add(new Finding(kind, switch (kind) {
                 case "scroll" -> finding.get("container") + " scrolls sideways by " + number(finding.get("by")) + " px";
                 case "clipped" -> name(kinds, finding.get("target"), finding.get("index")) + " is clipped by "
@@ -89,7 +92,7 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
                 case "overlap" -> name(kinds, finding.get("target"), finding.get("index")) + " is overlapped by "
                         + name(kinds, finding.get("byTarget"), finding.get("byIndex"));
                 default -> kind;
-            }));
+            }, box));
         }
         Reach subject = null;
         if (root.get("subject") instanceof Map<?, ?> s) {

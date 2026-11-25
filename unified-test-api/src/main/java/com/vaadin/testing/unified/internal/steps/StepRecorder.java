@@ -74,6 +74,7 @@ public final class StepRecorder {
         private List<CallSite> codePath = List.of();
         private String snapshot;
         private com.vaadin.testing.unified.spi.Highlight highlight;
+        private Layout layout;
         /** A failed step's Step Target, for the failure's evidence; null otherwise. */
         private transient com.vaadin.testing.unified.UnifiedElement target;
 
@@ -103,6 +104,8 @@ public final class StepRecorder {
         public String snapshot() { return snapshot; }
         /** Where its screenshot shows its Step Target; null without one. */
         public com.vaadin.testing.unified.spi.Highlight highlight() { return highlight; }
+        /** What the automatic layout checks measured during the step; null when they didn't. */
+        public Layout layout() { return layout; }
     }
 
     /** A step group: {@code page.step("Edit Alan Turing", () -> …)}, a User Task's heading. */
@@ -189,6 +192,69 @@ public final class StepRecorder {
         String targetName;
         /** User Steps that follow this one when it passes, e.g. the page a link opened ({@link #followedBy}). */
         final List<Supplier<Phrase>> followUps = new ArrayList<>();
+        /** The layout measured during the step by the automatic layout checks, or null. */
+        Layout layout;
+    }
+
+    /**
+     * What the automatic layout checks measured during a User Step (ADR 0011).
+     *
+     * @param point the measurement's number in the test, from 1
+     * @param findings the Layout Findings
+     * @param screenshot its screenshot, relative to the test's evidence directory; null without one
+     */
+    public record Layout(int point, List<LayoutFinding> findings, String screenshot) {}
+
+    /**
+     * One Layout Finding, as the reports show it.
+     *
+     * @param kind {@code scroll}, {@code clipped} or {@code overlap}
+     * @param text what it says
+     * @param box where it is, in CSS pixels of the Viewport: x, y, width, height; empty when unknown
+     */
+    public record LayoutFinding(String kind, String text, List<Double> box) {}
+
+    private boolean layoutChecks;
+    private boolean layoutChecksFail;
+    private java.nio.file.Path layoutScreenshots;
+    private int layoutPoints;
+
+    /**
+     * Turns the automatic layout checks on for this test, in a browser (ADR 0011).
+     *
+     * @param screenshots where each measurement keeps a screenshot of the Viewport; null for none
+     */
+    public void layoutChecks(boolean fail, java.nio.file.Path screenshots) {
+        this.layoutChecks = true;
+        this.layoutChecksFail = fail;
+        this.layoutScreenshots = screenshots;
+    }
+
+    public boolean layoutChecks() {
+        return layoutChecks;
+    }
+
+    /** Whether a Layout Finding fails its User Step. */
+    public boolean layoutChecksFail() {
+        return layoutChecksFail;
+    }
+
+    /** Where each measurement keeps a screenshot; null for none. */
+    public java.nio.file.Path layoutScreenshots() {
+        return layoutScreenshots;
+    }
+
+    /** The next measurement's number. */
+    public synchronized int nextLayoutPoint() {
+        return ++layoutPoints;
+    }
+
+    /** The running User Step measured this layout; outside a step, nothing. */
+    public void layout(Layout layout) {
+        Frame f = frame.get();
+        if (f != null) {
+            f.layout = layout;
+        }
     }
 
     /**
@@ -570,6 +636,7 @@ public final class StepRecorder {
                 : given.withTarget(given.target().withName(f.targetName));
         Group container = current();
         Step step = new Step(container.nextIndex(), ++steps, phrase, window, f.callSite);
+        step.layout = f.layout;
         last = step;
         step.durationNanos = System.nanoTime() - f.start;
         if (error != null) {

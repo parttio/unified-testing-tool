@@ -71,7 +71,7 @@ class LayoutScriptTest {
                 <p>Text</p><button style="width:120px;height:30px">Three</button>
                 """, LayoutScript.Target.interactive("button"), LayoutScript.Target.of("p"));
 
-        assertEquals("[]", result.getAsJsonArray("findings").toString());
+        assertEquals("[]", withoutBoxes(result));
         JsonArray buttons = matches(result, 0);
         assertEquals(3, buttons.size());
         assertEquals("visible", buttons.get(0).getAsJsonObject().get("reach").getAsString());
@@ -87,21 +87,21 @@ class LayoutScriptTest {
         JsonObject result = measure("<div style='width:700px;height:20px'>wide</div>");
 
         assertEquals("[{\"kind\":\"scroll\",\"container\":\"the page\",\"by\":325}]",
-                result.getAsJsonArray("findings").toString());
+                withoutBoxes(result));
     }
 
     @Test
     void lessThanAPixelTooWideIsNoSidewaysScroll() {
         JsonObject result = measure("<div style='width:375.6px;height:20px'>almost</div>");
 
-        assertEquals("[]", result.getAsJsonArray("findings").toString());
+        assertEquals("[]", withoutBoxes(result));
     }
 
     @Test
     void aPageThatHidesItsSidewaysOverflowDoesNotScroll() {
         JsonObject result = measure("<style>body{overflow-x:hidden}</style><div style='width:700px;height:20px'>wide</div>");
 
-        assertEquals("[]", result.getAsJsonArray("findings").toString());
+        assertEquals("[]", withoutBoxes(result));
     }
 
     @Test
@@ -111,7 +111,7 @@ class LayoutScriptTest {
                 """);
 
         assertEquals("[{\"kind\":\"scroll\",\"container\":\"div#scroller\",\"by\":200}]",
-                result.getAsJsonArray("findings").toString());
+                withoutBoxes(result));
     }
 
     /** A custom element whose shadow root holds {@code inner}, defined before it is used. */
@@ -130,7 +130,7 @@ class LayoutScriptTest {
 
         assertEquals("[{\"kind\":\"scroll\",\"container\":\"x-layout [part=content]\",\"by\":200},"
                 + "{\"kind\":\"scroll\",\"container\":\"x-old-layout [content]\",\"by\":100}]",
-                result.getAsJsonArray("findings").toString());
+                withoutBoxes(result));
     }
 
     @Test
@@ -145,7 +145,7 @@ class LayoutScriptTest {
                 + "<div style='width:400px;height:20px'>x</div></vaadin-scroller>");
 
         assertEquals("[{\"kind\":\"scroll\",\"container\":\"vaadin-scroller\",\"by\":100}]",
-                result.getAsJsonArray("findings").toString());
+                withoutBoxes(result));
     }
 
     // ---------------------------------------------------------------- clipped
@@ -160,7 +160,7 @@ class LayoutScriptTest {
                 """, LayoutScript.Target.interactive("button"));
 
         assertEquals("[{\"kind\":\"clipped\",\"target\":0,\"index\":0,\"by\":\"div#box\"}]",
-                result.getAsJsonArray("findings").toString());
+                withoutBoxes(result));
         assertEquals("clipped", matches(result, 0).get(0).getAsJsonObject().get("reach").getAsString());
         assertEquals("div#box", matches(result, 0).get(0).getAsJsonObject().get("by").getAsString());
         assertEquals("visible", matches(result, 0).get(1).getAsJsonObject().get("reach").getAsString());
@@ -238,7 +238,7 @@ class LayoutScriptTest {
                 """, LayoutScript.Target.interactive("button"));
 
         assertEquals("[{\"kind\":\"overlap\",\"target\":0,\"index\":0,\"byTarget\":0,\"byIndex\":1}]",
-                result.getAsJsonArray("findings").toString());
+                withoutBoxes(result));
         JsonObject save = matches(result, 0).get(0).getAsJsonObject();
         assertEquals("behind", save.get("reach").getAsString());
         assertEquals("[0,1]", save.get("byMatch").toString());
@@ -257,7 +257,7 @@ class LayoutScriptTest {
                 """, LayoutScript.Target.interactive("button"));
 
         assertEquals(1, components.getAsJsonArray("findings").size(), components.toString());
-        assertEquals("[]", dialog.getAsJsonArray("findings").toString());
+        assertEquals("[]", withoutBoxes(dialog));
         assertEquals("behind", matches(dialog, 0).get(0).getAsJsonObject().get("reach").getAsString());
     }
 
@@ -269,7 +269,7 @@ class LayoutScriptTest {
                 """, LayoutScript.Target.interactive("button"));
 
         assertEquals("[\"hidden\",\"hidden\",\"visible\"]", reaches(result, 0));
-        assertEquals("[]", result.getAsJsonArray("findings").toString());
+        assertEquals("[]", withoutBoxes(result));
     }
 
     // ---------------------------------------------------------------- the subject
@@ -295,6 +295,32 @@ class LayoutScriptTest {
                 """, LayoutScript.Target.interactive("button"));
 
         assertEquals("[\"visible\"]", reaches(result, 0));
+    }
+
+    /** The findings without their boxes, which {@link #eachFindingIsBoxedWhereItIs} checks. */
+    private static String withoutBoxes(JsonObject result) {
+        JsonArray findings = result.getAsJsonArray("findings").deepCopy();
+        findings.forEach(f -> f.getAsJsonObject().remove("box"));
+        return findings.toString();
+    }
+
+    @Test
+    void eachFindingIsBoxedWhereItIs() {
+        JsonObject result = measure("""
+                <div style="width:700px;height:20px">wide</div>
+                <div id="scroller" style="overflow-x:auto;width:300px;height:40px"><div style="width:500px;height:20px">x</div></div>
+                <div id="box" style="overflow:hidden;position:relative;width:200px;height:60px">
+                  <button style="position:absolute;left:250px;top:0;width:80px;height:30px">Clipped</button>
+                </div>
+                <button style="position:absolute;left:10px;top:200px;width:120px;height:40px">Save</button>
+                <button style="position:absolute;left:70px;top:210px;width:120px;height:40px">Delete</button>
+                """, LayoutScript.Target.interactive("button"));
+
+        List<String> boxes = new java.util.ArrayList<>();
+        result.getAsJsonArray("findings").forEach(f -> boxes.add(f.getAsJsonObject().get("kind").getAsString() + " "
+                + f.getAsJsonObject().get("box")));
+        assertEquals(List.of("scroll [0,0,375,667]", "scroll [0,20,300,40]", "clipped [250,60,80,30]",
+                "overlap [10,200,120,40]"), boxes);
     }
 
     private static String reaches(JsonObject result, int target) {
