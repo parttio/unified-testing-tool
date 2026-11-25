@@ -88,6 +88,47 @@ class CompareRunsTest {
         assertTrue(log.toString(StandardCharsets.UTF_8).contains("No evidence in " + dir.resolve("not-uploaded")));
     }
 
+    /** One Testing Tool's run at a Viewport, its open step measured: a CI matrix job's evidence. */
+    private Path atViewport(String name, int width, int height, String status, String findings, String components)
+            throws Exception {
+        Path evidence = dir.resolve("unified-evidence-" + name).resolve("unified-evidence");
+        Path test = evidence.resolve("EditPersonTest/edits/user-steps.json");
+        Files.createDirectories(test.getParent());
+        Files.writeString(test, """
+                {"schemaVersion": 1, "testClass": "demo.EditPersonTest", "testMethod": "edits",
+                 "displayName": "Editing a person", "tool": "playwright", "status": "%s",
+                 "viewport": {"name": "%s", "width": %d, "height": %d, "fixed": false},
+                 "startedAt": "2026-11-16T10:00:05Z", "durationMs": 1,
+                 "steps": [{"type": "step", "index": "1", "number": 1, "text": "open People", "verb": "open",
+                            "status": "passed", "layout": {"point": 1, "screenshot": "layout/001.png",
+                            "findings": [%s], "components": [%s]}}]}
+                """.formatted(status, name, width, height, findings, components));
+        return dir.resolve("unified-evidence-" + name);
+    }
+
+    @Test
+    void runsOfOneTestingToolAtSeveralViewportsAreAViewportComparisonWithItsPageAndJson() throws Exception {
+        Path desktop = atViewport("desktop", 1280, 720, "passed", "",
+                "{\"line\": \"button “Save”\", \"reach\": \"visible\"}, {\"line\": \"button “Export”\", \"reach\": \"visible\"}");
+        Path phone = atViewport("phone", 375, 667, "failed",
+                "{\"kind\": \"scroll\", \"text\": \"the page scrolls sideways by 40 px\", \"box\": [0, 0, 375, 667]}",
+                "{\"line\": \"button “Save”\", \"reach\": \"visible\"}");
+        Path page = dir.resolve("comparison");
+
+        int status = CompareRuns.run(List.of(phone, desktop), page, null,
+                new PrintStream(out, true, StandardCharsets.UTF_8), new PrintStream(log, true, StandardCharsets.UTF_8));
+
+        assertEquals(0, status, log.toString(StandardCharsets.UTF_8));
+        String md = out.toString(StandardCharsets.UTF_8);
+        assertTrue(md.contains("### Unified UI Tests · Viewports compared on Playwright\n"), md);
+        assertTrue(md.contains("| Scenario | desktop 1280 × 720 | phone 375 × 667 |\n|---|---|---|\n"
+                + "| Editing a person (EditPersonTest) | ✔ | ✘ fails · 1 ⚠ · 1 lost |\n"), md);
+        assertTrue(md.contains("- phone 375 × 667, point 1 (open People): ⚠ the page scrolls sideways by 40 px\n"), md);
+        assertTrue(md.contains("- phone 375 × 667, point 1 (open People): lost button “Export”, needs review\n"), md);
+        assertTrue(Files.isRegularFile(page.resolve("viewport-comparison.json")));
+        assertTrue(Files.readString(page.resolve("viewport-comparison.html")).contains("Viewport Comparison"));
+    }
+
     @Test
     void oneTestingToolAloneIsNothingToCompare() throws Exception {
         assertEquals(2, run(null, evidence("playwright", "passed", "see notification “Saved”", COMMIT)));
