@@ -71,6 +71,24 @@ class UserStepsFilesTest {
         }
     }
 
+    /**
+     * Signs in with a password that is the user name's first part, as demo apps often do: the user name and the
+     * scenario the author wrote stay readable, while the password is still masked on its own (#605).
+     */
+    @UnifiedSpringBootTest
+    @Tag("launched-only")
+    static class PasswordInTheUserName {
+        @Test
+        @DisplayName("A barista with a wrong password stays on the form")
+        void staysOnTheForm(UnifiedPage page) {
+            page.navigate(SignInFormView.class);
+            UnifiedLogin login = page.find(UnifiedLogin.class);
+            page.step("Sign in as barista@vaadin.com", () -> login.login(SignInFormView.USERNAME, "barista"));
+            page.step("Type barista again", () -> { });
+            com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat(login).hasError();
+        }
+    }
+
     private static TestingTool tool() {
         return TestingTool.parse(System.getProperty("vaadin.testing.tool", "browserless"));
     }
@@ -200,5 +218,27 @@ class UserStepsFilesTest {
         }
         String failure = summary.getFailures().get(0).getException().toString();
         assertFalse(failure.contains(SignInFormView.PASSWORD), failure);
+    }
+
+    @Test
+    void aPasswordInsideTheUserNameLeavesTheUserNameAndTheScenarioReadable(@TempDir Path dir) throws Exception {
+        TestExecutionSummary summary = run(PasswordInTheUserName.class, dir);
+        assertEquals(1, summary.getTestsSucceededCount(), () -> summary.getFailures().toString());
+
+        Path test = dir.resolve("UserStepsFilesTest$PasswordInTheUserName").resolve("staysOnTheForm");
+        List<String> lines = Files.readString(test.resolve("user-steps.txt")).lines().toList();
+        assertTrue(lines.get(0).startsWith("✔ UserStepsFilesTest.PasswordInTheUserName › "
+                + "A barista with a wrong password stays on the form   "), lines.get(0));
+        assertEquals(List.of(
+                "   1  open Sign In Form",
+                "   2  Sign in as barista@vaadin.com",
+                "      2.1  sign in as “barista@vaadin.com” in login",
+                "   3  Type •••• again",
+                "   4  see login with an error"), lines.subList(1, lines.size()), String.join("\n", lines));
+        JsonNode json = new ObjectMapper().readTree(Files.readString(test.resolve("user-steps.json")));
+        assertEquals("A barista with a wrong password stays on the form", json.get("displayName").asString());
+        assertEquals("sign in as “barista@vaadin.com” in login",
+                json.get("steps").get(1).get("steps").get(0).get("text").asString());
+        assertEquals("Type •••• again", json.get("steps").get(2).get("name").asString());
     }
 }

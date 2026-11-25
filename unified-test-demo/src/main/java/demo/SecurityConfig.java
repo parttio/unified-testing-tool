@@ -22,7 +22,7 @@ public class SecurityConfig {
 
     /**
      * Demo users; alice's and bob's passwords equal their names. The barista signs in through the login form
-     * ({@code LoginTest}), with a password that is not part of the name, so the masked password hides only itself.
+     * ({@code LoginTest}). A password inside its own user name leaves the name readable in the reports (#605).
      */
     @Bean
     UserDetailsService users() {

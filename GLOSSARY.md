@@ -92,6 +92,10 @@ _Avoid_: Task, step method, keyword, flow, journey, page object
 The component a User Step acts on or checks, marked in its snapshot and failure evidence on every Testing Tool: its line in a Browserless tree, a spotlighted box over a browser screenshot.
 _Avoid_: Highlighted element, focus, subject
 
+**Secret Value**:
+A value of the test that its reports show as `••••` wherever it occurs: a sign-in password or a value the test marks as secret. Exceptions: the password inside its own sign-in's user name, and the scenario name the author wrote.
+_Avoid_: Sensitive data, credential, redacted value
+
 **Base Run**:
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run

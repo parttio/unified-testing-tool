@@ -46,6 +46,13 @@ public final class TestLifecycle {
      * @param invocation the n-th run of a parameterized or repeated test, or null
      */
     public record TestId(String className, String methodName, String displayName, Integer invocation) {
+        /**
+         * Whether the test's author wrote its name ({@code @DisplayName}, the method's name), which the reports show
+         * unmasked; a parameterized or repeated invocation's name is built from its arguments (ADR 0014).
+         */
+        public boolean authoredName() {
+            return invocation == null;
+        }
     }
 
     /** The name of a test's failure evidence files in its evidence directory: {@code failure.png}, … */
@@ -149,7 +156,7 @@ public final class TestLifecycle {
      */
     public OpenTest open(AdapterContext context, StepRecorder steps, TestId test) {
         if (test != null) {
-            steps.describeTest(test.displayName(), evidenceDirName(test));
+            steps.describeTest(test.displayName(), test.authoredName(), evidenceDirName(test));
         }
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
@@ -296,9 +303,10 @@ public final class TestLifecycle {
                 : failure.getClass().getName().equals("org.opentest4j.TestAbortedException") ? "aborted" : "failed";
         UserStepsReport report = new UserStepsReport(test.className(), test.methodName(), test.displayName(),
                 settings.tool().name().toLowerCase(Locale.ROOT), status, failure, steps);
+        // the test may have been opened before it was named; the reports' scenario and a failure need its name
+        steps.describeTest(test.displayName(), test.authoredName(), evidenceDirName(test));
         if (failure instanceof UnifiedAssertionError unified) {
-            // a failure outside any User Step (or before the test was named) gets the rest here, before it is shown
-            steps.describeTest(test.displayName(), evidenceDirName(test));
+            // a failure outside any User Step gets the rest here, before it is shown
             steps.completeFailure(unified, report.codePath());
         }
         String text = report.text();

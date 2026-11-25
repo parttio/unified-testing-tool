@@ -159,7 +159,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
     /** {@code EditPersonTest › Editing a person in the dialog updates the grid}. */
     private String scenario() {
         String simple = testClass.substring(testClass.lastIndexOf('.') + 1).replace('$', '.');
-        return simple + " › " + steps.mask(displayName);
+        return simple + " › " + steps.maskScenario(displayName);
     }
 
     private static String seconds(long nanos) {
@@ -207,7 +207,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         json.field("schemaVersion", SCHEMA_VERSION);
         json.field("testClass", testClass);
         json.field("testMethod", testMethod);
-        json.field("displayName", steps.mask(displayName));
+        json.field("displayName", steps.maskScenario(displayName));
         json.field("tool", tool);
         json.field("status", status);
         json.field("startedAt", steps.startedAt().toString());
