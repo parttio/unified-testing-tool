@@ -508,6 +508,40 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void aFailsafeProfileWithTestBenchGridSettingsGetsAMigrationMarker() {
+        rewriteRun(pomXml(
+                """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>com.example</groupId>
+                    <artifactId>app</artifactId>
+                    <version>1.0</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.vaadin</groupId>
+                            <artifactId>vaadin-testbench-core-junit6</artifactId>
+                            <version>10.1.0</version>
+                            <scope>test</scope>
+                        </dependency>
+                    </dependencies>
+                    <profiles>
+                        <profile>
+                            <id>it-saucelabs</id>
+                            <properties>
+                                <com.vaadin.testbench.Parameters.gridBrowsers>chrome</com.vaadin.testbench.Parameters.gridBrowsers>
+                            </properties>
+                        </profile>
+                    </profiles>
+                </project>
+                """,
+                spec -> spec.after(actual -> {
+                    assertThat(actual).contains("<id>it-saucelabs</id>\n            <!-- "
+                            + MarkProfilesThatTestElsewhere.GRID + " (com.vaadin.testbench.Parameters.gridBrowsers)");
+                    return actual;
+                })));
+    }
+
+    @Test
     void aStaleBrowserlessTestSpringVersionGivesWayToTheBoms() {
         // 1.1.2 is the old standalone add-on line: its explicit version would win over the Vaadin BOM's 25.x (#354)
         rewriteRun(pomXml(

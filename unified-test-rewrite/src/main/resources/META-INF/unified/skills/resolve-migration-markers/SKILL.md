@@ -15,7 +15,7 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
 
 ## Steps
 
-1. **List the markers.** Search the test sources for `TODO unified:`. Write the list down: file, line, marker text. Done when the search and your list agree.
+1. **List the markers.** Search the test sources for `TODO unified:`. Write the list down: file, line, marker text. Done when the search and your list agree. Search each `pom.xml` too: a marker on a Failsafe `<profile>` ("this profile ran the tests against a server ...", "... gives the tests the address of a server ...", "... sets TestBench grid or Sauce Labs settings ...") asks whether that run still matters, which is the project's call. Leave those markers and the profiles as they are, and list them in your report for a person.
 2. **Resolve or keep each marker,** using the reference below for its kind. Work one test class at a time, and run that class's tests (step 3) before the next. Done when no `TODO unified:` is left.
 3. **Prove it.** First find how the project runs its UI tests, and use that runner for every run below:
    - **Failsafe**, when the classes are named `*IT` or the pom binds `maven-failsafe-plugin`, often in a profile (Vaadin's starters: `-Pit`). One class: `mvn verify -P<profile> -Dit.test=<Class>`; the whole suite: `mvn verify -P<profile>`. Leave out `-P<profile>` when the plugin is bound outside a profile.
@@ -31,7 +31,7 @@ A test is better the less it depends on an Escape Hatch: it then runs on every T
    - `TestBenchEscapeHatch`.
 
    When one is left, the module keeps its dependencies: the Selenium adapter brings only some element jars. When none is left, remove the module's direct `vaadin-testbench-*` dependencies, then run step 3's whole-suite runs again: they compile the tests and run them. When the compilation or a test fails because of the removal, put the dependencies back as they were. Done when every module that had them has either lost them with its suite runs passing, or has them back with the reference or failure that keeps them.
-5. **Report** a table: marker, outcome (resolved or kept), what you changed. Under it, the command and `Tests run:` count of each suite run, each style rule violation left, with its class and rule, and the `vaadin-testbench-*` dependencies step 4 removed, or why it kept them.
+5. **Report** a table: marker, outcome (resolved or kept), what you changed. Under it, the command and `Tests run:` count of each suite run, each style rule violation left, with its class and rule, the `vaadin-testbench-*` dependencies step 4 removed, or why it kept them, and the pom profile markers left for a person (step 1).
 
 ## Reference: the Unified API
 
