@@ -300,6 +300,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     common(json, step.window(), step.status(), step.durationNanos(), step.callSite(), step.error());
                     json.optional("snapshot", step.snapshot());
                     highlight(json, step.highlight());
+                    layout(json, step.layout());
                     readsAfter(json, step);
                 }
                 case Group group -> {
@@ -324,6 +325,28 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             json.close('}');
         }
         json.close(']');
+    }
+
+    /** What the automatic layout checks measured during the step (ADR 0011). */
+    private void layout(Json json, StepRecorder.Layout layout) {
+        if (layout == null) {
+            return;
+        }
+        json.key("layout").open('{');
+        json.field("point", layout.point());
+        json.optional("screenshot", layout.screenshot());
+        json.key("findings").open('[');
+        for (StepRecorder.LayoutFinding finding : layout.findings()) {
+            json.open('{');
+            json.field("kind", finding.kind());
+            json.field("text", steps.mask(finding.text()));
+            json.key("box").open('[');
+            finding.box().forEach(n -> json.number(n));
+            json.close(']');
+            json.close('}');
+        }
+        json.close(']');
+        json.close('}');
     }
 
     /** Where a screenshot shows its Step Target: a box in fractions of the image, or why there is none. */
@@ -434,6 +457,12 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             key(key);
             beforeValue();
             sb.append(value);
+        }
+
+        /** A number in an array, as written, without a needless {@code .0}. */
+        void number(double value) {
+            beforeValue();
+            sb.append(value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value));
         }
 
         void bool(String key, boolean value) {

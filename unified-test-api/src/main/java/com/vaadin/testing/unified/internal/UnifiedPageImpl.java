@@ -65,6 +65,7 @@ public final class UnifiedPageImpl implements UnifiedPage {
         record(() -> Phrases.open(view, null), () -> {
             requireNoRouteParameters(view);
             run.session().navigate(view);
+            LayoutChecks.measure(run);
         });
     }
 
@@ -87,14 +88,20 @@ public final class UnifiedPageImpl implements UnifiedPage {
     @Override
     public <T, C extends Component & HasUrlParameter<T>> void navigate(Class<C> view, T parameter) {
         run.steps().routeUsed(view);
-        record(() -> Phrases.open(view, parameter), () -> run.session().navigate(view, parameter));
+        record(() -> Phrases.open(view, parameter), () -> {
+            run.session().navigate(view, parameter);
+            LayoutChecks.measure(run);
+        });
     }
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         run.steps().routeUsed(view);
         record(() -> Phrases.open(view, named(parameters, QueryParameters.empty())),
-                () -> run.session().navigate(view, parameters));
+                () -> {
+                    run.session().navigate(view, parameters);
+                    LayoutChecks.measure(run);
+                });
     }
 
     @Override
@@ -106,7 +113,10 @@ public final class UnifiedPageImpl implements UnifiedPage {
     public void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
         run.steps().routeUsed(view);
         record(() -> Phrases.open(view, named(parameters, query)),
-                () -> run.session().navigate(view, parameters, query));
+                () -> {
+                    run.session().navigate(view, parameters, query);
+                    LayoutChecks.measure(run);
+                });
     }
 
     /** {@code owner=ada, week=2026-11-02}, or null for none: route parameters first, then the query's. */
@@ -124,12 +134,16 @@ public final class UnifiedPageImpl implements UnifiedPage {
                 run.requireBrowser("Navigating to an absolute URL");
             }
             run.session().navigate(path);
+            LayoutChecks.measure(run);
         });
     }
 
     @Override
     public void reload() {
-        record(() -> Phrases.page("reload", "reload the page"), () -> run.session().reload());
+        record(() -> Phrases.page("reload", "reload the page"), () -> {
+            run.session().reload();
+            LayoutChecks.measure(run);
+        });
     }
 
     /** A condition the User Steps can't read: recorded as a gap, whatever it calls while polling. */
@@ -190,6 +204,7 @@ public final class UnifiedPageImpl implements UnifiedPage {
             pause(RESIZE_HEARD_AFTER);
             run.session().settle();
             viewport = size;
+            LayoutChecks.measure(run);
         });
     }
 

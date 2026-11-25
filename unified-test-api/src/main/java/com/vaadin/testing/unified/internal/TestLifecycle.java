@@ -180,6 +180,10 @@ public final class TestLifecycle {
             }
         }
         steps.session(null, session);
+        if (tool.hasRealBrowser() && settings.layoutChecks()) {
+            steps.layoutChecks(settings.layoutFindings() == Settings.LayoutFindings.FAIL,
+                    settings.layoutChecksScreenshots());
+        }
         if (test != null && settings.userStepsSnapshots()) {
             Path snapshots = testEvidenceDir(test).resolve(StepRecorder.SNAPSHOT_DIR);
             deleteSnapshots(snapshots);

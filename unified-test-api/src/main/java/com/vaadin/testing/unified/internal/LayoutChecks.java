@@ -1,0 +1,23 @@
+package com.vaadin.testing.unified.internal;
+
+import com.vaadin.testing.unified.internal.steps.StepRecorder;
+
+/**
+ * The automatic layout checks (ADR 0011): with {@code vaadin.testing.layout-checks=on}, the layout is measured inside
+ * every User Step that changes what the page shows as a whole (a navigation, a reload, a Viewport change, and
+ * {@code checkLayout()}), and the step carries its Layout Findings into the reports.
+ */
+final class LayoutChecks {
+    private LayoutChecks() {}
+
+    /** Measures the run's page for the running User Step, when the test's layout checks are on. */
+    static void measure(TestRun run) {
+        StepRecorder steps = run.steps();
+        if (!steps.layoutChecks()) {
+            return;
+        }
+        LayoutMeasurement measured = LayoutMeasurement.measure(run, null);
+        steps.layout(new StepRecorder.Layout(steps.nextLayoutPoint(), measured.findings().stream()
+                .map(f -> new StepRecorder.LayoutFinding(f.kind(), f.text(), f.box())).toList(), null));
+    }
+}
