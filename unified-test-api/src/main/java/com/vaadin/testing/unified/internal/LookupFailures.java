@@ -41,7 +41,7 @@ import java.util.Optional;
  * field kinds in the same scope with exactly the wanted name. When the scope itself is missing, the scope's own
  * lookup fails first, with Near Misses for the scope.
  */
-final class LookupFailures {
+public final class LookupFailures {
     private LookupFailures() {}
 
     /** The Wrapper types a lookup by name may have meant instead ("another kind"), with their naming filter. */
@@ -82,7 +82,7 @@ final class LookupFailures {
     }
 
     /** An action's Auto-Wait timed out: the component is there, but hidden or disabled. */
-    static FailureParts notUsable(LazyElement element) {
+    public static FailureParts notUsable(LazyElement element) {
         List<String> reasons = new ArrayList<>();
         safely(() -> element.tryConcrete().ifPresent(e -> {
             if (!e.isVisible()) {

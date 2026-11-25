@@ -17,7 +17,7 @@ import java.util.Optional;
  * Unified Element on Browserless: reads the server-side element and component; user actions go through
  * the component's tester (events fire as from the browser), then a round-trip.
  */
-final class BrowserlessElement implements UnifiedElement {
+final class BrowserlessElement implements UnifiedElement, com.vaadin.testing.unified.spi.ElementIdentity {
 
     private final BrowserlessSession session;
     private final Component component;
@@ -54,6 +54,11 @@ final class BrowserlessElement implements UnifiedElement {
      */
     static BrowserlessElement found(BrowserlessSession session, Component component) {
         return new BrowserlessElement(session, component, List.of(component), false);
+    }
+
+    @Override
+    public boolean isSameElement(UnifiedElement other) {
+        return other instanceof BrowserlessElement e && e.component == component;
     }
 
     /** Where queries scoped to this element search: these components and their descendants. */

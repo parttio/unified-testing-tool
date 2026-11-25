@@ -261,6 +261,40 @@ public final class BrowserQueries {
             }""";
 
     /**
+     * A {@code <vaadin-side-nav>} as {@code SideNavAccess} reads it (#658): {@code {label, items}}, its label the
+     * text of its {@code slot="label"} child or null, its items its top-level items' labels ({@link #ITEM_NAME}).
+     */
+    public static final String SIDE_NAV = """
+            e => {
+              const name = %s;
+              const label = e.querySelector(':scope > [slot="label"]');
+              return {
+                label: label ? label.textContent.replace(/\\s+/g, ' ').trim() : null,
+                items: [...e.querySelectorAll(':scope > vaadin-side-nav-item')].map(name)
+              };
+            }""".formatted(ITEM_NAME);
+
+    /**
+     * A {@code <vaadin-side-nav-item>} as {@code SideNavItemAccess} reads it (#658): {@code {label, items, current,
+     * expanded, inCollapsedItem}}.
+     */
+    public static final String SIDE_NAV_ITEM = """
+            e => {
+              const name = %s;
+              let inCollapsedItem = false;
+              for (let p = e.parentElement; p && p.localName === 'vaadin-side-nav-item'; p = p.parentElement) {
+                if (!p.expanded) inCollapsedItem = true;
+              }
+              return {
+                label: name(e),
+                items: [...e.querySelectorAll(':scope > vaadin-side-nav-item')].map(name),
+                current: !!e.current,
+                expanded: !!e.expanded,
+                inCollapsedItem
+              };
+            }""".formatted(ITEM_NAME);
+
+    /**
      * The tags of the components named by their content (#641): ARIA's name-from-content roles among what Vaadin
      * renders, as Dramafinder reads them ({@code ButtonElement}, {@code TabElement}, {@code BadgeElement},
      * {@code MenuItemElement}, {@code BreadcrumbsItemElement}, {@code NotificationElement}), plus links, native

@@ -20,7 +20,7 @@ page.find(UnifiedButton.class).withLabel("Save");     // does not compile: a but
 
 So your IDE's completion after `find(UnifiedX.class).` lists what you can filter by, next to what you can do with the component.
 
-Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedEmailField`, `UnifiedPasswordField`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedLink`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedMessageInput`, `UnifiedMessageList`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedContainer` and the plain HTML Wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a Wrapper](#components-without-a-wrapper).
+Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedEmailField`, `UnifiedPasswordField`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedLink`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedMessageInput`, `UnifiedMessageList`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedSideNav` and `UnifiedSideNavItem` *(unreleased)*, `UnifiedContainer` and the plain HTML Wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a Wrapper](#components-without-a-wrapper).
 
 ## 2. Filters
 
@@ -36,6 +36,7 @@ Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `Un
 | `withTab("Security")` | a TabSheet or Tabs that has this tab | `page.find(UnifiedTabSheet.class).withTab("Security")` |
 | `withItem("File")` | a MenuBar that has this top-level item | `page.find(UnifiedMenuBar.class).withItem("File")` |
 | `withSummaryText("Advanced")` | a Details by its summary | `page.find(UnifiedDetails.class).withSummaryText("Advanced")` |
+| `withLabel("Orders")` *(unreleased)* | a side nav item by its own text, or a side nav by the label above its items | `page.find(UnifiedSideNavItem.class).withLabel("Orders")` |
 
 A field in a FormLayout item has no label of its own: `formLayout.addFormItem(field, "Nickname")` labels the item. `withLabel` finds it by that label too, on every Testing Tool, and a failure lists it under that name:
 
@@ -187,6 +188,7 @@ A page has many "City" fields, "Save" buttons and "Email" fields. Narrow the sea
 | plain HTML Wrappers | `page.find(UnifiedSection.class)…`, `UnifiedDiv`, … | that element |
 | `findComponent(..)` result | `page.findComponent(VerticalLayout.class)…` | that component |
 | `UnifiedDetails.content()` | `details.content()` | the Details content |
+| `UnifiedSideNav`, `UnifiedSideNavItem` *(unreleased)* | `page.find(UnifiedSideNav.class).withLabel("Help")`, `page.find(UnifiedSideNavItem.class).withLabel("Admin")` | its items; an item's child items |
 | `UnifiedTabSheet.content()` | `tabs.content()` | the selected tab's content |
 | Grid cells, header, row details | `row.cell("Actions")`, `column.header()`, `row.details()` | see [Grid](grid.md) |
 | a Template | `page.findTemplate(SearchBar.class)`, or a Wrapper with `TemplateScope` | its shadow root and light DOM: see [Templates](#templates) |

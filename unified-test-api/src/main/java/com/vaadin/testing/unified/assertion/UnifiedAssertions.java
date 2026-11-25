@@ -76,6 +76,8 @@ public final class UnifiedAssertions {
     public static TabsAssert assertThat(com.vaadin.testing.unified.component.UnifiedTabs tabs) { return new TabsAssert(tabs); }
     public static DetailsAssert assertThat(com.vaadin.testing.unified.component.UnifiedDetails details) { return new DetailsAssert(details); }
     public static MenuBarAssert assertThat(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { return new MenuBarAssert(menuBar); }
+    public static SideNavAssert assertThat(com.vaadin.testing.unified.component.UnifiedSideNav sideNav) { return new SideNavAssert(sideNav); }
+    public static SideNavItemAssert assertThat(com.vaadin.testing.unified.component.UnifiedSideNavItem item) { return new SideNavItemAssert(item); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
     public static LinkAssert assertThat(com.vaadin.testing.unified.component.UnifiedLink link) { return new LinkAssert(link); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
@@ -888,6 +890,45 @@ public final class UnifiedAssertions {
 
         public DetailsAssert hasSummaryText(String expected) {
             return check("to have summary text", expected, details::getSummaryText, v -> Objects.equals(v, expected));
+        }
+    }
+
+    /** Retrying checks of a side nav's top-level items. */
+    public static final class SideNavAssert extends WrapperAssert<SideNavAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedSideNav sideNav;
+
+        SideNavAssert(com.vaadin.testing.unified.component.UnifiedSideNav sideNav) { super(sideNav); this.sideNav = sideNav; }
+
+        /** Exactly these top-level items, by their labels, in this order. */
+        public SideNavAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, sideNav::getItems, list::equals);
+        }
+    }
+
+    /** Retrying checks of a side nav item: the page the user is on, its path, its child items. */
+    public static final class SideNavItemAssert extends WrapperAssert<SideNavItemAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedSideNavItem item;
+
+        SideNavItemAssert(com.vaadin.testing.unified.component.UnifiedSideNavItem item) { super(item); this.item = item; }
+
+        /** It is the page the user is on ({@code UnifiedSideNavItem.isCurrent()}). */
+        public SideNavItemAssert isCurrent() { return check("to be current", null, item::isCurrent, Boolean.TRUE::equals); }
+        public SideNavItemAssert isNotCurrent() { return check("not to be current", null, item::isCurrent, Boolean.FALSE::equals); }
+
+        /** Its child items are shown. */
+        public SideNavItemAssert isExpanded() { return check("to be expanded", null, item::isExpanded, Boolean.TRUE::equals); }
+        public SideNavItemAssert isCollapsed() { return check("to be collapsed", null, item::isExpanded, Boolean.FALSE::equals); }
+
+        /** The path as the application set it ({@code UnifiedSideNavItem.getPath()}), exactly. */
+        public SideNavItemAssert hasPath(String expected) {
+            return check("to have path", expected, item::getPath, v -> Objects.equals(v, expected));
+        }
+
+        /** Exactly these child items, by their labels, in this order. */
+        public SideNavItemAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, item::getItems, list::equals);
         }
     }
 

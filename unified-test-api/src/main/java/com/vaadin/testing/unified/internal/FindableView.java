@@ -35,6 +35,8 @@ import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
+import com.vaadin.testing.unified.component.UnifiedSideNav;
+import com.vaadin.testing.unified.component.UnifiedSideNavItem;
 import com.vaadin.testing.unified.component.UnifiedTabSheet;
 import com.vaadin.testing.unified.component.UnifiedTabs;
 import com.vaadin.testing.unified.component.UnifiedTextArea;
@@ -47,10 +49,12 @@ import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
 import com.vaadin.testing.unified.query.TextFilter;
 import com.vaadin.testing.unified.spi.ElementFacts;
+import com.vaadin.testing.unified.spi.ElementIdentity;
 import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
+import com.vaadin.testing.unified.spi.SideNavItemAccess;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -98,7 +102,7 @@ public final class FindableView {
             UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class, UnifiedComboBox.class, UnifiedMultiSelectComboBox.class,
             UnifiedDatePicker.class, UnifiedDateTimePicker.class, UnifiedRadioButtonGroup.class,
             UnifiedCheckbox.class, UnifiedButton.class, UnifiedLink.class, UnifiedGrid.class, UnifiedTabs.class,
-            UnifiedTabSheet.class, UnifiedMenuBar.class, UnifiedDetails.class, UnifiedUpload.class,
+            UnifiedTabSheet.class, UnifiedMenuBar.class, UnifiedSideNav.class, UnifiedSideNavItem.class, UnifiedDetails.class, UnifiedUpload.class,
             UnifiedMessageList.class, UnifiedMessageInput.class);
 
     /**
@@ -218,14 +222,14 @@ public final class FindableView {
 
     /** One component as read. {@code values} are its namers' values, normalized, null when it has none. */
     private record Read(UnifiedElement element, ElementFacts facts, Map<Namer, String> values, String value,
-            boolean hidden, boolean disabled, String summary, String clickable, int position) {
+            boolean hidden, boolean disabled, String summary, String clickable, String state, int position) {
         String valueOf(Namer namer) {
             return values.get(namer);
         }
 
         /** This read, listed because it says it is clickable: {@code role button}, {@code focusable}. */
         Read clickable(String why) {
-            return new Read(element, facts, values, value, hidden, disabled, summary, why, position);
+            return new Read(element, facts, values, value, hidden, disabled, summary, why, state, position);
         }
     }
 
@@ -394,7 +398,27 @@ public final class FindableView {
         }
         String summary = UnifiedGrid.class.isAssignableFrom(type) ? safely(() -> grid(e), null)
                 : UnifiedMessageList.class.isAssignableFrom(type) ? safely(() -> messageList(e), null) : null;
-        return new Read(e, f, values, value, hidden, disabled, summary, null, position);
+        String state = UnifiedSideNavItem.class.isAssignableFrom(type) ? safely(() -> sideNavItem(e), null) : null;
+        return new Read(e, f, values, value, hidden, disabled, summary, null, state, position);
+    }
+
+    /**
+     * {@code current}, {@code collapsed}: what a user sees of a side nav item. An item without child items is neither
+     * expanded nor collapsed.
+     */
+    private static String sideNavItem(UnifiedElement e) {
+        Optional<SideNavItemAccess> access = e.tryUnwrap(SideNavItemAccess.class);
+        if (access.isEmpty()) {
+            return null;
+        }
+        List<String> state = new ArrayList<>();
+        if (access.get().isCurrent()) {
+            state.add("current");
+        }
+        if (!access.get().items().isEmpty() && !access.get().isExpanded()) {
+            state.add("collapsed");
+        }
+        return state.isEmpty() ? null : String.join("; ", state);
     }
 
     /** {@code 3 messages}, from the Testing Tool's message list access. */
@@ -510,6 +534,9 @@ public final class FindableView {
         }
         if (r.summary() != null) {
             sb.append(", ").append(r.summary());
+        }
+        if (r.state() != null) {
+            state.add(r.state());
         }
         if (r.disabled()) {
             state.add("disabled");
@@ -737,7 +764,7 @@ public final class FindableView {
             }
         }
         for (Container container : containers) {
-            if (container.element() != r.element() && countIn(run, t, best, r, container.element()) == 1) {
+            if (container.element() != r.element() && isOnlyOneIn(run, t, best, r, container.element())) {
                 return notUnique + "; one in " + container.words() + ": " + container.lookup() + inner;
             }
         }
@@ -777,13 +804,36 @@ public final class FindableView {
 
     /** How many components the lookup by {@code namer} finds inside {@code container}; 0 when it can't be run. */
     private static int countIn(TestRun run, OfType t, Namer namer, Read r, UnifiedElement container) {
+        return matchesIn(run, t, namer, r, container).size();
+    }
+
+    /**
+     * Whether the container holds exactly one component of this name, and it is {@code r}'s: one alike elsewhere in
+     * the scope may be the one it holds.
+     */
+    private static boolean isOnlyOneIn(TestRun run, OfType t, Namer namer, Read r, UnifiedElement container) {
+        List<UnifiedElement> matches = matchesIn(run, t, namer, r, container);
+        return matches.size() == 1 && matches.get(0) instanceof ElementIdentity identity
+                && safely(() -> identity.isSameElement(r.element()), false);
+    }
+
+    private static List<UnifiedElement> matchesIn(TestRun run, OfType t, Namer namer, Read r,
+            UnifiedElement container) {
         if (namer.kind() == null) {
-            return 0; // a Wrapper's own filter runs in the core: not checked here
+            // a Wrapper's own filter runs in the core: its getter, read on each of the type in the container
+            String value = r.valueOf(namer);
+            TestRun quick = run.withTimeout(Duration.ZERO);
+            List<UnifiedElement> found = safely(() -> run.session().find(new QuerySpec(t.annotation().value(), t.tag(),
+                    t.selector(), container)), List.of());
+            return found.stream().filter(e -> {
+                Object w = Wrappers.newWrapper(t.type(), new LazyElement(fixed(e), -1, quick));
+                return value.equals(normalize(safely(() -> (String) namer.getter().invoke(w), null)));
+            }).toList();
         }
         List<Filter> filters = new ArrayList<>(t.selector());
         filters.add(new Filter(namer.kind(), null, r.valueOf(namer), true));
         return safely(() -> run.session().find(new QuerySpec(t.annotation().value(), t.tag(), List.copyOf(filters),
-                container)).size(), 0);
+                container)), List.<UnifiedElement>of());
     }
 
     private static Optional<UnifiedElement> single(List<UnifiedElement> found) {

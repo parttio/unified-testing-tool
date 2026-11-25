@@ -313,6 +313,10 @@ final class PlaywrightComponents {
                 PlaywrightCoreSetAccess.DetailsAccessImpl::new));
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
                 PlaywrightCoreSetAccess.MenuBarAccessImpl::new));
+        register(com.vaadin.flow.component.sidenav.SideNav.class, access(com.vaadin.testing.unified.spi.SideNavAccess.class,
+                PlaywrightSideNav.NavAccess::new));
+        register(com.vaadin.flow.component.sidenav.SideNavItem.class, access(com.vaadin.testing.unified.spi.SideNavItemAccess.class,
+                PlaywrightSideNav.ItemAccess::new));
         register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
                 PlaywrightCoreSetAccess.UploadAccessImpl::new));
         register(com.vaadin.flow.component.messages.MessageInput.class, access(com.vaadin.testing.unified.spi.MessageInputAccess.class,

@@ -100,9 +100,13 @@ class FindableViewTest {
                 "text field “Email”  find(UnifiedTextField.class).withLabel(\"Email\")",
                 "button “Cancel”     find(UnifiedButton.class).withText(\"Cancel\")",
                 "button “Save”       find(UnifiedButton.class).withText(\"Save\")"), lines(view));
-        assertEquals("text field “Email”                      not unique: 2 alike; one in dialog “Change email”:"
-                + " page.find(UnifiedDialog.class).withHeaderTitle(\"Change email\").find(UnifiedTextField.class)"
-                + ".withLabel(\"Email\")", lines(page.describe()).get(2));
+        // the dialog's field is found through the dialog; the profile's own Email field is not in it (#658)
+        List<String> emails = lines(page.describe()).stream().filter(l -> l.startsWith("text field “Email”"))
+                .map(l -> l.replaceAll(" {2,}", "  ")).toList();
+        assertEquals(List.of("text field “Email”  not unique: 2 alike",
+                "text field “Email”  not unique: 2 alike; one in dialog “Change email”:"
+                        + " page.find(UnifiedDialog.class).withHeaderTitle(\"Change email\").find(UnifiedTextField.class)"
+                        + ".withLabel(\"Email\")"), emails);
     }
 
     /** {@code browserless}, {@code playwright (chromium)}: the Testing Tool as the header names it. */

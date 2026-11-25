@@ -19,7 +19,8 @@ import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
  * else a generic Dramafinder element on the locator. Dramafinder's actions wait for the server round-trip;
  * actions on a raw locator wait here.
  */
-final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unified.spi.UsabilityCheck {
+final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unified.spi.UsabilityCheck,
+        com.vaadin.testing.unified.spi.ElementIdentity {
 
     private final PlaywrightSession session;
     private final Locator locator;
@@ -46,6 +47,19 @@ final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unif
         this.support = support;
         this.candidates = candidates;
         this.index = index;
+    }
+
+    @Override
+    public boolean isSameElement(UnifiedElement other) {
+        if (!(other instanceof PlaywrightElement o)) {
+            return false;
+        }
+        com.microsoft.playwright.ElementHandle handle = o.locator.elementHandle();
+        try {
+            return Boolean.TRUE.equals(locator.evaluate("(a, b) => a === b", handle));
+        } finally {
+            handle.dispose();
+        }
     }
 
     Locator candidates() {

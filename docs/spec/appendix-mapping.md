@@ -72,6 +72,7 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | dialog `assertOpen` / `assertClosed` / `assertHeaderText`, `getHeaderText()`, `closeWithEscape()` | `isOpen` / `isClosed` / `hasHeaderTitle`, `getHeaderTitle()`, `close()` |
 | confirm dialog: as a dialog, and `confirm()` / `reject()` / `cancel()`, `getMessage()`, `assertMessage(s)` | `UnifiedConfirmDialog`: `confirm()` / `reject()` / `cancel()`, `getText()`, `hasText(s)` |
 | login form or overlay: `login(u, p)`, `isErrorVisible()`, `assertErrorVisible` / `assertNoError`, overlay `getByTitle(page, s)` / `assertHeaderTitle` | `UnifiedLogin`: `login(u, p)`, `isError()`, `hasError` / `hasNoError`, `withTitle(s)` / `hasTitle` |
+| side navigation item: `getByLabel(page, s)`, `navigate()`, `isExpanded()`, `assertExpanded` / `assertCollapsed`, `assertCurrent` / `assertNotCurrent` *(unreleased)* | `UnifiedSideNavItem`: `withLabel(s)`, `click()`, `isExpanded()`, `isExpanded` / `isCollapsed`, `isCurrent` / `isNotCurrent` |
 | notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
 | `GridElement.get(page)` | `page.find(UnifiedGrid.class)` (no marker: a second grid fails loudly) |

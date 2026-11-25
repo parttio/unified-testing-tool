@@ -119,7 +119,15 @@ final class DramafinderWrappers {
                             "assertMessage", "hasText")),
             // a login form or overlay: one Wrapper for both, login(..) signs in as the element's does (#564)
             ELEMENT + "LoginFormElement", LOGIN,
-            ELEMENT + "LoginOverlayElement", LOGIN))
+            ELEMENT + "LoginOverlayElement", LOGIN), Map.of(
+            // side navigation: an item by its label, navigate() clicks it as a user does (#658)
+            ELEMENT + "SideNavigationItemElement", new Wrapper(COMPONENT + "UnifiedSideNavItem",
+                    union(COMMON_FILTERS, Set.of("withLabel")),
+                    with(same("isExpanded", "isVisible"), Map.of("navigate", "click")),
+                    with(VISIBILITY, Map.of("assertExpanded", "isExpanded", "assertCollapsed", "isCollapsed",
+                            "assertCurrent", "isCurrent", "assertNotCurrent", "isNotCurrent"))),
+            ELEMENT + "SideNavigationElement", new Wrapper(COMPONENT + "UnifiedSideNav",
+                    union(COMMON_FILTERS, Set.of("withLabel")), same("isVisible"), VISIBILITY)))
             .flatMap(m -> m.entrySet().stream()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     /** Elements whose {@code get(page)} finds the first one on the page: the Wrapper finds it, and a second one fails loudly. */

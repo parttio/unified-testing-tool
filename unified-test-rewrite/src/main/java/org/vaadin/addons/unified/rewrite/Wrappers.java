@@ -92,6 +92,13 @@ final class Wrappers {
                     "com.vaadin.testing.unified.component.UnifiedLink",
                     with(COMMON_FILTERS, "withText"),
                     Set.of("click", "getText", "isEnabled"))),
+            // side navigation (#658): TestBench's navigate() is the item's click
+            Map.entry("com.vaadin.flow.component.sidenav.testbench.SideNavItemElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedSideNavItem", COMMON_FILTERS,
+                    Set.of("click", "getLabel", "getPath", "isExpanded", "isCurrent", "isEnabled"),
+                    Map.of("navigate", "click"))),
+            Map.entry("com.vaadin.flow.component.sidenav.testbench.SideNavElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedSideNav", COMMON_FILTERS, Set.of("getLabel"))),
             Map.entry("com.vaadin.flow.component.notification.testbench.NotificationElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedNotification",
                     with(COMMON_FILTERS, "withText"),
                     Set.of("getText", "isOpen"))),

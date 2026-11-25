@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.browserless;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.sidenav.SideNavItem;
 import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.RouteConfiguration;
 import com.vaadin.flow.router.RouterLink;
@@ -28,13 +29,16 @@ record BrowserlessLinks(BrowserlessSession session, Component link) implements L
         if (link instanceof Anchor anchor) {
             return anchor.getHref();
         }
+        if (link instanceof SideNavItem item) {
+            return item.getPath() == null ? "" : item.getPath(); // the item's own <a> goes there in a browser
+        }
         String href = link.getElement().getAttribute("href");
         return href == null ? "" : href;
     }
 
     @Override
     public Optional<String> unfollowable() {
-        String target = link.getElement().getAttribute("target");
+        String target = link instanceof SideNavItem item ? item.getTarget() : link.getElement().getAttribute("target");
         if (target != null && !target.isBlank() && !java.util.List.of("_self", "_top", "_parent").contains(target)) {
             return Optional.of("opens another window (target=“" + target + "”)");
         }

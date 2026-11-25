@@ -1046,6 +1046,53 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void sideNavigationItemsBecomeUnifiedSideNavItems() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.SideNavigationItemElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class NavigationTest extends SpringPlaywrightIT {
+                    @Test
+                    void opensOrders() {
+                        navigate(PeopleView.class);
+                        SideNavigationItemElement orders = SideNavigationItemElement.getByLabel(page, "Orders");
+                        orders.navigate();
+                        orders.assertCurrent();
+                        SideNavigationItemElement admin = SideNavigationItemElement.getByLabel(page, "Admin");
+                        admin.assertCollapsed();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedSideNavItem;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class NavigationTest {
+                    @Test
+                    void opensOrders(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedSideNavItem orders = page.find(UnifiedSideNavItem.class).withLabel("Orders");
+                        orders.click();
+                        assertThat(orders).isCurrent();
+                        UnifiedSideNavItem admin = page.find(UnifiedSideNavItem.class).withLabel("Admin");
+                        assertThat(admin).isCollapsed();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aLookupWithACallTheWrapperLacksStaysBehindTheEscapeHatch() {
         rewriteRun(java(VIEW), java(
                 """
