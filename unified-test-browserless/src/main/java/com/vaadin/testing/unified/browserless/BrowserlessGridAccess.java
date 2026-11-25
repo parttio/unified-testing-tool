@@ -7,6 +7,8 @@ import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridTester;
 import com.vaadin.flow.component.grid.HeaderRow;
 import com.vaadin.flow.data.provider.SortDirection;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.data.renderer.LitRenderer;
 import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.GridAccess;
@@ -194,6 +196,15 @@ final class BrowserlessGridAccess implements GridAccess {
 
     @Override
     public UnifiedElement cell(int row, int column) {
+        // a ComponentRenderer is a LitRenderer too, whose components Browserless has
+        if (columns().get(column).getRenderer() instanceof LitRenderer<?> renderer
+                && !(renderer instanceof ComponentRenderer<?, ?>)) {
+            // never an empty cell: an absence check would pass on markup a browser shows (ADR 0015)
+            throw new UnsupportedOperationException("The cell at index " + column + " is drawn by a LitRenderer, whose"
+                    + " markup exists only in a browser, so Browserless can't search inside it. Annotate the test"
+                    + " with @RequiresBrowser to skip it here; to run a renderer function on Browserless, use the"
+                    + " Escape Hatch: GridTester.invokeLitRendererFunction.");
+        }
         return new BrowserlessElement(session, tester.getCellComponent(row, column));
     }
 

@@ -12,7 +12,7 @@ Clicking those buttons doesn't work on Browserless either. The `vaadin-crud` web
 
 ## What to do instead
 
-Write a **project Wrapper** for Crud, as Bakery did. Its `UnifiedCrud` opens a row's editor through the `vaadin-crud-edit` descendants and reads `editorOpened`, on Playwright and Selenium. A project Wrapper can't make Save, Cancel, Delete or Discard work on Browserless by clicking, because the server never hears the click. So a Crud test that clicks these buttons declares `@RequiresBrowser`, as Bakery's do. A Crud test can also keep the TestBench Escape Hatch (`CrudElement`), with `@RequiresTestingTool(SELENIUM)`.
+Write a **project Wrapper** for Crud, as Bakery did. Its `UnifiedCrud` opens a row's editor through the `vaadin-crud-edit` descendants and reads `editorOpened`, on Playwright and Selenium. To click one row's pencil, find it in that row's cell with a Wrapper bound to its tag, `row.cell(0).find(UnifiedCrudEdit.class).click()` with `@UnifiedComponent(value = Component.class, tag = "vaadin-crud-edit")` (#608, [ADR 0015](../docs/adr/0015-renderer-markup-is-found-by-tag-wrappers-row-click-avoids-it.md)). A project Wrapper can't make Save, Cancel, Delete or Discard work on Browserless by clicking, because the server never hears the click. So a Crud test that clicks these buttons declares `@RequiresBrowser`, as Bakery's do. A Crud test can also keep the TestBench Escape Hatch (`CrudElement`), with `@RequiresTestingTool(SELENIUM)`.
 
 Whether a Wrapper could fire the Crud's server-side events another way on Browserless, for example with `UnifiedElement.dispatchEvent("save")` on the crud, hasn't been tried.
 

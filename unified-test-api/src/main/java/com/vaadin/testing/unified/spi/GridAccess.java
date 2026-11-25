@@ -41,8 +41,25 @@ public interface GridAccess {
     void selectAll();
     void deselectAll();
 
+    /**
+     * Clicks a spot of the row free of interactive content (a link, a button, anything focusable, a web component,
+     * markup a renderer draws), so the click reaches the row rather than that content. Fails with
+     * {@link #noFreeSpot(String, int)} when the row has none (ADR 0015).
+     */
     void clickRow(int row);
+    /** As {@link #clickRow(int)}, a double click. */
     void doubleClickRow(int row);
+
+    /**
+     * The failure of a row click on a row that interactive content covers, the same on every browser Testing Tool.
+     *
+     * @param action what the click is for: {@code "click"}, {@code "double-click"}
+     */
+    static IllegalStateException noFreeSpot(String action, int row) {
+        return new IllegalStateException("Cannot " + action + " row " + row + ": interactive content covers every"
+                + " data cell of the row, padding included, so a click would land on it rather than on the row."
+                + " To click that content, find it in its cell: row.cell(..).find(..).click()");
+    }
 
     /** Null when the column is not sorted. */
     SortDirection sortDirection(int column);
