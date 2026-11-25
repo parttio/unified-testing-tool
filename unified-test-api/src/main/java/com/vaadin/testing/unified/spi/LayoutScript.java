@@ -8,9 +8,10 @@ import java.util.List;
 
 /**
  * The one script that measures a page's layout (ADR 0011), shipped by the core and run unchanged by every browser
- * adapter in {@link AdapterSession#measureLayout}: a JavaScript function expression that takes {@link #argument} and
- * returns a JSON string. Playwright: {@code page.evaluate(SOURCE, argument)}; Selenium:
- * {@code executeScript("return (" + SOURCE + ")(arguments[0])", argument)}.
+ * adapter in {@link AdapterSession#measureLayout}: a JavaScript function expression that takes
+ * {@code [argument, subject]} ({@link #argument}, and an element to report on as well, or null) and returns a JSON
+ * string. Playwright: {@code page.evaluate(SOURCE, Arrays.asList(argument, subjectHandle))}; Selenium:
+ * {@code executeScript("return (" + SOURCE + ")([arguments[0], arguments[1]])", argument, subjectElement)}.
  */
 public final class LayoutScript {
     private LayoutScript() {}

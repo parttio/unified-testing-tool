@@ -2,12 +2,14 @@
  * The layout script of the Unified API (ADR 0011): one round trip that measures what a user can reach on the page at
  * its current Viewport. It only reads: it never scrolls, styles or changes the page.
  *
- * In:  {"targets": [{"css": "vaadin-button", "interactive": true}, ...]}, as a JSON string
+ * In:  [argument, subject]: argument is {"targets": [{"css": "vaadin-button", "interactive": true}, ...]} as a JSON
+ *       string; subject is an element to report on as well, or null
  * Out: {"findings": [...], "matches": [[{"box": [x, y, width, height], "reach": "visible"}, ...], ...],
- *       "appLayouts": [...], "menuBars": [...]}, as a JSON string: matches per target, in document order, outside
+ *       "appLayouts": [...], "menuBars": [...], "subject": {"box": ..., "reach": ...}}, as a JSON string: matches per target, in document order, outside
  *       shadow roots, as find() searches.
  */
-(argument) => {
+(input) => {
+  const [argument, subject] = Array.isArray(input) ? input : [input, null];
   const { targets } = JSON.parse(argument);
   const round = (n) => Math.round(n * 10) / 10;
 
@@ -288,5 +290,9 @@
       findings.push({ kind: 'clipped', target, index, by: m.by });
     }
   }));
-  return JSON.stringify({ findings, matches, appLayouts: [], menuBars: [] });
+  const result = { findings, matches, appLayouts: [], menuBars: [] };
+  if (subject) {
+    result.subject = measure(subject);
+  }
+  return JSON.stringify(result);
 }

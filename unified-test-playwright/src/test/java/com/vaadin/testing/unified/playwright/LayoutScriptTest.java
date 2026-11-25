@@ -51,7 +51,8 @@ class LayoutScriptTest {
     private JsonObject measure(String body, LayoutScript.Target... targets) {
         page.setContent("<!doctype html><html><head><style>body{margin:0;font:16px sans-serif}</style></head><body>"
                 + body + "</body></html>");
-        String json = (String) page.evaluate(LayoutScript.SOURCE, LayoutScript.argument(List.of(targets)));
+        String json = (String) page.evaluate(LayoutScript.SOURCE,
+                java.util.Arrays.asList(LayoutScript.argument(List.of(targets)), null));
         return JsonParser.parseString(json).getAsJsonObject();
     }
 
@@ -269,6 +270,22 @@ class LayoutScriptTest {
 
         assertEquals("[\"hidden\",\"hidden\",\"visible\"]", reaches(result, 0));
         assertEquals("[]", result.getAsJsonArray("findings").toString());
+    }
+
+    // ---------------------------------------------------------------- the subject
+
+    @Test
+    void theSubjectGetsItsOwnReach() {
+        page.setContent("""
+                <button id="under" style="position:absolute;left:10px;top:620px;width:120px;height:30px">Under</button>
+                <footer id="bar" style="position:fixed;left:0;bottom:0;width:100%;height:60px;background:#eee"></footer>
+                """);
+        String json = (String) page.evaluate(LayoutScript.SOURCE, java.util.Arrays.asList(
+                LayoutScript.argument(List.of()), page.querySelector("#under")));
+        JsonObject subject = JsonParser.parseString(json).getAsJsonObject().getAsJsonObject("subject");
+
+        assertEquals("behind", subject.get("reach").getAsString());
+        assertEquals("footer#bar", subject.get("by").getAsString());
     }
 
     private static String reaches(JsonObject result, int target) {
