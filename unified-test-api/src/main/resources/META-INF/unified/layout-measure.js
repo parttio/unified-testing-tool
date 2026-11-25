@@ -31,6 +31,38 @@
     findings.push({ kind: 'scroll', container: 'the page', by: root.scrollWidth - root.clientWidth });
   }
 
+  // every element of the document and of each open shadow root, one TreeWalker each (as Lighthouse's
+  // getElementsInDocument does)
+  const allElements = () => {
+    const all = [];
+    const walk = (root) => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      for (let e = walker.nextNode(); e; e = walker.nextNode()) {
+        all.push(e);
+        if (e.shadowRoot) {
+          walk(e.shadowRoot);
+        }
+      }
+    };
+    walk(document);
+    return all;
+  };
+
+  // how a finding names an element: its tag and id; in a shadow root, its host and its part
+  const describe = (e) => {
+    const own = e.tagName.toLowerCase() + (e.id ? '#' + e.id : '');
+    return own;
+  };
+
+  // sideways scroll of a container: something a user must scroll sideways in
+  for (const e of allElements()) {
+    const overflowX = getComputedStyle(e).overflowX;
+    if ((overflowX === 'auto' || overflowX === 'scroll') && e.scrollWidth > e.clientWidth + TOLERANCE
+        && e.checkVisibility()) {
+      findings.push({ kind: 'scroll', container: describe(e), by: e.scrollWidth - e.clientWidth });
+    }
+  }
+
   const matches = targets.map((t) => Array.from(document.querySelectorAll(t.css)).map(measure));
   return JSON.stringify({ findings, matches, appLayouts: [], menuBars: [] });
 }

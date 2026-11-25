@@ -103,6 +103,16 @@ class LayoutScriptTest {
         assertEquals("[]", result.getAsJsonArray("findings").toString());
     }
 
+    @Test
+    void aContainerThatScrollsSidewaysIsNamedWithHowFar() {
+        JsonObject result = measure("""
+                <div id="scroller" style="overflow-x:auto;width:300px"><div style="width:500px;height:20px">x</div></div>
+                """);
+
+        assertEquals("[{\"kind\":\"scroll\",\"container\":\"div#scroller\",\"by\":200}]",
+                result.getAsJsonArray("findings").toString());
+    }
+
     /** x, y, width of a box, rounded, and 0 for the height so fonts don't matter. */
     private static String roundedXyW(JsonObject match) {
         JsonArray box = match.getAsJsonArray("box");
