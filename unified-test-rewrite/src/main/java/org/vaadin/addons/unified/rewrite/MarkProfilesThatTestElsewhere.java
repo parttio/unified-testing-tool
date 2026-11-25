@@ -16,7 +16,7 @@ import org.openrewrite.xml.tree.Xml;
  * Leaves a Migration Marker on a Maven profile whose Failsafe run tested a server or browser outside the test (#613),
  * which the TestBench migration changes without a word: a migrated {@code @UnifiedSpringBootTest} starts the JVM app
  * itself, and the Selenium adapter always runs a local browser. The marker is an XML comment after the profile's
- * {@code <id>}; the recipe changes nothing else in the profile (ADR 0017, amending ADR 0013). A profile is marked when
+ * {@code <id>}; the recipe changes nothing else in the profile (ADR 0019, amending ADR 0013). A profile is marked when
  * it sets a TestBench grid parameter or a Sauce Labs setting anywhere, and, when it binds {@code maven-failsafe-plugin},
  * when it starts a server with {@code native-maven-plugin}, {@code exec-maven-plugin} or a {@code spring-boot} goal
  * other than {@code start}/{@code stop}/{@code build-info}, or gives Failsafe a property naming a URL or host.

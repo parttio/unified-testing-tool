@@ -7,6 +7,6 @@ section: Migration
   `spring-boot` goal than `start`/`stop`, one that gives Failsafe a server address, and one with TestBench grid
   (`com.vaadin.testbench.Parameters.gridBrowsers`, `hubHostname`) or Sauce Labs settings. Such a profile used to run
   green after the migration against the JVM app the test starts, on a local browser, with nothing saying so. The
-  recipe changes nothing else in the profile ([ADR 0017](../adr/0017-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md)).
+  recipe changes nothing else in the profile ([ADR 0019](../adr/0019-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md)).
   The Selenium adapter has no remote Selenium grid; the configuration guide and [2. Test setup](../spec/02-test-setup.md)
   now say so, and remote-grid support is on the roadmap ([#645](https://github.com/parttio/unified-testing-tool/issues/645)).

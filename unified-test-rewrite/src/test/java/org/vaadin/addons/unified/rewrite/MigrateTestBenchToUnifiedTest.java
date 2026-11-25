@@ -4182,6 +4182,57 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                 })));
     }
 
+    @Test
+    void aTestAssertingOnALoginElementChecksTheLoginAndGetsNoSignInMarker() {
+        rewriteRun(java(SPRING_BOOT_APPLICATION), java(APPLICATION), java(ENABLE_WEB_SECURITY),
+                java(SECURITY_CONFIGURATION), java("""
+                        package com.example;
+
+                        import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+                        import com.vaadin.testbench.annotations.Attribute;
+
+                        @Attribute(name = "id", value = "login")
+                        public class LoginViewElement extends LoginOverlayElement {
+                            public void signIn(String user) {
+                                getUsernameField().setValue(user);
+                            }
+
+                            public String getUsernameLabel() {
+                                return getUsernameField().getPropertyString("label");
+                            }
+                        }
+                        """), java("""
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+                        import org.junit.jupiter.api.Assertions;
+
+                        public class LoginIT extends BrowserTestBase {
+
+                            @BrowserTest
+                            void checksTheLogin() {
+                                LoginViewElement checked = $(LoginViewElement.class).first();
+                                Assertions.assertEquals("Email", checked.getUsernameLabel());
+                                checked.signIn("admin");
+                            }
+
+                            @BrowserTest
+                            void signsIn() {
+                                LoginViewElement login = $(LoginViewElement.class).first();
+                                login.signIn("admin");
+                            }
+                        }
+                        """, spec -> spec.after(after -> {
+                    org.assertj.core.api.Assertions.assertThat(after)
+                            .containsOnlyOnce("// TODO unified: " + TestBenchSetupToUnified.SIGNS_IN)
+                            .contains("// TODO unified: " + TestBenchSetupToUnified.SIGNS_IN + "\n        "
+                                    + "// TODO unified: TestBench page object: LoginViewElement (custom element extending "
+                                    + "LoginOverlayElement): write a Wrapper or convert the page object\n        login.signIn(");
+                    return after;
+                })));
+    }
+
     private static final String SECURITY_POM = """
                 <project>
                     <modelVersion>4.0.0</modelVersion>
