@@ -46,6 +46,8 @@ class TestLifecycleTest {
         List<Path> evidence;
         IOException evidenceFailure;
         boolean traces;
+        /** What measureLayout returns, as the layout script's JSON; null when the Testing Tool can't measure. */
+        String layout;
         /** Why this Testing Tool can't set a Viewport; null when it can. */
         String cannotSetViewport;
 
@@ -66,6 +68,12 @@ class TestLifecycleTest {
                             case "testEnded" -> traces ? List.of(((Path) args[0]).resolve("trace.zip")) : List.of();
                             case "tracesSteps" -> traces;
                             case "unwrap", "queryParameter" -> Optional.empty();
+                            case "measureLayout" -> {
+                                if (layout == null) {
+                                    throw new UnsupportedOperationException("this Testing Tool can't measure the layout");
+                                }
+                                yield layout;
+                            }
                             case "setViewport" -> {
                                 if (cannotSetViewport != null) {
                                     throw new UnsupportedOperationException(cannotSetViewport);

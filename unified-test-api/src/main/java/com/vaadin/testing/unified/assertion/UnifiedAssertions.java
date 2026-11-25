@@ -25,6 +25,7 @@ import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import java.time.LocalDate;
 import com.vaadin.testing.unified.internal.LazyElement;
+import com.vaadin.testing.unified.internal.LayoutMeasurement;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
 import com.vaadin.testing.unified.internal.Wrappers;
@@ -149,6 +150,19 @@ public final class UnifiedAssertions {
         return ((Matches) matches).count();
     }
 
+    /** Layout Findings as a failure shows them: one after the other, or none. */
+    record LayoutFindings(List<LayoutMeasurement.Finding> findings) {
+        boolean none() {
+            return findings.isEmpty();
+        }
+
+        @Override
+        public String toString() {
+            return findings.isEmpty() ? "no Layout Findings"
+                    : String.join("; ", findings.stream().map(LayoutMeasurement.Finding::text).toList());
+        }
+    }
+
     // ---------------------------------------------------------------- page
 
     public static final class PageAssert {
@@ -159,6 +173,20 @@ public final class UnifiedAssertions {
         public PageAssert isAt(Class<? extends Component> view) {
             check(run, () -> Phrases.page("see", "see " + Phrases.viewName(view)), () -> "the page", "to show",
                     view.getSimpleName(), () -> run.session().currentPath(), any -> run.session().isAt(view));
+            return this;
+        }
+
+        /**
+         * Nothing on the page scrolls sideways at the current Viewport: neither the page itself nor a container in it,
+         * such as AppLayout's content area. Grid, Tabs, TabSheet and VirtualList scroll sideways by design and don't
+         * count (ADR 0011). Retries until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public PageAssert hasNoHorizontalScroll() {
+            run.requireBrowser("hasNoHorizontalScroll");
+            check(run, () -> Phrases.page("see", "see no sideways scroll"), () -> "the page",
+                    "to have no sideways scroll", null,
+                    () -> new LayoutFindings(LayoutMeasurement.measure(run, null).findings("scroll")),
+                    v -> ((LayoutFindings) v).none());
             return this;
         }
 

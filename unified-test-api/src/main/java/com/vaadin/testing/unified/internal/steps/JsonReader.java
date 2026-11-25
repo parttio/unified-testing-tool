@@ -9,7 +9,7 @@ import java.util.Map;
  * A minimal JSON reader for reading {@code user-steps.json} back, so the Unified API needs no JSON library.
  * Objects become {@link Map}s (in order), arrays {@link List}s, numbers {@link Long} or {@link Double}.
  */
-final class JsonReader {
+public final class JsonReader {
 
     private final String text;
     private int pos;
@@ -19,7 +19,7 @@ final class JsonReader {
     }
 
     /** Parses one JSON value; throws {@link IllegalArgumentException} on malformed input. */
-    static Object parse(String text) {
+    public static Object parse(String text) {
         JsonReader reader = new JsonReader(text);
         Object value = reader.value();
         reader.skipWhitespace();
