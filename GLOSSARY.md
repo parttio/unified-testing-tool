@@ -92,6 +92,10 @@ _Avoid_: Highlighted element, focus, subject
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run
 
+**Replay**:
+Running a failed scenario again, from its evidence, with every kind of evidence on, and stopping just before the failing User Step so a person or an agent can look at the page, run the step, and try lookups; for a person in a visible browser, on Browserless with the JVM held open.
+_Avoid_: Rerun, recording, debug mode, time travel
+
 **Findable View**:
 A text view of what a Unified UI Test can find in a page or a container: one line per component, with its kind, name and state and the lookup that singles it out, written on failure on every Testing Tool and returned by `describe()`.
 _Avoid_: Snapshot, ARIA snapshot, component tree, page dump
