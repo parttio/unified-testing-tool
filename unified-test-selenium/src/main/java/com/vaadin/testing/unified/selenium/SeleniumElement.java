@@ -241,7 +241,8 @@ final class SeleniumElement implements UnifiedElement, com.vaadin.testing.unifie
 
     /**
      * Clicks the element as TestBench does (focus, then click()) unless another element is on top of its centre, as
-     * {@code elementFromPoint} sees it through shadow roots; then it returns "covered" and clicks nothing. An element
+     * {@code elementFromPoint} sees it through shadow roots, and through a slot for a host's own text under the point;
+     * then it returns "covered" and clicks nothing. An element
      * without a box, or one clicks pass through, is clicked as before.
      */
     static final String CLICK_IF_REACHABLE = """
@@ -251,7 +252,15 @@ final class SeleniumElement implements UnifiedElement, com.vaadin.testing.unifie
             let hit = r.width > 0 && r.height > 0 ? document.elementFromPoint(x, y) : null;
             while (hit && hit.shadowRoot) {
               const inner = hit.shadowRoot.elementFromPoint(x, y);
-              if (!inner || inner === hit) break;
+              if (!inner || inner === hit) {
+                // the point is over the host's own text, which a slot in its shadow root shows: start from that text,
+                // whose assignedSlot leads to what renders it (a side nav item's label in its <a>, #658)
+                const caret = document.caretPositionFromPoint ? document.caretPositionFromPoint(x, y)
+                    : document.caretRangeFromPoint ? document.caretRangeFromPoint(x, y) : null;
+                const text = caret && (caret.offsetNode || caret.startContainer);
+                if (text && text.nodeType === 3 && text.parentNode === hit && text.assignedSlot) hit = text;
+                break;
+              }
               hit = inner;
             }
             const up = (n) => n.assignedSlot || n.parentElement
