@@ -20,6 +20,79 @@ public class FindableViewTest {
     private final FakePage fake = new FakePage();
     private final UnifiedPage page = fake.page;
 
+    // ---------------------------------------------------------------- Reach, in a browser (ADR 0011)
+
+    private static final com.vaadin.testing.unified.ViewportSize PHONE =
+            new com.vaadin.testing.unified.ViewportSize("phone", 375, 667);
+
+    /** The layout script's result with these matches for the first target, the Findable View's first type. */
+    private static String layout(String matchesOfEveryTarget) {
+        return "{\"findings\":[],\"matches\":" + matchesOfEveryTarget + ",\"appLayouts\":[],\"menuBars\":[]}";
+    }
+
+    @Test
+    void inABrowserTheViewSaysWhichViewportItDescribes() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save");
+        browser.layout = layout("[]");
+
+        assertEquals("Findable view of “/people” on playwright at Viewport phone 375 × 667: 1 component",
+                browser.page.describe().lines().findFirst().orElseThrow());
+    }
+
+    @Test
+    void inABrowserEachLineSaysWhatClipsCoversOrHidesItsComponent() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Delete")
+                .add("vaadin-button", "text", "Share", "visible", "false").add("vaadin-button", "text", "Help");
+        browser.reaches.put("vaadin-button", List.of("behind:the AppLayout drawer", "clipped:div#box",
+                "hidden:the MenuBar overflow", "after scroll"));
+
+        assertEquals(List.of(
+                "button “Save” (behind the AppLayout drawer)  page.find(UnifiedButton.class).withText(\"Save\")",
+                "button “Delete” (clipped)               page.find(UnifiedButton.class).withText(\"Delete\")",
+                "button “Share” (hidden in the MenuBar overflow)  page.find(UnifiedButton.class).withText(\"Share\")",
+                "button “Help”                           page.find(UnifiedButton.class).withText(\"Help\")"),
+                lines(browser.page.describe()));
+    }
+
+    @Test
+    void aCoverTheViewListsIsNamedAsTheViewNamesIt() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Menu");
+        browser.reaches.put("vaadin-button", List.of("behind#vaadin-button@1", "visible"));
+
+        assertEquals("button “Save” (behind button “Menu”)  page.find(UnifiedButton.class).withText(\"Save\")",
+                lines(browser.page.describe()).get(0));
+    }
+
+    @Test
+    void whenTheScriptAndTheLookupDisagreeOnHowManyThereAreTheLinesSayNothingOfReach() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Delete");
+        browser.reaches.put("vaadin-button", List.of("clipped:div#box"));
+
+        assertEquals(List.of("button “Save”    page.find(UnifiedButton.class).withText(\"Save\")",
+                "button “Delete”  page.find(UnifiedButton.class).withText(\"Delete\")"), lines(browser.page.describe()));
+    }
+
+    @Test
+    void clickingAComponentSomethingCoversFailsSayingWhatCoversIt() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save");
+        RuntimeException intercepted = new RuntimeException("<div part=\"backdrop\"> intercepts pointer events");
+        browser.clickError = intercepted;
+        browser.subjectReach = "behind:the AppLayout drawer";
+
+        com.vaadin.testing.unified.UnifiedAssertionError e = org.junit.jupiter.api.Assertions.assertThrows(
+                com.vaadin.testing.unified.UnifiedAssertionError.class,
+                () -> browser.page.find(com.vaadin.testing.unified.component.UnifiedButton.class).withText("Save").click());
+
+        assertEquals("a reachable button with text “Save”", e.getExpected());
+        assertEquals("behind the AppLayout drawer", e.getFound());
+        org.junit.jupiter.api.Assertions.assertSame(intercepted, e.getCause());
+    }
+
     @Test
     void eachComponentWithItsNameStateAndLookup() {
         fake.add("vaadin-text-field", "label", "Name", "value", "Alan Turing")

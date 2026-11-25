@@ -48,7 +48,10 @@ public class LayoutAppLayoutView extends AppLayout {
         wideRow.getStyle().set("flex-shrink", "0");
         Tabs tabs = new Tabs(new Tab("Overview"), new Tab("Details"), new Tab("History"), new Tab("Files"),
                 new Tab("Settings"));
-        VerticalLayout content = new VerticalLayout(new TextField("Search"), tabs, grid, wideRow, new Button("Save"));
+        // opens the drawer from the content, the same way on every Testing Tool
+        Button openDrawer = new Button("Open the drawer", e -> setDrawerOpened(true));
+        VerticalLayout content = new VerticalLayout(openDrawer, new TextField("Search"), tabs, grid, wideRow,
+                new Button("Save"));
         setContent(content);
     }
 }

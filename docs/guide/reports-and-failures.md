@@ -146,7 +146,7 @@ Any other error a step's attempts throw is retried until the timeout, and `Cause
 Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it. When the failed step was about a grid row or a chat message, the grid's columns and first rows, or the list's first messages, follow, each with the lookup that finds it, as `grid.describe()` lists them.
 
 ```
-Findable view of “/checkout” on playwright (chromium): 6 components
+Findable view of “/checkout” on playwright (chromium) at Viewport 1280 × 720: 6 components
 text field “Street”  page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("Street")
 text field “City”    page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("City")
 text field “Street”  page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("Street")
@@ -154,6 +154,8 @@ text field “City”    page.find(UnifiedContainer.class).withId("shipping").fi
 button “Save”        page.find(UnifiedButton.class).withText("Save")
 button “Cancel”      page.find(UnifiedButton.class).withText("Cancel")
 ```
+
+In a browser *(unreleased)*, the header names the Viewport, and a line says when a user can't get to its component as it shows: `(clipped)` when a box with hidden overflow cuts it off, `(behind the AppLayout drawer)` or `(behind button “Menu”)` when something covers it, `(hidden in the AppLayout drawer)` or `(hidden in the MenuBar overflow)` when Vaadin tucked it away. A component a user scrolls to says nothing. A container's `describe()` doesn't say this, only the page's. An action on a component something covers or clips fails with that in `Found`, the same on Playwright and Selenium: `Expected a reachable button with text “Save”`, `Found behind the AppLayout drawer`.
 
 A kind of component whose lookup threw is not left out: the view ends with `Not listed: link (UnsupportedOperationException: …)` *(unreleased)*.
 

@@ -70,7 +70,9 @@ class LayoutScriptOnVaadinTest {
 
         JsonObject result = measure(page);
 
-        assertEquals("[\"behind the AppLayout drawer\"]", reachesAndBy(result, 2), result.toString());
+        // "Open the drawer" and "Save", in the content
+        assertEquals("[\"behind the AppLayout drawer\",\"behind the AppLayout drawer\"]", reachesAndBy(result, 2),
+                result.toString());
         assertEquals("[]", result.getAsJsonArray("findings").toString().replaceAll("\\{\"kind\":\"scroll\"[^}]*},?", "")
                 .replace(",]", "]"));
     }

@@ -323,6 +323,16 @@ class LayoutScriptTest {
                 "overlap [10,200,120,40]"), boxes);
     }
 
+    @Test
+    void aMatchThatLetsClicksThroughIsNotBehindWhatIsUnderIt() {
+        // a disabled Vaadin button has pointer-events: none, so a hit test lands on its parent
+        JsonObject result = measure("""
+                <div id="row" style="padding:10px"><button style="pointer-events:none">Archive</button></div>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[\"visible\"]", reaches(result, 0));
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));

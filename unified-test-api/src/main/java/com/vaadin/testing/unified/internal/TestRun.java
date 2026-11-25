@@ -50,6 +50,9 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
             }
         }
         steps.session(windowName, windowSession);
+        if (tool.hasRealBrowser()) {
+            steps.viewportChanged(windowName, viewport);
+        }
         return new TestRun(tool, windowSession, timeout, steps, windowName, ownTimeout, viewport);
     }
 

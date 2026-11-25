@@ -757,6 +757,21 @@ public final class StepRecorder {
     public void viewport(com.vaadin.testing.unified.ViewportSize size, boolean fixed) {
         this.viewport = size;
         this.viewportFixed = fixed;
+        viewportChanged(null, size);
+    }
+
+    /** Each window's Viewport now ("" for the first window). */
+    private final Map<String, com.vaadin.testing.unified.ViewportSize> currentViewports =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** A window's Viewport changed, or a window opened at one. */
+    public void viewportChanged(String window, com.vaadin.testing.unified.ViewportSize size) {
+        currentViewports.put(window == null ? "" : window, size);
+    }
+
+    /** The window's Viewport now; null without a browser. */
+    public com.vaadin.testing.unified.ViewportSize currentViewport(String window) {
+        return currentViewports.get(window == null ? "" : window);
     }
 
     /** The Viewport the test ran at; null without a browser. */
