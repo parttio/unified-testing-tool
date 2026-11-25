@@ -5,6 +5,8 @@ import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.Viewport;
+import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.internal.logs.ServerLogs;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
@@ -161,8 +163,9 @@ public final class TestLifecycle {
         steps.applicationPackages(ApplicationPackages.of(context));
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
+        ViewportSize viewport = viewport(context);
         if (tool.hasRealBrowser()) {
-            session.setViewport(settings.viewport());
+            session.setViewport(viewport);
         }
         steps.session(null, session);
         if (test != null && settings.userStepsSnapshots()) {
@@ -174,6 +177,16 @@ public final class TestLifecycle {
                 .orElse(null);
         return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)),
                 logs);
+    }
+
+    /**
+     * The Viewport the test runs at: its method's {@link Viewport}, else its class's, else the run's
+     * {@code vaadin.testing.viewport}, else 1280 × 720 (ADR 0011).
+     */
+    ViewportSize viewport(AdapterContext context) {
+        return find(context.testMethod().orElse(null), context.testClass().orElse(null), Viewport.class)
+                .map(v -> new ViewportSize(v.name(), v.width(), v.height()))
+                .orElseGet(settings::viewport);
     }
 
     /** One open test. Close it exactly once, when the test ends. */
