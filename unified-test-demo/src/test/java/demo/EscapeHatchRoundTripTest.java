@@ -12,11 +12,14 @@ import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
 import org.vaadin.addons.dramafinder.AutoWait;
 
 /**
  * A Unified action after an Escape Hatch action that reaches the server (docs/guide/tool-specific.md): the server's
- * answer to the click (the editor loads the person) can arrive after the next Unified action, and overwrite it.
+ * answer to the click (the editor loads the person) can arrive after the next Unified action, and overwrite it. Auto-Wait
+ * waits for it before the next Unified action acts (#604); the guide's waits are for code that reads the page itself.
  */
 @UnifiedSpringBootTest
 class EscapeHatchRoundTripTest {
@@ -56,4 +59,30 @@ class EscapeHatchRoundTripTest {
         assertThat(page.find(UnifiedNotification.class)).hasText("Saved Alan M. Turing");
     }
     // --8<-- [end:assertTheServersValue]
+
+    @Test
+    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+    @DisplayName("The user loads the stored name with a Playwright click, types a new one at once and saves")
+    void playwrightActionWaitsForTheEscapeHatchsRoundTrip(UnifiedPage page) {
+        page.navigate(SlowLoadView.class);
+
+        page.unwrap(Page.class).locator("#load").click();     // returns before the server has answered
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("New name");
+        page.find(UnifiedButton.class).withText("Save").click();
+
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved New name");
+    }
+
+    @Test
+    @RequiresTestingTool(TestingTool.SELENIUM)
+    @DisplayName("The user loads the stored name with a WebDriver click, types a new one at once and saves")
+    void seleniumActionWaitsForTheEscapeHatchsRoundTrip(UnifiedPage page) {
+        page.navigate(SlowLoadView.class);
+
+        page.unwrap(WebDriver.class).findElement(By.id("load")).click();
+        page.find(UnifiedTextField.class).withLabel("Name").setValue("New name");
+        page.find(UnifiedButton.class).withText("Save").click();
+
+        assertThat(page.find(UnifiedNotification.class)).hasText("Saved New name");
+    }
 }

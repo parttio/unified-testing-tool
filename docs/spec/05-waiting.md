@@ -13,6 +13,7 @@ sequenceDiagram
     participant A as App
     T->>W: click()
     W->>W: wait: exactly one match, visible, enabled
+    W->>A: wait: earlier server round-trip finished
     W->>A: user action
     W->>A: wait: server round-trip finished
     W->>A: wait: address bar updated (browsers)
@@ -22,8 +23,10 @@ sequenceDiagram
 | Testing Tool | Before the action | After the action |
 |---|---|---|
 | Browserless | by construction | by construction (synchronous) |
-| Playwright (Dramafinder) | Playwright actionability | **adapter adds** wait for Vaadin idle |
-| Selenium (TestBench) | **adapter adds** element-state wait | `waitForVaadin` |
+| Playwright (Dramafinder) | Playwright actionability; **adapter adds** wait for Vaadin idle, at most 5 s *(unreleased)* | **adapter adds** wait for Vaadin idle |
+| Selenium (TestBench) | **adapter adds** element-state wait; `waitForVaadin` | `waitForVaadin` |
+
+**A round trip already under way** *(unreleased)*. An Escape Hatch action that reaches the server (a Playwright `Locator.click()`) returns before the server has answered, and that answer can start another round trip. If the next action acted meanwhile, the late answer would overwrite it ([#604](https://github.com/parttio/unified-testing-tool/issues/604)). So before acting, an action also waits until no Flow client is busy. Browserless is synchronous, and TestBench's commands wait for Vaadin. On Playwright the adapter does it in the same call to the page that checks the component is visible and enabled, so an idle page costs no extra round trip; a component with a visibility rule of its own takes one more call. Its wait is capped at 5 s: an app that is still busy then, such as one with a short `@Poll` interval or a long request, is acted on anyway rather than failing as not usable ([ADR 0014](../adr/0014-playwright-actions-wait-for-flow-idle-before-acting.md)). The server round trip after the action is still waited for in full.
 
 **Address bar.** A server-side navigation (`ui.navigate(..)` in a listener) changes the address bar after Flow has handled the response: in a timeout, or in React mode through React Router while Flow's `Vaadin.Flow.navigation` flag is set. The round-trip wait is over by then. So after every action, the browser adapters also wait for that change (`AdapterSession.settle()`: one timeout, then while the flag is set, at most 2 s, then one more timeout, then the round trip the navigation may start). A one-shot read of the URL right after an action, through the Escape Hatch or a report, sees the new path ([#233](https://github.com/parttio/unified-testing-tool/issues/233)). The flag is Flow's internal, not an API.
 
@@ -84,7 +87,7 @@ Not part of the Unified API. Use the Escape Hatch and the tool's own switch (e.g
 
 ## Requirements on Testing Tool adapters
 
-- Guarantee both halves of Auto-Wait for every action, including the address bar change of a server-side navigation (`settle()`).
+- Guarantee both halves of Auto-Wait for every action: before it, a round trip already under way (capped where the app may never be idle); after it, the action's round trip, including the address bar change of a server-side navigation (`settle()`).
 - Re-resolve Wrappers on every call, and count the matches for `exists()`, `doesNotExist()` and `hasCount(n)`.
 - Retry assertions until the timeout; on Browserless flush `UI.access` tasks and signals between attempts.
 - Give grid row and column actions the same Auto-Wait as every other action.

@@ -153,19 +153,42 @@ final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unif
      * visibility rule (non-empty box, visibility visible, display: contents by its children) and no
      * {@code disabled} attribute, read in the page together. Otherwise, or when the component has its own
      * visibility rule, {@link #isVisible()} and {@link #isEnabled()} (#402).
+     * <p>
+     * Once the element is usable, the same call also waits until no Flow client is busy, at most
+     * {@link PlaywrightSession#FLOW_IDLE_CAP_MS}, and then checks the element again: a round trip started before the
+     * action, by an Escape Hatch click, can't overwrite what the action does (#604, ADR 0014). An idle page answers
+     * at once, so the check costs no extra round trip.
      */
     @Override
     public boolean isVisibleAndEnabled() {
         java.util.Optional<Boolean> own = support.visible(locator);
         if (own.isPresent() || candidates == null) {
-            return own.orElseGet(locator::isVisible) && isEnabled();
+            if (!(own.orElseGet(locator::isVisible) && isEnabled())) {
+                return false;
+            }
+            return switch (session.awaitFlowIdle()) {
+                case IDLE -> true;
+                case WAITED -> support.visible(locator).orElseGet(locator::isVisible) && isEnabled();
+                case GONE -> false;
+            };
         }
-        return Boolean.TRUE.equals(candidates.evaluateAll(VISIBLE_AND_ENABLED, index));
+        try {
+            return Boolean.TRUE.equals(candidates.evaluateAll(VISIBLE_AND_ENABLED,
+                    List.of(index, PlaywrightSession.FLOW_IDLE_CAP_MS)));
+        } catch (com.microsoft.playwright.PlaywrightException e) {
+            if (e.getMessage() != null && e.getMessage().contains("Execution context was destroyed")) {
+                return false; // the page navigated while Flow was busy: find the element again
+            }
+            throw e;
+        }
     }
 
-    /** As Playwright's isVisible() and Dramafinder's isEnabled() (the disabled attribute) decide them. */
+    /**
+     * As Playwright's isVisible() and Dramafinder's isEnabled() (the disabled attribute) decide them; when both hold,
+     * after Flow has been idle, or busy for {@code idleMs}.
+     */
     private static final String VISIBLE_AND_ENABLED = """
-            (els, i) => {
+            async (els, [i, idleMs]) => {
               const el = els[i];
               if (!el) return false;
               const textVisible = (node) => {
@@ -189,7 +212,18 @@ final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unif
                 const r = e.getBoundingClientRect();
                 return r.width > 0 && r.height > 0;
               };
-              return visible(el) && !el.hasAttribute('disabled');
+              const usable = () => el.isConnected && visible(el) && !el.hasAttribute('disabled');
+              if (!usable()) return false;
+              const tick = (ms) => new Promise(r => setTimeout(r, ms));
+              const busy = () => {
+                const clients = window.Vaadin?.Flow?.clients;
+                return !!clients && Object.values(clients).some(c => c.isActive && c.isActive());
+              };
+              if (!busy()) return true;
+              for (let t = 0; t < idleMs && busy(); t += 10) {
+                await tick(10);
+              }
+              return usable();
             }""";
 
     /** No {@code disabled} attribute: Vaadin components reflect the property to it. */
