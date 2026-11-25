@@ -181,6 +181,41 @@ ul.plain { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: colum
 .lic > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
 .lic h3 { font-size: 1rem; }
 .foot { font-size: 13px; color: var(--muted); }
+
+/* where the code lives */
+.steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.steps button { font: inherit; font-size: 14px; text-align: left; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; display: flex; flex-direction: column; gap: 0; line-height: 1.3; }
+.steps button small { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.steps button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: var(--accent-soft); }
+.steps button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.phase-sum { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; font-size: 15px; }
+.st-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.st-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.repos { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; align-items: start; }
+.repo { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.repo.isnew { border-color: var(--ok); border-style: dashed; }
+.repo.archived { opacity: .62; }
+.repo-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.repo-h b { font-family: var(--mono); font-size: 14px; font-weight: 500; word-break: break-word; }
+.repo-h span { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.repo-note { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.mods { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.mod { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 7px 10px; border-radius: 6px; background: var(--code-bg); border-left: 3px solid transparent; }
+.mod .mn { font-family: var(--mono); font-size: 12.5px; word-break: break-word; }
+.mod .md { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.badge { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; align-self: start; }
+.mod.s-same .badge { display: none; }
+.mod.s-new { border-left-color: var(--ok); } .mod.s-new .badge { color: var(--ok); }
+.mod.s-in { border-left-color: var(--accent); } .mod.s-in .badge { color: var(--accent); }
+.mod.s-chg { border-left-color: var(--warn); } .mod.s-chg .badge { color: var(--warn); }
+.mod.s-frozen { border-left-color: var(--muted); background: transparent; border: 1px dashed var(--line); border-left: 3px solid var(--muted); } .mod.s-frozen .badge { color: var(--muted); }
+.mod.s-gone { border-left-color: var(--bad); background: transparent; } .mod.s-gone .mn { text-decoration: line-through; color: var(--muted); } .mod.s-gone .badge { color: var(--bad); }
+.moves { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.moves li { display: grid; grid-template-columns: minmax(0, 1fr) 1.5rem minmax(0, 1fr); gap: 8px; align-items: start; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.moves li:last-child { border-bottom: 0; }
+.moves .arr { color: var(--accent); text-align: center; font-family: var(--mono); }
+.moves .what { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+@media (max-width: 560px) { .moves li { grid-template-columns: minmax(0, 1fr); } .moves .arr { text-align: left; } }
 @media (prefers-reduced-motion: no-preference) { .fill { transition: width .5s ease; } }
 </style>
 
@@ -192,6 +227,7 @@ ul.plain { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: colum
       <a href="#coverage">Coverage</a>
       <a href="#options">Merge options</a>
       <a href="#architecture">Architecture</a>
+      <a href="#where">Where code lives</a>
       <a href="#product">Product story</a>
       <a href="#roadmap">Roadmap</a>
       <a href="#caveats">Not verified</a>
@@ -375,6 +411,24 @@ flowchart TD
       <p>Most of the Unified API's design decisions carry over: filters that follow component type, wrappers as interfaces in the component's jar, a test-runner-neutral lifecycle, the Findable View and the migration recipes. The design departs from it in three places: drivers per runtime instead of adapters per tool, no per-component <code>*Access</code> interfaces in the driver SPI, and drivers that sit on the runtime instead of on another wrapper library.</p>
     </section>
 
+    <section id="where">
+      <div class="eyebrow">Where the code lives, phase by phase <span class="op">opinion</span></div>
+      <h2>What moves where, and what gets created</h2>
+      <p>Pick a phase to see every repository as it stands after that phase. "Today" is measured from the checkouts; the later phases are the proposal. The name <code>vaadin/testing</code> is a placeholder for the new home. It could also be <code>browserless-test</code> renamed, since that repo is already under <code>vaadin</code> and versioned with the platform.</p>
+      <div class="steps" role="group" aria-label="Choose a phase" id="steps"></div>
+      <div class="phase-sum" id="phase-sum"></div>
+      <div class="st-legend">
+        <span><span class="badge" style="color:var(--ok)">new</span>created in this phase</span>
+        <span><span class="badge" style="color:var(--accent)">moved in</span>arrived from another repo</span>
+        <span><span class="badge" style="color:var(--warn)">changed</span>reshaped in place</span>
+        <span><span class="badge" style="color:var(--muted)">frozen</span>kept for existing tests, no new features</span>
+        <span><span class="badge" style="color:var(--bad)">removed</span>deleted or emptied</span>
+      </div>
+      <div class="repos" id="repos"></div>
+      <h3 id="moves-h">Moves in this phase</h3>
+      <ul class="moves" id="moves"></ul>
+    </section>
+
     <section id="product">
       <div class="eyebrow">The official product <span class="op">opinion</span></div>
       <h2>What a Vaadin developer would see</h2>
@@ -535,5 +589,212 @@ flowchart TD
     });
   });
   render("all");
+})();
+
+(function () {
+  // m(name, description, status); status: same | new | in | chg | frozen | gone
+  function m(n, d, s) { return { n: n, d: d, s: s || "same" }; }
+  var LBL = { same: "", "new": "new", "in": "moved in", chg: "changed", frozen: "frozen", gone: "removed" };
+
+  var phases = [
+    {
+      id: "today", step: "Today", title: "Seven repositories",
+      sum: "Component knowledge is spread over four places: TestBench elements in <code>flow-components</code> and <code>flow</code>, Browserless testers in <code>browserless-test/shared</code>, Dramafinder elements in one Maven module, and the Unified API's adapters on top of all three. UI Unit in <code>testbench</code> is a deprecated fork of Browserless.",
+      repos: [
+        { r: "vaadin/testbench", lic: "commercial", mods: [
+          m("vaadin-testbench-shared", "TestBenchElement, ElementQuery, waitForVaadin, screenshots"),
+          m("vaadin-testbench-core · -core-junit5 · -core-junit6", "JUnit 4 / 5 / 6 integration; the JUnit 6 module compiles the JUnit 5 sources"),
+          m("vaadin-testbench-unit-shared · -unit · -unit-junit5 · -unit-junit6 · -unit-quarkus", "UI Unit: in-JVM testing, a deprecated fork of Browserless (5 modules)"),
+          m("vaadin-testbench-loadtest", "k6 kit that turns UI tests into load tests"),
+          m("vaadin-testbench-bom", "")
+        ]},
+        { r: "vaadin/flow-components", lic: "Apache-2.0 / commercial per component", mods: [
+          m("vaadin-‹x›-flow", "the Java component itself (48 component parents)"),
+          m("vaadin-‹x›-testbench  ×48", "TestBench elements (Selenium), 86 classes, 10,632 lines, released with the component"),
+          m("vaadin-‹x›-flow-integration-tests", "the component's own browser tests")
+        ]},
+        { r: "vaadin/flow", lic: "Apache-2.0", mods: [
+          m("flow-client", "holds Vaadin.Flow.clients, which every tool polls to know the server is done"),
+          m("flow-html-components-testbench", "46 TestBench elements for Div, Anchor, Input …")
+        ]},
+        { r: "vaadin/web-components", lic: "Apache-2.0 / commercial", mods: [
+          m("<vaadin-grid>, <vaadin-combo-box> …", "private fields such as _scrollToFlatIndex, called by four copies of test JavaScript")
+        ]},
+        { r: "vaadin/browserless-test", lic: "Apache-2.0", note: "The testers use the package com.vaadin.flow.component.* but live here, not in flow-components.", mods: [
+          m("shared", "mocked Vaadin environment + 78 testers + ComponentQuery (Java and Kotlin)"),
+          m("locator-processor", "generates the typed findXxx() locators"),
+          m("junit6 · spring · quarkus · junit6-cdi-tests", "test runner and framework integration"),
+          m("bom", "")
+        ]},
+        { r: "parttio/dramafinder", lic: "Apache-2.0", note: "One Maven module, own version (2.2.x).", mods: [
+          m("element/", "57 Playwright element classes + Has* mixins, 21,166 lines"),
+          m("AutoWait, RouteNavigation, base class", "waits for the server, route-to-URL, test setup"),
+          m("spring/ · agent/", "test login for @WithMockUser; agent report, view outline"),
+          m("skills/ · llms.txt", "agent skills")
+        ]},
+        { r: "parttio/unified-testing-tool", lic: "Apache-2.0", mods: [
+          m("unified-test-api", "Unified wrappers, lookups, reports, SPI with per-component *Access interfaces"),
+          m("unified-test-browserless · -playwright · -selenium", "adapters that sit on top of Browserless testers, Dramafinder and TestBench elements"),
+          m("unified-test-spring · -archunit", "Spring Boot support, style rules"),
+          m("unified-test-rewrite", "OpenRewrite migration recipes from all three tools"),
+          m("unified-test-demo · -bom", "")
+        ]}
+      ],
+      moves: []
+    },
+    {
+      id: "p0", step: "Phase 0", title: "Stop double work",
+      sum: "Only deletion, no design. UI Unit's five modules go in the next TestBench major. Its users run the existing recipe and land on Browserless. Nothing else moves.",
+      repos: [
+        { r: "vaadin/testbench", lic: "commercial", mods: [
+          m("vaadin-testbench-shared", ""),
+          m("vaadin-testbench-core · -core-junit5 · -core-junit6", ""),
+          m("vaadin-testbench-unit-* (5 modules)", "deleted: already @Deprecated(forRemoval = true)", "gone"),
+          m("vaadin-testbench-loadtest", ""),
+          m("vaadin-testbench-bom", "", "chg")
+        ]},
+        { r: "vaadin/flow-components", lic: "unchanged", mods: [ m("vaadin-‹x›-flow · vaadin-‹x›-testbench ×48", "unchanged") ]},
+        { r: "vaadin/flow", lic: "unchanged", mods: [ m("flow-client · flow-html-components-testbench", "unchanged") ]},
+        { r: "vaadin/browserless-test", lic: "Apache-2.0", mods: [ m("shared · locator-processor · junit6 · spring · quarkus · bom", "unchanged; now the only in-JVM tool") ]},
+        { r: "parttio/dramafinder", lic: "unchanged", mods: [ m("one module", "unchanged") ]},
+        { r: "parttio/unified-testing-tool", lic: "unchanged", mods: [ m("all modules", "unchanged; its recipe MigrateUIUnitToBrowserless is what UI Unit users run") ]}
+      ],
+      moves: [
+        ["testbench / vaadin-testbench-unit-*", "deleted", "users migrate with MigrateUIUnitToBrowserless from unified-test-rewrite"]
+      ]
+    },
+    {
+      id: "p1", step: "Phase 1", title: "One home",
+      sum: "Three repositories become one: Browserless, the Unified API and (by agreement with its maintainer) Dramafinder move into one Vaadin monorepo with <code>com.vaadin</code> coordinates, platform versioning and one BOM. Code is moved, not rewritten. TestBench stays in its own repo because it is commercial. Component repos do not change yet.",
+      repos: [
+        { r: "vaadin/testing", lic: "Apache-2.0", isnew: true, note: "New monorepo (name is a placeholder). Versioned with the Vaadin platform.", mods: [
+          m("browserless/  (shared, locator-processor, junit6, spring, quarkus)", "from vaadin/browserless-test, unchanged", "in"),
+          m("testing-api", "from unified-test-api; package rename to com.vaadin", "in"),
+          m("testing-adapter-browserless · -playwright · -selenium", "from unified-test-*, unchanged for now", "in"),
+          m("testing-spring · testing-archunit", "from unified-test-spring / -archunit", "in"),
+          m("testing-rewrite", "from unified-test-rewrite + a new org.vaadin.addons → com.vaadin rename recipe", "in"),
+          m("dramafinder", "the Dramafinder module as-is, com.vaadin coordinates", "in"),
+          m("vaadin-testing-bom", "one BOM, imported by the platform BOM", "new"),
+          m("CI matrix", "runs the demo tests on Browserless, Playwright and Selenium", "new")
+        ]},
+        { r: "vaadin/testbench", lic: "commercial", mods: [
+          m("vaadin-testbench-shared · -core* · -loadtest · -bom", "unchanged")
+        ]},
+        { r: "vaadin/flow-components", lic: "unchanged", mods: [ m("vaadin-‹x›-flow · vaadin-‹x›-testbench ×48", "unchanged") ]},
+        { r: "vaadin/flow", lic: "unchanged", mods: [ m("flow-client · flow-html-components-testbench", "unchanged") ]},
+        { r: "vaadin/browserless-test", lic: "archived", archived: true, mods: [ m("everything", "moved to vaadin/testing (or this repo is renamed and becomes it)", "gone") ]},
+        { r: "parttio/dramafinder", lic: "archived", archived: true, mods: [ m("everything", "moved to vaadin/testing; README points there", "gone") ]},
+        { r: "parttio/unified-testing-tool", lic: "archived", archived: true, mods: [ m("everything", "moved to vaadin/testing", "gone") ]}
+      ],
+      moves: [
+        ["browserless-test / *", "vaadin/testing / browserless/", "whole repo, history kept"],
+        ["unified-testing-tool / unified-test-*", "vaadin/testing / testing-*", "renamed modules, com.vaadin packages"],
+        ["dramafinder / (single module)", "vaadin/testing / dramafinder", "needs the maintainer's agreement"]
+      ]
+    },
+    {
+      id: "p2", step: "Phase 2", title: "Shared browser layer",
+      sum: "The duplication actually goes here. The SPI is trimmed to Driver / Session / Node. Component behaviour is written once for the server and once for the DOM, still in one central place. The three adapters are replaced by thin drivers. The Selenium driver lives in the TestBench repo, so the commercial code stays separate. Flow and web-components each get a small public API that tests use instead of private fields.",
+      repos: [
+        { r: "vaadin/testing", lic: "Apache-2.0", mods: [
+          m("testing-api", "SPI trimmed to Driver, Session, Node, ServerNode, DomNode; the per-component *Access interfaces are removed", "chg"),
+          m("testing-server", "server behaviours for the 26 Unified components, extracted from the Browserless testers (temporary home)", "new"),
+          m("testing-dom", "DOM behaviours for the 26 components, one set for Playwright and Selenium (temporary home)", "new"),
+          m("testing-driver-browserless", "the mocked environment from browserless/shared as a driver", "new"),
+          m("testing-driver-playwright", "DomNode over Playwright Locator; built from Dramafinder's AutoWait, RouteNavigation and base class (≈1,000 lines)", "new"),
+          m("testing-adapter-browserless · -playwright · -selenium", "replaced by the drivers", "gone"),
+          m("browserless/ (testers)", "kept: existing Browserless tests and the escape hatch still use them", "same"),
+          m("dramafinder", "frozen; existing Dramafinder tests keep working", "frozen"),
+          m("testing-spring · -rewrite · -archunit · bom", "")
+        ]},
+        { r: "vaadin/testbench", lic: "commercial", mods: [
+          m("vaadin-testbench-driver", "Selenium driver: DomNode over WebElement; grid, cloud, real Safari, screenshot comparison", "new"),
+          m("vaadin-testbench-shared · -core*", "kept for existing TestBench tests"),
+          m("vaadin-testbench-loadtest · -bom", "")
+        ]},
+        { r: "vaadin/flow", lic: "Apache-2.0", mods: [
+          m("flow-client", "a public, documented 'client is idle' API, replacing three copies of the wait script", "chg"),
+          m("flow-html-components-testbench", "")
+        ]},
+        { r: "vaadin/web-components", lic: "unchanged", mods: [
+          m("<vaadin-grid>, <vaadin-combo-box>, <vaadin-date-picker>, <vaadin-upload>", "supported test hooks (rows, items, scroll to index), owned by the components team", "chg")
+        ]},
+        { r: "vaadin/flow-components", lic: "unchanged", mods: [ m("vaadin-‹x›-flow · vaadin-‹x›-testbench ×48", "unchanged") ]}
+      ],
+      moves: [
+        ["browserless/shared testers (logic)", "vaadin/testing / testing-server", "copied out as server behaviours; the testers stay for now"],
+        ["unified-test-playwright + -selenium *Access + Dramafinder/TestBench element logic", "vaadin/testing / testing-dom", "one DOM implementation replaces four JavaScript copies"],
+        ["dramafinder AutoWait, RouteNavigation", "vaadin/testing / testing-driver-playwright", ""],
+        ["testbench-shared (WebDriver plumbing)", "vaadin/testbench / vaadin-testbench-driver", "stays commercial"]
+      ]
+    },
+    {
+      id: "p3", step: "Phase 3", title: "Knowledge next to components",
+      sum: "Component by component, the wrapper and its two behaviours move out of <code>vaadin/testing</code> into the component's own repo, where the TestBench element already is. They are released with the component, and a component change and its test-wrapper change land in one pull request. <code>vaadin/testing</code> is left with the API, the drivers and the integrations. Old elements and testers stay frozen as escape hatches.",
+      repos: [
+        { r: "vaadin/flow-components", lic: "follows the component (GridPro, Charts … stay commercial)", mods: [
+          m("vaadin-‹x›-flow", "the component"),
+          m("vaadin-‹x›-testing  ×48", "Wrapper interface + server behaviour + DOM behaviour; depends only on testing-api", "new"),
+          m("vaadin-‹x›-testbench ×48", "old TestBench elements, frozen; reachable through the escape hatch", "frozen")
+        ]},
+        { r: "vaadin/flow", lic: "Apache-2.0", mods: [
+          m("flow-html-components-testing", "wrappers for Div, Anchor, Input …", "new"),
+          m("flow-html-components-testbench", "frozen", "frozen"),
+          m("flow-client", "")
+        ]},
+        { r: "vaadin/testing", lic: "Apache-2.0", note: "No component code left here.", mods: [
+          m("testing-api", "Page, filters, assertions, Auto-Wait, reports, SPI"),
+          m("testing-driver-browserless · testing-driver-playwright", ""),
+          m("testing-spring · testing-quarkus · testing-rewrite · skills", "Quarkus ported from Browserless", "chg"),
+          m("testing-server · testing-dom", "emptied into the component modules", "gone"),
+          m("browserless/ testers", "frozen; new work goes into vaadin-‹x›-testing", "frozen"),
+          m("dramafinder", "frozen", "frozen"),
+          m("vaadin-testing-bom · vaadin-testing (aggregator)", "one dependency brings the API and every vaadin-‹x›-testing module")
+        ]},
+        { r: "vaadin/testbench", lic: "commercial", mods: [
+          m("vaadin-testbench-driver", "the Selenium driver"),
+          m("vaadin-testbench-shared · -core*", "frozen with the old element API", "frozen"),
+          m("vaadin-testbench-loadtest", "")
+        ]},
+        { r: "vaadin/web-components", lic: "unchanged", mods: [ m("test hooks", "extended to the remaining components as their DOM behaviours need them", "chg") ]}
+      ],
+      moves: [
+        ["vaadin/testing / testing-server + testing-dom (per component)", "flow-components / vaadin-‹x›-testing", "one component per PR, starting with the 26"],
+        ["browserless/shared testers not yet covered (≈30 components)", "flow-components / vaadin-‹x›-testing", "become that component's server behaviour"],
+        ["vaadin/testing HTML wrappers", "flow / flow-html-components-testing", ""]
+      ]
+    }
+  ];
+
+  var stepsEl = document.getElementById("steps");
+  stepsEl.innerHTML = phases.map(function (p, i) {
+    return '<button type="button" id="step-' + p.id + '" data-i="' + i + '" aria-pressed="' + (i === 0) + '"><small>' + p.step + "</small>" + p.title + "</button>";
+  }).join("");
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function show(i) {
+    var p = phases[i];
+    document.getElementById("phase-sum").innerHTML = p.sum;
+    document.getElementById("repos").innerHTML = p.repos.map(function (r) {
+      return '<div class="repo' + (r.isnew ? " isnew" : "") + (r.archived ? " archived" : "") + '">' +
+        '<div class="repo-h"><b>' + r.r + "</b><span>" + r.lic + "</span></div>" +
+        (r.note ? '<div class="repo-note">' + r.note + "</div>" : "") +
+        '<ul class="mods">' + r.mods.map(function (x) {
+          return '<li class="mod s-' + x.s + '"><span class="mn">' + esc(x.n) + '</span><span class="badge">' + LBL[x.s] + "</span>" +
+            (x.d ? '<span class="md">' + esc(x.d) + "</span>" : "") + "</li>";
+        }).join("") + "</ul></div>";
+    }).join("");
+    var mv = document.getElementById("moves"), mh = document.getElementById("moves-h");
+    mh.hidden = mv.hidden = !p.moves.length;
+    mv.innerHTML = p.moves.map(function (x) {
+      return '<li><span class="mono">' + esc(x[0]) + '</span><span class="arr">→</span><span class="mono">' + esc(x[1]) + "</span>" +
+        (x[2] ? '<span class="what">' + esc(x[2]) + "</span>" : "") + "</li>";
+    }).join("");
+    stepsEl.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(+b.dataset.i === i)); });
+    try { localStorage.setItem("where-phase", String(i)); } catch (e) {}
+  }
+  stepsEl.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) show(+b.dataset.i); });
+  var start = 0;
+  try { var s = parseInt(localStorage.getItem("where-phase"), 10); if (s >= 0 && s < phases.length) start = s; } catch (e) {}
+  show(start);
 })();
 </script>
