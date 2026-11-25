@@ -24,10 +24,12 @@ public final class Settings {
     public static final String USER_STEPS_COMPARE_DIR = "vaadin.testing.user-steps.compare-dir";
     public static final String USER_STEPS_SERVER_LOG = "vaadin.testing.user-steps.server-log";
     public static final String USER_STEPS_SNAPSHOTS = "vaadin.testing.user-steps.snapshots";
+    public static final String VIEWPORT = "vaadin.testing.viewport";
 
     /** Which tests print their User Steps to stdout, the CI log. */
     public enum UserStepsLog { ALL, FAILED, NONE }
 
+    private static final Pattern VIEWPORT_VALUE = Pattern.compile("(?:([^:]+):)?(\\d+)\\s*[xX×]\\s*(\\d+)");
     private static final Pattern DURATION = Pattern.compile("(\\d+)\\s*(ms|s|m)?");
 
     private final ConfigurationSource source;
@@ -51,6 +53,26 @@ public final class Settings {
     public Duration timeout() {
         return get(TIMEOUT).map(Settings::parseDuration).orElse(Duration.ofSeconds(10));
     }
+
+    /**
+     * {@code vaadin.testing.viewport}: the Viewport of every test that declares none, {@code [name:]WIDTHxHEIGHT}
+     * such as {@code phone:375x667}; 1280 × 720 when unset (ADR 0011).
+     */
+    public com.vaadin.testing.unified.Viewport viewport() {
+        return get(VIEWPORT).map(String::trim).map(v -> {
+            Matcher m = VIEWPORT_VALUE.matcher(v);
+            int width = m.matches() ? Integer.parseInt(m.group(2)) : 0;
+            int height = m.matches() ? Integer.parseInt(m.group(3)) : 0;
+            if (width < 1 || height < 1) {
+                throw new IllegalArgumentException(
+                        VIEWPORT + ": expected [name:]WIDTHxHEIGHT, such as phone:375x667, got " + v);
+            }
+            return new com.vaadin.testing.unified.Viewport(m.group(1) == null ? "" : m.group(1).trim(), width, height);
+        }).orElse(DEFAULT_VIEWPORT);
+    }
+
+    /** The Viewport when neither the test nor the run sets one: the same on every browser Testing Tool. */
+    public static final com.vaadin.testing.unified.Viewport DEFAULT_VIEWPORT = com.vaadin.testing.unified.Viewport.of(1280, 720);
 
     /** Where failure evidence goes: next to the Surefire reports, so CI uploads it with them. */
     public Path evidenceDir() {
