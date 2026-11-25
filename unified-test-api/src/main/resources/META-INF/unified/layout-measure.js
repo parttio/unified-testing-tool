@@ -11,10 +11,6 @@
   const { targets } = JSON.parse(argument);
   const round = (n) => Math.round(n * 10) / 10;
 
-  const measure = (element) => {
-    const r = element.getBoundingClientRect();
-    return { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
-  };
 
   // a box that sticks out by less than this is rounding, not something a user scrolls to
   const TOLERANCE = 1;
@@ -80,6 +76,68 @@
     }
   }
 
+  // the element's parent in the flat tree: its slot, its parent, or its shadow root's host
+  const flatParent = (e) => e.assignedSlot || e.parentElement
+      || (e.getRootNode() instanceof ShadowRoot ? e.getRootNode().host : null);
+
+  // the boxes that can clip an element: its containing-block chain, not its DOM parents (CSS 2 §10.1; Siteimprove
+  // Alfa's and Cypress's visibility rules, MIT): an absolute box escapes static ancestors, a fixed box every ancestor
+  // without a transform, filter or containment
+  const containingBlocks = (element) => {
+    const chain = [];
+    let position = getComputedStyle(element).position;
+    for (let n = flatParent(element); n && n !== document.documentElement; n = flatParent(n)) {
+      const style = getComputedStyle(n);
+      if (style.display === 'contents') {
+        continue;
+      }
+      const createsBlockForFixed = style.transform !== 'none' || style.filter !== 'none'
+          || /paint|layout|strict|content/.test(style.contain);
+      if (position === 'fixed' && !createsBlockForFixed) {
+        continue;
+      }
+      if (position === 'absolute' && style.position === 'static' && !createsBlockForFixed) {
+        continue;
+      }
+      chain.push(n);
+      position = style.position;
+    }
+    return chain;
+  };
+
+  // what clips the point (x, y) of an element, or null: a box with hidden overflow it lies outside of
+  const clippedBy = (element, x, y) => {
+    for (const box of containingBlocks(element)) {
+      const style = getComputedStyle(box);
+      const r = box.getBoundingClientRect();
+      const left = r.left + box.clientLeft;
+      const top = r.top + box.clientTop;
+      const outsideX = x < left || x > left + box.clientWidth;
+      const outsideY = y < top || y > top + box.clientHeight;
+      const hides = (overflow) => overflow === 'hidden' || overflow === 'clip';
+      if ((hides(style.overflowX) && outsideX) || (hides(style.overflowY) && outsideY)) {
+        return describe(box);
+      }
+    }
+    return null;
+  };
+
+  const measure = (element) => {
+    const r = element.getBoundingClientRect();
+    const match = { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
+    const by = clippedBy(element, r.left + r.width / 2, r.top + r.height / 2);
+    if (by) {
+      match.reach = 'clipped';
+      match.by = by;
+    }
+    return match;
+  };
+
   const matches = targets.map((t) => Array.from(document.querySelectorAll(t.css)).map(measure));
+  matches.forEach((list, target) => list.forEach((m, index) => {
+    if (m.reach === 'clipped') {
+      findings.push({ kind: 'clipped', target, index, by: m.by });
+    }
+  }));
   return JSON.stringify({ findings, matches, appLayouts: [], menuBars: [] });
 }

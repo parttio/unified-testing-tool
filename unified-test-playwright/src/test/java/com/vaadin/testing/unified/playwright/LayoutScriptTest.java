@@ -147,6 +147,24 @@ class LayoutScriptTest {
                 result.getAsJsonArray("findings").toString());
     }
 
+    // ---------------------------------------------------------------- clipped
+
+    @Test
+    void aButtonPushedOutOfAHiddenOverflowBoxIsClippedByIt() {
+        JsonObject result = measure("""
+                <div id="box" style="overflow:hidden;width:200px;height:60px;white-space:nowrap">
+                  <span style="display:inline-block;width:250px">spacer</span><button>Save</button>
+                </div>
+                <button>Cancel</button>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[{\"kind\":\"clipped\",\"target\":0,\"index\":0,\"by\":\"div#box\"}]",
+                result.getAsJsonArray("findings").toString());
+        assertEquals("clipped", matches(result, 0).get(0).getAsJsonObject().get("reach").getAsString());
+        assertEquals("div#box", matches(result, 0).get(0).getAsJsonObject().get("by").getAsString());
+        assertEquals("visible", matches(result, 0).get(1).getAsJsonObject().get("reach").getAsString());
+    }
+
     /** x, y, width of a box, rounded, and 0 for the height so fonts don't matter. */
     private static String roundedXyW(JsonObject match) {
         JsonArray box = match.getAsJsonArray("box");
