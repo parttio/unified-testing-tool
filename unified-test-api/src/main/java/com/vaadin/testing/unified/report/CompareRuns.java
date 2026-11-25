@@ -26,7 +26,7 @@ import java.util.stream.Stream;
  * directories: for CI, where each Testing Tool has a job of its own and none has another's evidence while it runs.
  *
  * <pre>
- * java -cp unified-test-api.jar com.vaadin.testing.unified.report.CompareRuns &lt;evidence dir&gt; &lt;evidence dir&gt; ...
+ * java -cp unified-test-api.jar com.vaadin.testing.unified.report.CompareRuns [--out &lt;dir&gt;] &lt;evidence dir&gt; ...
  * </pre>
  *
  * Every {@code user-steps.json} under the directories is read, at any depth, and sorted by its Testing Tool. Each
@@ -35,8 +35,13 @@ import java.util.stream.Stream;
  * {@code vaadin.testing.user-steps.compare-dir} (spec chapter 12): the scenarios that pass on one and fail on the
  * other, those that take different User Steps and where they part, and whether both runs tested the same code.
  * <p>
+ * A Testing Tool run at several Viewports is also compared Viewport by Viewport, with the widest (ADR 0011): its
+ * {@code viewport-comparison.html} and {@code viewport-comparison.json} go into {@code --out <dir>}
+ * ({@code target/viewport-comparison} without it), and the Testing Tools are compared at their widest Viewport.
+ * <p>
  * It prints Markdown, and appends it to the GitHub job summary when {@code GITHUB_STEP_SUMMARY} is set. It reports:
- * the exit code is 0 whatever the runs say, and 2 when no two Testing Tools are found.
+ * the exit code is 0 whatever the runs say, and 2 when there is nothing to compare: neither two Testing Tools nor
+ * one at two Viewports.
  */
 public final class CompareRuns {
     private CompareRuns() {}
