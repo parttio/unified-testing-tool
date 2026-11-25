@@ -42,7 +42,12 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
     /** Another window of the same test, recording into the same User Steps, at the test's Viewport. */
     public TestRun inWindow(AdapterSession windowSession, String windowName) {
         if (tool.hasRealBrowser()) {
-            windowSession.setViewport(viewport);
+            try {
+                windowSession.setViewport(viewport);
+            } catch (UnsupportedOperationException e) {
+                // decided when the test's first page opened: a test that needs its Viewport was skipped then, one
+                // on the default size runs at the browser's own size, with its warning already in the report
+            }
         }
         steps.session(windowName, windowSession);
         return new TestRun(tool, windowSession, timeout, steps, windowName, ownTimeout, viewport);

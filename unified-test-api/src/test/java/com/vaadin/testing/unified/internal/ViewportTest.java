@@ -223,4 +223,16 @@ class ViewportTest {
         assertEquals(false, plain.viewportFixed());
         assertEquals(null, browserless.viewport());
     }
+
+    @Test
+    void anotherWindowOfATestOnTheDefaultRunsWhenTheTestingToolCantSetIt() throws Exception {
+        session.cannotSetViewport = CANT;
+        com.vaadin.testing.unified.UnifiedPage page = lifecycle("selenium", Map.of()).open(context(Plain.class),
+                new StepRecorder()).page();
+
+        page.openWindow();
+        page.openAsUser("alice", "ADMIN");
+
+        assertEquals(3, sizesAsked().size());
+    }
 }
