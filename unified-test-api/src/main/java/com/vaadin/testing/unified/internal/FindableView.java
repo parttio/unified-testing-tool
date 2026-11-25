@@ -190,6 +190,12 @@ public final class FindableView {
     record Line(String description, String lookup) {}
 
     /**
+     * The lines of a view, and the kinds it could not list because their lookup threw, each with its error:
+     * {@code link (UnsupportedOperationException: …)}.
+     */
+    record Listing(List<Line> lines, List<String> notListed) {}
+
+    /**
      * A filter a lookup of one Wrapper type can name a component by: one the Testing Tools match ({@code kind}),
      * or one of the Wrapper's own, read with its getter ({@code withHeaderTitle} and {@code getHeaderTitle()}).
      */
@@ -234,9 +240,10 @@ public final class FindableView {
 
     // ---------------------------------------------------------------- reading
 
-    static List<Line> components(TestRun run, UnifiedElement scope, boolean inTemplate, String prefix) {
+    static Listing components(TestRun run, UnifiedElement scope, boolean inTemplate, String prefix) {
         return run.steps().unrecorded(() -> {
             List<OfType> all = new ArrayList<>();
+            List<String> notListed = new ArrayList<>();
             Set<String> listed = new HashSet<>();
             Set<Class<?>> types = new LinkedHashSet<>(BUILT_IN);
             types.addAll(run.steps().wrapperTypes());
@@ -252,7 +259,7 @@ public final class FindableView {
                         all.add(found);
                     }
                 } catch (RuntimeException | AssertionError e) {
-                    // this kind can't be listed on this Testing Tool
+                    notListed.add(notListed(type, e));
                 }
             }
             for (Class<?> type : CLICKABLE_PLAIN) {
@@ -267,7 +274,7 @@ public final class FindableView {
                         all.add(found);
                     }
                 } catch (RuntimeException | AssertionError e) {
-                    // this kind can't be listed on this Testing Tool
+                    notListed.add(notListed(type, e));
                 }
             }
             List<Container> containers = new ArrayList<>();
@@ -293,8 +300,14 @@ public final class FindableView {
                 }
             }
             lines.addAll(templates(run, scope, inTemplate, prefix, listed));
-            return lines;
+            return new Listing(lines, notListed);
         });
+    }
+
+    /** {@code link (UnsupportedOperationException: Browserless …)}: the kind and its error's first line. */
+    private static String notListed(Class<?> type, Throwable error) {
+        return StepTarget.kindOf(type) + " (" + com.vaadin.testing.unified.internal.failures.FailureParts.oneLine(error)
+                + ")";
     }
 
     /**
@@ -726,10 +739,13 @@ public final class FindableView {
 
     // ---------------------------------------------------------------- rendering
 
-    static String render(String header, List<Line> lines) {
+    static String render(String header, Listing listing) {
         StringBuilder sb = new StringBuilder(header).append(": ");
+        List<Line> lines = listing.lines();
         if (lines.isEmpty()) {
-            return sb.append("no component a Unified UI Test can find\n").toString();
+            sb.append("no component a Unified UI Test can find\n");
+            notListed(sb, listing);
+            return sb.toString();
         }
         sb.append(lines.size()).append(lines.size() == 1 ? " component\n" : " components\n");
         List<Line> shown = lines.subList(0, Math.min(MAX_LINES, lines.size()));
@@ -738,7 +754,13 @@ public final class FindableView {
             sb.append("… and ").append(lines.size() - shown.size())
                     .append(" more: describe a container to see them\n");
         }
+        notListed(sb, listing);
         return sb.toString();
+    }
+
+    /** {@code Not listed: link (UnsupportedOperationException: …)}, for each kind whose lookup threw (#611). */
+    private static void notListed(StringBuilder sb, Listing listing) {
+        listing.notListed().forEach(n -> sb.append("Not listed: ").append(n).append('\n'));
     }
 
     /** The lines, each description padded so the lookups line up. */

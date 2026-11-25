@@ -71,6 +71,8 @@ assertThat(users.row().withCellTextContaining("Email", "user11")).hasCount(11);
 
 A lookup that finds no component or several, an action on a component that stays disabled or hidden, and an assertion that times out all throw `UnifiedAssertionError`, an `AssertionError`. Its message is the same on every Testing Tool: the User Step that failed, what was expected and found, the Near Misses, how long it waited and where the timeout came from ([12. Readable tests, Failures](12-readable-tests.md#failures)). An assertion timeout lists the distinct values it saw while waiting (`Found “Saving…”, then “Saved Alan Turing”`).
 
+**What can't pass by waiting** *(unreleased)*. An attempt that throws counts as "not yet" and is tried again until the timeout, but for an `UnsupportedOperationException`: the Testing Tool can't do that, so the wait ends at the first attempt, without a `Waited` line. Either way, the failure names the error its last attempt threw in its `Cause` line ([ADR 0019](../adr/0019-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md)).
+
 ## Background work
 
 On Browserless, retrying assertions and waits run `roundTrip()` and `runPendingSignalsTasks()` between attempts, so views updated from background threads (`UI.access`, signals) behave the same as in a browser.
@@ -90,4 +92,5 @@ Not part of the Unified API. Use the Escape Hatch and the tool's own switch (e.g
 - Guarantee both halves of Auto-Wait for every action: before it, a round trip already under way (capped where the app may never be idle); after it, the action's round trip, including the address bar change of a server-side navigation (`settle()`).
 - Re-resolve Wrappers on every call, and count the matches for `exists()`, `doesNotExist()` and `hasCount(n)`.
 - Retry assertions until the timeout; on Browserless flush `UI.access` tasks and signals between attempts.
+- Throw `UnsupportedOperationException` only for what the Testing Tool can never do, which ends the wait at once; throw another exception for what may change while the test waits, such as a row not rendered yet *(unreleased)*.
 - Give grid row and column actions the same Auto-Wait as every other action.

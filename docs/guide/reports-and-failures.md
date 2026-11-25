@@ -45,6 +45,7 @@ Changing a person's email updates the grid
 | `Found` | `none`; several matches (`2: …`, each with where it is); `1, but disabled` (or hidden, read-only, covered by an open dialog); or, for an assertion, the values it saw while waiting |
 | `Nearby` | the Near Misses: components the lookup almost matched |
 | `Did you mean` | the lookup you probably meant, when one Near Miss is clearly best |
+| `Cause` *(unreleased)* | the error the step's last attempt threw, such as what this Testing Tool can't do: `UnsupportedOperationException: …` |
 | `Waited` | how long, and where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` |
 | `Tool` | the Testing Tool, and its browser |
 | `Code` | where it happened: the line that called the step, then the line inside it |
@@ -128,6 +129,18 @@ A component that is there but can't be used:
   Found         1, but disabled
 ```
 
+What the Testing Tool can't do *(unreleased)*. It fails at the first attempt, since waiting won't change it, and its `Cause` line says why. Here it's a lookup inside a cell that a LitRenderer draws, on Browserless:
+
+```
+  Failed at     User Step 2 of 2: click edit pencil in cell at index 1 in row where Name is “Bob” in grid (test id “editable”)
+  Expected      exactly one cell at index 1 in row where Name is “Bob” in grid (test id “editable”)
+  Found         none
+  Cause         UnsupportedOperationException: The cell at index 1 is drawn by a LitRenderer, whose markup exists only in a browser, so Browserless can't search inside it. Annotate the test with @RequiresBrowser to skip it here; to run a renderer function on Browserless, use the Escape Hatch: GridTester.invokeLitRendererFunction.
+  Tool          browserless
+```
+
+Any other error a step's attempts throw is retried until the timeout, and `Cause` names the last one.
+
 ### The Findable View
 
 Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it. When the failed step was about a grid row or a chat message, the grid's columns and first rows, or the list's first messages, follow, each with the lookup that finds it, as `grid.describe()` lists them.
@@ -141,6 +154,8 @@ text field “City”    page.find(UnifiedContainer.class).withId("shipping").fi
 button “Save”        page.find(UnifiedButton.class).withText("Save")
 button “Cancel”      page.find(UnifiedButton.class).withText("Cancel")
 ```
+
+A kind of component whose lookup threw is not left out: the view ends with `Not listed: link (UnsupportedOperationException: …)` *(unreleased)*.
 
 When `Did you mean` has nothing to say, look for the component here. The same view is `page.describe()` in a test ([Finding components](finding-components.md#what-is-there-to-find)).
 
