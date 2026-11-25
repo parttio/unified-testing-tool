@@ -124,10 +124,18 @@ final class SeleniumElement implements UnifiedElement {
                 BrowserQueries.cssName(name));
     }
 
-    /** The same script as the {@code withAccessibleName(..)} filter; TestBench has no read of it. */
+    /**
+     * The same script as the {@code withAccessibleName(..)} filter, on the same element: what the user sees (a
+     * notification's card). TestBench has no read of it.
+     */
     @Override
     public String getAccessibleName() {
-        return (String) js("return (" + BrowserQueries.ACCESSIBLE_NAME + ")(arguments[0]);");
+        return (String) session.js("return (" + BrowserQueries.ACCESSIBLE_NAME + ")(arguments[0]);", content());
+    }
+
+    /** The element that holds what the user sees: the support's content (a notification's card), else this one. */
+    WebElement content() {
+        return SeleniumSession.stale(() -> support.content(element, session));
     }
 
     @Override

@@ -261,20 +261,97 @@ public final class BrowserQueries {
             }""";
 
     /**
-     * What a screen reader announces, approximated as on every Testing Tool: aria-label, the accessibleName
-     * property ({@code setAriaLabel} on a field), the aria-labelledby target's text, label, text. Text is
-     * {@link #TEXT}'s: a tooltip is not part of it.
+     * The tags of the components named by their content (#641): ARIA's name-from-content roles among what Vaadin
+     * renders, as Dramafinder reads them ({@code ButtonElement}, {@code TabElement}, {@code BadgeElement},
+     * {@code MenuItemElement}, {@code BreadcrumbsItemElement}, {@code NotificationElement}), plus links, native
+     * buttons and headings. A Notification is its card in a browser and its host on Browserless. Any other
+     * component has no accessible name unless it is labelled.
+     */
+    public static final java.util.Set<String> NAMED_BY_CONTENT = java.util.Set.of("vaadin-button", "vaadin-tab",
+            "vaadin-badge", "vaadin-menu-bar-button", "vaadin-menu-bar-item", "vaadin-context-menu-item",
+            "vaadin-breadcrumbs-item", "vaadin-notification-card", "vaadin-notification", "a", "button", "h1", "h2",
+            "h3", "h4", "h5", "h6");
+
+    /** Whether a component with this tag is named by its content ({@link #NAMED_BY_CONTENT}). */
+    public static boolean namedByContent(String tag) {
+        return tag != null && NAMED_BY_CONTENT.contains(tag.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    /**
+     * The accessible name, as browsers and Dramafinder's {@code getAccessibleName()} compute it (#641), the same on
+     * every Testing Tool. Dramafinder's {@code AccessibleNames} scripts, verbatim, chosen by tag:
+     * <ul>
+     * <li>every component: the texts of its {@code aria-labelledby} targets (several ids: joined with a space),
+     * else a non-blank {@code aria-label}, else its native {@code <label>}s; read on the host, then on its own
+     * input ({@code slot="input"}, {@code "textarea"} or {@code "value"}), so a field's label,
+     * {@code accessibleName} and {@code accessibleNameRef} count. A placeholder doesn't.</li>
+     * <li>a component named by its content ({@link #NAMED_BY_CONTENT}): its {@code aria-labelledby} or
+     * {@code aria-label} name when either is set, else its own text, without slotted children such as an icon or a
+     * tooltip.</li>
+     * </ul>
+     * Whitespace normalized; null when nothing names it. Playwright reads the same with Dramafinder's
+     * {@code AccessibleNames}; Browserless computes it from the server-side elements.
      */
     public static final String ACCESSIBLE_NAME = """
             e => {
-              const text = %s;
-              const by = e.getAttribute('aria-labelledby');
-              const target = by && document.getElementById(by);
-              for (const v of [e.getAttribute('aria-label'), e.accessibleName, target ? text(target) : null, e.label]) {
-                if (v != null && String(v).trim() !== '') return String(v);
+              const text = node => {
+                let full = '';
+                for (let child = node.firstChild; child; child = child.nextSibling) {
+                  if (child.nodeType === Node.TEXT_NODE) {
+                    full += child.nodeValue || '';
+                  } else if (child.nodeType === Node.ELEMENT_NODE
+                      && !['SCRIPT', 'NOSCRIPT', 'STYLE'].includes(child.nodeName)) {
+                    full += child instanceof HTMLInputElement
+                        && ['submit', 'button', 'reset'].includes(child.type) ? child.value : text(child);
+                  }
+                }
+                if (node.shadowRoot) {
+                  full += text(node.shadowRoot);
+                }
+                return full;
+              };
+              const labels = el => {
+                const ref = el.getAttribute('aria-labelledby');
+                if (ref !== null) {
+                  const root = el.getRootNode();
+                  const targets = [];
+                  for (const id of ref.split(' ').filter(id => !!id)) {
+                    const target = root.querySelector('#' + CSS.escape(id));
+                    if (target && !targets.includes(target)) {
+                      targets.push(target);
+                    }
+                  }
+                  if (targets.length) {
+                    return targets.map(text);
+                  }
+                }
+                const ariaLabel = el.getAttribute('aria-label');
+                if (ariaLabel !== null && ariaLabel.trim()) {
+                  return [ariaLabel];
+                }
+                const labelable = ['BUTTON', 'METER', 'OUTPUT', 'PROGRESS', 'SELECT', 'TEXTAREA'].includes(el.nodeName)
+                    || (el.nodeName === 'INPUT' && el.type !== 'hidden');
+                return labelable && el.labels ? [...el.labels].map(text) : [];
+              };
+              const join = texts => texts.map(t => t.replace(/\\s+/g, ' ').trim()).filter(t => t).join(' ') || null;
+              if (!%s.includes(e.localName)) {
+                const own = [...e.children].find(c => ['input', 'textarea', 'value'].includes(c.getAttribute('slot')));
+                return join(labels(e)) ?? (own ? join(labels(own)) : null);
               }
-              return text(e);
-            }""".formatted(TEXT);
+              if (e.hasAttribute('aria-label') || e.hasAttribute('aria-labelledby')) {
+                return join(labels(e));
+              }
+              const children = [...e.childNodes];
+              const hasText = node => !!(node.textContent || '').trim();
+              if (!children.some(c => c.nodeType === Node.ELEMENT_NODE && c.hasAttribute('slot') && hasText(c))) {
+                return join([e.textContent || '']);
+              }
+              return join(children
+                  .filter(c => c.nodeType === Node.TEXT_NODE
+                      || (c.nodeType === Node.ELEMENT_NODE && !c.hasAttribute('slot')))
+                  .map(c => c.textContent || ''));
+            }""".formatted(NAMED_BY_CONTENT.stream().sorted().map(t -> "'" + t + "'")
+                    .collect(java.util.stream.Collectors.joining(", ", "[", "]")));
 
     /**
      * The label of the FormLayout item holding the element ({@code formLayout.addFormItem(field, "Name")}): the

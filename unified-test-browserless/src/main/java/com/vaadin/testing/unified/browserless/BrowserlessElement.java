@@ -104,10 +104,14 @@ final class BrowserlessElement implements UnifiedElement {
         return value == null || value.isBlank() ? null : value.strip();
     }
 
-    /** The same computation as the {@code withAccessibleName(..)} filter: {@link #accessibleName(Component)}. */
+    /**
+     * The same computation as the {@code withAccessibleName(..)} filter: {@link AccessibleNames}, what a browser
+     * computes. A component named by its content is named by {@link #getText()}'s text when the support reads it
+     * (a notification's renderer).
+     */
     @Override
     public String getAccessibleName() {
-        return accessibleName(component);
+        return AccessibleNames.of(component, () -> support.text(component, session.window()));
     }
 
     @Override
@@ -353,38 +357,6 @@ final class BrowserlessElement implements UnifiedElement {
     }
 
     // ---------------------------------------------------------------- helpers
-
-    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
-    static String accessibleName(Component c) {
-        Element e = c.getElement();
-        String ariaLabel = e.getAttribute("aria-label");
-        if (ariaLabel != null && !ariaLabel.isBlank()) {
-            return ariaLabel;
-        }
-        // a field's setAriaLabel(..): the web component forwards it to its input as aria-label
-        String accessibleName = e.getProperty("accessibleName");
-        if (accessibleName != null && !accessibleName.isBlank()) {
-            return accessibleName;
-        }
-        String labelledBy = e.getAttribute("aria-labelledby");
-        if (labelledBy != null && !labelledBy.isBlank()) {
-            Optional<UI> ui = c.getUI();
-            if (ui.isPresent()) {
-                Optional<String> text = ui.get().getElement().getChildren()
-                        .flatMap(BrowserlessElement::descendants)
-                        .filter(el -> labelledBy.equals(el.getAttribute("id")))
-                        .map(Element::getTextRecursively).findFirst();
-                if (text.isPresent()) {
-                    return text.get();
-                }
-            }
-        }
-        String label = e.getProperty("label");
-        if (label != null && !label.isBlank()) {
-            return label;
-        }
-        return e.getTextRecursively();
-    }
 
     private static java.util.stream.Stream<Element> descendants(Element e) {
         return java.util.stream.Stream.concat(java.util.stream.Stream.of(e), e.getChildren().flatMap(BrowserlessElement::descendants));

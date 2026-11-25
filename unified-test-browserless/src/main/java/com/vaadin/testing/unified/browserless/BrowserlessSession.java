@@ -331,7 +331,7 @@ final class BrowserlessSession implements AdapterSession {
             }
             case ATTRIBUTE -> f.value() == null ? e.hasAttribute(f.name()) : f.value().equals(e.getAttribute(f.name()));
             case WITHOUT_ATTRIBUTE -> !e.hasAttribute(f.name());
-            case ACCESSIBLE_NAME -> f.matches(BrowserlessElement.accessibleName(c));
+            case ACCESSIBLE_NAME -> f.matches(new BrowserlessElement(this, c).getAccessibleName());
         };
     }
 

@@ -7,7 +7,7 @@ Decided in [#28](https://github.com/parttio/unified-testing-tool/issues/28) and,
 Rows are found by **what they show**, the way components are: `row()` returns a lazy row, its filters narrow it, and every use finds it again. Index access stays for tests where order is the point.
 
 ```java
-UnifiedGrid users = page.find(UnifiedGrid.class).withAccessibleName("Users");
+UnifiedGrid users = page.find(UnifiedGrid.class).withTestId("users");
 
 users.column("Name").header().find(UnifiedTextField.class).setValue("Ali");   // header filter
 assertThat(users).hasRowCount(1);
