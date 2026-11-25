@@ -180,6 +180,23 @@ class LayoutScriptTest {
         assertEquals("[\"visible\",\"visible\",\"after scroll\"]", reaches(result, 0));
     }
 
+    @Test
+    void thePageScrollsToWhatIsBelowButClipsWhatIsLeftOfItOrBeyondAHiddenEdge() {
+        JsonObject scrolls = measure("""
+                <div style="height:1000px"></div><button>Below the fold</button>
+                <button style="position:absolute;left:-300px;top:10px">Left of the page</button>
+                """, LayoutScript.Target.interactive("button"));
+        JsonObject hides = measure("""
+                <style>body{overflow-x:hidden}</style>
+                <button style="position:absolute;left:500px;top:10px">Beyond the edge</button>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[\"after scroll\",\"clipped\"]", reaches(scrolls, 0));
+        assertEquals("the page", matches(scrolls, 0).get(1).getAsJsonObject().get("by").getAsString());
+        assertEquals("[\"clipped\"]", reaches(hides, 0));
+        assertEquals("the page", matches(hides, 0).get(0).getAsJsonObject().get("by").getAsString());
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));

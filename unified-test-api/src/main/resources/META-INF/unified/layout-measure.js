@@ -127,10 +127,38 @@
     return { reach: afterScroll ? 'after scroll' : 'visible' };
   };
 
+  // how a user reaches the point (x, y) on the page itself, or null when it is in the Viewport: nothing scrolls to
+  // the left of or above the page's origin, nor past an edge whose overflow the page hides, nor to a fixed box
+  const pageOverflowY = (() => {
+    const html = getComputedStyle(document.documentElement).overflowY;
+    return html !== 'visible' || !document.body ? html : getComputedStyle(document.body).overflowY;
+  })();
+  const reachOnThePage = (element, x, y) => {
+    if (x + window.scrollX < 0 || y + window.scrollY < 0) {
+      return { reach: 'clipped', by: 'the page' };
+    }
+    const outsideX = x > root.clientWidth;
+    const outsideY = y > root.clientHeight;
+    if (!outsideX && !outsideY) {
+      return null;
+    }
+    const hidesY = pageOverflowY === 'hidden' || pageOverflowY === 'clip';
+    const fixed = getComputedStyle(element).position === 'fixed';
+    if (fixed || (outsideX && !pageScrolls) || (outsideY && hidesY)) {
+      return { reach: 'clipped', by: 'the page' };
+    }
+    return { reach: 'after scroll' };
+  };
+
   const measure = (element) => {
     const r = element.getBoundingClientRect();
     const match = { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
-    const reach = reachThroughBoxes(element, r.left + r.width / 2, r.top + r.height / 2);
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    let reach = reachThroughBoxes(element, x, y);
+    if (reach.reach !== 'clipped') {
+      reach = reachOnThePage(element, x, y) || reach;
+    }
     match.reach = reach.reach;
     if (reach.by) {
       match.by = reach.by;
