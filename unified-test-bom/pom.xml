@@ -31,7 +31,7 @@
     </scm>
 
     <properties>
-        <dramafinder.version>2.2.2</dramafinder.version>
+        <dramafinder.version>2.2.3</dramafinder.version>
     </properties>
 
     <dependencyManagement>

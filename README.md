@@ -97,9 +97,9 @@ Import the BOM and add the adapters you run on as test dependencies (here for a 
 </dependencies>
 ```
 
-The BOM also sets the version of Dramafinder (`org.vaadin.addons:dramafinder`, 2.2.2), which the Playwright adapter runs on. Browserless Test and TestBench come at the versions your Vaadin BOM manages.
+The BOM also sets the version of Dramafinder (`org.vaadin.addons:dramafinder`, 2.2.3), which the Playwright adapter runs on. Browserless Test and TestBench come at the versions your Vaadin BOM manages.
 
-The Playwright adapter brings Dramafinder 2.2.2, so a project on Dramafinder 1.x moves to 2.x. Remove a direct `dramafinder` dependency: a version you declare wins over the BOM's, and the adapter needs 2.x. The class and method names are the same, so Dramafinder 1.x code left in the project still compiles, but its lookups now follow 2.x rules: `getByLabel` and `getByText` match the whole value and fail when several components match ([Dramafinder 1.x](docs/migrating-from-dramafinder.md#dramafinder-1x)).
+The Playwright adapter brings Dramafinder 2.2.3, so a project on Dramafinder 1.x moves to 2.x. Remove a direct `dramafinder` dependency: a version you declare wins over the BOM's, and the adapter needs 2.x. The class and method names are the same, so Dramafinder 1.x code left in the project still compiles, but its lookups now follow 2.x rules: `getByLabel` and `getByText` match the whole value and fail when several components match ([Dramafinder 1.x](docs/migrating-from-dramafinder.md#dramafinder-1x)).
 
 Run the tests on Browserless with `mvn test`, and on another Testing Tool with `-Dvaadin.testing.tool=playwright` or `selenium`. The Selenium adapter runs TestBench, which needs a TestBench license; Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath. Every setting: [Configuration](docs/guide/configuration.md).
 
