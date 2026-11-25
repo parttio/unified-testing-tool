@@ -132,6 +132,21 @@ class LayoutScriptTest {
                 result.getAsJsonArray("findings").toString());
     }
 
+    @Test
+    void gridTabsTabSheetAndVirtualListScrollSidewaysByDesignButAScrollerDoesNot() {
+        String scrolls = "<div style='overflow-x:auto;width:300px'><div style='width:500px;height:20px'>x</div></div>";
+        JsonObject result = measure(component("vaadin-grid", scrolls) + component("vaadin-tabs", scrolls)
+                + component("vaadin-tabsheet", "<vaadin-tabs></vaadin-tabs>")
+                + "<vaadin-grid></vaadin-grid><vaadin-tabs></vaadin-tabs><vaadin-tabsheet></vaadin-tabsheet>"
+                + "<vaadin-virtual-list style='display:block;overflow-x:auto;width:300px'>"
+                + "<div style='width:500px;height:20px'>x</div></vaadin-virtual-list>"
+                + "<vaadin-scroller style='display:block;overflow-x:auto;width:300px'>"
+                + "<div style='width:400px;height:20px'>x</div></vaadin-scroller>");
+
+        assertEquals("[{\"kind\":\"scroll\",\"container\":\"vaadin-scroller\",\"by\":100}]",
+                result.getAsJsonArray("findings").toString());
+    }
+
     /** x, y, width of a box, rounded, and 0 for the height so fonts don't matter. */
     private static String roundedXyW(JsonObject match) {
         JsonArray box = match.getAsJsonArray("box");

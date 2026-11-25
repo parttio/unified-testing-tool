@@ -53,18 +53,29 @@
     const root = e.getRootNode();
     if (root instanceof ShadowRoot) {
       const part = e.getAttribute('part');
-      const attribute = part ? '[part=' + part + ']'
-          : e.attributes.length ? '[' + e.attributes[0].name + ']' : e.tagName.toLowerCase();
+      const named = Array.from(e.attributes).find((a) => a.name !== 'style' && a.name !== 'class');
+      const attribute = part ? '[part=' + part + ']' : named ? '[' + named.name + ']' : e.tagName.toLowerCase();
       return root.host.tagName.toLowerCase() + ' ' + attribute;
     }
     return e.tagName.toLowerCase() + (e.id ? '#' + e.id : '');
+  };
+
+  // components that scroll sideways by design, with their own affordance: not a finding (#491)
+  const SCROLL_BY_DESIGN = new Set(['vaadin-grid', 'vaadin-tabs', 'vaadin-tabsheet', 'vaadin-virtual-list']);
+  const scrollsByDesign = (e) => {
+    for (let n = e; n; n = n.parentElement || (n.getRootNode() instanceof ShadowRoot ? n.getRootNode().host : null)) {
+      if (SCROLL_BY_DESIGN.has(n.tagName.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
   };
 
   // sideways scroll of a container: something a user must scroll sideways in
   for (const e of allElements()) {
     const overflowX = getComputedStyle(e).overflowX;
     if ((overflowX === 'auto' || overflowX === 'scroll') && e.scrollWidth > e.clientWidth + TOLERANCE
-        && e.checkVisibility()) {
+        && e.checkVisibility() && !scrollsByDesign(e)) {
       findings.push({ kind: 'scroll', container: describe(e), by: e.scrollWidth - e.clientWidth });
     }
   }
