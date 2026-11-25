@@ -216,14 +216,18 @@ public final class StepRecorder {
 
     private boolean layoutChecks;
     private boolean layoutChecksFail;
-    private boolean layoutChecksScreenshots;
+    private java.nio.file.Path layoutScreenshots;
     private int layoutPoints;
 
-    /** Turns the automatic layout checks on for this test, in a browser (ADR 0011). */
-    public void layoutChecks(boolean fail, boolean screenshots) {
+    /**
+     * Turns the automatic layout checks on for this test, in a browser (ADR 0011).
+     *
+     * @param screenshots where each measurement keeps a screenshot of the Viewport; null for none
+     */
+    public void layoutChecks(boolean fail, java.nio.file.Path screenshots) {
         this.layoutChecks = true;
         this.layoutChecksFail = fail;
-        this.layoutChecksScreenshots = screenshots;
+        this.layoutScreenshots = screenshots;
     }
 
     public boolean layoutChecks() {
@@ -235,9 +239,9 @@ public final class StepRecorder {
         return layoutChecksFail;
     }
 
-    /** Whether each measurement keeps a screenshot. */
-    public boolean layoutChecksScreenshots() {
-        return layoutChecksScreenshots;
+    /** Where each measurement keeps a screenshot; null for none. */
+    public java.nio.file.Path layoutScreenshots() {
+        return layoutScreenshots;
     }
 
     /** The next measurement's number. */

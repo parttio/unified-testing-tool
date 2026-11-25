@@ -43,7 +43,7 @@ class LayoutChecksTest {
                     @Override public AdapterSession open(AdapterContext context) { return session.proxy(); }
                 });
         return lifecycle.open(new TestLifecycleTest.PlainContext(ViewportTest.Plain.class,
-                ViewportTest.Plain.class.getDeclaredMethod("anything")), steps).page();
+                ViewportTest.Plain.class.getDeclaredMethod("anything")), steps, TestLifecycleTest.SAVES).page();
     }
 
     private long measurements() {
@@ -124,5 +124,22 @@ class LayoutChecksTest {
         JsonNode step = json().get("steps").get(0);
         assertEquals("failed", step.get("status").asString());
         assertEquals(1, step.get("layout").get("findings").size());
+    }
+
+    @Test
+    void withScreenshotsEachMeasurementKeepsOneOfTheViewport() throws Exception {
+        UnifiedPage page = page(Map.of(Settings.LAYOUT_CHECKS, "on", Settings.LAYOUT_CHECKS_SCREENSHOTS, "on"));
+        session.layout = SCROLLS;
+
+        page.navigate("profile");
+        page.checkLayout();
+
+        Path layoutDir = evidenceDir.resolve("ProfileTest").resolve("saves").resolve("layout");
+        assertEquals(java.util.List.of("writeStepSnapshot[" + layoutDir + ", 001, null]",
+                "writeStepSnapshot[" + layoutDir + ", 002, null]"),
+                session.calls.stream().filter(c -> c.startsWith("writeStepSnapshot")).toList());
+        JsonNode steps = json().get("steps");
+        assertEquals("layout/001.png", steps.get(0).get("layout").get("screenshot").asString());
+        assertEquals("layout/002.png", steps.get(1).get("layout").get("screenshot").asString());
     }
 }

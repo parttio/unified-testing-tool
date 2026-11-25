@@ -181,8 +181,12 @@ public final class TestLifecycle {
         }
         steps.session(null, session);
         if (tool.hasRealBrowser() && settings.layoutChecks()) {
-            steps.layoutChecks(settings.layoutFindings() == Settings.LayoutFindings.FAIL,
-                    settings.layoutChecksScreenshots());
+            Path layoutScreenshots = null;
+            if (test != null && settings.layoutChecksScreenshots()) {
+                layoutScreenshots = testEvidenceDir(test).resolve(LAYOUT_DIR);
+                deleteSnapshots(layoutScreenshots);
+            }
+            steps.layoutChecks(settings.layoutFindings() == Settings.LayoutFindings.FAIL, layoutScreenshots);
         }
         if (test != null && settings.userStepsSnapshots()) {
             Path snapshots = testEvidenceDir(test).resolve(StepRecorder.SNAPSHOT_DIR);
@@ -199,6 +203,9 @@ public final class TestLifecycle {
      * The Viewport the test runs at: its method's {@link Viewport}, else its class's, else the run's
      * {@code vaadin.testing.viewport}, else 1280 × 720 (ADR 0011).
      */
+    /** The folder of a test's evidence directory that holds the layout checks' screenshots. */
+    static final String LAYOUT_DIR = "layout";
+
     /** Where the Unified API's own warnings come from, in the reports' log lines. */
     static final String UNIFIED = "unified";
 
