@@ -181,21 +181,33 @@
     return false;
   };
 
-  // the matched elements, so that a cover is named as the component the test knows: element -> name
-  const matchedNames = new Map();
+  // the matched elements, so that a cover is named as the component the test knows: element -> {target, index}
+  const matchedAt = new Map();
 
-  // what covers element at (x, y), or null when a click there reaches it
+  // the nearest matched element at or above n, across shadow roots, or null
+  const matchedAround = (n, interactiveOnly) => {
+    for (; n; n = flatParent(n)) {
+      const at = matchedAt.get(n);
+      if (at && (!interactiveOnly || targets[at.target].interactive)) {
+        return n;
+      }
+    }
+    return null;
+  };
+
+  // what covers element at (x, y): {by, byMatch: [target, index] when it is a match}, or null when a click there
+  // reaches it
   const coveredBy = (element, x, y) => {
     const hit = hitTarget(x, y);
     if (!hit || reaches(hit, element)) {
       return null;
     }
-    for (let n = hit; n; n = flatParent(n)) {
-      if (matchedNames.has(n)) {
-        return matchedNames.get(n);
-      }
+    const match = matchedAround(hit, false);
+    if (match) {
+      const at = matchedAt.get(match);
+      return { by: describe(match), byMatch: [at.target, at.index] };
     }
-    return describe(hit);
+    return { by: describe(hit) };
   };
 
   const measure = (element) => {
@@ -208,21 +220,54 @@
       reach = reachOnThePage(element, reach.x, reach.y) || reach;
     }
     if (reach.reach === 'visible') {
-      const by = coveredBy(element, x, y);
-      if (by) {
-        reach = { reach: 'behind', by };
+      const cover = coveredBy(element, x, y);
+      if (cover) {
+        reach = { reach: 'behind', ...cover };
       }
     }
     match.reach = reach.reach;
     if (reach.by) {
       match.by = reach.by;
     }
+    if (reach.byMatch) {
+      match.byMatch = reach.byMatch;
+    }
     return match;
   };
 
   const elements = targets.map((t) => Array.from(document.querySelectorAll(t.css)));
-  elements.forEach((list) => list.forEach((e) => matchedNames.set(e, describe(e))));
+  elements.forEach((list, target) => list.forEach((e, index) => matchedAt.set(e, { target, index })));
   const matches = elements.map((list) => list.map(measure));
+
+  // overlap: an interactive match on which two or more of five points (its centre and its corners, inset) land on
+  // another interactive match, so that a 1 px touch is not one (#491)
+  const INSET = 2;
+  for (const [element, at] of matchedAt) {
+    if (!targets[at.target].interactive || matchedAround(flatParent(element), true)) {
+      continue;
+    }
+    const r = element.getBoundingClientRect();
+    if (r.width <= 2 * INSET || r.height <= 2 * INSET || matches[at.target][at.index].reach === 'clipped') {
+      continue;
+    }
+    const points = [[r.left + r.width / 2, r.top + r.height / 2], [r.left + INSET, r.top + INSET],
+        [r.right - INSET, r.top + INSET], [r.left + INSET, r.bottom - INSET], [r.right - INSET, r.bottom - INSET]];
+    const covers = new Map();
+    for (const [x, y] of points) {
+      const hit = hitTarget(x, y);
+      const other = hit && !reaches(hit, element) ? matchedAround(hit, true) : null;
+      if (other && !reaches(element, other)) {
+        covers.set(other, (covers.get(other) || 0) + 1);
+      }
+    }
+    for (const [other, count] of covers) {
+      if (count >= 2) {
+        const by = matchedAt.get(other);
+        findings.push({ kind: 'overlap', target: at.target, index: at.index, byTarget: by.target, byIndex: by.index });
+        break;
+      }
+    }
+  }
   matches.forEach((list, target) => list.forEach((m, index) => {
     if (m.reach === 'clipped') {
       findings.push({ kind: 'clipped', target, index, by: m.by });

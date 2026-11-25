@@ -227,6 +227,22 @@ class LayoutScriptTest {
         assertEquals("footer#bar", matches(result, 0).get(0).getAsJsonObject().get("by").getAsString());
     }
 
+    // ---------------------------------------------------------------- overlap
+
+    @Test
+    void twoOverlappingButtonsAreOneFindingNamingTheCoveredOneAndWhatCoversIt() {
+        JsonObject result = measure("""
+                <button style="position:absolute;left:10px;top:10px;width:120px;height:40px">Save</button>
+                <button style="position:absolute;left:70px;top:20px;width:120px;height:40px">Delete</button>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[{\"kind\":\"overlap\",\"target\":0,\"index\":0,\"byTarget\":0,\"byIndex\":1}]",
+                result.getAsJsonArray("findings").toString());
+        JsonObject save = matches(result, 0).get(0).getAsJsonObject();
+        assertEquals("behind", save.get("reach").getAsString());
+        assertEquals("[0,1]", save.get("byMatch").toString());
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));
