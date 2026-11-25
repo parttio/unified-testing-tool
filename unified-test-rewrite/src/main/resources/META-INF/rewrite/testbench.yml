@@ -8,7 +8,9 @@ description: >-
   Selenium adapters as test dependencies, and Spring Security's test support when the project uses Spring Security,
   for `@WithMockUser`. Leaves direct TestBench dependencies to `RemoveTestBenchWhenUnused`, which
   `MigrateTestBenchToUnified` runs: the Selenium adapter brings TestBench core and some element jars, not all. Leaves a
-  Migration Marker at the top of the pom when the project's Vaadin is older than 25.3.
+  Migration Marker at the top of the pom when the project's Vaadin is older than 25.3, and on each Failsafe profile
+  that ran the tests against a server or browser outside the test (a native executable, a server address, TestBench
+  grid or Sauce Labs settings).
 preconditions:
   - org.openrewrite.maven.search.DependencyInsight:
       groupIdPattern: com.vaadin
@@ -16,6 +18,7 @@ preconditions:
       onlyDirect: true
 recipeList:
   - org.vaadin.addons.unified.rewrite.SeparateFailsafeEvidence
+  - org.vaadin.addons.unified.rewrite.MarkProfilesThatTestElsewhere
   - org.vaadin.addons.unified.rewrite.CheckVaadinVersion
   - org.vaadin.addons.unified.rewrite.AddSpringSecurityTest
   - org.openrewrite.maven.AddManagedDependency:

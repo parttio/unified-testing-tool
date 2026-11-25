@@ -73,7 +73,7 @@ An OpenRewrite recipe that rewrites a Testing Tool's existing tests into Unified
 _Avoid_: Converter, codemod, migration script
 
 **Migration Marker**:
-The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch.
+The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch. In a `pom.xml` it is an XML comment, `<!-- TODO unified: ... -->`, on what the build must change (an old Vaadin, a Failsafe profile that tested a server or browser outside the test).
 _Avoid_: TODO, FIXME, warning
 
 **Component Reference**:
