@@ -283,7 +283,9 @@ async (input) => {
     if (reach.reach !== 'clipped') {
       reach = reachOnThePage(element, reach.x, reach.y) || reach;
     }
-    if (reach.reach === 'visible') {
+    // a match clicks pass through (pointer-events: none, as on a disabled Vaadin button) can't be hit-tested: a hit
+    // lands on what is under it, which doesn't cover it
+    if (reach.reach === 'visible' && getComputedStyle(element).pointerEvents !== 'none') {
       const cover = coveredBy(element, x, y);
       if (cover) {
         reach = { reach: 'behind', ...cover };
