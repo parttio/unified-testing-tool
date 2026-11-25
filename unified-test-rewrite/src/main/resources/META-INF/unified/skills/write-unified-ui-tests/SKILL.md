@@ -191,6 +191,9 @@ Every setting is a JUnit configuration parameter (`src/test/resources/junit-plat
 | `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits (`500ms`, `1m`) |
 | `vaadin.testing.viewport` | `1280x720`: in a browser, the exact Viewport of every test without `@Viewport` (`phone:375x667`) |
+| `vaadin.testing.layout-checks` | `off`: `on` measures the layout after each navigation, reload and `setViewport` and puts Layout Findings on that step |
+| `vaadin.testing.layout-findings` | `report`: `fail` fails the step that measured a Layout Finding |
+| `vaadin.testing.layout-checks.screenshots` | `off`: `on` keeps a Viewport screenshot per measurement |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a screenshot or component tree after every User Step, in `steps/` |
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
