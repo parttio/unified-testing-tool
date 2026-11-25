@@ -105,8 +105,10 @@
     return chain;
   };
 
-  // what clips the point (x, y) of an element, or null: a box with hidden overflow it lies outside of
-  const clippedBy = (element, x, y) => {
+  // how a user reaches the point (x, y) of an element through its containing blocks: {reach: 'clipped', by} when a
+  // box with hidden overflow cuts it off, {reach: 'after scroll'} when a scrolling box shows it once scrolled
+  const reachThroughBoxes = (element, x, y) => {
+    let afterScroll = false;
     for (const box of containingBlocks(element)) {
       const style = getComputedStyle(box);
       const r = box.getBoundingClientRect();
@@ -116,19 +118,22 @@
       const outsideY = y < top || y > top + box.clientHeight;
       const hides = (overflow) => overflow === 'hidden' || overflow === 'clip';
       if ((hides(style.overflowX) && outsideX) || (hides(style.overflowY) && outsideY)) {
-        return describe(box);
+        return { reach: 'clipped', by: describe(box) };
+      }
+      if (outsideX || outsideY) {
+        afterScroll = true;
       }
     }
-    return null;
+    return { reach: afterScroll ? 'after scroll' : 'visible' };
   };
 
   const measure = (element) => {
     const r = element.getBoundingClientRect();
     const match = { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
-    const by = clippedBy(element, r.left + r.width / 2, r.top + r.height / 2);
-    if (by) {
-      match.reach = 'clipped';
-      match.by = by;
+    const reach = reachThroughBoxes(element, r.left + r.width / 2, r.top + r.height / 2);
+    match.reach = reach.reach;
+    if (reach.by) {
+      match.by = reach.by;
     }
     return match;
   };

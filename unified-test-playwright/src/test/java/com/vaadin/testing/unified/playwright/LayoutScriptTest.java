@@ -165,6 +165,27 @@ class LayoutScriptTest {
         assertEquals("visible", matches(result, 0).get(1).getAsJsonObject().get("reach").getAsString());
     }
 
+    @Test
+    void escapingABoxOrBeingReachableByScrollingIsNotClipped() {
+        JsonObject result = measure("""
+                <div style="overflow:hidden;width:50px;height:20px">
+                  <button style="position:absolute;left:100px;top:100px">Escapes a static box</button>
+                  <button style="position:fixed;left:150px;top:200px">Fixed</button>
+                </div>
+                <div style="overflow:auto;width:200px;height:60px;white-space:nowrap">
+                  <span style="display:inline-block;width:250px">spacer</span><button>Scroll to me</button>
+                </div>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[\"visible\",\"visible\",\"after scroll\"]", reaches(result, 0));
+    }
+
+    private static String reaches(JsonObject result, int target) {
+        JsonArray reaches = new JsonArray();
+        matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));
+        return reaches.toString();
+    }
+
     /** x, y, width of a box, rounded, and 0 for the height so fonts don't matter. */
     private static String roundedXyW(JsonObject match) {
         JsonArray box = match.getAsJsonArray("box");
