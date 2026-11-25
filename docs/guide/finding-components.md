@@ -250,6 +250,11 @@ A `LitTemplate`'s `@Id` components live in its shadow root, and no lookup enters
 - **Slotted content** (what the view adds to the Template) is found inside it, and on the page, once.
 - **A web component that renders its content in the browser** (not a `LitTemplate`) is entered the same way, but Browserless has nothing inside it: such a test declares `@RequiresBrowser`.
 - **The Template's element is its host** *(unreleased)*. `findTemplate(X.class).element()` is the `<x-tag>` element, and its `findDescendants(..)` and `findChildren(..)` stay in the light DOM, as on any element: they don't enter the shadow root. Plain HTML in the template, with no `@Id`, can't be found on any Testing Tool. Give it an `@Id` (and an `id` in the template) to reach it.
+- **Plain HTML in a template, in a test for one browser.** When the template can't get an `@Id`, the Escape Hatch reaches its HTML: Playwright's CSS enters open shadow roots, and TestBench's `$` on an element searches its shadow root. The Unified API won't get a lookup for it, because Browserless can't see it ([ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md), [#617](https://github.com/parttio/unified-testing-tool/issues/617)):
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:templateHtmlEscapeHatch"
+    ```
 
 When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. `describe()` on a Template lists what is inside it, by `withId(..)` first *(unreleased)*:
 
