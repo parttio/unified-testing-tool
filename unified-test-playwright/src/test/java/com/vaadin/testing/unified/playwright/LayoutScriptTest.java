@@ -212,6 +212,21 @@ class LayoutScriptTest {
         assertEquals("div#box", matches(result, 0).get(0).getAsJsonObject().get("by").getAsString());
     }
 
+    // ---------------------------------------------------------------- behind
+
+    @Test
+    void aButtonUnderAFixedFooterIsBehindItButNotUnderABadgeThatLetsClicksThrough() {
+        JsonObject result = measure("""
+                <button style="position:absolute;left:10px;top:620px;width:120px;height:30px">Under the footer</button>
+                <footer id="bar" style="position:fixed;left:0;bottom:0;width:100%;height:60px;background:#eee"></footer>
+                <button style="position:absolute;left:10px;top:10px;width:120px;height:30px">Badged</button>
+                <span style="position:absolute;left:10px;top:10px;width:120px;height:30px;pointer-events:none">3</span>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[\"behind\",\"visible\"]", reaches(result, 0));
+        assertEquals("footer#bar", matches(result, 0).get(0).getAsJsonObject().get("by").getAsString());
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));

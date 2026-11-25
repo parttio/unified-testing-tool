@@ -157,6 +157,47 @@
     return { reach: 'after scroll' };
   };
 
+  // what a click at (x, y) reaches: elementFromPoint, descending into each open shadow root, as Playwright's
+  // expectHitTarget does (Apache-2.0)
+  const hitTarget = (x, y) => {
+    let hit = document.elementFromPoint(x, y);
+    while (hit && hit.shadowRoot) {
+      const inner = hit.shadowRoot.elementFromPoint(x, y);
+      if (!inner || inner === hit) {
+        break;
+      }
+      hit = inner;
+    }
+    return hit;
+  };
+
+  // whether a click on hit lands on element: hit is element or inside it, across shadow roots and slots
+  const reaches = (hit, element) => {
+    for (let n = hit; n; n = flatParent(n)) {
+      if (n === element) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // the matched elements, so that a cover is named as the component the test knows: element -> name
+  const matchedNames = new Map();
+
+  // what covers element at (x, y), or null when a click there reaches it
+  const coveredBy = (element, x, y) => {
+    const hit = hitTarget(x, y);
+    if (!hit || reaches(hit, element)) {
+      return null;
+    }
+    for (let n = hit; n; n = flatParent(n)) {
+      if (matchedNames.has(n)) {
+        return matchedNames.get(n);
+      }
+    }
+    return describe(hit);
+  };
+
   const measure = (element) => {
     const r = element.getBoundingClientRect();
     const match = { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
@@ -166,6 +207,12 @@
     if (reach.reach !== 'clipped') {
       reach = reachOnThePage(element, reach.x, reach.y) || reach;
     }
+    if (reach.reach === 'visible') {
+      const by = coveredBy(element, x, y);
+      if (by) {
+        reach = { reach: 'behind', by };
+      }
+    }
     match.reach = reach.reach;
     if (reach.by) {
       match.by = reach.by;
@@ -173,7 +220,9 @@
     return match;
   };
 
-  const matches = targets.map((t) => Array.from(document.querySelectorAll(t.css)).map(measure));
+  const elements = targets.map((t) => Array.from(document.querySelectorAll(t.css)));
+  elements.forEach((list) => list.forEach((e) => matchedNames.set(e, describe(e))));
+  const matches = elements.map((list) => list.map(measure));
   matches.forEach((list, target) => list.forEach((m, index) => {
     if (m.reach === 'clipped') {
       findings.push({ kind: 'clipped', target, index, by: m.by });
