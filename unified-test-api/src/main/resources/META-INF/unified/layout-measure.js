@@ -22,7 +22,12 @@
 
   // sideways scroll of the page itself
   const root = document.scrollingElement || document.documentElement;
-  if (root.scrollWidth > root.clientWidth + TOLERANCE) {
+  // the viewport takes html's overflow, or body's when html's is visible (CSS Overflow 3, propagation)
+  const htmlOverflowX = getComputedStyle(document.documentElement).overflowX;
+  const pageOverflowX = htmlOverflowX !== 'visible' || !document.body ? htmlOverflowX
+      : getComputedStyle(document.body).overflowX;
+  const pageScrolls = pageOverflowX !== 'hidden' && pageOverflowX !== 'clip';
+  if (pageScrolls && root.scrollWidth > root.clientWidth + TOLERANCE) {
     findings.push({ kind: 'scroll', container: 'the page', by: root.scrollWidth - root.clientWidth });
   }
 

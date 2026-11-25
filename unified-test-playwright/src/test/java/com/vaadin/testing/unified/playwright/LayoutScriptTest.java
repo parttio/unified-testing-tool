@@ -96,6 +96,13 @@ class LayoutScriptTest {
         assertEquals("[]", result.getAsJsonArray("findings").toString());
     }
 
+    @Test
+    void aPageThatHidesItsSidewaysOverflowDoesNotScroll() {
+        JsonObject result = measure("<style>body{overflow-x:hidden}</style><div style='width:700px;height:20px'>wide</div>");
+
+        assertEquals("[]", result.getAsJsonArray("findings").toString());
+    }
+
     /** x, y, width of a box, rounded, and 0 for the height so fonts don't matter. */
     private static String roundedXyW(JsonObject match) {
         JsonArray box = match.getAsJsonArray("box");
