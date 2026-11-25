@@ -319,13 +319,14 @@ final class SeleniumGridAccess implements GridAccess {
      * (ADR 0015). Fails the same way as on Playwright when no cell has one.
      */
     private void clickFreeSpot(String action, int row, boolean twice) {
-        int columns = dataColumns().size();
-        for (int column = 0; column < columns; column++) {
-            WebElement content = content(cellElement(row, column));
+        // as many round trips as the first cell's click took before: the row and columns once, then one script
+        GridTRElement tr = row(row);
+        for (GridColumnElement column : dataColumns()) {
+            GridTHTDElement cell = tr.getCell(column);
+            WebElement content = cell == null ? null : content(cell);
             if (content == null) {
                 continue;
             }
-            session.js("arguments[0].scrollIntoView({block: 'center', inline: 'center'})", content);
             if (session.js(FREE_SPOT_JS, content) instanceof List<?> spot) {
                 Actions actions = new Actions(session.driver()).moveToElement(content,
                         ((Number) spot.get(0)).intValue(), ((Number) spot.get(1)).intValue());
@@ -338,13 +339,14 @@ final class SeleniumGridAccess implements GridAccess {
     }
 
     /**
-     * On a cell content element: the offset from its centre, {@code [x, y]}, of a spot where a click reaches the
+     * On a cell content element, scrolled to the centre first: the offset from its centre, {@code [x, y]}, of a spot where a click reaches the
      * grid rather than interactive content rendered in the cell (the centre if free, else the free spot nearest
      * it, the padding last), or null. Adapted from Dramafinder's {@code GridElement}, so both browser Testing
      * Tools judge a spot alike.
      */
     private static final String FREE_SPOT_JS = """
             const c = arguments[0];
+            c.scrollIntoView({block: 'center', inline: 'center'});
             const r = c.getBoundingClientRect();
             const w = r.width, h = r.height;
             if (!w || !h) return null;
