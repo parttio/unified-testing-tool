@@ -65,6 +65,8 @@ class TestLifecycleTest {
                             case "tracesSteps" -> traces;
                             case "unwrap", "queryParameter" -> Optional.empty();
                             case "find" -> List.of();
+                            // another window records into the same list
+                            case "openWindow", "openAsUser" -> proxy;
                             case "isAt" -> false;
                             default -> null;
                         };

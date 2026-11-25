@@ -175,7 +175,7 @@ public final class TestLifecycle {
         }
         ServerLogs.Listening logs = settings.userStepsServerLog().map(level -> ServerLogs.start(steps, level))
                 .orElse(null);
-        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)),
+        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null, false, viewport)),
                 logs);
     }
 

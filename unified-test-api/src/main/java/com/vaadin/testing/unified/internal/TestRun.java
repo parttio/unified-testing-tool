@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedAssertionError;
+import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.internal.failures.FailureParts;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.spi.AdapterSession;
@@ -13,14 +14,20 @@ import java.util.function.Supplier;
  * One running test: its Testing Tool, adapter session and timeout, and the recorder of its User Steps, shared by
  * all its windows. {@code window} names the window the steps run in: null for the test's first window.
  * {@code ownTimeout} is true when a Wrapper's {@code withTimeout(..)} set the timeout, not the setting.
+ * {@code viewport} is the size the test declares, which each of its new windows starts at.
  */
 public record TestRun(TestingTool tool, AdapterSession session, Duration timeout, StepRecorder steps,
-        String window, boolean ownTimeout) {
+        String window, boolean ownTimeout, ViewportSize viewport) {
 
     private static final long POLL_MILLIS = 50;
 
     public TestRun(TestingTool tool, AdapterSession session, Duration timeout, StepRecorder steps, String window) {
-        this(tool, session, timeout, steps, window, false);
+        this(tool, session, timeout, steps, window, false, Settings.DEFAULT_VIEWPORT);
+    }
+
+    public TestRun(TestingTool tool, AdapterSession session, Duration timeout, StepRecorder steps, String window,
+            boolean ownTimeout) {
+        this(tool, session, timeout, steps, window, ownTimeout, Settings.DEFAULT_VIEWPORT);
     }
 
     /** A run of its own, with a fresh recorder: for tests of the Unified API itself. */
@@ -29,13 +36,16 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
     }
 
     public TestRun withTimeout(Duration newTimeout) {
-        return new TestRun(tool, session, newTimeout, steps, window, true);
+        return new TestRun(tool, session, newTimeout, steps, window, true, viewport);
     }
 
-    /** Another window of the same test, recording into the same User Steps. */
+    /** Another window of the same test, recording into the same User Steps, at the test's Viewport. */
     public TestRun inWindow(AdapterSession windowSession, String windowName) {
+        if (tool.hasRealBrowser()) {
+            windowSession.setViewport(viewport);
+        }
         steps.session(windowName, windowSession);
-        return new TestRun(tool, windowSession, timeout, steps, windowName, ownTimeout);
+        return new TestRun(tool, windowSession, timeout, steps, windowName, ownTimeout, viewport);
     }
 
     /**

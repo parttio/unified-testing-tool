@@ -121,4 +121,16 @@ class ViewportTest {
 
         assertEquals(List.of("setViewport[768 × 1024]"), sizesAsked());
     }
+
+    @Test
+    void anotherWindowOrUserStartsAtTheTestsViewport() throws Exception {
+        com.vaadin.testing.unified.UnifiedPage page = lifecycle("playwright", Map.of())
+                .open(context(OnAPhone.class), new StepRecorder()).page();
+
+        page.openWindow();
+        page.openAsUser("alice", "ADMIN");
+
+        assertEquals(List.of("setViewport[phone 375 × 667]", "setViewport[phone 375 × 667]",
+                "setViewport[phone 375 × 667]"), sizesAsked());
+    }
 }
