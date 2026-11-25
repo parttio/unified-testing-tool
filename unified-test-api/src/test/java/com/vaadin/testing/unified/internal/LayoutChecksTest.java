@@ -110,4 +110,19 @@ class LayoutChecksTest {
         assertEquals(1, step.get("layout").get("point").asInt());
         assertEquals(1, step.get("layout").get("findings").size());
     }
+
+    @Test
+    void withFailAFindingFailsTheUserStepThatMeasuredIt() throws Exception {
+        UnifiedPage page = page(Map.of(Settings.LAYOUT_CHECKS, "on", Settings.LAYOUT_FINDINGS, "fail"));
+        session.layout = SCROLLS;
+
+        com.vaadin.testing.unified.UnifiedAssertionError e = org.junit.jupiter.api.Assertions.assertThrows(
+                com.vaadin.testing.unified.UnifiedAssertionError.class, () -> page.navigate("profile"));
+
+        assertEquals("the page scrolls sideways by 40 px", e.getFound());
+        assertEquals("the page to have no Layout Findings", e.getExpected());
+        JsonNode step = json().get("steps").get(0);
+        assertEquals("failed", step.get("status").asString());
+        assertEquals(1, step.get("layout").get("findings").size());
+    }
 }

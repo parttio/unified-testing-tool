@@ -23,5 +23,9 @@ final class LayoutChecks {
         LayoutMeasurement measured = LayoutMeasurement.measure(run, null);
         steps.layout(new StepRecorder.Layout(steps.nextLayoutPoint(), measured.findings().stream()
                 .map(f -> new StepRecorder.LayoutFinding(f.kind(), f.text(), f.box())).toList(), null));
+        if (steps.layoutChecksFail() && !measured.findings().isEmpty()) {
+            throw run.failure(com.vaadin.testing.unified.internal.failures.FailureParts.of(
+                    "the page to have no Layout Findings", measured.findings().get(0).text()), null);
+        }
     }
 }
