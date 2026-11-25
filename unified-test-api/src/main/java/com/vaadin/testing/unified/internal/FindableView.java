@@ -544,6 +544,15 @@ public final class FindableView {
             return Map.of();
         }
         Map<Read, String> words = new IdentityHashMap<>();
+        // a cover that is itself listed is named as its line names it: "button “Menu”"
+        java.util.function.Function<int[], String> named = at -> {
+            if (at == null || at[0] < 0 || at[0] >= measured.size()) {
+                return null;
+            }
+            OfType t = measured.get(at[0]);
+            return t.reads().stream().filter(r -> r.position() == at[1]).findFirst().map(r -> words(t, r))
+                    .orElse(null);
+        };
         for (int k = 0; k < measured.size() && k < matches.size(); k++) {
             OfType t = measured.get(k);
             List<LayoutMeasurement.Reach> list = matches.get(k);
@@ -554,7 +563,10 @@ public final class FindableView {
                 LayoutMeasurement.Reach reach = list.get(r.position());
                 String word = switch (reach.reach()) {
                     case "clipped" -> "clipped";
-                    case "behind" -> reach.by() == null ? "behind" : "behind " + reach.by();
+                    case "behind" -> {
+                        String cover = named.apply(reach.byMatch());
+                        yield cover != null ? "behind " + cover : reach.by() == null ? "behind" : "behind " + reach.by();
+                    }
                     case "hidden" -> reach.by() == null ? null : "hidden in " + reach.by();
                     default -> null;
                 };

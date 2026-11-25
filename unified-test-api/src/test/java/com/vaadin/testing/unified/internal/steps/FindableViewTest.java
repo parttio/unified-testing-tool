@@ -57,6 +57,16 @@ public class FindableViewTest {
     }
 
     @Test
+    void aCoverTheViewListsIsNamedAsTheViewNamesIt() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Menu");
+        browser.reaches.put("vaadin-button", List.of("behind#vaadin-button@1", "visible"));
+
+        assertEquals("button “Save” (behind button “Menu”)  page.find(UnifiedButton.class).withText(\"Save\")",
+                lines(browser.page.describe()).get(0));
+    }
+
+    @Test
     void whenTheScriptAndTheLookupDisagreeOnHowManyThereAreTheLinesSayNothingOfReach() {
         FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
         browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Delete");

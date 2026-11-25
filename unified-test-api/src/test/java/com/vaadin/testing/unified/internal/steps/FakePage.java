@@ -103,6 +103,28 @@ final class FakePage {
                 viewport == null ? com.vaadin.testing.unified.internal.Settings.DEFAULT_VIEWPORT : viewport));
     }
 
+    /**
+     * One match: {@code "clipped:div#box"}, or {@code "behind#vaadin-button@1"} for a cover that is itself a match:
+     * the second of the target with that selector.
+     */
+    private static String match(String reach, List<?> targets) {
+        int at = reach.startsWith("behind#") ? "behind".length() : -1;
+        if (at > 0) {
+            String[] cover = reach.substring(at + 1).split("@");
+            int target = -1;
+            for (int t = 0; t < targets.size(); t++) {
+                if (((com.vaadin.testing.unified.spi.LayoutScript.Target) targets.get(t)).css().equals(cover[0])) {
+                    target = t;
+                }
+            }
+            return "{\"box\":[0,0,10,10],\"reach\":\"" + reach.substring(0, at) + "\",\"by\":\"" + cover[0]
+                    + "\",\"byMatch\":[" + target + "," + cover[1] + "]}";
+        }
+        String[] parts = reach.split(":", 2);
+        return "{\"box\":[0,0,10,10],\"reach\":\"" + parts[0] + "\""
+                + (parts.length > 1 ? ",\"by\":\"" + parts[1] + "\"" : "") + "}";
+    }
+
     /** The layout script's result for these targets, from {@link #reaches}. */
     private String layoutOf(List<?> targets) {
         StringBuilder matches = new StringBuilder("[");
@@ -111,9 +133,7 @@ final class FakePage {
             matches.append(t == 0 ? "" : ",").append('[');
             List<String> list = reaches.getOrDefault(css, List.of());
             for (int i = 0; i < list.size(); i++) {
-                String[] reach = list.get(i).split(":", 2);
-                matches.append(i == 0 ? "" : ",").append("{\"box\":[0,0,10,10],\"reach\":\"").append(reach[0])
-                        .append('"').append(reach.length > 1 ? ",\"by\":\"" + reach[1] + "\"" : "").append('}');
+                matches.append(i == 0 ? "" : ",").append(match(list.get(i), targets));
             }
             matches.append(']');
         }
