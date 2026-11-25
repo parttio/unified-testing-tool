@@ -72,4 +72,36 @@ class ViewportComparisonTest {
                 new ViewportComparison.Lost("button “Export”", "missing", false)), atPhone.lost());
         assertEquals("phone/EditPersonTest/editsAPerson/layout/001.png", atPhone.screenshot());
     }
+
+    @Test
+    void pointsAfterTheRunsPartAreNotComparedAndTheyPartWhereTheyTakeOtherSteps() {
+        String drawerPoint = layout(2, "", component("button “Save”", "visible", null));
+        ScenarioResult desktop = parse(scenario("desktop", 1280, 720, false, "passed", DESKTOP_OPEN + ","
+                + step(2, "click side nav item “Plan”", drawerPoint)), "desktop/");
+        ScenarioResult phone = parse(scenario("phone", 375, 667, false, "passed",
+                step(1, "open People", layout(1, "", component("button “Save”", "visible", null))) + ","
+                        + step(2, "open the drawer", drawerPoint)), "phone/");
+
+        ViewportComparison.Scenario editing = ViewportComparison.of("playwright", List.of(desktop, phone)).scenarios()
+                .get(0);
+
+        RunComparison.Parting parting = editing.partings().get("phone 375 × 667");
+        assertEquals(2, parting.position());
+        assertEquals("open the drawer", parting.there().strip());
+        assertEquals(List.of("desktop 1280 × 720", "phone 375 × 667"), List.copyOf(editing.points().get(0).atSize().keySet()));
+        assertEquals(List.of("desktop 1280 × 720"), List.copyOf(editing.points().get(1).atSize().keySet()));
+    }
+
+    @Test
+    void aScenarioWithItsOwnViewportIsMarkedFixed() {
+        ScenarioResult desktop = parse(scenario("phone", 375, 667, true, "passed", DESKTOP_OPEN), "desktop/");
+        ScenarioResult phone = parse(scenario("phone", 375, 667, true, "passed", DESKTOP_OPEN), "phone/");
+        ScenarioResult other = parse(scenario("desktop", 1280, 720, false, "passed", DESKTOP_OPEN)
+                .replace("editsAPerson", "plain"), "desktop/plain/");
+
+        ViewportComparison comparison = ViewportComparison.of("playwright", List.of(desktop, phone, other));
+
+        assertEquals(true, comparison.fixed().stream().anyMatch(s -> s.testMethod().equals("editsAPerson")));
+        assertEquals(List.of("plain"), comparison.scenarios().stream().map(ViewportComparison.Scenario::testMethod).toList());
+    }
 }

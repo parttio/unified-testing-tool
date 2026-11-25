@@ -16,10 +16,12 @@ import java.util.Set;
  * @param tool the Testing Tool
  * @param reference the widest Viewport, which the others are compared with
  * @param sizes every Viewport, widest first
- * @param scenarios one per scenario of the reference run, then those only at other sizes
+ * @param scenarios one per scenario of the reference run
+ * @param fixed the scenarios that declare their Viewport ({@code @Viewport}): run at that size in every run, listed
+ *        once and not compared
  */
 public record ViewportComparison(String tool, ViewportSize reference, List<ViewportSize> sizes,
-        List<Scenario> scenarios) {
+        List<Scenario> scenarios, List<Scenario> fixed) {
 
     /** What a component's Reach is when a user can get to it: on the reference, it counts as there. */
     private static final Set<String> REACHABLE = Set.of("visible", "after scroll", "behind");
@@ -69,8 +71,17 @@ public record ViewportComparison(String tool, ViewportSize reference, List<Viewp
     public static ViewportComparison of(String tool, List<ScenarioResult> results) {
         Map<String, List<ScenarioResult>> bySize = new LinkedHashMap<>();
         Map<String, ViewportSize> sizeOf = new LinkedHashMap<>();
+        List<Scenario> fixed = new ArrayList<>();
+        List<ScenarioResult> fixedSeen = new ArrayList<>();
         for (ScenarioResult r : results) {
-            if (r.viewport() != null) {
+            if (r.fixedViewport()) {
+                if (new BaseRun(fixedSeen).find(r).isEmpty()) {
+                    fixedSeen.add(r);
+                    fixed.add(new Scenario(r.displayName(), r.testClass(), r.testMethod(),
+                            Map.of(r.viewport() == null ? "" : r.viewport().toString(), r.status()), true, List.of(),
+                            Map.of()));
+                }
+            } else if (r.viewport() != null) {
                 bySize.computeIfAbsent(r.viewport().toString(), k -> new ArrayList<>()).add(r);
                 sizeOf.putIfAbsent(r.viewport().toString(), r.viewport());
             }
@@ -86,7 +97,7 @@ public record ViewportComparison(String tool, ViewportSize reference, List<Viewp
                 scenarios.add(scenario(ref, reference, sizes, bySize));
             }
         }
-        return new ViewportComparison(tool, reference, sizes, List.copyOf(scenarios));
+        return new ViewportComparison(tool, reference, sizes, List.copyOf(scenarios), List.copyOf(fixed));
     }
 
     private static Scenario scenario(ScenarioResult ref, ViewportSize reference, List<ViewportSize> sizes,
