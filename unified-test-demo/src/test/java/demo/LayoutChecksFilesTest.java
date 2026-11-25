@@ -11,6 +11,7 @@ import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -34,6 +35,7 @@ class LayoutChecksFilesTest {
     @Viewport(width = 375, height = 667, name = "phone")
     static class OnAPhone {
         @Test
+        @DisplayName("Opening the AppLayout on a phone")
         void opensTheAppLayout(UnifiedPage page) {
             page.navigate(LayoutAppLayoutView.class);
         }
