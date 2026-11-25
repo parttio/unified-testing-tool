@@ -2,6 +2,7 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -109,10 +110,10 @@ public class TemplateTest {
     }
 
     @Test
-    @DisplayName("A lookup that finds nothing names the Templates where it would, and how to enter them")
+    @DisplayName("A lookup that finds nothing names the Templates where it would, and how to enter them, before"
+            + " the test has used their classes")
     void failureNamesTheTemplate(UnifiedPage page) {
         page.navigate(OrdersView.class);
-        page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class).describe(); // the test knows both classes
 
         UnifiedTextField filter = page.find(UnifiedTextField.class).withId("filter")
                 .withTimeout(Duration.ofMillis(200));
@@ -127,14 +128,16 @@ public class TemplateTest {
     }
 
     @Test
-    @DisplayName("The Findable View lists a Template as one line, with the lookup that enters it")
+    @DisplayName("The Findable View lists a Template as one line, with the lookup that enters it, before the test"
+            + " has used its class")
     void findableViewListsTemplates(UnifiedPage page) {
         page.navigate(OrdersView.class);
 
         String view = page.describe();
 
         assertTrue(view.contains("Template <demo-orders-panel>"), view);
-        assertTrue(view.contains("page.findTemplate(<the class with @Tag(\"demo-orders-panel\")>.class)"), view);
+        assertTrue(view.contains("page.findTemplate(OrdersPanel.class)"), view);
+        assertFalse(view.contains("<the class with"), view);
         String inside = page.findTemplate(OrdersPanel.class).describe();
         assertTrue(inside.contains("Template <demo-search-bar>"), inside);
         assertTrue(inside.contains("span (id “status”)") || inside.contains("button “New customer”"), inside);

@@ -56,6 +56,10 @@ _Avoid_: UI, window, driver, browser
 A component whose own content a test reaches only by entering it, one Template at a time: an app's LitTemplate on every Testing Tool, or a client-rendered web component on browser Testing Tools only.
 _Avoid_: Shadow host, web component, LitTemplate, app template
 
+**Application's packages**:
+The packages the Unified API takes as the application's own, read from the test the same way on every Testing Tool: the test class's, the `@SpringBootApplication`'s, the configured view packages and those of the routes the test opened, with their subpackages. A Template's class is looked up in them by its tag (ADR 0017).
+_Avoid_: classpath, scan packages, base packages
+
 **Viewport**:
 The visible area of a Unified Page, as width × height in CSS pixels, which the application lays itself out for; a test runs at one unless it changes it.
 _Avoid_: Window size, screen size, resolution, breakpoint

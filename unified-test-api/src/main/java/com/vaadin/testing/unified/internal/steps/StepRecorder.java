@@ -222,6 +222,7 @@ public final class StepRecorder {
     /** The Wrapper types the test has looked up, in order: the custom ones show in its Findable View. */
     private final Set<Class<?>> wrapperTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private final Set<Class<?>> templateTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
+    private final Set<String> applicationPackages = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private final Instant startedAt = Instant.now();
     private final long start = System.nanoTime();
     private int steps;
@@ -756,6 +757,25 @@ public final class StepRecorder {
     /** A {@code findTemplate(..)} of this component type started, in any window of the test. */
     public void templateUsed(Class<?> templateType) {
         templateTypes.add(templateType);
+    }
+
+    /** The application's own packages, where a Template's class is looked up by its tag (ADR 0017). */
+    public void applicationPackages(java.util.Collection<String> packages) {
+        applicationPackages.addAll(packages);
+    }
+
+    /** The test opened this route: its package is one of the application's. */
+    public void routeUsed(Class<?> route) {
+        if (!route.getPackageName().isEmpty()) {
+            applicationPackages.add(route.getPackageName());
+        }
+    }
+
+    /** The application's own packages known so far: from the test, and the routes it opened. */
+    public List<String> applicationPackages() {
+        synchronized (applicationPackages) {
+            return List.copyOf(applicationPackages);
+        }
     }
 
     /** The Template classes the test has looked up with {@code findTemplate(..)} so far, first lookup first. */

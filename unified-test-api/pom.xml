@@ -28,6 +28,11 @@
             <artifactId>vaadin-core</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- finds the class that declares a Template's tag in the application's packages (ADR 0017) -->
+        <dependency>
+            <groupId>io.github.classgraph</groupId>
+            <artifactId>classgraph</artifactId>
+        </dependency>
         <!-- the JUnit integration finds a Spring test's context; only when the test has Spring's test support -->
         <dependency>
             <groupId>org.springframework</groupId>

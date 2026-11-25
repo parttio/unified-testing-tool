@@ -158,6 +158,7 @@ public final class TestLifecycle {
         if (test != null) {
             steps.describeTest(test.displayName(), test.authoredName(), evidenceDirName(test));
         }
+        steps.applicationPackages(ApplicationPackages.of(context));
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
         steps.session(null, session);
