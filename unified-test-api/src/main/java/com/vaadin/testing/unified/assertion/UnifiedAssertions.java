@@ -25,6 +25,7 @@ import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import java.time.LocalDate;
 import com.vaadin.testing.unified.internal.LazyElement;
+import com.vaadin.testing.unified.internal.LayoutMeasurement;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
 import com.vaadin.testing.unified.internal.Wrappers;
@@ -149,6 +150,27 @@ public final class UnifiedAssertions {
         return ((Matches) matches).count();
     }
 
+    /** A component's Reach as a failure shows it: {@code after scroll}, {@code clipped by div#box}. */
+    record ReachShown(LayoutMeasurement.Reach reach) {
+        @Override
+        public String toString() {
+            return reach.reach() + (reach.by() == null ? "" : " by " + reach.by());
+        }
+    }
+
+    /** Layout Findings as a failure shows them: one after the other, or none. */
+    record LayoutFindings(List<LayoutMeasurement.Finding> findings) {
+        boolean none() {
+            return findings.isEmpty();
+        }
+
+        @Override
+        public String toString() {
+            return findings.isEmpty() ? "no Layout Findings"
+                    : String.join("; ", findings.stream().map(LayoutMeasurement.Finding::text).toList());
+        }
+    }
+
     // ---------------------------------------------------------------- page
 
     public static final class PageAssert {
@@ -159,6 +181,35 @@ public final class UnifiedAssertions {
         public PageAssert isAt(Class<? extends Component> view) {
             check(run, () -> Phrases.page("see", "see " + Phrases.viewName(view)), () -> "the page", "to show",
                     view.getSimpleName(), () -> run.session().currentPath(), any -> run.session().isAt(view));
+            return this;
+        }
+
+        /**
+         * Nothing on the page scrolls sideways at the current Viewport: neither the page itself nor a container in it,
+         * such as AppLayout's content area. Grid, Tabs, TabSheet and VirtualList scroll sideways by design and don't
+         * count (ADR 0011). Retries until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public PageAssert hasNoHorizontalScroll() {
+            run.requireBrowser("hasNoHorizontalScroll");
+            check(run, () -> Phrases.page("see", "see no sideways scroll"), () -> "the page",
+                    "to have no sideways scroll", null,
+                    () -> new LayoutFindings(LayoutMeasurement.measure(run, null).findings("scroll")),
+                    v -> ((LayoutFindings) v).none());
+            return this;
+        }
+
+        /**
+         * No Layout Finding on the page at the current Viewport: nothing scrolls sideways
+         * ({@link #hasNoHorizontalScroll()}), no component is clipped out of reach, and no component a user acts on
+         * overlaps another (ADR 0011). Retries until the timeout. Needs
+         * {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public PageAssert hasNoLayoutFindings() {
+            run.requireBrowser("hasNoLayoutFindings");
+            check(run, () -> Phrases.page("see", "see no Layout Findings"), () -> "the page",
+                    "to have no Layout Findings", null,
+                    () -> new LayoutFindings(LayoutMeasurement.measure(run, null).findings()),
+                    v -> ((LayoutFindings) v).none());
             return this;
         }
 
@@ -298,6 +349,30 @@ public final class UnifiedAssertions {
         /** Exactly this many components match the lookup. */
         public SELF hasCount(int expected) {
             return check("to have count", expected, element::countNow, v -> Objects.equals(v, expected));
+        }
+
+        /**
+         * On screen at the current Viewport without scrolling, whether or not something covers it (ADR 0011). Retries
+         * until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public SELF isInViewport() {
+            run.requireBrowser("isInViewport");
+            return check("to be in the viewport", null, this::reach,
+                    v -> Set.of("visible", "behind").contains(((ReachShown) v).reach().reach()));
+        }
+
+        /**
+         * Not cut off: neither a box with hidden overflow nor the page keeps a user from it, though they may have to
+         * scroll to it (ADR 0011). Retries until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public SELF isNotClipped() {
+            run.requireBrowser("isNotClipped");
+            return check("not to be clipped", null, this::reach,
+                    v -> !Set.of("clipped", "hidden").contains(((ReachShown) v).reach().reach()));
+        }
+
+        private ReachShown reach() {
+            return new ReachShown(LayoutMeasurement.measure(run, element.concrete()).subject());
         }
 
         public SELF isVisible() { return check("to be visible", null, wrapper::isVisible, Boolean.TRUE::equals); }

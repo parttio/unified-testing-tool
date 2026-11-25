@@ -143,6 +143,16 @@ public interface AdapterSession extends AutoCloseable {
         throw new UnsupportedOperationException(getClass().getSimpleName() + " can't set a Viewport");
     }
 
+    /**
+     * Runs the core's layout script ({@link LayoutScript#SOURCE}) in this page, unchanged, with
+     * {@link LayoutScript#argument} for {@code targets} and the {@code subject}'s own element (null for none), and
+     * returns the JSON string it returns (ADR 0011). One round trip, no waiting. A Testing Tool without a browser
+     * throws {@link UnsupportedOperationException}, as the default does.
+     */
+    default String measureLayout(java.util.List<LayoutScript.Target> targets, com.vaadin.testing.unified.UnifiedElement subject) {
+        throw new UnsupportedOperationException(getClass().getSimpleName() + " can't measure the layout");
+    }
+
     /** Another window of the same user and session. This session closes it when it closes. */
     AdapterSession openWindow();
 

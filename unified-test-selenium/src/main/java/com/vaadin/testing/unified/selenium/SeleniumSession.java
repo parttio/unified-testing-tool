@@ -427,6 +427,16 @@ final class SeleniumSession implements AdapterSession {
                 .setViewport(size.width(), size.height());
     }
 
+    /** The core's layout script, unchanged, with the subject's WebElement (ADR 0011). One round trip. */
+    @Override
+    public String measureLayout(java.util.List<com.vaadin.testing.unified.spi.LayoutScript.Target> targets,
+            com.vaadin.testing.unified.UnifiedElement subject) {
+        Object element = subject instanceof SeleniumElement e ? e.webElement() : null;
+        return (String) js("return (" + com.vaadin.testing.unified.spi.LayoutScript.SOURCE
+                + ")([arguments[0], arguments[1]])", com.vaadin.testing.unified.spi.LayoutScript.argument(targets),
+                element);
+    }
+
     @Override
     public void screenshot(Path file) {
         try {

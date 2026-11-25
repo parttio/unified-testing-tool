@@ -107,3 +107,4 @@ Written into the test's evidence directory, `<vaadin.testing.evidence-dir>/<test
 - Unsupported calls without the annotation fail with a message naming it.
 - Capture failure evidence as in the table, for the failed User Step.
 - Set an exact Viewport in `AdapterSession.setViewport(ViewportSize)`, for that page only, returning once the browser has applied it; the core calls it as soon as each page opens and for `page.setViewport`. A Testing Tool that can't set it exactly throws `UnsupportedOperationException` saying why (the default), never sizes approximately.
+- Run the core's layout script (`LayoutScript.SOURCE`) unchanged in `AdapterSession.measureLayout(targets, subject)`, with the subject's own element, and return its JSON string: one round trip; the script waits for AppLayout's drawer itself. Never a script of the adapter's own: the core ships no generic JavaScript call through the SPI.
