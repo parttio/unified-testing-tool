@@ -197,6 +197,21 @@ class LayoutScriptTest {
         assertEquals("the page", matches(hides, 0).get(0).getAsJsonObject().get("by").getAsString());
     }
 
+    @Test
+    void whatIsBeforeAScrollingBoxsOriginIsClippedButWhatItScrolledPastIsNot() {
+        JsonObject result = measure("""
+                <div id="box" style="overflow:auto;position:relative;width:200px;height:60px">
+                  <div style="width:600px;height:20px"></div>
+                  <button style="position:absolute;left:-120px;top:0">Before the origin</button>
+                  <button style="position:absolute;left:10px;top:0">Scrolled past</button>
+                </div>
+                <script>document.getElementById('box').scrollLeft = 300</script>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[\"clipped\",\"after scroll\"]", reaches(result, 0));
+        assertEquals("div#box", matches(result, 0).get(0).getAsJsonObject().get("by").getAsString());
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));

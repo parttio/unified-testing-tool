@@ -121,10 +121,17 @@
         return { reach: 'clipped', by: describe(box) };
       }
       if (outsideX || outsideY) {
+        // a scrolling box: nothing scrolls to before its origin (in its content, after its scroll offset)
+        if (x - left + box.scrollLeft < 0 || y - top + box.scrollTop < 0) {
+          return { reach: 'clipped', by: describe(box) };
+        }
         afterScroll = true;
+        // once scrolled into view, the point is inside the box: the boxes around it and the page judge that place
+        x = Math.min(Math.max(x, left), left + box.clientWidth);
+        y = Math.min(Math.max(y, top), top + box.clientHeight);
       }
     }
-    return { reach: afterScroll ? 'after scroll' : 'visible' };
+    return { reach: afterScroll ? 'after scroll' : 'visible', x, y };
   };
 
   // how a user reaches the point (x, y) on the page itself, or null when it is in the Viewport: nothing scrolls to
@@ -157,7 +164,7 @@
     const y = r.top + r.height / 2;
     let reach = reachThroughBoxes(element, x, y);
     if (reach.reach !== 'clipped') {
-      reach = reachOnThePage(element, x, y) || reach;
+      reach = reachOnThePage(element, reach.x, reach.y) || reach;
     }
     match.reach = reach.reach;
     if (reach.by) {
