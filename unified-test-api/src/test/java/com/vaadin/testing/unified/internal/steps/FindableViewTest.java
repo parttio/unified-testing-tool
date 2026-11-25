@@ -67,6 +67,23 @@ public class FindableViewTest {
     }
 
     @Test
+    void clickingAComponentSomethingCoversFailsSayingWhatCoversIt() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save");
+        RuntimeException intercepted = new RuntimeException("<div part=\"backdrop\"> intercepts pointer events");
+        browser.clickError = intercepted;
+        browser.subjectReach = "behind:the AppLayout drawer";
+
+        com.vaadin.testing.unified.UnifiedAssertionError e = org.junit.jupiter.api.Assertions.assertThrows(
+                com.vaadin.testing.unified.UnifiedAssertionError.class,
+                () -> browser.page.find(com.vaadin.testing.unified.component.UnifiedButton.class).withText("Save").click());
+
+        assertEquals("a reachable button with text “Save”", e.getExpected());
+        assertEquals("behind the AppLayout drawer", e.getFound());
+        org.junit.jupiter.api.Assertions.assertSame(intercepted, e.getCause());
+    }
+
+    @Test
     void eachComponentWithItsNameStateAndLookup() {
         fake.add("vaadin-text-field", "label", "Name", "value", "Alan Turing")
                 .add("vaadin-text-field", "label", "Email")

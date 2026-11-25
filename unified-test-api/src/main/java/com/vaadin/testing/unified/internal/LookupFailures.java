@@ -97,6 +97,30 @@ final class LookupFailures {
                 reasons.isEmpty() ? null : "1, but " + String.join(" and ", reasons));
     }
 
+    /**
+     * An action on a visible, enabled component failed in the browser: when something covers it or a box clips it,
+     * the failure says so in the same words on every Testing Tool (ADR 0011, #494), with the Testing Tool's own
+     * exception as its cause. Otherwise it returns, and the caller throws that exception unchanged.
+     */
+    static void failIfUnreachable(LazyElement element, UnifiedElement concrete, RuntimeException failure) {
+        TestRun run = element.run();
+        if (!run.tool().hasRealBrowser()) {
+            return;
+        }
+        LayoutMeasurement.Reach reach;
+        try {
+            reach = LayoutMeasurement.measure(run, concrete).subject();
+        } catch (RuntimeException e) {
+            return; // a failure message never fails for want of the layout
+        }
+        if (reach == null || !(reach.reach().equals("behind") || reach.reach().equals("clipped"))) {
+            return;
+        }
+        throw run.failure(FailureParts.of("a reachable " + target(element),
+                reach.reach() + (reach.by() == null ? "" : " " + (reach.reach().equals("clipped") ? "by " : "")
+                        + reach.by())), failure);
+    }
+
     // ---------------------------------------------------------------- what was expected
 
     /**

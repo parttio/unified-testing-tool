@@ -54,6 +54,8 @@ final class FakePage {
      * when {@link #layout} is null.
      */
     final Map<String, List<String>> reaches = new java.util.concurrent.ConcurrentHashMap<>();
+    /** The subject's Reach when the layout script is asked about one: {@code "behind:the AppLayout drawer"}. */
+    volatile String subjectReach;
     /** What a click throws, e.g. a browser's "intercepts pointer events"; null for none. */
     volatile RuntimeException clickError;
 
@@ -85,7 +87,7 @@ final class FakePage {
                         if (layout != null) {
                             yield layout;
                         }
-                        if (reaches.isEmpty()) {
+                        if (reaches.isEmpty() && subjectReach == null) {
                             throw new UnsupportedOperationException("this fake can't measure the layout");
                         }
                         yield layoutOf((List<?>) args[0]);
@@ -115,7 +117,14 @@ final class FakePage {
             }
             matches.append(']');
         }
-        return "{\"findings\":[],\"matches\":" + matches.append(']') + ",\"appLayouts\":[],\"menuBars\":[]}";
+        String subject = "";
+        if (subjectReach != null) {
+            String[] reach = subjectReach.split(":", 2);
+            subject = ",\"subject\":{\"box\":[0,0,10,10],\"reach\":\"" + reach[0] + "\""
+                    + (reach.length > 1 ? ",\"by\":\"" + reach[1] + "\"" : "") + "}";
+        }
+        return "{\"findings\":[],\"matches\":" + matches.append(']') + ",\"appLayouts\":[],\"menuBars\":[]"
+                + subject + "}";
     }
 
     /** Adds a component: {@code add("vaadin-text-field", "label", "Name")}. */
