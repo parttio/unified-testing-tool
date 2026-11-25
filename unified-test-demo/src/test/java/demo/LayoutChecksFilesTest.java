@@ -72,5 +72,8 @@ class LayoutChecksFilesTest {
         assertTrue(layout.get("findings").get(0).get("text").asString()
                 .startsWith("vaadin-app-layout [part=content] scrolls sideways by "), layout.toString());
         assertTrue(Files.isRegularFile(test.resolve(layout.get("screenshot").asString())), layout.toString());
+        // what a Viewport Comparison compares: the page's components with their Reach
+        assertTrue(layout.get("components").toString().contains("{\"line\":\"button “Save”\",\"reach\":\"visible\"}"),
+                layout.get("components").toString());
     }
 }
