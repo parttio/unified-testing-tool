@@ -565,6 +565,37 @@ Code is moved, not rewritten. `vaadin/testbench` and the component repositories 
 | `vaadin/testbench` | `vaadin-testbench-driver`, `-loadtest` | unchanged | |
 | | `-shared`, `-core*` | frozen | with the old element API |
 
+#### Breaking changes per phase
+
+The phases above only avoid breaking existing tests if one rule holds throughout **[opinion]**: *old APIs are frozen, never changed in place, and deleted only at a Vaadin major release, with a Migration Recipe ready.* Measured against that rule, this is what each phase does to existing tests.
+
+| Phase | TestBench tests | Browserless tests | Dramafinder tests | Unified UI Tests (alpha) |
+|---|---|---|---|---|
+| 0 | **break** if they still use UI Unit; already `@Deprecated(forRemoval = true, since = "10.1")` (I5), recipe `MigrateUIUnitToBrowserless` exists | no change | no change | no change |
+| 1 | no change | no change, **if** `com.vaadin:browserless-test` keeps its coordinates | **break**: new coordinates (and package, if renamed); versioning model changes (below) | **break**: coordinates and package `org.vaadin.addons` → `com.vaadin` |
+| 2 | no change: elements untouched | no change: testers untouched | no change: frozen | **silent behaviour change**: adapters replaced by `testing-dom` |
+| 3 | no change: elements frozen and still published | no change, **if** testers keep their fully qualified names | no change | dependency change only, if the aggregator brings the component modules |
+
+For the three existing tools, the compile breaks are UI Unit (already announced) and Dramafinder's move. The larger risks are not compile errors.
+
+**Risks, in order of harm [opinion]:**
+
+1. **Silent behaviour change in phase 2.** A test that compiles but behaves differently is worse than one that fails to compile. The Grid case shows how it happens: the Selenium adapter reads cell text with `textContent`, the Playwright adapter with `innerText` (see [One DOM module for both browsers](#one-dom-module-for-both-browsers)); one shared DOM behaviour changes the result on one side. Only Unified UI Tests are exposed, because TestBench and Dramafinder elements are frozen, not rewritten. *Mitigation:* before an adapter is replaced, run the existing suites unchanged against the new layer and list every difference in the release notes.
+2. **Dramafinder's versioning model in phase 1.** Dramafinder has its own semver and "targets Vaadin 25", so one release spans the 25.x minors (I10). Browserless targets exactly one Vaadin version (I7). Applying Browserless's rule to Dramafinder means its users can no longer upgrade the test library without upgrading Vaadin. *Mitigation:* keep publishing the frozen Dramafinder module under its current coordinates, package and own version; only the new Playwright driver follows the platform version.
+3. **Package and coordinate renames in phase 1.** *Mitigation:* Maven relocation POMs, so that `org.vaadin.addons:dramafinder` and the `unified-test-*` artifacts still resolve ([Maven guide to relocation](https://maven.apache.org/guides/mini/guide-relocation.html)); do not rename Dramafinder's package at all, since it is frozen; rename the Unified API's package once, with a recipe. It is an alpha (`0.1.0-alpha5`, I13), so this is the cheapest moment.
+
+**What makes phase 3 safer than it looks (fact, then inference).** Browserless's testers already use the component's package: `ButtonTester` is `com.vaadin.flow.component.button.ButtonTester` in `browserless-test/shared/src/main/java/com/vaadin/flow/component/button/`. **[opinion]** A tester can therefore move into its component's `flow-components` jar with the same fully qualified name; tests that import it keep compiling, and only the jar that provides it changes. TestBench elements already live in `flow-components` and do not move. Phase 3, the largest move, needs no import changes for Browserless or TestBench users.
+
+**Rules for every phase [opinion]:**
+
+- **Additive only.** A phase adds the new API next to the old one; no existing public class changes behaviour in place.
+- **Freeze, then delete at a major.** Frozen modules stay published and supported for at least one Vaadin major, and are deleted only when a recipe migrates them.
+- **Same names, same coordinates where possible;** relocation POMs where coordinates must change.
+- **A compatibility suite gates each phase.** The four tools' existing test suites run unchanged against that phase's artifacts; a phase is done when they pass or every difference is documented.
+- **Every intended break ships with a recipe** in `testing-rewrite`, run in CI against sample projects.
+
+Under these rules, an existing user meets only UI Unit's removal (already announced) and, if they choose to move, Dramafinder's new coordinates. Everything else is opt-in.
+
 #### One DOM module for both browsers
 
 **[opinion]** A `vaadin-‹x›-testing` module is one package for Selenium and Playwright because it compiles against `DomNode`, not against either library; each driver implements `DomNode` (find through shadow roots, user gestures, run a JavaScript function on a node, wait). What stays per driver is element-reference lifetime (Selenium's `WebElement` goes stale, Playwright's `Locator` re-resolves), the event sequence of typing (`sendKeys` versus `fill`) and the Escape Hatch types. The need is visible today: the Grid column-reading script exists twice, in `unified-test-selenium/.../SeleniumGridAccess.java` (around L190) and `unified-test-playwright/.../PlaywrightGridAccess.java` (around L112), differing in calling convention (`arguments[0]` and a `done` callback versus `(gs, [column, pageMs]) =>`), and they have already drifted: one reads `assignedNodes()…textContent`, the other `assignedElements()[0].innerText`.

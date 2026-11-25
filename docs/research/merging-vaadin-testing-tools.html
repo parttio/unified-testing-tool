@@ -181,6 +181,9 @@ ul.plain { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: colum
 .lic > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
 .lic h3 { font-size: 1rem; }
 .foot { font-size: 13px; color: var(--muted); }
+.brk td { min-width: 150px; font-size: 13.5px; }
+.brk td .pill { display: inline-block; margin-bottom: 4px; margin-right: 4px; }
+.rules li::before { content: "Rule " counter(r); }
 
 /* where the code lives */
 .steps { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -228,6 +231,7 @@ ul.plain { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: colum
       <a href="#options">Merge options</a>
       <a href="#architecture">Architecture</a>
       <a href="#where">Where code lives</a>
+      <a href="#breaking">Breaking changes</a>
       <a href="#product">Product story</a>
       <a href="#roadmap">Roadmap</a>
       <a href="#caveats">Not verified</a>
@@ -427,6 +431,44 @@ flowchart TD
       <div class="repos" id="repos"></div>
       <h3 id="moves-h">Moves in this phase</h3>
       <ul class="moves" id="moves"></ul>
+    </section>
+
+    <section id="breaking">
+      <div class="eyebrow">Breaking changes per phase <span class="op">opinion</span></div>
+      <h2>What each phase does to existing tests</h2>
+      <div class="verdict">
+        <p><strong>One rule keeps existing tests working:</strong> old APIs are frozen, never changed in place, and deleted only at a Vaadin major release, with a migration recipe ready.</p>
+      </div>
+      <div class="tscroll">
+        <table class="brk">
+          <thead><tr><th>Phase</th><th>TestBench tests</th><th>Browserless tests</th><th>Dramafinder tests</th><th>Unified tests (alpha)</th></tr></thead>
+          <tbody>
+            <tr><td><b>0</b> Delete UI Unit</td><td><span class="pill no">break</span> if they still use UI Unit; already deprecated for removal since 10.1, recipe exists</td><td><span class="pill go">none</span></td><td><span class="pill go">none</span></td><td><span class="pill go">none</span></td></tr>
+            <tr><td><b>1</b> One home</td><td><span class="pill go">none</span></td><td><span class="pill go">none</span> if <code>com.vaadin:browserless-test</code> keeps its coordinates</td><td><span class="pill no">break</span> new coordinates; versioning model changes</td><td><span class="pill no">break</span> coordinates and package <code>org.vaadin.addons</code> → <code>com.vaadin</code></td></tr>
+            <tr><td><b>2</b> Shared browser layer</td><td><span class="pill go">none</span> elements untouched</td><td><span class="pill go">none</span> testers untouched</td><td><span class="pill go">none</span> frozen</td><td><span class="pill mid">silent change</span> adapters replaced by one DOM behaviour</td></tr>
+            <tr><td><b>3</b> Code next to components</td><td><span class="pill go">none</span> elements frozen, still published</td><td><span class="pill go">none</span> if testers keep their class names</td><td><span class="pill go">none</span></td><td><span class="pill mid">dependency</span> only, if the aggregator brings the modules</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>The three risks, in order of harm</h3>
+      <div class="opts">
+        <div class="opt"><span class="rk">1</span><div><h3>Silent behaviour change in phase 2</h3><p>A test that compiles but behaves differently is worse than one that fails to compile. Today the Selenium adapter reads Grid cell text with <code>textContent</code> and the Playwright adapter with <code>innerText</code>; one shared DOM behaviour changes the result on one side. Only Unified tests are exposed. <b>Mitigation:</b> run the existing suites unchanged against the new layer before an adapter is replaced, and list every difference in the release notes.</p></div><span class="pill mid">Unified only</span></div>
+        <div class="opt"><span class="rk">2</span><div><h3>Dramafinder's versioning model in phase 1</h3><p>Dramafinder has its own version and one release spans the Vaadin 25.x minors. Browserless targets exactly one Vaadin version. Applying that rule to Dramafinder means users can't upgrade the test library without upgrading Vaadin. <b>Mitigation:</b> keep publishing frozen Dramafinder under its current coordinates, package and version; only the new Playwright driver follows platform versions.</p></div><span class="pill mid">Dramafinder</span></div>
+        <div class="opt"><span class="rk">3</span><div><h3>Package and coordinate renames in phase 1</h3><p><b>Mitigation:</b> Maven relocation POMs so old coordinates still resolve; don't rename Dramafinder's package at all; rename the Unified API's package once, with a recipe, while it is still an alpha.</p></div><span class="pill mid">Dramafinder, Unified</span></div>
+      </div>
+
+      <div class="phase-sum"><b>Why phase 3 is safer than it looks.</b> Browserless's testers already use the component's package: <code>com.vaadin.flow.component.button.ButtonTester</code>. A tester can move into its component's <code>flow-components</code> jar with the same fully qualified name, so tests that import it keep compiling. TestBench elements already live in <code>flow-components</code> and don't move. The largest move needs no import changes for Browserless or TestBench users.</div>
+
+      <h3>Rules for every phase</h3>
+      <ol class="rules">
+        <li><b>Additive only.</b> A phase adds the new API next to the old one; no existing public class changes behaviour in place.</li>
+        <li><b>Freeze, then delete at a major.</b> Frozen modules stay published for at least one Vaadin major and are deleted only when a recipe migrates them.</li>
+        <li><b>Same names, same coordinates</b> where possible; relocation POMs where coordinates must change.</li>
+        <li><b>A compatibility suite gates each phase.</b> The four tools' existing suites run unchanged against that phase's artifacts.</li>
+        <li><b>Every intended break ships with a recipe,</b> run in CI against sample projects.</li>
+      </ol>
+      <p>Under these rules an existing user meets only UI Unit's removal, already announced, and, if they choose to move, Dramafinder's new coordinates. Everything else is opt-in.</p>
     </section>
 
     <section id="product">
