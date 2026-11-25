@@ -227,6 +227,10 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
                 .append(s.failed() ? "✘" : s.aborted() ? "–" : "✔").append("</span> <span class=\"name\">")
                 .append(esc(s.displayName())).append("</span> <span class=\"class\">")
                 .append(esc(s.simpleClassName())).append("</span>");
+        if (s.viewport() != null) {
+            h.append(" <span class=\"badge viewport\" title=\"The Viewport this scenario ran at\">")
+                    .append(esc(s.viewport().toString())).append("</span>");
+        }
         if (changed) {
             h.append(" <span class=\"badge ").append(isNew ? "new" : "changed").append("\">")
                     .append(isNew ? "new" : "changed").append("</span>");

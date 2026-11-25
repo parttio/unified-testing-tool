@@ -36,6 +36,19 @@ class RunReportTest {
     }
 
     @Test
+    void aScenarioShowsTheViewportItRanAt() {
+        String atPhone = RunSummaryTest.EDIT_PERSON.replaceFirst("\"tool\": \"([a-z]+)\",",
+                "\"tool\": \"$1\", \"viewport\": {\"name\": \"phone\", \"width\": 375, \"height\": 667, \"fixed\": true},");
+        String html = new RunReport(new RunSummary("Playwright", List.of(scenario(atPhone, "EditPersonTest/editsAPerson"),
+                scenario(RunSummaryTest.EDIT_PERSON.replace("editsAPerson", "plain"), "EditPersonTest/plain")), 0, null),
+                s -> List.of()).html();
+
+        assertTrue(html.contains("<span class=\"class\">EditPersonTest</span> <span class=\"badge viewport\" "
+                + "title=\"The Viewport this scenario ran at\">phone 375 × 667</span>"), html);
+        assertEquals(1, html.split("badge viewport").length - 1, html);
+    }
+
+    @Test
     void sectionsComeInSummaryOrderWithPassingHidden() {
         String html = report(CHANGES);
 
