@@ -260,6 +260,17 @@ class LayoutScriptTest {
         assertEquals("behind", matches(dialog, 0).get(0).getAsJsonObject().get("reach").getAsString());
     }
 
+    @Test
+    void aMatchThatIsNotRenderedIsHidden() {
+        JsonObject result = measure("""
+                <button style="display:none">None</button><button style="visibility:hidden">Invisible</button>
+                <button>Shown</button>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[\"hidden\",\"hidden\",\"visible\"]", reaches(result, 0));
+        assertEquals("[]", result.getAsJsonArray("findings").toString());
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));

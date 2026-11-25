@@ -213,6 +213,10 @@
   const measure = (element) => {
     const r = element.getBoundingClientRect();
     const match = { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
+    if (!element.checkVisibility({ visibilityProperty: true })) {
+      match.reach = 'hidden';
+      return match;
+    }
     const x = r.left + r.width / 2;
     const y = r.top + r.height / 2;
     let reach = reachThroughBoxes(element, x, y);
@@ -258,7 +262,7 @@
       continue;
     }
     const r = element.getBoundingClientRect();
-    if (r.width <= 2 * INSET || r.height <= 2 * INSET || matches[at.target][at.index].reach === 'clipped') {
+    if (r.width <= 2 * INSET || r.height <= 2 * INSET || ['clipped', 'hidden'].includes(matches[at.target][at.index].reach)) {
       continue;
     }
     const points = [[r.left + r.width / 2, r.top + r.height / 2], [r.left + INSET, r.top + INSET],
