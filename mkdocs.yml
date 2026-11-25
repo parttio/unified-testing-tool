@@ -117,6 +117,7 @@ nav:
       - adr/0014-secrets-are-masked-as-substrings-except-the-login-user-name-and-display-name.md
       - adr/0015-renderer-markup-is-found-by-tag-wrappers-row-click-avoids-it.md
       - adr/0016-accessible-name-follows-the-browser.md
+      - adr/0017-the-page-path-is-checked-not-read.md
   - Release notes:
       - Unreleased: releases/unreleased.md
       - 0.1.0-alpha5: releases/0.1.0-alpha5.md

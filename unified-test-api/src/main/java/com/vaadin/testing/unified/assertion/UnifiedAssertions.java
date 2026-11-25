@@ -170,6 +170,35 @@ public final class UnifiedAssertions {
         }
 
         /**
+         * The page's path matches this regular expression as a whole, for a path the test only partly knows, such
+         * as {@code "products/\\d+"} after opening an item whose id it doesn't know. The path is the one
+         * {@link #hasPath(String)} compares: no leading {@code /}, no query string. Retries until the timeout.
+         *
+         * @throws java.util.regex.PatternSyntaxException at once, if {@code regex} is not a regular expression
+         */
+        public PageAssert hasPathMatching(String regex) {
+            return hasPathMatching(java.util.regex.Pattern.compile(regex));
+        }
+
+        /**
+         * {@link #hasPathMatching(String)} with a compiled pattern, e.g. one with
+         * {@link java.util.regex.Pattern#CASE_INSENSITIVE}. The User Step shows the pattern's text.
+         */
+        public PageAssert hasPathMatching(java.util.regex.Pattern pattern) {
+            java.util.regex.Pattern relative = pattern.pattern().startsWith("/")
+                    ? java.util.regex.Pattern.compile(pattern.pattern().substring(1), pattern.flags()) : pattern;
+            String regex = relative.pattern();
+            check(run, () -> Phrase.template("see", "see path matching {value}", null, List.of(regex)),
+                    () -> "the page", "to have path matching", regex, () -> run.session().currentPath(),
+                    v -> v != null && relative.matcher(withoutLeadingSlash(v.toString())).matches());
+            return this;
+        }
+
+        private static String withoutLeadingSlash(String path) {
+            return path.startsWith("/") ? path.substring(1) : path;
+        }
+
+        /**
          * The page's title is exactly this: what the browser shows on the tab, set by the view's
          * {@code @PageTitle}, {@code HasDynamicTitle} or {@code Page.setTitle(..)}. On Browserless, the title the
          * UI last set.

@@ -91,6 +91,25 @@ class NavigationTest {
         assertThat(page.find(UnifiedParagraph.class).withId("showing")).hasText("Shipment 42");
     }
 
+    // --8<-- [start:hasPathMatching]
+    @Test
+    @DisplayName("Opening a shipment puts its number in the path")
+    void putsTheShipmentNumberInThePath(UnifiedPage page) {
+        page.navigate("shipment/42?tab=2");
+
+        // the test doesn't need to know the number: any digits after "shipment/", the query string aside
+        assertThat(page).isAt(ShipmentView.class).hasPathMatching("shipment/\\d+");
+    }
+    // --8<-- [end:hasPathMatching]
+
+    @Test
+    @DisplayName("A path pattern may start with a slash and matches the whole path")
+    void aPathPatternMatchesTheWholePath(UnifiedPage page) {
+        page.navigate(ShipmentView.class);
+
+        assertThat(page).hasPathMatching("/shipment").hasPathMatching("ship.*");
+    }
+
     @Test
     @DisplayName("Opening the edit alias of shipment 42 shows the shipments view")
     void isAtTheViewOnAnAliasWithAParameter(UnifiedPage page) {
