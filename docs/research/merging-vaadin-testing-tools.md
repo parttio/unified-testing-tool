@@ -475,6 +475,100 @@ Efforts are rough person-month ranges for a team that knows the code, before rev
 
 **[opinion]** Phase 0 and 1 pay for themselves within a release; phase 2 is where the duplication actually goes; phase 3 is the long tail, and it is also the phase that changes who owns test code, so it needs the components team's agreement before it starts.
 
+### Where the code lives, phase by phase
+
+Each table shows the repositories as they stand **after** that phase. "Today" is fact, from the checkouts at the commits in the header; the later phases are **[opinion]**. Status: **new** = created in this phase, **moved in** = arrived from another repository, **changed** = reshaped in place, **frozen** = kept for existing tests, no new features, **removed** = deleted or emptied. Three names are placeholders chosen for this map, not decisions: the new home `vaadin/testing` (renaming `browserless-test` would serve as well, since it is already under `vaadin` and versioned with the platform), the module names `testing-*` and `vaadin-‹x›-testing`, and putting the Selenium driver in `vaadin/testbench` so the commercial code stays in its own repository.
+
+#### Today: seven repositories
+
+Two facts that the repository names hide:
+
+- **Browserless's testers are not in `flow-components`.** All of them are in `browserless-test/shared`, under the package `com.vaadin.flow.component.*` (for example `shared/src/main/java/com/vaadin/flow/component/button/`). `flow-components` holds no Browserless code: its component parents contain `vaadin-‹x›-flow`, `vaadin-‹x›-testbench` and `vaadin-‹x›-flow-integration-tests` only (`git ls-tree` of `vaadin-button-flow-parent` and `vaadin-grid-flow-parent` at `d1a42ad`; no path matching `browserless` in the tree).
+- **Dramafinder is one Maven module** (no `<module>` in its `pom.xml`; packages `element/`, `agent/`, `spring/` under `src/main/java/org/vaadin/addons/dramafinder`). The Unified API is the only multi-module one of the three newer tools (`unified-testing-tool` `pom.xml`: nine modules).
+
+| Repository | Licence | Module | What it holds |
+|---|---|---|---|
+| `vaadin/testbench` | commercial | `vaadin-testbench-shared` | `TestBenchElement`, `ElementQuery`, `waitForVaadin`, screenshots |
+| | | `-core`, `-core-junit5`, `-core-junit6` | JUnit 4 / 5 / 6 integration; JUnit 6 compiles the JUnit 5 sources (I2) |
+| | | `-unit-shared`, `-unit`, `-unit-junit5`, `-unit-junit6`, `-unit-quarkus` | UI Unit, the deprecated fork of Browserless (A1, I5) |
+| | | `-loadtest`, `-bom` | k6 load-test kit; BOM |
+| `vaadin/flow-components` | per component | `vaadin-‹x›-flow` | the Java component (48 component parents) |
+| | | `vaadin-‹x›-testbench` ×48 | TestBench elements, 86 classes (I3) |
+| | | `vaadin-‹x›-flow-integration-tests` | the component's own browser tests |
+| `vaadin/flow` | Apache-2.0 | `flow-client` | `Vaadin.Flow.clients`, polled by every tool to know the server is done (A2) |
+| | | `flow-html-components-testbench` | 46 HTML elements (I3) |
+| `vaadin/web-components` | per component | `<vaadin-grid>`, `<vaadin-combo-box>`, … | private fields called by four copies of test JavaScript (A3) |
+| `vaadin/browserless-test` | Apache-2.0 | `shared` | mocked environment, 78 testers, `ComponentQuery` (I6) |
+| | | `locator-processor` | generated `findXxx()` locators (I9) |
+| | | `junit6`, `spring`, `quarkus`, `junit6-cdi-tests`, `bom` | integrations |
+| `parttio/dramafinder` | Apache-2.0 | (single module) `element/` | 57 Playwright elements and `Has*` mixins |
+| | | `AutoWait`, `RouteNavigation`, base class | waiting, route-to-URL, setup |
+| | | `spring/`, `agent/`, `skills/` | test login; agent report; agent skills (I12) |
+| `parttio/unified-testing-tool` | Apache-2.0 | `unified-test-api` | Wrappers, lookups, reports, SPI with per-component `*Access` |
+| | | `unified-test-browserless`, `-playwright`, `-selenium` | adapters on top of the three tools' wrappers |
+| | | `-spring`, `-archunit`, `-rewrite`, `-demo`, `-bom` | Spring, style rules, Migration Recipes, demo, BOM |
+
+#### Phase 0: stop double work
+
+| Repository | Module | Status | Note |
+|---|---|---|---|
+| `vaadin/testbench` | `vaadin-testbench-unit-*` (5 modules) | removed | users run `MigrateUIUnitToBrowserless` |
+| | `vaadin-testbench-bom` | changed | drops the UI Unit artifacts |
+| all others | — | unchanged | `browserless-test` is now the only in-JVM tool |
+
+#### Phase 1: one home
+
+Code is moved, not rewritten. `vaadin/testbench` and the component repositories do not change.
+
+| Repository | Module | Status | From |
+|---|---|---|---|
+| `vaadin/testing` (new, Apache-2.0, platform-versioned) | `browserless/` (`shared`, `locator-processor`, `junit6`, `spring`, `quarkus`) | moved in | `vaadin/browserless-test`, history kept |
+| | `testing-api` | moved in | `unified-test-api`, packages renamed to `com.vaadin` |
+| | `testing-adapter-browserless`, `-playwright`, `-selenium` | moved in | `unified-test-*`, unchanged for now |
+| | `testing-spring`, `testing-archunit` | moved in | `unified-test-spring`, `-archunit` |
+| | `testing-rewrite` | moved in | `unified-test-rewrite`, plus a new `org.vaadin.addons` → `com.vaadin` rename recipe |
+| | `dramafinder` | moved in | `parttio/dramafinder`, as is, `com.vaadin` coordinates; needs its maintainer's agreement |
+| | `vaadin-testing-bom` | new | imported by the platform BOM |
+| | CI matrix | new | the demo's tests on Browserless, Playwright and Selenium |
+| `vaadin/browserless-test`, `parttio/dramafinder`, `parttio/unified-testing-tool` | everything | removed (archived) | README points to `vaadin/testing` |
+
+#### Phase 2: shared browser layer
+
+| Repository | Module | Status | Note |
+|---|---|---|---|
+| `vaadin/testing` | `testing-api` | changed | SPI trimmed to `Driver`, `Session`, `Node`, `ServerNode`, `DomNode`; `spi/*Access` removed (section 5, rule 3) |
+| | `testing-server` | new | server behaviours for the 26 Unified components, extracted from the Browserless testers; temporary home |
+| | `testing-dom` | new | DOM behaviours for the same 26, one set for Playwright and Selenium; temporary home |
+| | `testing-driver-browserless` | new | the mocked environment from `browserless/shared` as a driver |
+| | `testing-driver-playwright` | new | `DomNode` over Playwright `Locator`; from Dramafinder's `AutoWait`, `RouteNavigation` and base class (about 1,000 lines) |
+| | `testing-adapter-*` | removed | replaced by the drivers (A6) |
+| | `browserless/` testers | unchanged | existing Browserless tests and the Escape Hatch still use them |
+| | `dramafinder` | frozen | existing Dramafinder tests keep working |
+| `vaadin/testbench` | `vaadin-testbench-driver` | new | Selenium driver: `DomNode` over `WebElement`; grid, cloud vendors, real Safari, screenshot comparison; commercial |
+| | `-shared`, `-core*` | unchanged | for existing TestBench tests |
+| `vaadin/flow` | `flow-client` | changed | a public "client is idle" API replaces three copies of the wait script (A2) |
+| `vaadin/web-components` | Grid, ComboBox, DatePicker, Upload | changed | supported test hooks (rows, items, scroll to index) owned by the components team (A3) |
+
+#### Phase 3: component knowledge next to the component
+
+| Repository | Module | Status | Note |
+|---|---|---|---|
+| `vaadin/flow-components` | `vaadin-‹x›-testing` ×48 | new | Wrapper interface + server behaviour + DOM behaviour, depending only on `testing-api`; licence follows the component (GridPro, Charts stay commercial, as their TestBench elements are today, I4) |
+| | `vaadin-‹x›-testbench` ×48 | frozen | old TestBench elements, reachable through the Escape Hatch |
+| `vaadin/flow` | `flow-html-components-testing` | new | Wrappers for `Div`, `Anchor`, `Input`, … |
+| | `flow-html-components-testbench` | frozen | |
+| `vaadin/testing` | `testing-server`, `testing-dom` | removed | emptied into the component modules, one component per pull request, starting with the 26 |
+| | `browserless/` testers | frozen | testers not yet covered (about 30 components) become their component's server behaviour |
+| | `dramafinder` | frozen | |
+| | `testing-api`, drivers, `testing-spring`, `testing-quarkus`, `testing-rewrite`, skills | unchanged / changed | Quarkus ported from Browserless; no component code left in this repository |
+| | `vaadin-testing` (aggregator) | new | one dependency brings the API and every `vaadin-‹x›-testing` module |
+| `vaadin/testbench` | `vaadin-testbench-driver`, `-loadtest` | unchanged | |
+| | `-shared`, `-core*` | frozen | with the old element API |
+
+#### One DOM module for both browsers
+
+**[opinion]** A `vaadin-‹x›-testing` module is one package for Selenium and Playwright because it compiles against `DomNode`, not against either library; each driver implements `DomNode` (find through shadow roots, user gestures, run a JavaScript function on a node, wait). What stays per driver is element-reference lifetime (Selenium's `WebElement` goes stale, Playwright's `Locator` re-resolves), the event sequence of typing (`sendKeys` versus `fill`) and the Escape Hatch types. The need is visible today: the Grid column-reading script exists twice, in `unified-test-selenium/.../SeleniumGridAccess.java` (around L190) and `unified-test-playwright/.../PlaywrightGridAccess.java` (around L112), differing in calling convention (`arguments[0]` and a `done` callback versus `(gs, [column, pageMs]) =>`), and they have already drifted: one reads `assignedNodes()…textContent`, the other `assignedElements()[0].innerText`.
+
 ## Open questions
 
 - Will Dramafinder's maintainer and Vaadin agree on moving it (namespace, governance, cadence)? Unchanged from the S-vs-P note.
