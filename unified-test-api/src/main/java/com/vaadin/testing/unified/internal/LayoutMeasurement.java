@@ -76,6 +76,23 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
         return parse(run.session().measureLayout(targets, subject), kinds);
     }
 
+    /**
+     * The Reach of every match of each target, in document order: one run of the layout script, no waiting. Fails
+     * without a real browser.
+     */
+    @SuppressWarnings("unchecked")
+    static List<List<Reach>> matches(TestRun run, List<LayoutScript.Target> targets) {
+        run.requireBrowser("Measuring the layout");
+        Map<String, Object> root = (Map<String, Object>) JsonReader.parse(run.session().measureLayout(targets, null));
+        List<List<Reach>> matches = new ArrayList<>();
+        for (Object list : (List<Object>) root.getOrDefault("matches", List.of())) {
+            matches.add(((List<Object>) list).stream().map(m -> (Map<String, Object>) m)
+                    .map(m -> new Reach(String.valueOf(m.get("reach")), m.get("by") == null ? null
+                            : String.valueOf(m.get("by")))).toList());
+        }
+        return matches;
+    }
+
     @SuppressWarnings("unchecked")
     static LayoutMeasurement parse(String json, List<String> kinds) {
         Map<String, Object> root = (Map<String, Object>) JsonReader.parse(json);

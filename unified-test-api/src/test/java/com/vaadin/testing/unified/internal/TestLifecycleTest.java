@@ -236,7 +236,7 @@ class TestLifecycleTest {
         assertEquals(List.of(saves.resolve("failure.png"), view), evidence);
         assertFalse(Files.exists(saves.resolve("failure.tree.txt")), "an earlier run's evidence is gone");
         // the Findable View, on every Testing Tool; this fake page has nothing to find
-        assertEquals("Findable view of “/” on playwright: no component a Unified UI Test can find\n",
+        assertEquals("Findable view of “/” on playwright at Viewport 1280 × 720: no component a Unified UI Test can find\n",
                 Files.readString(view));
         assertTrue(Files.readString(saves.resolve("user-steps.json"))
                 .contains("\"evidence\": [\n      \"failure.png\",\n      \"failure.view.txt\"\n    ]"),
@@ -244,6 +244,7 @@ class TestLifecycleTest {
         assertEquals(List.of("setViewport[1280 × 720]", "consoleErrors", "writeFailureEvidence[" + saves + ", failure, null]",
                 "testEnded[" + evidenceDir.resolve("ProfileTest").resolve("saves") + ", true]", "close"),
                 session.calls.stream().filter(call -> !call.startsWith("find[") && !call.startsWith("findTemplates[")
+                        && !call.startsWith("measureLayout[")
                         && !call.equals("currentPath")
                         && !call.equals("browserName")).toList()); // the Findable View's reads
         Throwable[] suppressed = failure.getSuppressed();

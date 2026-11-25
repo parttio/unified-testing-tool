@@ -48,6 +48,12 @@ final class FakePage {
 
     /** What the layout script returns in a browser (ADR 0011); null when it can't measure. */
     volatile String layout;
+    /**
+     * The Reach of each match of a target, by the target's CSS selector, in document order: {@code "visible"},
+     * {@code "clipped:div#box"}, {@code "behind:the AppLayout drawer"}. The layout script's matches are built from it
+     * when {@link #layout} is null.
+     */
+    final Map<String, List<String>> reaches = new java.util.concurrent.ConcurrentHashMap<>();
     /** What a click throws, e.g. a browser's "intercepts pointer events"; null for none. */
     volatile RuntimeException clickError;
 
@@ -76,10 +82,13 @@ final class FakePage {
                         yield errors;
                     }
                     case "measureLayout" -> {
-                        if (layout == null) {
+                        if (layout != null) {
+                            yield layout;
+                        }
+                        if (reaches.isEmpty()) {
                             throw new UnsupportedOperationException("this fake can't measure the layout");
                         }
-                        yield layout;
+                        yield layoutOf((List<?>) args[0]);
                     }
                     case "hashCode" -> 1;
                     default -> null;
@@ -90,6 +99,23 @@ final class FakePage {
         }
         page = new UnifiedPageImpl(new TestRun(tool, session, Duration.ofMillis(200), steps, null, false,
                 viewport == null ? com.vaadin.testing.unified.internal.Settings.DEFAULT_VIEWPORT : viewport));
+    }
+
+    /** The layout script's result for these targets, from {@link #reaches}. */
+    private String layoutOf(List<?> targets) {
+        StringBuilder matches = new StringBuilder("[");
+        for (int t = 0; t < targets.size(); t++) {
+            String css = ((com.vaadin.testing.unified.spi.LayoutScript.Target) targets.get(t)).css();
+            matches.append(t == 0 ? "" : ",").append('[');
+            List<String> list = reaches.getOrDefault(css, List.of());
+            for (int i = 0; i < list.size(); i++) {
+                String[] reach = list.get(i).split(":", 2);
+                matches.append(i == 0 ? "" : ",").append("{\"box\":[0,0,10,10],\"reach\":\"").append(reach[0])
+                        .append('"').append(reach.length > 1 ? ",\"by\":\"" + reach[1] + "\"" : "").append('}');
+            }
+            matches.append(']');
+        }
+        return "{\"findings\":[],\"matches\":" + matches.append(']') + ",\"appLayouts\":[],\"menuBars\":[]}";
     }
 
     /** Adds a component: {@code add("vaadin-text-field", "label", "Name")}. */

@@ -41,6 +41,32 @@ public class FindableViewTest {
     }
 
     @Test
+    void inABrowserEachLineSaysWhatClipsCoversOrHidesItsComponent() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Delete")
+                .add("vaadin-button", "text", "Share", "visible", "false").add("vaadin-button", "text", "Help");
+        browser.reaches.put("vaadin-button", List.of("behind:the AppLayout drawer", "clipped:div#box",
+                "hidden:the MenuBar overflow", "after scroll"));
+
+        assertEquals(List.of(
+                "button “Save” (behind the AppLayout drawer)  page.find(UnifiedButton.class).withText(\"Save\")",
+                "button “Delete” (clipped)               page.find(UnifiedButton.class).withText(\"Delete\")",
+                "button “Share” (hidden in the MenuBar overflow)  page.find(UnifiedButton.class).withText(\"Share\")",
+                "button “Help”                           page.find(UnifiedButton.class).withText(\"Help\")"),
+                lines(browser.page.describe()));
+    }
+
+    @Test
+    void whenTheScriptAndTheLookupDisagreeOnHowManyThereAreTheLinesSayNothingOfReach() {
+        FakePage browser = new FakePage(com.vaadin.testing.unified.TestingTool.PLAYWRIGHT, PHONE);
+        browser.add("vaadin-button", "text", "Save").add("vaadin-button", "text", "Delete");
+        browser.reaches.put("vaadin-button", List.of("clipped:div#box"));
+
+        assertEquals(List.of("button “Save”    page.find(UnifiedButton.class).withText(\"Save\")",
+                "button “Delete”  page.find(UnifiedButton.class).withText(\"Delete\")"), lines(browser.page.describe()));
+    }
+
+    @Test
     void eachComponentWithItsNameStateAndLookup() {
         fake.add("vaadin-text-field", "label", "Name", "value", "Alan Turing")
                 .add("vaadin-text-field", "label", "Email")
