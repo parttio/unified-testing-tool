@@ -36,9 +36,11 @@ public record ViewportComparison(String tool, ViewportSize reference, List<Viewp
      * @param fixed whether it declares its Viewport ({@code @Viewport}): run at that size everywhere, not compared
      * @param points its measurement points, matched by order as long as the runs take the same User Steps
      * @param partings where the run at a size takes other User Steps than the reference's, by Viewport
+     * @param steps each run's User Steps, as lines, by Viewport
      */
     public record Scenario(String displayName, String testClass, String testMethod, Map<String, String> status,
-            boolean fixed, List<Point> points, Map<String, RunComparison.Parting> partings) {}
+            boolean fixed, List<Point> points, Map<String, RunComparison.Parting> partings,
+            Map<String, List<String>> steps) {}
 
     /**
      * One measurement point.
@@ -79,7 +81,7 @@ public record ViewportComparison(String tool, ViewportSize reference, List<Viewp
                     fixedSeen.add(r);
                     fixed.add(new Scenario(r.displayName(), r.testClass(), r.testMethod(),
                             Map.of(r.viewport() == null ? "" : r.viewport().toString(), r.status()), true, List.of(),
-                            Map.of()));
+                            Map.of(), Map.of()));
                 }
             } else if (r.viewport() != null) {
                 bySize.computeIfAbsent(r.viewport().toString(), k -> new ArrayList<>()).add(r);
@@ -133,8 +135,10 @@ public record ViewportComparison(String tool, ViewportSize reference, List<Viewp
             }
             points.add(new Point(k + 1, at.step(), atSize));
         }
+        Map<String, List<String>> steps = new LinkedHashMap<>();
+        runs.forEach((size, run) -> steps.put(size, run.stepLines().stream().map(String::strip).toList()));
         return new Scenario(ref.displayName(), ref.testClass(), ref.testMethod(), status, ref.fixedViewport(),
-                List.copyOf(points), partings);
+                List.copyOf(points), partings, steps);
     }
 
     /** The components the reference reaches and the other run doesn't, in the reference's order. */
