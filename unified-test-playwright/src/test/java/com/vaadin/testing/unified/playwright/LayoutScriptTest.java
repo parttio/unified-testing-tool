@@ -288,6 +288,15 @@ class LayoutScriptTest {
         assertEquals("footer#bar", subject.get("by").getAsString());
     }
 
+    @Test
+    void stickingOutOfABoxThatDoesNotClipOrScrollIsStillVisible() {
+        JsonObject result = measure("""
+                <div style="height:0"><button>Sticks out of a box with no height</button></div>
+                """, LayoutScript.Target.interactive("button"));
+
+        assertEquals("[\"visible\"]", reaches(result, 0));
+    }
+
     private static String reaches(JsonObject result, int target) {
         JsonArray reaches = new JsonArray();
         matches(result, target).forEach(m -> reaches.add(m.getAsJsonObject().get("reach")));

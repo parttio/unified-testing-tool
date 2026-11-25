@@ -634,6 +634,19 @@ final class PlaywrightSession implements AdapterSession {
         page.setViewportSize(size.width(), size.height());
     }
 
+    /** The core's layout script, unchanged, with the subject's element (ADR 0011). One round trip. */
+    @Override
+    public String measureLayout(java.util.List<com.vaadin.testing.unified.spi.LayoutScript.Target> targets,
+            com.vaadin.testing.unified.UnifiedElement subject) {
+        String argument = com.vaadin.testing.unified.spi.LayoutScript.argument(targets);
+        if (subject instanceof PlaywrightElement element) {
+            return (String) element.locator().evaluate("(element, argument) => ("
+                    + com.vaadin.testing.unified.spi.LayoutScript.SOURCE + ")([argument, element])", argument);
+        }
+        return (String) page.evaluate(com.vaadin.testing.unified.spi.LayoutScript.SOURCE,
+                java.util.Arrays.asList(argument, null));
+    }
+
     @Override
     public void screenshot(Path file) {
         page.screenshot(new Page.ScreenshotOptions().setPath(file));

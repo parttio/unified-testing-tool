@@ -122,7 +122,8 @@
       if ((hides(style.overflowX) && outsideX) || (hides(style.overflowY) && outsideY)) {
         return { reach: 'clipped', by: describe(box) };
       }
-      if (outsideX || outsideY) {
+      const scrolls = (overflow) => overflow === 'auto' || overflow === 'scroll';
+      if ((scrolls(style.overflowX) && outsideX) || (scrolls(style.overflowY) && outsideY)) {
         // a scrolling box: nothing scrolls to before its origin (in its content, after its scroll offset)
         if (x - left + box.scrollLeft < 0 || y - top + box.scrollTop < 0) {
           return { reach: 'clipped', by: describe(box) };
