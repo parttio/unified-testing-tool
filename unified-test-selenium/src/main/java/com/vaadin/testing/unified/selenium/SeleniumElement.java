@@ -225,16 +225,42 @@ final class SeleniumElement implements UnifiedElement {
     @Override
     public void click() {
         scrollToCenter();
-        try {
-            SeleniumSession.stale(element::click);
-        } catch (org.openqa.selenium.ElementClickInterceptedException e) {
-            // something covers it: no user can click it, so neither does the test; the core names the cover (#494)
-            throw e;
-        } catch (ElementNotInteractableException e) {
-            SeleniumSession.stale(() -> tb().callFunction("click")); // e.g. a host element without a box of its own
+        // TestBench clicks with JavaScript (focus, then click()), which nothing can cover: hit-test first, in the same
+        // round trip, so that a covered component fails as a user's click would, the same as on Playwright (#494)
+        if ("covered".equals(SeleniumSession.stale(() -> session.js(CLICK_IF_REACHABLE, element)))) {
+            throw new org.openqa.selenium.ElementClickInterceptedException(
+                    "Element is covered: another element would receive the click");
         }
         session.waitForVaadin();
     }
+
+    /**
+     * Clicks the element as TestBench does (focus, then click()) unless another element is on top of its centre, as
+     * {@code elementFromPoint} sees it through shadow roots; then it returns "covered" and clicks nothing. An element
+     * without a box, or one clicks pass through, is clicked as before.
+     */
+    static final String CLICK_IF_REACHABLE = """
+            const e = arguments[0];
+            const r = e.getBoundingClientRect();
+            const x = r.left + r.width / 2, y = r.top + r.height / 2;
+            let hit = r.width > 0 && r.height > 0 ? document.elementFromPoint(x, y) : null;
+            while (hit && hit.shadowRoot) {
+              const inner = hit.shadowRoot.elementFromPoint(x, y);
+              if (!inner || inner === hit) break;
+              hit = inner;
+            }
+            const up = (n) => n.assignedSlot || n.parentElement
+                || (n.getRootNode() instanceof ShadowRoot ? n.getRootNode().host : null);
+            let reached = !hit || getComputedStyle(e).pointerEvents === 'none';
+            for (let n = hit; n && !reached; n = up(n)) {
+              reached = n === e;
+            }
+            if (!reached) {
+              return 'covered';
+            }
+            e.focus();
+            e.click();
+            return 'clicked';""";
 
     /** Double-clicks, then waits for Vaadin. */
     void doubleClick() {
