@@ -79,6 +79,23 @@ class LayoutScriptTest {
         assertEquals(1, matches(result, 1).size());
     }
 
+    // ---------------------------------------------------------------- sideways scroll
+
+    @Test
+    void aPageWiderThanTheViewportScrollsSidewaysByTheDifference() {
+        JsonObject result = measure("<div style='width:700px;height:20px'>wide</div>");
+
+        assertEquals("[{\"kind\":\"scroll\",\"container\":\"the page\",\"by\":325}]",
+                result.getAsJsonArray("findings").toString());
+    }
+
+    @Test
+    void lessThanAPixelTooWideIsNoSidewaysScroll() {
+        JsonObject result = measure("<div style='width:375.6px;height:20px'>almost</div>");
+
+        assertEquals("[]", result.getAsJsonArray("findings").toString());
+    }
+
     /** x, y, width of a box, rounded, and 0 for the height so fonts don't matter. */
     private static String roundedXyW(JsonObject match) {
         JsonArray box = match.getAsJsonArray("box");

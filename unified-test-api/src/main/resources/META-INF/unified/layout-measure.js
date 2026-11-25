@@ -16,6 +16,16 @@
     return { box: [round(r.left), round(r.top), round(r.width), round(r.height)], reach: 'visible' };
   };
 
+  // a box that sticks out by less than this is rounding, not something a user scrolls to
+  const TOLERANCE = 1;
+  const findings = [];
+
+  // sideways scroll of the page itself
+  const root = document.scrollingElement || document.documentElement;
+  if (root.scrollWidth > root.clientWidth + TOLERANCE) {
+    findings.push({ kind: 'scroll', container: 'the page', by: root.scrollWidth - root.clientWidth });
+  }
+
   const matches = targets.map((t) => Array.from(document.querySelectorAll(t.css)).map(measure));
-  return JSON.stringify({ findings: [], matches, appLayouts: [], menuBars: [] });
+  return JSON.stringify({ findings, matches, appLayouts: [], menuBars: [] });
 }
