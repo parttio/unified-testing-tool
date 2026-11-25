@@ -2,6 +2,7 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,15 +86,20 @@ class GridInteractionTest {
     @RequiresTestingTool(TestingTool.BROWSERLESS)
     @DisplayName("On Browserless, a lookup in a LitRenderer's cell fails and names @RequiresBrowser, never finding nothing")
     void rendererMarkupIsNotFoundOnBrowserless(UnifiedPage page) {
-        UnifiedGrid editable = grid(page, "editable").withTimeout(Duration.ofMillis(500));
-        Scope pencilCell = editable.row().withCellText("Name", "Bob").cell(1);
+        // no short timeout: what Browserless can't do fails at once, rather than after the timeout (#611)
+        Scope pencilCell = grid(page, "editable").row().withCellText("Name", "Bob").cell(1);
         String expected = "The cell at index 1 is drawn by a LitRenderer, whose markup exists only in a browser, so"
                 + " Browserless can't search inside it. Annotate the test with @RequiresBrowser to skip it here; to run"
                 + " a renderer function on Browserless, use the Escape Hatch: GridTester.invokeLitRendererFunction.";
 
+        long start = System.nanoTime();
         UnifiedAssertionError click = assertThrows(UnifiedAssertionError.class,
                 () -> pencilCell.find(DemoEdit.class).click());
+        assertTrue(Duration.ofNanos(System.nanoTime() - start).compareTo(Duration.ofSeconds(5)) < 0);
         assertEquals(expected, click.getCause().getMessage());
+        assertTrue(click.getMessage().contains("\n  Cause         UnsupportedOperationException: " + expected + "\n"),
+                click.getMessage());
+        assertFalse(click.getMessage().contains("Waited"), click.getMessage());
 
         // not an empty cell: an absence check fails too, rather than passing
         UnifiedAssertionError absent = assertThrows(UnifiedAssertionError.class,

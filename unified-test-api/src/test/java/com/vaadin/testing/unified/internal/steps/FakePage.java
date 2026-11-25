@@ -33,6 +33,8 @@ final class FakePage {
 
     final List<Map<String, String>> components = new CopyOnWriteArrayList<>();
     final List<String> actions = new CopyOnWriteArrayList<>();
+    /** What a lookup of a tag throws instead of finding: {@code findErrors.put("a", new UnsupportedOperationException(..))}. */
+    final Map<String, RuntimeException> findErrors = new java.util.concurrent.ConcurrentHashMap<>();
     /** What the application does when a component is clicked, e.g. log an error. */
     Runnable onClick = () -> { };
     /** The page's path, which a click may change ({@link #onClick}). */
@@ -83,6 +85,13 @@ final class FakePage {
     }
 
     private List<UnifiedElement> find(QuerySpec spec) {
+        if (spec.tag() != null) {
+            for (String tag : com.vaadin.testing.unified.internal.BrowserQueries.tags(spec.tag())) {
+                if (findErrors.containsKey(tag)) {
+                    throw findErrors.get(tag);
+                }
+            }
+        }
         return components.stream()
                 .filter(c -> spec.tag().equals("*")
                         || com.vaadin.testing.unified.internal.BrowserQueries.tags(spec.tag()).contains(c.get("tag")))

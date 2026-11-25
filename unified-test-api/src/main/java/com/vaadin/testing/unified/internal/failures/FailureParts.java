@@ -24,6 +24,7 @@ public final class FailureParts {
     private volatile String found;
     private volatile List<String> nearMisses = List.of();
     private volatile String suggestion;
+    private volatile String cause;
     private volatile String lookup;
     private volatile Duration waited;
     private volatile String waitedSetting;
@@ -65,6 +66,21 @@ public final class FailureParts {
     public FailureParts found(String newFound) {
         this.found = newFound;
         return this;
+    }
+
+    /**
+     * The error the last attempt threw, as {@code UnsupportedOperationException: Browserless has no CSS}: its
+     * simple class name and the first line of its message. None when the last attempt returned (#611).
+     */
+    public FailureParts cause(Throwable error) {
+        this.cause = error == null ? null : oneLine(error);
+        return this;
+    }
+
+    /** {@code UnsupportedOperationException: Browserless has no CSS}: the simple class name, the message's first line. */
+    public static String oneLine(Throwable error) {
+        String message = error.getMessage() == null ? "" : error.getMessage().strip().lines().findFirst().orElse("");
+        return error.getClass().getSimpleName() + (message.isEmpty() ? "" : ": " + message);
     }
 
     /** How long the call waited, and where that timeout came from ({@code vaadin.testing.timeout}). */
@@ -141,6 +157,8 @@ public final class FailureParts {
     public String found() { return masked(found); }
     public List<String> nearMisses() { return nearMisses.stream().map(this::masked).toList(); }
     public String suggestion() { return masked(suggestion); }
+    /** The error the last attempt threw, in one line; else null. */
+    public String cause() { return masked(cause); }
     /** The failed lookup as code, when there is a suggestion to compare it with; else null. */
     public String lookup() { return masked(lookup); }
     public Duration waited() { return waited; }

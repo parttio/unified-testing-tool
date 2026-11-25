@@ -128,6 +128,19 @@ public class UserStepsReportTest {
     }
 
     @Test
+    void jsonNamesTheErrorTheLastAttemptThrew() throws Exception {
+        fake.findErrors.put("vaadin-notification",
+                new UnsupportedOperationException("Browserless can't read this notification"));
+        AssertionError failure = assertThrows(AssertionError.class,
+                () -> assertThat(fake.page.find(UnifiedNotification.class)).exists());
+
+        JsonNode fail = new ObjectMapper().readTree(report(failure).json()).get("failure");
+
+        assertEquals("UnsupportedOperationException: Browserless can't read this notification",
+                fail.get("cause").asString());
+    }
+
+    @Test
     void jsonFollowsSchemaVersion1() throws Exception {
         AssertionError failure = runFailingScenario();
         JsonNode json = new ObjectMapper().readTree(report(failure).json());
@@ -148,6 +161,7 @@ public class UserStepsReportTest {
         assertEquals("none", fail.get("found").asString());
         assertFalse(fail.has("nearMisses"));
         assertFalse(fail.has("suggestion"));
+        assertFalse(fail.has("cause"));
         assertEquals("4.1", fail.get("stepIndex").asString());
         assertEquals(5, fail.get("stepNumber").asInt());
         assertEquals(2, fail.get("codePath").size());

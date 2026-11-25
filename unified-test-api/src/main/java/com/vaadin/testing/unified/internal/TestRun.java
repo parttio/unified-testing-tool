@@ -40,7 +40,9 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
 
     /**
      * Calls {@code attempt} until it returns a non-null value or the timeout ends. Exceptions count as
-     * "not yet"; the last one is the cause of the failure. Between attempts the session syncs. The failure is a
+     * "not yet", but for an {@link UnsupportedOperationException}, which the Testing Tool throws for what it can't
+     * do and which fails at once (#611). The exception of the last attempt is the cause of the failure, and its
+     * {@code Cause} line. Between attempts the session syncs. The failure is a
      * {@link UnifiedAssertionError} expecting what {@code failure} says.
      */
     public <T> T poll(Supplier<T> attempt, Supplier<String> failure) {
@@ -62,11 +64,15 @@ public record TestRun(TestingTool tool, AdapterSession session, Duration timeout
                     return result;
                 }
                 last = null;
+            } catch (UnsupportedOperationException e) {
+                // the Testing Tool can't do it: waiting won't change that (#611)
+                throw failure(failure.get().cause(e), e);
             } catch (RuntimeException e) {
                 last = e;
             }
             if (System.nanoTime() > deadline) {
-                throw failure(failure.get().waited(timeout, ownTimeout ? "withTimeout" : Settings.TIMEOUT), last);
+                throw failure(failure.get().cause(last).waited(timeout, ownTimeout ? "withTimeout" : Settings.TIMEOUT),
+                        last);
             }
             session.sync();
             try {

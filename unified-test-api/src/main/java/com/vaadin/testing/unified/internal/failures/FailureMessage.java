@@ -46,6 +46,7 @@ public final class FailureMessage {
             line(sb, "Nearby", String.join(", ", parts.nearMisses()));
         }
         line(sb, "Did you mean", parts.suggestion());
+        line(sb, "Cause", parts.cause());
         if (parts.waited() != null) {
             line(sb, "Waited", duration(parts.waited())
                     + (parts.waitedSetting() == null ? "" : " (" + parts.waitedSetting() + ")"));

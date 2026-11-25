@@ -39,6 +39,18 @@ public class FindableViewTest {
     }
 
     @Test
+    void aKindWhoseLookupFailsIsNamedWithTheErrorRatherThanLeftOut() {
+        fake.add("vaadin-button", "text", "Save");
+        fake.findErrors.put("a", new UnsupportedOperationException("Browserless can't read this link's text\nmore"));
+
+        assertEquals("""
+                Findable view of “/people” on browserless: 1 component
+                button “Save”  page.find(UnifiedButton.class).withText("Save")
+                Not listed: link (UnsupportedOperationException: Browserless can't read this link's text)
+                """, page.describe());
+    }
+
+    @Test
     void aMessageListShowsItsMessageCount() {
         fake.add("vaadin-message-list", "messages", "Assistant:Hi!|You:Soup|Assistant:Here is a recipe.");
 
