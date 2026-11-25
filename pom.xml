@@ -87,7 +87,7 @@
                 <artifactId>archunit</artifactId>
                 <version>${archunit.version}</version>
             </dependency>
-            <!-- reads the application's classes for a Template's tag (ADR 0017); Browserless brings the same -->
+            <!-- reads the application's classes for a Template's tag (ADR 0018); Browserless brings the same -->
             <dependency>
                 <groupId>io.github.classgraph</groupId>
                 <artifactId>classgraph</artifactId>

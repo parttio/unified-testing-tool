@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Templates in failure messages and the Findable View (spec 04, "Templates"): which are in a scope, and the lookup
  * that enters one. A browser knows a Template by its tag only, so the lookup names the Wrapper or class the test
- * has looked up for that tag, else the only class in the application's packages that declares it (ADR 0017), the
+ * has looked up for that tag, else the only class in the application's packages that declares it (ADR 0018), the
  * same on every Testing Tool, and a placeholder naming the tag otherwise.
  */
 final class Templates {

@@ -57,7 +57,7 @@ A component whose own content a test reaches only by entering it, one Template a
 _Avoid_: Shadow host, web component, LitTemplate, app template
 
 **Application's packages**:
-The packages the Unified API takes as the application's own, read from the test the same way on every Testing Tool: the test class's, the `@SpringBootApplication`'s, the configured view packages and those of the routes the test opened, with their subpackages. A Template's class is looked up in them by its tag (ADR 0017).
+The packages the Unified API takes as the application's own, read from the test the same way on every Testing Tool: the test class's, the `@SpringBootApplication`'s, the configured view packages and those of the routes the test opened, with their subpackages. A Template's class is looked up in them by its tag (ADR 0018).
 _Avoid_: classpath, scan packages, base packages
 
 **Viewport**:

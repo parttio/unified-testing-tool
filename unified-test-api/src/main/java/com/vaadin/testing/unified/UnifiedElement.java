@@ -91,7 +91,8 @@ public interface UnifiedElement extends HasEscapeHatch {
      * On a Template's element ({@code findTemplate(X.class).element()}, its host) this doesn't enter the Template's
      * shadow root either, on any Testing Tool: plain HTML written in the template, with no {@code @Id}, can't be
      * found this way or by a lookup. Give it an {@code @Id} and find it inside the Template with
-     * {@code withId(..)} (spec 04, "Templates").
+     * {@code withId(..)} (spec 04, "Templates"). No Unified call enters the shadow root (#617); a test for one
+     * browser can reach such HTML through the Escape Hatch.
      */
     List<UnifiedElement> findDescendants(String tag);
 }

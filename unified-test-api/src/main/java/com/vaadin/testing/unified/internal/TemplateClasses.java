@@ -17,7 +17,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The class the application declares for a Template's tag (ADR 0017): among the classes in the application's
+ * The class the application declares for a Template's tag (ADR 0018): among the classes in the application's
  * packages (and their subpackages) that extend {@link Component}, aren't abstract and declare {@link Tag}
  * themselves, the only one with that tag. The packages are scanned once per JVM, when a tag is first asked for,
  * by reading their class files: no class is loaded but the one returned.

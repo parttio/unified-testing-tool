@@ -28,7 +28,7 @@
             <artifactId>vaadin-core</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- finds the class that declares a Template's tag in the application's packages (ADR 0017) -->
+        <!-- finds the class that declares a Template's tag in the application's packages (ADR 0018) -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>

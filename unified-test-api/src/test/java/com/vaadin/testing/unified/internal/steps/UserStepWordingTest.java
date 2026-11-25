@@ -393,6 +393,54 @@ public class UserStepWordingTest {
     }
 
     @Test
+    void aPathPatternReadsAsSeePathMatching() {
+        // issue #610
+        fake.path = "products/42";
+
+        assertThat(fake.page).hasPathMatching("products/\\d+")
+                .hasPathMatching(java.util.regex.Pattern.compile("PRODUCTS/.+", java.util.regex.Pattern.CASE_INSENSITIVE));
+
+        assertEquals(List.of("see path matching “products/\\d+”", "see path matching “PRODUCTS/.+”"), texts());
+    }
+
+    @Test
+    void aPathThatNeverMatchesFailsWithThePatternAndThePathsSeen() {
+        fake.path = "products";
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> assertThat(fake.page).hasPathMatching("products/\\d+"));
+
+        assertTrue(error.getMessage().contains("the page to have path matching “products/\\d+”"), error.getMessage());
+        assertTrue(error.getMessage().contains("“products”"), error.getMessage());
+
+        fake.path = "products/42/edit"; // part of the path matching is not enough
+        assertThrows(AssertionError.class, () -> assertThat(fake.page).hasPathMatching("products/\\d+"));
+    }
+
+    @Test
+    void aLeadingSlashOnEitherSideDoesNotAffectThePathMatch() {
+        fake.path = "/products/42";
+        assertThat(fake.page).hasPathMatching("products/\\d+");
+
+        fake.path = "products/42";
+        assertThat(fake.page).hasPathMatching("/products/\\d+")
+                .hasPathMatching(java.util.regex.Pattern.compile("/PRODUCTS/\\d+", java.util.regex.Pattern.CASE_INSENSITIVE));
+
+        assertEquals(List.of("see path matching “products/\\d+”", "see path matching “products/\\d+”",
+                "see path matching “PRODUCTS/\\d+”"), texts());
+    }
+
+    @Test
+    void anInvalidPathPatternFailsAtTheCallWithoutWaiting() {
+        long start = System.nanoTime();
+
+        assertThrows(java.util.regex.PatternSyntaxException.class, () -> assertThat(fake.page).hasPathMatching("products/(\\d+"));
+
+        assertTrue(System.nanoTime() - start < 150_000_000L, "waited for the timeout");
+        assertEquals(List.of(), texts());
+    }
+
+    @Test
     void menuBarAssertionsReadAsSeeWithItems() {
         fake.add("vaadin-menu-bar", "testId", "menu", "items", "File,Help", "items File", "Export,Print",
                 "items File/Export", "PDF,CSV", "disabled", "File/Print");

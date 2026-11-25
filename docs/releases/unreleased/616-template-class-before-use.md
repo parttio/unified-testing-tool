@@ -9,4 +9,4 @@ section: New
   `vaadin.testing.browserless.view-packages` and the opened routes' packages, and they're scanned the first time a
   tag needs a class. The lookup is the same on every Testing Tool. When no class there declares the tag, or several
   do, the placeholder stays. `unified-test-api` now depends on ClassGraph, which Browserless Test already brings
-  ([ADR 0017](../adr/0017-template-class-from-the-application-packages.md)).
+  ([ADR 0018](../adr/0018-template-class-from-the-application-packages.md)).

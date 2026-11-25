@@ -6,7 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.microsoft.playwright.Locator;
+import com.vaadin.testbench.TestBenchElement;
+import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TemplateScope;
+import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
@@ -108,6 +112,41 @@ public class TemplateTest {
             assertThat(searchBar.find(UnifiedButton.class).withText("New order")).doesNotExist();
         }
     }
+
+    @Test
+    @DisplayName("A Template's element is its host: findDescendants stays in the light DOM, on every Testing Tool")
+    void templateElementStaysInTheLightDom(UnifiedPage page) {
+        page.navigate(OrdersView.class);
+        UnifiedTemplate searchBar = page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class);
+
+        assertEquals(List.of(), searchBar.element().findDescendants("vaadin-button"));
+    }
+
+    // Template HTML with no @Id (#617, .out-of-scope/shadow-piercing-lookups.md): give it an @Id, or reach it
+    // through the Escape Hatch, in a test for that one Testing Tool.
+    // --8<-- [start:templateHtmlEscapeHatch]
+    @Test
+    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+    @DisplayName("Playwright: the Template's Locator reaches HTML in its shadow root that has no @Id")
+    void templateHtmlThroughPlaywright(UnifiedPage page) {
+        page.navigate(OrdersView.class);
+        UnifiedTemplate searchBar = page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class);
+
+        Locator buttons = searchBar.unwrap(Locator.class).locator("vaadin-button"); // CSS enters open shadow roots
+        assertEquals(List.of("New order", "Not bound"), buttons.allTextContents());
+    }
+
+    @Test
+    @RequiresTestingTool(TestingTool.SELENIUM)
+    @DisplayName("Selenium: the Template's TestBench element reaches HTML in its shadow root that has no @Id")
+    void templateHtmlThroughSelenium(UnifiedPage page) {
+        page.navigate(OrdersView.class);
+        UnifiedTemplate searchBar = page.findTemplate(OrdersPanel.class).findTemplate(SearchBar.class);
+
+        List<TestBenchElement> buttons = searchBar.unwrap(TestBenchElement.class).$("vaadin-button").all();
+        assertEquals(List.of("New order", "Not bound"), buttons.stream().map(TestBenchElement::getText).toList());
+    }
+    // --8<-- [end:templateHtmlEscapeHatch]
 
     @Test
     @DisplayName("A lookup that finds nothing names the Templates where it would, and how to enter them, before"

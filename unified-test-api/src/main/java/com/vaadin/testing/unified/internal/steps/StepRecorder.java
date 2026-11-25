@@ -759,7 +759,7 @@ public final class StepRecorder {
         templateTypes.add(templateType);
     }
 
-    /** The application's own packages, where a Template's class is looked up by its tag (ADR 0017). */
+    /** The application's own packages, where a Template's class is looked up by its tag (ADR 0018). */
     public void applicationPackages(java.util.Collection<String> packages) {
         applicationPackages.addAll(packages);
     }

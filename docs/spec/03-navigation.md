@@ -13,6 +13,7 @@ page.reload();
 
 assertThat(page).isAt(ProfileView.class);
 assertThat(page).hasPath("profile").hasQueryParameter("tab", "2");
+assertThat(page).hasPathMatching("products/\\d+");               // a path the test only partly knows
 assertThat(page).hasTitle("Profile");
 ```
 
@@ -27,6 +28,7 @@ assertThat(page).hasTitle("Profile");
 | Reload | `page.reload()` on every Testing Tool (Browserless simulates it, `@PreserveOnRefresh` respected). |
 | Back / forward | Escape Hatch only. |
 | `isAt(view)` | Browsers match the page's current location (read in the page, so a RouterLink or `history.pushState` navigation counts) against the view's route template and each of its `@RouteAlias`es, with the layouts' prefixes: a required `:x` matches one segment, an optional `:x?` zero or one, a wildcard `:x*` the remaining ones; a regex constraint is not checked, nor are query parameters. A view with no route (an error view) is matched by the view the page's UI shows: `@UnifiedSpringBootTest` serves a test-only endpoint (`/__unified/current-view`) that answers for the caller's own Vaadin session. Browserless checks the current view's class. |
+| `hasPath(path)`, `hasPathMatching(regex)` *(unreleased)* | The page's path, without a leading `/` and the query string, on every Testing Tool. `hasPath` compares it exactly. `hasPathMatching` checks it against a regular expression (a `String`, or a `java.util.regex.Pattern` for flags), which must match the whole path: `products/\d+` passes on `products/42`, not on `products` or `products/42/edit`; `products/.+` checks a prefix. A leading `/` in the pattern is ignored, as in `hasPath`. An invalid pattern throws `PatternSyntaxException` at the call, without waiting. The User Steps read `see path “profile”` and `see path matching “products/\d+”`. There is no path getter: the path is checked, not read ([ADR 0017](../adr/0017-the-page-path-is-checked-not-read.md)). |
 | `hasTitle(title)` | The page's title, exactly, on every Testing Tool: what a view's `@PageTitle`, `HasDynamicTitle` or `Page.setTitle(..)` set. Browsers read `document.title`; Browserless reads the title the UI last sent (`UI.getInternals().getTitle()`), which Flow keeps on the server. A title set by the page's own script or the HTML template, not through Flow, is seen in a browser only. |
 
 ## Route class to URL (browser Testing Tools)
