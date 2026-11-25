@@ -5,8 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.vaadin.flow.component.grid.GridTester;
 import com.vaadin.flow.data.provider.SortDirection;
 import com.vaadin.testing.unified.RequiresBrowser;
+import com.vaadin.testing.unified.RequiresTestingTool;
+import com.vaadin.testing.unified.Scope;
+import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedGrid;
@@ -60,6 +64,70 @@ class GridInteractionTest {
         assertNotification(page, "Removing Bob");
     }
     // --8<-- [end:clicksAComponentInACellByIndex]
+
+    // --8<-- [start:clicksRendererMarkupInACell]
+    @Test
+    @RequiresBrowser // the markup a LitRenderer draws exists only in a browser
+    @DisplayName("The user clicks the pencil in Bob's row and the card in Ada's, both drawn by a LitRenderer")
+    void clicksRendererMarkupInACell(UnifiedPage page) {
+        UnifiedGrid editable = grid(page, "editable");
+        // DemoEdit is a Wrapper bound to the tag only: @UnifiedComponent(value = Component.class, tag = "demo-edit")
+        editable.row().withCellText("Name", "Bob").cell(1).find(DemoEdit.class).click();
+        assertNotification(page, "Editing Bob");
+
+        UnifiedGrid cards = page.find(UnifiedGrid.class).withTestId("cards");
+        cards.row(0).cell("Order").find(DemoCard.class).click();
+        assertNotification(page, "Opening Ada");
+    }
+    // --8<-- [end:clicksRendererMarkupInACell]
+
+    @Test
+    @RequiresTestingTool(TestingTool.BROWSERLESS)
+    @DisplayName("On Browserless, a lookup in a LitRenderer's cell fails and names @RequiresBrowser, never finding nothing")
+    void rendererMarkupIsNotFoundOnBrowserless(UnifiedPage page) {
+        UnifiedGrid editable = grid(page, "editable").withTimeout(Duration.ofMillis(500));
+        Scope pencilCell = editable.row().withCellText("Name", "Bob").cell(1);
+        String expected = "The cell at index 1 is drawn by a LitRenderer, whose markup exists only in a browser, so"
+                + " Browserless can't search inside it. Annotate the test with @RequiresBrowser to skip it here; to run"
+                + " a renderer function on Browserless, use the Escape Hatch: GridTester.invokeLitRendererFunction.";
+
+        UnifiedAssertionError click = assertThrows(UnifiedAssertionError.class,
+                () -> pencilCell.find(DemoEdit.class).click());
+        assertEquals(expected, click.getCause().getMessage());
+
+        // not an empty cell: an absence check fails too, rather than passing
+        UnifiedAssertionError absent = assertThrows(UnifiedAssertionError.class,
+                () -> assertThat(pencilCell.find(DemoEdit.class)).doesNotExist());
+        assertEquals(expected, absent.getCause().getMessage());
+    }
+
+    @Test
+    @RequiresBrowser // Browserless can't see layout: it fires the grid's item click listener
+    @DisplayName("Clicking a row that a clickable card fills fails the same way on every browser, naming the cell")
+    void rowClickAvoidsRendererMarkup(UnifiedPage page) {
+        UnifiedGrid cards = grid(page, "cards").withTimeout(Duration.ofMillis(500));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> cards.row(0).click());
+
+        assertEquals("Cannot click row 0: interactive content covers every data cell of the row, padding included,"
+                + " so a click would land on it rather than on the row. To click that content, find it in its cell:"
+                + " row.cell(..).find(..).click()", error.getMessage());
+    }
+
+    // --8<-- [start:runsRendererFunctionOnBrowserless]
+    @Test
+    @RequiresTestingTool(TestingTool.BROWSERLESS) // the Escape Hatch to Browserless Test's GridTester
+    @DisplayName("On Browserless, the test runs the card's renderer function for Ada's row")
+    void runsRendererFunctionOnBrowserless(UnifiedPage page) {
+        page.navigate(UsersView.class);
+        UnifiedGrid cards = page.find(UnifiedGrid.class).withTestId("cards");
+
+        // not a user action: what the card's @click would call, run without the card
+        cards.unwrap(GridTester.class).invokeLitRendererFunction(0, 0, "open");
+
+        assertNotification(page, "Opening Ada");
+    }
+    // --8<-- [end:runsRendererFunctionOnBrowserless]
 
     @Test
     @DisplayName("A cell index past the last visible column fails, naming the cell by its index and the column count")

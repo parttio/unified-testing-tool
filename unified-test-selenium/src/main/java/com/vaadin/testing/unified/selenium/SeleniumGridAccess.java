@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
 
 /**
  * Grid access on Selenium, through TestBench's GridElement: its columns, rows, cells, header cells and
@@ -304,13 +305,77 @@ final class SeleniumGridAccess implements GridAccess {
 
     @Override
     public void clickRow(int row) {
-        element(cellContent(row, 0)).click();
+        clickFreeSpot("click", row, false);
     }
 
     @Override
     public void doubleClickRow(int row) {
-        element(cellContent(row, 0)).doubleClick();
+        clickFreeSpot("double-click", row, true);
     }
+
+    /**
+     * Clicks the first data cell with a spot free of interactive content, as Dramafinder's row click does on
+     * Playwright: a click on a link, a button or a renderer's card would reach that content, not the row
+     * (ADR 0015). Fails the same way as on Playwright when no cell has one.
+     */
+    private void clickFreeSpot(String action, int row, boolean twice) {
+        int columns = dataColumns().size();
+        for (int column = 0; column < columns; column++) {
+            WebElement content = content(cellElement(row, column));
+            if (content == null) {
+                continue;
+            }
+            session.js("arguments[0].scrollIntoView({block: 'center', inline: 'center'})", content);
+            if (session.js(FREE_SPOT_JS, content) instanceof List<?> spot) {
+                Actions actions = new Actions(session.driver()).moveToElement(content,
+                        ((Number) spot.get(0)).intValue(), ((Number) spot.get(1)).intValue());
+                (twice ? actions.doubleClick() : actions.click()).perform();
+                session.waitForVaadin();
+                return;
+            }
+        }
+        throw GridAccess.noFreeSpot(action, row);
+    }
+
+    /**
+     * On a cell content element: the offset from its centre, {@code [x, y]}, of a spot where a click reaches the
+     * grid rather than interactive content rendered in the cell (the centre if free, else the free spot nearest
+     * it, the padding last), or null. Adapted from Dramafinder's {@code GridElement}, so both browser Testing
+     * Tools judge a spot alike.
+     */
+    private static final String FREE_SPOT_JS = """
+            const c = arguments[0];
+            const r = c.getBoundingClientRect();
+            const w = r.width, h = r.height;
+            if (!w || !h) return null;
+            const s = getComputedStyle(c);
+            const pad = side => Math.max(1, (parseFloat(s['padding' + side]) || 0) / 2);
+            const xs = [w / 2, w / 4, 3 * w / 4, pad('Left'), w - pad('Right'), 1, w - 1];
+            const ys = [h / 2, h / 4, 3 * h / 4, pad('Top'), h - pad('Bottom'), 1, h - 1];
+            const off = ([x, y]) => ((x - w / 2) / w) ** 2 + ((y - h / 2) / h) ** 2;
+            const points = xs.flatMap(x => ys.map(y => [x, y])).sort((a, b) => off(a) - off(b));
+            const interactive = 'a[href], button, input, select, textarea, label, [tabindex], [contenteditable]';
+            // an app's element (a Lit template's) is judged by what its open shadow root holds; a Vaadin
+            // component's shadow root is its own, any of it may take the click
+            const appShadow = e => e.shadowRoot && !e.localName.startsWith('vaadin-') ? e.shadowRoot : null;
+            for (const [x, y] of points) {
+                let hit = c.getRootNode().elementFromPoint(r.left + x, r.top + y);
+                if (!hit || !c.contains(hit)) continue;
+                for (let inner; appShadow(hit); hit = inner) {
+                    inner = appShadow(hit).elementFromPoint(r.left + x, r.top + y);
+                    if (!inner || inner === hit) break;
+                }
+                let safe = true;
+                for (let e = hit; e !== c; e = e.parentElement ?? e.getRootNode().host) {
+                    if (!e || e.matches(interactive) || (e.localName.includes('-') && !appShadow(e))) {
+                        safe = false;
+                        break;
+                    }
+                }
+                if (safe) return [Math.round(x - w / 2), Math.round(y - h / 2)];
+            }
+            return null;
+            """;
 
     // ---------------------------------------------------------------- sorting
 

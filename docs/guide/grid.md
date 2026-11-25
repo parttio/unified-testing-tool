@@ -67,6 +67,20 @@ A row's `toString()` *(unreleased)* reads the same way, and a column too (`colum
 --8<-- "unified-test-demo/src/test/java/demo/GridInteractionTest.java:clicksAComponentInACellByIndex"
 ```
 
+### Markup a renderer draws *(unreleased)*
+
+A `LitRenderer` draws plain markup, not Flow components: Crud's `vaadin-crud-edit` pencil, a clickable card. Find it in the cell with a [custom Wrapper](custom-wrappers.md) bound to its tag only, `@UnifiedComponent(value = Component.class, tag = "demo-edit")`, with a `click()`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/GridInteractionTest.java:clicksRendererMarkupInACell"
+```
+
+That markup only exists in a browser, so the test declares `@RequiresBrowser`. On Browserless, a lookup in such a cell fails and says so, rather than finding nothing. To run the renderer's function there instead (`cardClick`, say), use Browserless Test's `GridTester` through the [Escape Hatch](tool-specific.md#the-escape-hatch); it isn't a user action, so the Unified API has no call for it ([ADR 0015](../adr/0015-renderer-markup-is-found-by-tag-wrappers-row-click-avoids-it.md)):
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/GridInteractionTest.java:runsRendererFunctionOnBrowserless"
+```
+
 ## Columns
 
 Find a column by its header text; `columnWithId("owner")` (`Column.setId`) or `column(1)` for a column without header text.
@@ -100,6 +114,8 @@ When the application adds or removes columns while the test runs, check the head
 ```
 
 The multi-select checkbox column is not a column: column indexes count only the application's columns.
+
+`row.click()` clicks a spot of the row free of interactive content (a link, a button, a renderer's card), so it selects the row or opens its details rather than pressing what is in a cell. When such content covers the whole row, it fails, the same on Playwright and Selenium *(unreleased)*, and names `row.cell(..).find(..).click()` for clicking that content. Browserless sees no layout and clicks the row.
 
 ## The item behind a row
 

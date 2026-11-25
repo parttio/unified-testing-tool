@@ -61,6 +61,8 @@ flowchart TD
 | Values | Rendered text only. The item behind a row: Escape Hatch (Browserless). |
 | Lazy loading | Row access scrolls the row into view and waits for its data (Auto-Wait). `getRowCount()` is the total, not the rendered rows. |
 | Cell components | Through `row.cell(column)` on every Testing Tool (Browserless queries can't see renderer components). |
+| Renderer markup *(unreleased)* | Markup a `LitRenderer` draws (no Flow component) is found in `row.cell(..)` by a Wrapper bound to its tag, in a browser. On Browserless, a lookup in such a cell fails, naming `@RequiresBrowser`; it never finds nothing. Running a renderer function is no Unified call: Escape Hatch, `GridTester.invokeLitRendererFunction` ([ADR 0015](../adr/0015-renderer-markup-is-found-by-tag-wrappers-row-click-avoids-it.md)). |
+| Row click | `click()` and `doubleClick()` click a spot of the row free of interactive content (links, buttons, focusable content, web components, renderer markup), on Playwright and Selenium alike *(unreleased: Selenium clicked the first cell's content)*. A row with no such spot fails with the same message on both, naming `row.cell(..).find(..).click()`. Browserless fires the grid's item click. |
 | Selection | Single and multi; `selectAll` / `deselectAll`. The multi-select checkbox column is not a column: indexes count only the application's columns (as Flow's `Grid.getColumns()`). |
 | Row details | `toggleDetails()` is what a user does: click the row (details open on click, Flow's default). Searching inside details (`details()`) is not available on Browserless yet (gap ticket). |
 

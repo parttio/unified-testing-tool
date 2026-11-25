@@ -189,12 +189,24 @@ final class PlaywrightGridAccess implements GridAccess {
     /** Clicks a spot of the row free of interactive content, so a button or link in a cell isn't hit. */
     @Override
     public void clickRow(int row) {
-        rowOf(row).click();
+        withoutFreeSpot("click", row, () -> rowOf(row).click());
     }
 
     @Override
     public void doubleClickRow(int row) {
-        rowOf(row).doubleClick();
+        withoutFreeSpot("double-click", row, () -> rowOf(row).doubleClick());
+    }
+
+    /** Dramafinder's refusal of a row without a free spot, in the words Selenium uses too (ADR 0015). */
+    private static void withoutFreeSpot(String action, int row, Runnable click) {
+        try {
+            click.run();
+        } catch (IllegalStateException e) {
+            if (e.getMessage() != null && e.getMessage().contains("spot free of interactive content")) {
+                throw GridAccess.noFreeSpot(action, row);
+            }
+            throw e;
+        }
     }
 
     // ---------------------------------------------------------------- sorting

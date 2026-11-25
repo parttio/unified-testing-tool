@@ -9,6 +9,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.provider.DataProvider;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.data.renderer.LitRenderer;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -116,7 +117,28 @@ public class UsersView extends VerticalLayout {
         accounts.setItems(List.of(new User("Ada", "ada@example.com", ""), new User("Bob", "bob@example.com", "")));
         accounts.setAllRowsVisible(true);
 
-        add(users, roles, archived, archivedOn, tasks, staff, accounts);
+        // markup a LitRenderer draws, which only exists in a browser (#608): a pencil in a column without
+        // header text, as Crud.addEditColumn draws, and a clickable card that fills its row's only cell
+        Grid<User> editable = new Grid<>();
+        editable.setTestId("editable");
+        editable.addColumn(User::name).setHeader("Name");
+        editable.addColumn(LitRenderer.<User>of("<demo-edit role=\"button\" @click=${edit}>✎</demo-edit>")
+                .withFunction("edit", u -> Notification.show("Editing " + u.name())));
+        editable.setItems(List.of(new User("Ada", "ada@example.com", ""), new User("Bob", "bob@example.com", "")));
+        editable.setAllRowsVisible(true);
+
+        Grid<User> cards = new Grid<>();
+        cards.setTestId("cards");
+        // the negative margin spreads the card over the cell's padding, so no spot of the row is free of it
+        cards.addColumn(LitRenderer.<User>of("<demo-card style=\"display: block; margin: -50px; padding: 50px\""
+                        + " @click=${open}>${item.name}</demo-card>")
+                .withProperty("name", User::name)
+                .withFunction("open", u -> Notification.show("Opening " + u.name())))
+                .setHeader("Order");
+        cards.setItems(List.of(new User("Ada", "ada@example.com", ""), new User("Bob", "bob@example.com", "")));
+        cards.setAllRowsVisible(true);
+
+        add(users, roles, archived, archivedOn, tasks, staff, accounts, editable, cards);
     }
 
     private java.util.stream.Stream<User> filtered() {
