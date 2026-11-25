@@ -256,7 +256,7 @@ A `LitTemplate`'s `@Id` components live in its shadow root, and no lookup enters
     --8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:templateHtmlEscapeHatch"
     ```
 
-When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. `describe()` on a Template lists what is inside it, by `withId(..)` first *(unreleased)*:
+When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. The lookup names the Template's class (`findTemplate(SearchBar.class)`) even before your test has used it, when one class in your application's packages declares that `@Tag` *(unreleased)*. When no class there declares the tag, or two do, it reads `findTemplate(<the class with @Tag("search-bar")>.class)`. `describe()` on a Template lists what is inside it, by `withId(..)` first *(unreleased)*:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:describeTemplate"
