@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -216,6 +217,8 @@ public final class StepRecorder {
     private final Group root = new Group(null, "", null, null);
     private final Deque<Group> open = new ArrayDeque<>();
     private final Set<String> secrets = new LinkedHashSet<>();
+    /** Sign-ins' user names that contain their password, with those passwords: not masked inside the name. */
+    private final Map<String, Set<String>> userNames = new LinkedHashMap<>();
     /** The Wrapper types the test has looked up, in order: the custom ones show in its Findable View. */
     private final Set<Class<?>> wrapperTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private final Set<Class<?>> templateTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
@@ -238,6 +241,7 @@ public final class StepRecorder {
     public static final int MAX_LOG_LINES = 100;
     private int windows = 1;
     private volatile String scenario;
+    private volatile boolean scenarioAuthored;
     private volatile String evidenceDir;
     private long durationNanos = -1;
     /** The session of each window, by window name ("" for the first): snapshots and trace groups. */
@@ -676,8 +680,23 @@ public final class StepRecorder {
      * directory as the failure shows it.
      */
     public void describeTest(String scenario, String evidenceDir) {
+        describeTest(scenario, false, evidenceDir);
+    }
+
+    /**
+     * {@link #describeTest(String, String)}, saying whether the test's author wrote the scenario's name
+     * ({@code @DisplayName}, the method's name), which the reports then show unmasked (ADR 0014). A parameterized
+     * or repeated invocation's name, built from the test's arguments, is masked like the rest.
+     */
+    public void describeTest(String scenario, boolean authored, String evidenceDir) {
         this.scenario = scenario;
+        this.scenarioAuthored = authored;
         this.evidenceDir = evidenceDir;
+    }
+
+    /** The scenario's name as the reports show it: as written when its author wrote it, else masked. */
+    public String maskScenario(String name) {
+        return scenarioAuthored ? name : mask(name);
     }
 
     /**
@@ -689,7 +708,7 @@ public final class StepRecorder {
         FailureParts parts = failure.parts();
         parts.mask(this::mask);
         if (parts.scenario() == null && scenario != null) {
-            parts.scenario(scenario);
+            parts.scenario(scenario, scenarioAuthored);
         }
         if (parts.evidenceDir() == null && evidenceDir != null) {
             parts.evidenceDir(evidenceDir);
@@ -763,11 +782,58 @@ public final class StepRecorder {
         return value;
     }
 
-    /** The text with every secret value replaced by {@value Phrase#MASK}. */
-    public synchronized String mask(String text) {
-        if (text == null) {
-            return null;
+    /**
+     * Hides a sign-in's password like {@link #secret(String)}, except inside its own user name, which isn't secret
+     * (ADR 0014): {@code login("barista@vaadin.com", "barista")} is shown as {@code “barista@vaadin.com”}. A
+     * password equal to its user name is masked there too.
+     */
+    public synchronized void password(String username, String password) {
+        secret(password);
+        if (username != null && password != null && !password.isEmpty() && !username.equals(password)
+                && username.contains(password)) {
+            userNames.computeIfAbsent(username, u -> new LinkedHashSet<>()).add(password);
         }
+    }
+
+    /**
+     * The text with every secret value replaced by {@value Phrase#MASK}, except a sign-in's password inside that
+     * sign-in's user name. At each position the longest match wins, a secret over a user name of the same length.
+     */
+    public synchronized String mask(String text) {
+        if (text == null || secrets.isEmpty()) {
+            return text;
+        }
+        StringBuilder masked = new StringBuilder(text.length());
+        int i = 0;
+        while (i < text.length()) {
+            String secret = longestAt(text, i, secrets);
+            String userName = longestAt(text, i, userNames.keySet());
+            if (userName != null && (secret == null || userName.length() > secret.length())) {
+                Set<String> others = new LinkedHashSet<>(secrets);
+                others.removeAll(userNames.get(userName));
+                masked.append(replaceAll(userName, others));
+                i += userName.length();
+            } else if (secret != null) {
+                masked.append(Phrase.MASK);
+                i += secret.length();
+            } else {
+                masked.append(text.charAt(i++));
+            }
+        }
+        return masked.toString();
+    }
+
+    private static String longestAt(String text, int index, Set<String> candidates) {
+        String longest = null;
+        for (String candidate : candidates) {
+            if (text.startsWith(candidate, index) && (longest == null || candidate.length() > longest.length())) {
+                longest = candidate;
+            }
+        }
+        return longest;
+    }
+
+    private static String replaceAll(String text, Set<String> secrets) {
         String masked = text;
         for (String secret : secrets) {
             masked = masked.replace(secret, Phrase.MASK);

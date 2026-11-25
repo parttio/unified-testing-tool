@@ -28,7 +28,7 @@ public final class LoginSupport {
     public static void login(UnifiedWrapper login, String username, String password) {
         LazyElement element = Wrappers.lazyElementOf(login);
         TestRun run = element.run();
-        run.steps().secret(password);
+        run.steps().password(username, password);
         String before = run.session().currentPath();
         element.act("sign in", e -> {
             LoginAccess access = e.unwrap(LoginAccess.class);

@@ -252,6 +252,32 @@ class TestLifecycleTest {
     }
 
     @Test
+    void theDisplayNameTheAuthorWroteIsNotMaskedButAnInvocationsIs() throws Exception {
+        TestLifecycle.TestId authored = new TestLifecycle.TestId("demo.LoginTest", "logout",
+                "A signed-in barista logs out", null);
+        TestLifecycle.TestId invocation = new TestLifecycle.TestId("demo.LoginTest", "logout", "[1] barista", 1);
+        for (TestLifecycle.TestId id : List.of(authored, invocation)) {
+            TestLifecycle.OpenTest test = lifecycle("browserless").open(new PlainContext(Plain.class, null),
+                    new StepRecorder(), id);
+            test.page().secret("barista");
+            com.vaadin.testing.unified.UnifiedAssertionError failure = new com.vaadin.testing.unified.UnifiedAssertionError(
+                    com.vaadin.testing.unified.internal.failures.FailureParts.of("“barista” signed in", "none"),
+                    null);
+
+            test.close(failure, id);
+
+            String shown = id == authored ? "A signed-in barista logs out" : "[1] ••••";
+            Path dir = lifecycle("browserless").testEvidenceDir(id);
+            assertTrue(Files.readString(dir.resolve("user-steps.txt")).startsWith("✘ LoginTest › " + shown + "   "),
+                    Files.readString(dir.resolve("user-steps.txt")));
+            assertTrue(Files.readString(dir.resolve("user-steps.json")).contains("\"displayName\": \"" + shown + "\""),
+                    Files.readString(dir.resolve("user-steps.json")));
+            assertTrue(failure.getMessage().contains(shown), failure.getMessage());
+            assertTrue(failure.getMessage().contains("“••••” signed in"), failure.getMessage());
+        }
+    }
+
+    @Test
     void keepsTheTestsOwnFailureWhenTheEvidenceCannotBeWritten() {
         session.evidenceFailure = new IOException("disk full");
         TestLifecycle.OpenTest test = lifecycle("selenium").open(new PlainContext(Plain.class, null), new StepRecorder());

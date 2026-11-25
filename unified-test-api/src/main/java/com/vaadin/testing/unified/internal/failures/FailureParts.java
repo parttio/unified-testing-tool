@@ -15,6 +15,7 @@ import java.util.function.UnaryOperator;
 public final class FailureParts {
 
     private volatile String scenario;
+    private volatile boolean scenarioAuthored;
     private volatile Integer stepNumber;
     private volatile IntSupplier totalSteps;
     private volatile String stepText;
@@ -99,7 +100,16 @@ public final class FailureParts {
     }
 
     public void scenario(String newScenario) {
+        scenario(newScenario, false);
+    }
+
+    /**
+     * The scenario; one its test's author wrote ({@code @DisplayName}, the method's name) is shown unmasked, as it
+     * comes from the source, a parameterized or repeated invocation's name masked (ADR 0014).
+     */
+    public void scenario(String newScenario, boolean authored) {
         this.scenario = newScenario;
+        this.scenarioAuthored = authored;
     }
 
     public void evidenceDir(String newEvidenceDir) {
@@ -118,7 +128,7 @@ public final class FailureParts {
 
     // ---------------------------------------------------------------- reading, masked
 
-    public String scenario() { return masked(scenario); }
+    public String scenario() { return scenarioAuthored ? scenario : masked(scenario); }
     public Integer stepNumber() { return stepNumber; }
     /** The User Steps the test recorded so far; after the test, all of them. Null when no step failed. */
     public Integer totalSteps() {

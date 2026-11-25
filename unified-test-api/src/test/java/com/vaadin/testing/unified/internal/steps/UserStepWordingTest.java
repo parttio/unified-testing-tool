@@ -217,6 +217,39 @@ public class UserStepWordingTest {
     }
 
     @Test
+    void aPasswordInsideItsUserNameIsNotMaskedThereButEverywhereElse() {
+        fake.add("vaadin-login-overlay", "opened", "true");
+
+        fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "barista");
+
+        assertEquals("sign in as “barista@vaadin.com” in login", fake.steps.mask(texts().get(0)));
+        assertEquals("Sign in as barista@vaadin.com", fake.steps.mask("Sign in as barista@vaadin.com"));
+        assertEquals("password •••• rejected for barista@vaadin.com",
+                fake.steps.mask("password barista rejected for barista@vaadin.com"));
+        assertEquals("expected “••••”, found “••••2”",
+                fake.steps.mask("expected “barista”, found “barista2”"));
+    }
+
+    @Test
+    void aPasswordEqualToItsUserNameIsMaskedEverywhere() {
+        fake.add("vaadin-login-overlay", "opened", "true");
+
+        fake.page.find(UnifiedLogin.class).login("admin", "admin");
+
+        assertEquals("sign in as “••••” in login", fake.steps.mask(texts().get(0)));
+    }
+
+    @Test
+    void anotherSecretInsideAUserNameIsStillMaskedThere() {
+        fake.add("vaadin-login-overlay", "opened", "true");
+        fake.page.secret("vaadin");
+
+        fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "barista");
+
+        assertEquals("sign in as “barista@••••.com” in login", fake.steps.mask(texts().get(0)));
+    }
+
+    @Test
     void anAdaptersFailureWhileSigningInIsMaskedInTheReports() {
         fake.add("vaadin-login-form");
 
