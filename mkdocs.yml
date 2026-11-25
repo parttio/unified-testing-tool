@@ -119,7 +119,8 @@ nav:
       - adr/0016-accessible-name-follows-the-browser.md
       - adr/0017-the-page-path-is-checked-not-read.md
       - adr/0018-template-class-from-the-application-packages.md
-      - adr/0019-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md
+      - adr/0019-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md
+      - adr/0020-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md
   - Release notes:
       - Unreleased: releases/unreleased.md
       - 0.1.0-alpha5: releases/0.1.0-alpha5.md
