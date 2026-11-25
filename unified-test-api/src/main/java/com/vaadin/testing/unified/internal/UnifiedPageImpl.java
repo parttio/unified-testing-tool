@@ -209,6 +209,14 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
+    public void checkLayout() {
+        record(() -> Phrases.page("check", "check the layout"), () -> {
+            run.requireBrowser("checkLayout");
+            LayoutChecks.measureNow(run);
+        });
+    }
+
+    @Override
     public ViewportSize viewport() {
         return viewport;
     }

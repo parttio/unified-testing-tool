@@ -12,10 +12,14 @@ final class LayoutChecks {
 
     /** Measures the run's page for the running User Step, when the test's layout checks are on. */
     static void measure(TestRun run) {
-        StepRecorder steps = run.steps();
-        if (!steps.layoutChecks()) {
-            return;
+        if (run.steps().layoutChecks()) {
+            measureNow(run);
         }
+    }
+
+    /** Measures the run's page for the running User Step, whether or not the automatic checks are on. */
+    static void measureNow(TestRun run) {
+        StepRecorder steps = run.steps();
         LayoutMeasurement measured = LayoutMeasurement.measure(run, null);
         steps.layout(new StepRecorder.Layout(steps.nextLayoutPoint(), measured.findings().stream()
                 .map(f -> new StepRecorder.LayoutFinding(f.kind(), f.text(), f.box())).toList(), null));

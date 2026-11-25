@@ -96,4 +96,18 @@ class LayoutChecksTest {
         assertEquals("[1,2,3]", "[" + steps.get(0).get("layout").get("point") + "," + steps.get(1).get("layout").get("point")
                 + "," + steps.get(2).get("layout").get("point") + "]");
     }
+
+    @Test
+    void checkLayoutIsAUserStepThatMeasuresEvenWithTheAutomaticChecksOff() throws Exception {
+        UnifiedPage page = page(Map.of());
+        session.layout = SCROLLS;
+
+        page.checkLayout();
+
+        assertEquals(1, measurements());
+        JsonNode step = json().get("steps").get(0);
+        assertEquals("check the layout", step.get("text").asString());
+        assertEquals(1, step.get("layout").get("point").asInt());
+        assertEquals(1, step.get("layout").get("findings").size());
+    }
 }
