@@ -52,16 +52,18 @@ Without the annotation, `unwrap(..)` on a tool that doesn't have the type fails 
 
 ### After an Escape Hatch action
 
-An Escape Hatch action that reaches the server, such as a click through Playwright's own `Locator`, returns before the server has answered. The next Unified action can act while that answer is still on its way, and the answer then overwrites it. Here the click opens Alan Turing in the editor; the name is typed first, then the server loads the person into the form and restores the old name, and Save stores it:
+An Escape Hatch action that reaches the server, such as a click through Playwright's own `Locator`, returns before the server has answered. Here the click opens Alan Turing in the editor, and the server loads the person into the form a moment later:
 
 ```java
 page.unwrap(Page.class).getByText("Alan Turing").click();   // the server loads the person into the form...
-name.setValue("Alan M. Turing");                             // ...possibly after this: the old name is back
+name.setValue("Alan M. Turing");                             // ...and Auto-Wait waits for that before typing
 ```
 
-On Selenium this rarely shows, because TestBench waits for the server around its own commands; on Playwright it does. Two ways to make the next Unified action wait:
+The next Unified action waits for that answer before it acts, on every Testing Tool *(unreleased)*: TestBench waits for the server around its own commands, and on Playwright Auto-Wait waits until Flow is idle, for at most 5 s, then acts anyway ([5. Waiting](../spec/05-waiting.md#auto-wait), [#604](https://github.com/parttio/unified-testing-tool/issues/604)). Before that, on Playwright, the answer could arrive after the next action and overwrite it.
 
-- **Check the state the server produces before acting.** An assertion retries until the server's answer is there, on every Testing Tool. Prefer this wherever the answer changes something the user sees:
+Escape Hatch code that comes next, reading the page itself, gets no such wait, and neither does an action after an answer that takes longer than 5 s. Make it wait in one of two ways:
+
+- **Check the state the server produces.** An assertion retries until the server's answer is there, on every Testing Tool. Prefer this wherever the answer changes something the user sees:
 
     ```java
     --8<-- "unified-test-demo/src/test/java/demo/EscapeHatchRoundTripTest.java:assertTheServersValue"

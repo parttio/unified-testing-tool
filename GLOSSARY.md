@@ -25,7 +25,7 @@ The Vaadin components the Unified API spec designs in full, one per interaction 
 _Avoid_: Supported components, MVP components
 
 **Auto-Wait**:
-The Unified API's guarantee that an action waits for its component to be usable before acting and for the server round-trip to finish after, on every Testing Tool.
+The Unified API's guarantee that an action waits, before acting, for its component to be usable and for a server round-trip already under way to finish, and after acting, for the round-trip it started, on every Testing Tool.
 _Avoid_: Implicit wait, waitForVaadin
 
 **Unified UI Test**:

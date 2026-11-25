@@ -260,13 +260,13 @@ Escape Hatch code gets none of the Unified API's waiting, so it waits with its T
 and `Locator.waitFor()` for an element. The style rules accept that wait where the test, its class, or every test
 reaching the helper declares that Testing Tool; `Thread.sleep(..)` and another Testing Tool's waits still fail.
 
-An Escape Hatch action that reaches the server (a Playwright `Locator.click()`) returns before the server answers,
-so the next Unified action can act first and the server's answer overwrites it: the click opens a person in the
-editor, `setValue("Alan M. Turing")` types, then the form loads and the old name is back. Before the next Unified
-action, make it wait, in this order of preference:
+An Escape Hatch action that reaches the server (a Playwright `Locator.click()`) returns before the server answers.
+The next Unified action waits for that answer before acting, on every Testing Tool (on Playwright for at most 5 s,
+then it acts anyway). Escape Hatch code that comes next gets no such wait, nor does an action after a longer answer:
+make it wait, in this order of preference:
 
 1. **Check the state the server produces**, on every Testing Tool: `assertThat(name).hasValue("Alan Turing");`
-   before `name.setValue("Alan M. Turing");`. The assertion retries until the answer is there.
+   before reading the page through the Escape Hatch. The assertion retries until the answer is there.
 2. **Wait for the server in the Escape Hatch** when the answer has nothing to check, in a test with
    `@RequiresTestingTool(TestingTool.PLAYWRIGHT)`:
    `AutoWait.waitForVaadinIdle(page.unwrap(Page.class));` (`org.vaadin.addons.dramafinder.AutoWait`).

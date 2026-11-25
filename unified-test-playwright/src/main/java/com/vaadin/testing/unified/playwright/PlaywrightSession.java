@@ -555,6 +555,45 @@ final class PlaywrightSession implements AdapterSession {
     private static final int SETTLE_IDLE_MS = 5000;
 
     /**
+     * How long an action waits, before acting, for a Flow client that is still busy (#604, ADR 0014): then it acts
+     * anyway, so an app that stays busy (a short {@code @Poll} interval, a long request) can still be driven.
+     */
+    static final int FLOW_IDLE_CAP_MS = SETTLE_IDLE_MS;
+
+    /** What {@link #awaitFlowIdle()} found. */
+    enum FlowIdle {
+        /** No Flow client was busy: nothing waited. */
+        IDLE,
+        /** A Flow client was busy: waited until it was idle, or for the cap. */
+        WAITED,
+        /** The page navigated meanwhile. */
+        GONE
+    }
+
+    /** Waits until no Flow client is busy, at most {@link #FLOW_IDLE_CAP_MS}; one call to the page. */
+    FlowIdle awaitFlowIdle() {
+        try {
+            return Boolean.TRUE.equals(page.evaluate(AWAIT_FLOW_IDLE, FLOW_IDLE_CAP_MS)) ? FlowIdle.WAITED
+                    : FlowIdle.IDLE;
+        } catch (com.microsoft.playwright.PlaywrightException e) {
+            return FlowIdle.GONE;
+        }
+    }
+
+    private static final String AWAIT_FLOW_IDLE = """
+            async (idleMs) => {
+              const busy = () => {
+                const clients = window.Vaadin?.Flow?.clients;
+                return !!clients && Object.values(clients).some(c => c.isActive && c.isActive());
+              };
+              if (!busy()) return false;
+              for (let t = 0; t < idleMs && busy(); t += 10) {
+                await new Promise(r => setTimeout(r, 10));
+              }
+              return true;
+            }""";
+
+    /**
      * {@link BrowserQueries#SETTLE_NAVIGATION}, then Dramafinder's idle condition (no Flow client active, the dev
      * server loaded), polled: {@code idle}, {@code busy} when still busy after the given time, or {@code leaving}
      * once the page has started loading another document ({@link #SEE_LEAVING}).
