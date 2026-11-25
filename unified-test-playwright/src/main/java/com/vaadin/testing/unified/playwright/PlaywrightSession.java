@@ -82,32 +82,8 @@ final class PlaywrightSession implements AdapterSession {
             }
         });
         page.onPageError(error -> consoleErrors.add(error));
-        page.onRequest(request -> {
-            if (request.isNavigationRequest() && request.frame() == page.mainFrame()) {
-                pageLoaded = true;
-                loaded = false;
-            }
-        });
-        page.onLoad(p -> loaded = true);
-        page.addInitScript(SEE_LEAVING);
     }
 
-    /** Whether the page has fired {@code load} since it last started loading another document. */
-    private volatile boolean loaded = true;
-
-    /**
-     * Notes in the page when it starts loading another document: the Navigation API's {@code navigate} event fires
-     * inside the location change, the link's click or the form's submit, before the request goes out (#397).
-     */
-    private static final String SEE_LEAVING = """
-            window.navigation?.addEventListener('navigate', e => {
-              if (!e.destination.sameDocument && e.downloadRequest === null) {
-                window.__unifiedLeaving = true;
-              }
-            });""";
-
-    /** Whether the page has started loading another document since {@link #settle()} last ran (#397). */
-    private volatile boolean pageLoaded;
 
     /** What the page logged with console.error, and the exceptions no script caught, since they were last read. */
     private final List<String> consoleErrors = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
@@ -146,7 +122,6 @@ final class PlaywrightSession implements AdapterSession {
     /** Opens the test-only login URL: the browser context's session belongs to that user afterwards. */
     void logIn(String loginUrl) {
         com.microsoft.playwright.Response response = page.navigate(loginUrl);
-        loadWaitedFor();
         if (response == null || !response.ok()) {
             throw new IllegalStateException("Test login failed: " + (response == null ? "no response" : response.status()
                     + " " + response.text()));
@@ -414,19 +389,16 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public void navigate(Class<? extends Component> view) {
         RouteNavigation.navigate(page, baseUrl, view);
-        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, Object urlParameter) {
         RouteNavigation.navigate(page, baseUrl, view, urlParameter);
-        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters));
-        loadWaitedFor();
     }
 
     @Override
@@ -434,7 +406,6 @@ final class PlaywrightSession implements AdapterSession {
         String queryString = query.getQueryString();
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters)
                 + (queryString.isEmpty() ? "" : "?" + queryString));
-        loadWaitedFor();
     }
 
     @Override
@@ -445,24 +416,14 @@ final class PlaywrightSession implements AdapterSession {
         } else {
             RouteNavigation.open(page, baseUrl, path.startsWith("/") ? path.substring(1) : path);
         }
-        loadWaitedFor();
     }
 
     @Override
     public void reload() {
         page.reload();
         AutoWait.waitForVaadinIdle(page);
-        loadWaitedFor();
     }
 
-    /**
-     * The session loaded the page itself and has waited for it: the next action's {@link #settle()} has no page
-     * load of its own to wait for, and no extra calls to make (#397).
-     */
-    private void loadWaitedFor() {
-        pageLoaded = false;
-        loaded = true;
-    }
 
     @Override
     public boolean isAt(Class<? extends Component> view) {
@@ -511,54 +472,22 @@ final class PlaywrightSession implements AdapterSession {
     }
 
     /**
-     * Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may
-     * start: both in one call to the page (#402). When the action loaded another page, or Flow stays busy
-     * longer than {@link #SETTLE_IDLE_MS}, Dramafinder's own wait takes over, with its timeout; after a page load,
-     * only once Flow has started the new page's UI (#397).
+     * Waits after an action, in one call to the page when nothing is pending (#402): for the round trip it started,
+     * for a server-side navigation to reach the address bar (#233), and for a page load it started, until Flow has
+     * started the new page's UI (#397). All of it is Dramafinder's wait since 2.2.3 (parttio/dramafinder#304, #305,
+     * #320). It sees a page load through the Navigation API listener it installs in each page on its first wait
+     * there, and the session waits on every page it opens.
      */
     @Override
     public void settle() {
-        try {
-            Object state = page.evaluate(SETTLE_AND_IDLE, List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS));
-            if ("leaving".equals(state)) {
-                // the request for the next page may not be out yet: its load is still to come
-                pageLoaded = true;
-                loaded = false;
-            } else if ("idle".equals(state) && !pageLoaded) {
-                return;
-            }
-        } catch (com.microsoft.playwright.PlaywrightException e) {
-            // the action loaded another page: nothing of Flow's left to wait for in this one
-        }
-        if (pageLoaded) {
-            waitForFlowStart();
-        }
         AutoWait.waitForVaadinIdle(page);
     }
-
-    /**
-     * After a page load: waits for the new page's {@code load}. Dramafinder's idle wait, which {@link #settle()} runs
-     * next, then waits until Flow has started the page's UI (Dramafinder 2.2.1+, parttio/dramafinder#305): before
-     * that, only Flow's TypeScript client is registered and the page would read as idle while it shows nothing (#397).
-     */
-    private void waitForFlowStart() {
-        pageLoaded = false;
-        try {
-            page.waitForCondition(() -> loaded, new Page.WaitForConditionOptions().setTimeout(timeoutMillis));
-        } catch (com.microsoft.playwright.TimeoutError e) {
-            // the navigation loaded no page (a 204, a cancelled one): the page in place is the one to wait for
-        }
-        page.waitForLoadState(com.microsoft.playwright.options.LoadState.LOAD);
-    }
-
-    /** How long {@link #SETTLE_AND_IDLE} waits for Flow to be idle before Dramafinder's wait takes over, in ms. */
-    private static final int SETTLE_IDLE_MS = 5000;
 
     /**
      * How long an action waits, before acting, for a Flow client that is still busy (#604, ADR 0014): then it acts
      * anyway, so an app that stays busy (a short {@code @Poll} interval, a long request) can still be driven.
      */
-    static final int FLOW_IDLE_CAP_MS = SETTLE_IDLE_MS;
+    static final int FLOW_IDLE_CAP_MS = 5000;
 
     /** What {@link #awaitFlowIdle()} found. */
     enum FlowIdle {
@@ -593,33 +522,6 @@ final class PlaywrightSession implements AdapterSession {
               return true;
             }""";
 
-    /**
-     * {@link BrowserQueries#SETTLE_NAVIGATION}, then Dramafinder's idle condition (no Flow client active, the dev
-     * server loaded), polled: {@code idle}, {@code busy} when still busy after the given time, or {@code leaving}
-     * once the page has started loading another document ({@link #SEE_LEAVING}).
-     */
-    private static final String SETTLE_AND_IDLE = """
-            async ([cap, idleMs]) => {
-              const tick = (ms) => new Promise(r => setTimeout(r, ms));
-              await tick(0);
-              for (let t = 0; window.Vaadin?.Flow?.navigation && t < cap; t += 10) {
-                await tick(10);
-              }
-              await tick(0);
-              const idle = () => {
-                const flow = window.Vaadin && window.Vaadin.Flow;
-                if (flow && flow.clients) {
-                  return !Object.values(flow.clients).some(c => c.isActive());
-                }
-                return !(flow && flow.devServerIsNotLoaded);
-              };
-              let state = 'busy';
-              for (let t = 0; t <= idleMs; t += 10) {
-                if (idle()) { state = 'idle'; break; }
-                await tick(10);
-              }
-              return window.__unifiedLeaving ? 'leaving' : state;
-            }""";
 
     /** A full-page screenshot, with where it shows the failed step's Step Target. */
     @Override
