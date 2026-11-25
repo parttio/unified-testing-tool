@@ -227,7 +227,10 @@ final class SeleniumElement implements UnifiedElement {
         scrollToCenter();
         try {
             SeleniumSession.stale(element::click);
-        } catch (ElementNotInteractableException e) { // incl. ElementClickInterceptedException
+        } catch (org.openqa.selenium.ElementClickInterceptedException e) {
+            // something covers it: no user can click it, so neither does the test; the core names the cover (#494)
+            throw e;
+        } catch (ElementNotInteractableException e) {
             SeleniumSession.stale(() -> tb().callFunction("click")); // e.g. a host element without a box of its own
         }
         session.waitForVaadin();
