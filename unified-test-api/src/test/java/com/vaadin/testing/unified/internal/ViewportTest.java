@@ -1,9 +1,11 @@
 package com.vaadin.testing.unified.internal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.Viewport;
+import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.spi.AdapterContext;
 import com.vaadin.testing.unified.spi.AdapterSession;
@@ -132,5 +134,25 @@ class ViewportTest {
 
         assertEquals(List.of("setViewport[phone 375 × 667]", "setViewport[phone 375 × 667]",
                 "setViewport[phone 375 × 667]"), sizesAsked());
+    }
+
+    @Test
+    void settingTheViewportIsAUserStepThatWaitsForTheServer() throws Exception {
+        StepRecorder steps = new StepRecorder();
+        com.vaadin.testing.unified.UnifiedPage page = lifecycle("playwright", Map.of())
+                .open(context(OnAPhone.class), steps).page();
+        assertEquals(new ViewportSize("phone", 375, 667), page.viewport());
+
+        long start = System.nanoTime();
+        page.setViewport(768, 1024);
+
+        assertEquals(ViewportSize.of(768, 1024), page.viewport());
+        assertEquals(List.of("set viewport to 768 × 1024"), steps.entries().stream()
+                .map(e -> ((StepRecorder.Step) e).phrase().render()).toList());
+        // Vaadin hears a resize 300 ms after the browser's last resize event, then handles it (ADR 0011)
+        List<String> calls = session.calls;
+        int set = calls.indexOf("setViewport[768 × 1024]");
+        assertEquals("settle", calls.get(set + 1));
+        assertTrue(System.nanoTime() - start >= 300_000_000L);
     }
 }
