@@ -3,7 +3,7 @@ package com.vaadin.testing.unified.internal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.vaadin.testing.unified.Viewport;
+import com.vaadin.testing.unified.ViewportSize;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -25,11 +25,11 @@ class SettingsTest {
 
     @Test
     void viewportDefaultsTo1280By720AndTakesAnOptionalName() {
-        assertEquals(new Viewport("", 1280, 720), settings(Map.of()).viewport());
-        assertEquals(new Viewport("", 375, 667), settings(Map.of(Settings.VIEWPORT, "375x667")).viewport());
-        assertEquals(new Viewport("phone", 375, 667),
+        assertEquals(new ViewportSize("", 1280, 720), settings(Map.of()).viewport());
+        assertEquals(new ViewportSize("", 375, 667), settings(Map.of(Settings.VIEWPORT, "375x667")).viewport());
+        assertEquals(new ViewportSize("phone", 375, 667),
                 settings(Map.of(Settings.VIEWPORT, " phone:375x667 ")).viewport());
-        assertEquals(new Viewport("tablet", 768, 1024),
+        assertEquals(new ViewportSize("tablet", 768, 1024),
                 settings(Map.of(Settings.VIEWPORT, "tablet:768×1024")).viewport());
     }
 

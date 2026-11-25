@@ -58,7 +58,7 @@ public final class Settings {
      * {@code vaadin.testing.viewport}: the Viewport of every test that declares none, {@code [name:]WIDTHxHEIGHT}
      * such as {@code phone:375x667}; 1280 × 720 when unset (ADR 0011).
      */
-    public com.vaadin.testing.unified.Viewport viewport() {
+    public com.vaadin.testing.unified.ViewportSize viewport() {
         return get(VIEWPORT).map(String::trim).map(v -> {
             Matcher m = VIEWPORT_VALUE.matcher(v);
             int width = m.matches() ? Integer.parseInt(m.group(2)) : 0;
@@ -67,12 +67,12 @@ public final class Settings {
                 throw new IllegalArgumentException(
                         VIEWPORT + ": expected [name:]WIDTHxHEIGHT, such as phone:375x667, got " + v);
             }
-            return new com.vaadin.testing.unified.Viewport(m.group(1) == null ? "" : m.group(1).trim(), width, height);
+            return new com.vaadin.testing.unified.ViewportSize(m.group(1) == null ? "" : m.group(1).trim(), width, height);
         }).orElse(DEFAULT_VIEWPORT);
     }
 
     /** The Viewport when neither the test nor the run sets one: the same on every browser Testing Tool. */
-    public static final com.vaadin.testing.unified.Viewport DEFAULT_VIEWPORT = com.vaadin.testing.unified.Viewport.of(1280, 720);
+    public static final com.vaadin.testing.unified.ViewportSize DEFAULT_VIEWPORT = com.vaadin.testing.unified.ViewportSize.of(1280, 720);
 
     /** Where failure evidence goes: next to the Surefire reports, so CI uploads it with them. */
     public Path evidenceDir() {
