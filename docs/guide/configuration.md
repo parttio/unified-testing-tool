@@ -49,4 +49,4 @@ void onAPhone(UnifiedPage page) {
 
 Only the Viewport is set, not the screen: `screen.width` and `getScreenWidth()` are whatever the browser says. Don't size the browser window through the Escape Hatch; use `setViewport`.
 
-When the Testing Tool can't set an exact Viewport, a test with `@Viewport`, or any test of a run with `vaadin.testing.viewport`, is skipped with the reason. A test on the default 1280 × 720 runs with a warning in its report, and a mid-test `setViewport` fails its User Step. The Selenium adapter sets exact Viewports from [#490](https://github.com/parttio/unified-testing-tool/issues/490) on.
+When the Testing Tool can't set an exact Viewport, a test with `@Viewport`, or any test of a run with `vaadin.testing.viewport`, is skipped with the reason. A test on the default 1280 × 720 runs with a warning in its report, and a mid-test `setViewport` fails its User Step. Playwright and Selenium on Chrome set exact Viewports; Selenium on Firefox follows in [#490](https://github.com/parttio/unified-testing-tool/issues/490).

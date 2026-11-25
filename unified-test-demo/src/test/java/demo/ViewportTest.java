@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.RequiresBrowser;
-import com.vaadin.testing.unified.RequiresTestingTool;
-import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.Viewport;
 import com.vaadin.testing.unified.ViewportSize;
@@ -44,8 +42,6 @@ class ViewportTest {
     }
 
     @Test
-    // Selenium sets exact Viewports from #490 on; until then setViewport fails its User Step there, as it should
-    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
     @DisplayName("After setViewport, the server has heard of the new size by the next User Step")
     void resizedMidTest(UnifiedPage page) {
         page.navigate(ViewportView.class);
