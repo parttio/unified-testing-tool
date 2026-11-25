@@ -126,7 +126,14 @@ public final class LazyElement implements UnifiedElement {
                 UnifiedElement e = concrete();
                 return ready.test(e) ? e : null;
             }, () -> LookupFailures.notUsable(this));
-            body.accept(element);
+            try {
+                body.accept(element);
+            } catch (com.vaadin.testing.unified.spi.StaleElementException | UnsupportedOperationException e) {
+                throw e;
+            } catch (RuntimeException e) {
+                LookupFailures.failIfUnreachable(this, element, e);
+                throw e;
+            }
             run.session().settle();
             return null;
         }));

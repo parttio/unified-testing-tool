@@ -147,8 +147,10 @@ public final class FindableView {
         } catch (RuntimeException e) {
             where = "the page";
         }
-        return run.steps().mask(render("Findable view of " + where + " on " + run.toolName(),
-                components(run, null, false, "page.")));
+        com.vaadin.testing.unified.ViewportSize viewport = run.tool().hasRealBrowser()
+                ? run.steps().currentViewport(run.window()) : null;
+        return run.steps().mask(render("Findable view of " + where + " on " + run.toolName()
+                + (viewport == null ? "" : " at Viewport " + viewport), components(run, null, false, "page.")));
     }
 
     /**
@@ -216,14 +218,14 @@ public final class FindableView {
 
     /** One component as read. {@code values} are its namers' values, normalized, null when it has none. */
     private record Read(UnifiedElement element, ElementFacts facts, Map<Namer, String> values, String value,
-            boolean hidden, boolean disabled, String summary, String clickable) {
+            boolean hidden, boolean disabled, String summary, String clickable, int position) {
         String valueOf(Namer namer) {
             return values.get(namer);
         }
 
         /** This read, listed because it says it is clickable: {@code role button}, {@code focusable}. */
         Read clickable(String why) {
-            return new Read(element, facts, values, value, hidden, disabled, summary, why);
+            return new Read(element, facts, values, value, hidden, disabled, summary, why, position);
         }
     }
 
@@ -233,7 +235,7 @@ public final class FindableView {
      * HTML type were read, so that a value unique among them may not be unique in the scope.
      */
     private record OfType(Class<?> type, UnifiedComponent annotation, String tag, List<Filter> selector,
-            List<Namer> namers, List<Read> reads, boolean partial) {}
+            List<Namer> namers, List<Read> reads, boolean partial, int foundCount) {}
 
     /** A container listed with a unique lookup, through which an ambiguous component may be singled out. */
     private record Container(String words, String lookup, UnifiedElement element) {}
@@ -291,11 +293,13 @@ public final class FindableView {
                     }
                 }
             }
+            Map<Read, String> reach = scope == null && !inTemplate && run.tool().hasRealBrowser() ? reach(run, all)
+                    : Map.of();
             List<Line> lines = new ArrayList<>();
             for (OfType t : all) {
                 for (Read r : t.reads()) {
                     String lookup = lookups.get(r);
-                    lines.add(new Line(description(t, r), lookup != null ? lookup
+                    lines.add(new Line(description(t, r, reach.get(r)), lookup != null ? lookup
                             : apart(run, t, r, scope, inTemplate, prefix, containers)));
                 }
             }
@@ -340,6 +344,7 @@ public final class FindableView {
         if (found.isEmpty()) {
             return null;
         }
+        int foundCount = found.size();
         found = found.subList(0, Math.min(found.size(), MAX_PER_TYPE));
         List<ElementFacts> facts = LookupFailures.facts(run, found);
         List<Namer> namers = namers(type, inTemplate);
@@ -349,16 +354,16 @@ public final class FindableView {
             if (facts.get(i) != null && facts.get(i).internalPart()) {
                 continue; // another component's own part, which the application didn't create: not listed (#517)
             }
-            reads.add(read(quick, type, namers, found.get(i), facts.get(i)));
+            reads.add(read(quick, type, namers, found.get(i), facts.get(i), i));
         }
         if (reads.isEmpty()) {
             return null;
         }
-        return new OfType(type, annotation, tag, selector, namers, reads, false);
+        return new OfType(type, annotation, tag, selector, namers, reads, false, foundCount);
     }
 
     private static Read read(TestRun quick, Class<?> type, List<Namer> namers, UnifiedElement e,
-            ElementFacts facts) {
+            ElementFacts facts, int position) {
         ElementFacts f = facts != null ? facts : new ElementFacts(null, null, null, null, null, null, null);
         Map<Namer, String> values = new HashMap<>();
         Object wrapper = null;
@@ -389,7 +394,7 @@ public final class FindableView {
         }
         String summary = UnifiedGrid.class.isAssignableFrom(type) ? safely(() -> grid(e), null)
                 : UnifiedMessageList.class.isAssignableFrom(type) ? safely(() -> messageList(e), null) : null;
-        return new Read(e, f, values, value, hidden, disabled, summary, null);
+        return new Read(e, f, values, value, hidden, disabled, summary, null, position);
     }
 
     /** {@code 3 messages}, from the Testing Tool's message list access. */
@@ -488,7 +493,7 @@ public final class FindableView {
      * {@code button (no name; id “save”)}, {@code grid, 3 rows},
      * {@code message list, 2 messages}.
      */
-    private static String description(OfType t, Read r) {
+    private static String description(OfType t, Read r, String reach) {
         StringBuilder sb = new StringBuilder(words(t, r));
         List<String> state = new ArrayList<>();
         if (name(t, r) == null && (LabelFilter.class.isAssignableFrom(t.type())
@@ -513,12 +518,64 @@ public final class FindableView {
             state.add(r.clickable());
         }
         if (r.hidden()) {
-            state.add("hidden");
+            state.add(reach != null && reach.startsWith("hidden in ") ? reach : "hidden");
+        } else if (reach != null && !reach.startsWith("hidden")) {
+            state.add(reach);
         }
         if (!state.isEmpty()) {
             sb.append(" (").append(String.join("; ", state)).append(')');
         }
         return sb.toString();
+    }
+
+    /**
+     * Each component's Reach in words, from one run of the layout script with every listed type's own lookup
+     * (ADR 0011, #494): {@code clipped}, {@code behind the AppLayout drawer}, {@code hidden in the MenuBar overflow};
+     * none when it is visible or a user scrolls to it. A type whose matches the script counts differently, or one
+     * read only in part, gets none: a read never fails the view.
+     */
+    private static Map<Read, String> reach(TestRun run, List<OfType> all) {
+        List<OfType> measured = all.stream().filter(t -> !t.partial()).toList();
+        List<List<LayoutMeasurement.Reach>> matches;
+        try {
+            matches = LayoutMeasurement.matches(run, measured.stream().map(t -> com.vaadin.testing.unified.spi
+                    .LayoutScript.Target.of(BrowserQueries.selector(t.tag(), t.selector()))).toList());
+        } catch (RuntimeException e) {
+            return Map.of();
+        }
+        Map<Read, String> words = new IdentityHashMap<>();
+        // a cover that is itself listed is named as its line names it: "button “Menu”"
+        java.util.function.Function<int[], String> named = at -> {
+            if (at == null || at[0] < 0 || at[0] >= measured.size()) {
+                return null;
+            }
+            OfType t = measured.get(at[0]);
+            return t.reads().stream().filter(r -> r.position() == at[1]).findFirst().map(r -> words(t, r))
+                    .orElse(null);
+        };
+        for (int k = 0; k < measured.size() && k < matches.size(); k++) {
+            OfType t = measured.get(k);
+            List<LayoutMeasurement.Reach> list = matches.get(k);
+            if (list.size() != t.foundCount()) {
+                continue;
+            }
+            for (Read r : t.reads()) {
+                LayoutMeasurement.Reach reach = list.get(r.position());
+                String word = switch (reach.reach()) {
+                    case "clipped" -> "clipped";
+                    case "behind" -> {
+                        String cover = named.apply(reach.byMatch());
+                        yield cover != null ? "behind " + cover : reach.by() == null ? "behind" : "behind " + reach.by();
+                    }
+                    case "hidden" -> reach.by() == null ? null : "hidden in " + reach.by();
+                    default -> null;
+                };
+                if (word != null) {
+                    words.put(r, word);
+                }
+            }
+        }
+        return words;
     }
 
     /** The kind and name: {@code dialog “Edit person”}. */
@@ -574,9 +631,9 @@ public final class FindableView {
             if (facts.get(i) != null && facts.get(i).internalPart()) {
                 continue;
             }
-            reads.add(read(quick, type, namers, found.get(i), facts.get(i)).clickable(why.get(i)));
+            reads.add(read(quick, type, namers, found.get(i), facts.get(i), -1).clickable(why.get(i)));
         }
-        return reads.isEmpty() ? null : new OfType(type, annotation, tag, List.of(), namers, reads, true);
+        return reads.isEmpty() ? null : new OfType(type, annotation, tag, List.of(), namers, reads, true, -1);
     }
 
     private static boolean isClickable(String role) {

@@ -50,8 +50,13 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
      *
      * @param reach {@code visible}, {@code after scroll}, {@code clipped}, {@code behind} or {@code hidden}
      * @param by what clips or covers it; null otherwise
+     * @param byMatch when what covers it is itself a match: its target and position; null otherwise
      */
-    public record Reach(String reach, String by) {}
+    public record Reach(String reach, String by, int[] byMatch) {
+        public Reach(String reach, String by) {
+            this(reach, by, null);
+        }
+    }
 
     /** The findings of one kind. */
     public List<Finding> findings(String kind) {
@@ -74,6 +79,25 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
             }
         }
         return parse(run.session().measureLayout(targets, subject), kinds);
+    }
+
+    /**
+     * The Reach of every match of each target, in document order: one run of the layout script, no waiting. Fails
+     * without a real browser.
+     */
+    @SuppressWarnings("unchecked")
+    static List<List<Reach>> matches(TestRun run, List<LayoutScript.Target> targets) {
+        run.requireBrowser("Measuring the layout");
+        Map<String, Object> root = (Map<String, Object>) JsonReader.parse(run.session().measureLayout(targets, null));
+        List<List<Reach>> matches = new ArrayList<>();
+        for (Object list : (List<Object>) root.getOrDefault("matches", List.of())) {
+            matches.add(((List<Object>) list).stream().map(m -> (Map<String, Object>) m)
+                    .map(m -> new Reach(String.valueOf(m.get("reach")), m.get("by") == null ? null
+                            : String.valueOf(m.get("by")), m.get("byMatch") instanceof List<?> at && at.size() == 2
+                                    ? new int[] { ((Number) at.get(0)).intValue(), ((Number) at.get(1)).intValue() }
+                                    : null)).toList());
+        }
+        return matches;
     }
 
     @SuppressWarnings("unchecked")

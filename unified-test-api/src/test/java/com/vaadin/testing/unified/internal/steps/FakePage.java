@@ -46,7 +46,25 @@ final class FakePage {
     final java.util.concurrent.atomic.AtomicInteger adapterCalls = new java.util.concurrent.atomic.AtomicInteger();
     final UnifiedPageImpl page;
 
+    /** What the layout script returns in a browser (ADR 0011); null when it can't measure. */
+    volatile String layout;
+    /**
+     * The Reach of each match of a target, by the target's CSS selector, in document order: {@code "visible"},
+     * {@code "clipped:div#box"}, {@code "behind:the AppLayout drawer"}. The layout script's matches are built from it
+     * when {@link #layout} is null.
+     */
+    final Map<String, List<String>> reaches = new java.util.concurrent.ConcurrentHashMap<>();
+    /** The subject's Reach when the layout script is asked about one: {@code "behind:the AppLayout drawer"}. */
+    volatile String subjectReach;
+    /** What a click throws, e.g. a browser's "intercepts pointer events"; null for none. */
+    volatile RuntimeException clickError;
+
     FakePage() {
+        this(TestingTool.BROWSERLESS, null);
+    }
+
+    /** A fake page on this Testing Tool, at this Viewport (a browser's) or none. */
+    FakePage(TestingTool tool, com.vaadin.testing.unified.ViewportSize viewport) {
         AdapterSession session = (AdapterSession) Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] { AdapterSession.class }, counted((proxy, method, args) -> switch (method.getName()) {
                     case "find" -> find((QuerySpec) args[0]);
@@ -65,12 +83,68 @@ final class FakePage {
                         console.clear();
                         yield errors;
                     }
+                    case "measureLayout" -> {
+                        if (layout != null) {
+                            yield layout;
+                        }
+                        if (reaches.isEmpty() && subjectReach == null) {
+                            throw new UnsupportedOperationException("this fake can't measure the layout");
+                        }
+                        yield layoutOf((List<?>) args[0]);
+                    }
                     case "hashCode" -> 1;
                     default -> null;
                 }));
         steps.session(null, session);
-        page = new UnifiedPageImpl(new TestRun(TestingTool.BROWSERLESS, session, Duration.ofMillis(200), steps,
-                null));
+        if (viewport != null) {
+            steps.viewport(viewport, false);
+        }
+        page = new UnifiedPageImpl(new TestRun(tool, session, Duration.ofMillis(200), steps, null, false,
+                viewport == null ? com.vaadin.testing.unified.internal.Settings.DEFAULT_VIEWPORT : viewport));
+    }
+
+    /**
+     * One match: {@code "clipped:div#box"}, or {@code "behind#vaadin-button@1"} for a cover that is itself a match:
+     * the second of the target with that selector.
+     */
+    private static String match(String reach, List<?> targets) {
+        int at = reach.startsWith("behind#") ? "behind".length() : -1;
+        if (at > 0) {
+            String[] cover = reach.substring(at + 1).split("@");
+            int target = -1;
+            for (int t = 0; t < targets.size(); t++) {
+                if (((com.vaadin.testing.unified.spi.LayoutScript.Target) targets.get(t)).css().equals(cover[0])) {
+                    target = t;
+                }
+            }
+            return "{\"box\":[0,0,10,10],\"reach\":\"" + reach.substring(0, at) + "\",\"by\":\"" + cover[0]
+                    + "\",\"byMatch\":[" + target + "," + cover[1] + "]}";
+        }
+        String[] parts = reach.split(":", 2);
+        return "{\"box\":[0,0,10,10],\"reach\":\"" + parts[0] + "\""
+                + (parts.length > 1 ? ",\"by\":\"" + parts[1] + "\"" : "") + "}";
+    }
+
+    /** The layout script's result for these targets, from {@link #reaches}. */
+    private String layoutOf(List<?> targets) {
+        StringBuilder matches = new StringBuilder("[");
+        for (int t = 0; t < targets.size(); t++) {
+            String css = ((com.vaadin.testing.unified.spi.LayoutScript.Target) targets.get(t)).css();
+            matches.append(t == 0 ? "" : ",").append('[');
+            List<String> list = reaches.getOrDefault(css, List.of());
+            for (int i = 0; i < list.size(); i++) {
+                matches.append(i == 0 ? "" : ",").append(match(list.get(i), targets));
+            }
+            matches.append(']');
+        }
+        String subject = "";
+        if (subjectReach != null) {
+            String[] reach = subjectReach.split(":", 2);
+            subject = ",\"subject\":{\"box\":[0,0,10,10],\"reach\":\"" + reach[0] + "\""
+                    + (reach.length > 1 ? ",\"by\":\"" + reach[1] + "\"" : "") + "}";
+        }
+        return "{\"findings\":[],\"matches\":" + matches.append(']') + ",\"appLayouts\":[],\"menuBars\":[]"
+                + subject + "}";
     }
 
     /** Adds a component: {@code add("vaadin-text-field", "label", "Name")}. */
@@ -182,6 +256,9 @@ final class FakePage {
                     case "click", "focus", "pressKey" -> {
                         actions.add(method.getName() + " " + component.get("tag"));
                         if (method.getName().equals("click")) {
+                            if (clickError != null) {
+                                throw clickError;
+                            }
                             onClick.run();
                         }
                         yield null;
