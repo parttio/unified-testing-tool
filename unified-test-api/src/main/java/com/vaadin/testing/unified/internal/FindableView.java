@@ -358,7 +358,7 @@ public final class FindableView {
                 Object w = wrapper;
                 value = safely(() -> (String) namer.getter().invoke(w), null);
             } else if (namer.kind() == Filter.Kind.ACCESSIBLE_NAME) {
-                // a name of its own: not the text that a missing name falls back to
+                // a name of its own: not the text a component named by its content is named by (#641)
                 String name = normalize(f.accessibleName());
                 value = name != null && !name.equals(normalize(f.text())) ? name : null;
             } else {

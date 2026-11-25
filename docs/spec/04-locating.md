@@ -46,15 +46,14 @@ Exact match by default (whitespace normalised); every text filter has a `…Cont
 | `withProperty`, `where(Predicate<UnifiedElement>)` | building blocks for custom filters | `CommonFilters` | for Wrapper authors |
 | type-specific, e.g. `withHeaderTitle` | declared by the Wrapper as a default method | that type | yes |
 
-**Accessible name** order on every Testing Tool (Dramafinder's own filters use the browser's computation). `UnifiedElement.getAccessibleName()` reads the same value ([6. Wrappers](06-wrappers.md#unified-element)):
+**Accessible name**: the browser's computation, as Dramafinder's `getAccessibleName()` reads it, the same on every Testing Tool. Decided in #641; see [ADR 0016](../adr/0016-accessible-name-follows-the-browser.md). `UnifiedElement.getAccessibleName()` reads the same value ([6. Wrappers](06-wrappers.md#unified-element)):
 
-1. `aria-label`
-2. the `accessibleName` property (what `setAriaLabel` sets on a field; the field forwards it to its input)
-3. text of the `aria-labelledby` target
-4. `label`
-5. text content (buttons)
+1. the texts of the `aria-labelledby` targets, every id, joined with a space
+2. a non-blank `aria-label`
+3. a field's own label, as the web component renders it on its input (a group, such as a radio group, on its host): `accessibleNameRef` (`setAriaLabelledBy`), else `accessibleName` (`setAriaLabel`), else `label`. A select adds the value it shows (the selected item or the placeholder). A placeholder is not a name
+4. the own text of a component named by its content, only when it has neither `aria-labelledby` nor `aria-label`: a button, a tab, a menu item, a breadcrumb item, a badge, a notification, a link (`Anchor`, `RouterLink`), a native `<button>`, a heading. Slotted children, an icon or a tooltip, are not part of it
 
-Rare edge cases can differ from the browser.
+Each is read on the host, then on the field's own input. What a Vaadin web component renders as a name counts too: a dialog's header title, an avatar's name, a side nav's label, a card's title. Whitespace is normalised. Nothing applies: the name is `null`, so a `Div` or a `Span` showing text has none, and `withText(..)` finds it.
 
 ## What a lookup sees
 

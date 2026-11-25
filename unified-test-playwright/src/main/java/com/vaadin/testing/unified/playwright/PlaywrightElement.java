@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
 import org.vaadin.addons.dramafinder.element.GenericElement;
 import org.vaadin.addons.dramafinder.element.VaadinElement;
+import org.vaadin.addons.dramafinder.element.query.AccessibleNames;
 import org.vaadin.addons.dramafinder.element.shared.FocusableElement;
 import org.vaadin.addons.dramafinder.element.shared.HasValueElement;
 
@@ -91,10 +92,16 @@ final class PlaywrightElement implements UnifiedElement, com.vaadin.testing.unif
         return value == null ? null : value.strip();
     }
 
-    /** The same script as the {@code withAccessibleName(..)} filter. Dramafinder has no read of it yet. */
+    /**
+     * Dramafinder's read ({@code VaadinElement.getAccessibleName()} and the overrides of the components named by
+     * their content), which {@link BrowserQueries#ACCESSIBLE_NAME}, the {@code withAccessibleName(..)} filter,
+     * computes the same way. A link, a native button or a heading has no Dramafinder element: it is read as
+     * Dramafinder reads a button.
+     */
     @Override
     public String getAccessibleName() {
-        return (String) locator.evaluate(BrowserQueries.ACCESSIBLE_NAME);
+        return BrowserQueries.namedByContent(getTag()) ? AccessibleNames.labelledOrOwnText(locator)
+                : AccessibleNames.labelled(locator);
     }
 
     @Override

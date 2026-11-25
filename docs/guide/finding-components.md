@@ -30,7 +30,7 @@ Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `Un
 |---|---|---|
 | `withLabel("Email")` | a field by its label, or by the label of its FormLayout item | `page.find(UnifiedTextField.class).withLabel("Email")` |
 | `withText("Save")` | a button, notification, … by its text | `page.find(UnifiedButton.class).withText("Save")` |
-| `withAccessibleName("Delete account")` | what a screen reader announces: `aria-label`, `setAriaLabel(..)`, label or text | an icon-only button, a field without a visible label |
+| `withAccessibleName("Delete account")` | what a screen reader announces: `aria-labelledby`, `aria-label`, a field's label or `setAriaLabel(..)`, the text of a button, link, tab or heading | an icon-only button, a field without a visible label |
 | `withPlaceholder("Nickname")` | a field by its placeholder | `page.find(UnifiedTextField.class).withPlaceholder("Nickname")` |
 | `withHeaderTitle("Delete?")` | a dialog by its header | `page.find(UnifiedDialog.class).withHeaderTitle("Change email")` |
 | `withTab("Security")` | a TabSheet or Tabs that has this tab | `page.find(UnifiedTabSheet.class).withTab("Security")` |
@@ -53,6 +53,12 @@ A field named with `setAriaLabel(..)` and no visible label is found the same way
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ReportTest.java:findsAFieldByItsAccessibleName"
+```
+
+The accessible name is the browser's, on every Testing Tool: `aria-labelledby` (several ids: their texts joined with a space) wins over `aria-label`, then a field's label, `setAriaLabel(..)` or `setAriaLabelledBy(..)`, then the own text of a component named by its content (a button, a link, a tab, a menu item, a notification, a badge, a heading), without its icon or tooltip. A placeholder is not a name. Other components have none: a `Div` or a `Span` showing text is found by `withText(..)`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/AccessibleNamesTest.java:aDivHasNoAccessibleName"
 ```
 
 ### Exact or containing
