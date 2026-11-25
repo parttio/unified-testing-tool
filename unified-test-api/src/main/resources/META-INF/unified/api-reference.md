@@ -395,6 +395,28 @@ Section, Flow's `Section`. Guide: [Working with components, Plain HTML and text]
 - **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
 - **Checks:** those of every Wrapper
 
+### `UnifiedSideNav`
+
+Side nav, Flow's `SideNav`. Guide: [Working with components, Side navigation](https://parttio.github.io/unified-testing-tool/guide/components/#side-navigation).
+
+- **Filters:** `withLabel(String)`
+- **Reads:** `getItems() → List<String>`, `getLabel() → String`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
+- **Checks:** those of every Wrapper, and `hasItems(String...)`
+
+### `UnifiedSideNavItem`
+
+Side nav item, Flow's `SideNavItem`. Guide: [Working with components, Side navigation](https://parttio.github.io/unified-testing-tool/guide/components/#side-navigation).
+
+- **Filters:** `withLabel(String)`, `withPath(String)`
+- **Actions**, each with the User Step it reports:
+  - `click()`: click side nav item “…”
+  - `collapse()`: collapse side nav item “…”
+  - `expand()`: expand side nav item “…”
+- **Reads:** `getItems() → List<String>`, `getLabel() → String`, `getPath() → String`, `isCurrent() → boolean`, `isExpanded() → boolean`
+- **Also:** `describe() → String`, `find(Class<W>) → W`, `findComponent(Class<C>) → UnifiedGenericComponent`, `findTemplate(Class<C>) → UnifiedTemplate`
+- **Checks:** those of every Wrapper, and `hasItems(String...)`, `hasPath(String)`, `isCollapsed()`, `isCurrent()`, `isExpanded()`, `isNotCurrent()`
+
 ### `UnifiedSpan`
 
 Span, Flow's `Span`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).

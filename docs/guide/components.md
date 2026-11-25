@@ -139,6 +139,37 @@ Tool: `profile` for a `RouterLink` to the profile view, not the absolute URL a b
 --8<-- "unified-test-demo/src/test/java/demo/LinkTest.java:readsALink"
 ```
 
+## Side navigation
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha5`. See [what is unreleased](../releases/unreleased.md).
+
+`UnifiedSideNavItem` finds an item of a `SideNav` by its label, the item's own text: `withLabel("Orders")`, or by
+where it goes with `withPath(..)`. `click()` clicks it as a user does. An item with a path is followed as
+[`UnifiedLink.click()`](#links) follows a link, and waits for the new page:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/SideNavTest.java:clicksASideNavItem"
+```
+
+An item is a [Scope](finding-components.md#scopes) for its child items, and `UnifiedSideNav`, found by the label
+above its items, is one for its items. Either tells apart two items of the same label. A click on a nested item first
+expands the collapsed items it is in, by their toggle buttons, as a user does:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/SideNavTest.java:clicksANestedItem"
+```
+
+An item without a path expands or collapses its child items when clicked, as in a browser; `expand()` and
+`collapse()` use its toggle button and do nothing when it is already so. On Browserless, an item whose path leaves the
+application, or opens another window, fails the click, saying the test needs `@RequiresBrowser`. The User Steps read
+`click side nav item “Users” in side nav item “Admin”`, then `open “shop/admin/users”`.
+
+`assertThat(item)` checks `isCurrent()` (the page the user is on), `isExpanded()`, `isCollapsed()`, `hasPath(..)`
+and `hasItems(..)`; `getPath()` reads the path as the application set it, the same on every Testing Tool. As in a
+browser, opening a page expands the items holding its item on every Testing Tool, and the item itself when it has
+child items. The [Findable View](finding-components.md) lists each item, with `(current)` and `(collapsed)`, and a
+nested item in a collapsed one as `(hidden)`.
+
 ## Tabs and Details
 
 ```java

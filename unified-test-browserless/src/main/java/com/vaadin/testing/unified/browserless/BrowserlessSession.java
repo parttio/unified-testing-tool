@@ -56,6 +56,9 @@ final class BrowserlessSession implements AdapterSession {
         this.app = app;
         this.user = user;
         this.window = user.newWindow();
+        // what the side nav web component does after each navigation in a browser (#658)
+        com.vaadin.flow.component.UI ui = this.window.getUI();
+        ui.addAfterNavigationListener(e -> BrowserlessSideNav.autoExpand(ui, e.getLocation()));
         this.ownsUser = ownsUser;
         this.ownsApp = ownsApp;
         ACTIVE.set(this);

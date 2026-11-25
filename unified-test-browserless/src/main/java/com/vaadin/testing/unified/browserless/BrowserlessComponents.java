@@ -282,6 +282,25 @@ final class BrowserlessComponents {
         Support link = access(com.vaadin.testing.unified.spi.LinkAccess.class, BrowserlessLinks::new);
         register(com.vaadin.flow.router.RouterLink.class, link);
         register(com.vaadin.flow.component.html.Anchor.class, link);
+        // SideNav (#658): an item is hidden in a collapsed item, and follows its path as a link does
+        register(com.vaadin.flow.component.sidenav.SideNav.class, access(com.vaadin.testing.unified.spi.SideNavAccess.class,
+                (session, c) -> new BrowserlessSideNav.NavAccess((com.vaadin.flow.component.sidenav.SideNav) c)));
+        register(com.vaadin.flow.component.sidenav.SideNavItem.class, new Support() {
+            @Override
+            public Optional<Boolean> visible(Component component) {
+                return BrowserlessSideNav.hiddenByParent(component) ? Optional.of(false) : Optional.empty();
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                var item = (com.vaadin.flow.component.sidenav.SideNavItem) component;
+                if (type == com.vaadin.testing.unified.spi.SideNavItemAccess.class) {
+                    return Optional.of(new BrowserlessSideNav.ItemAccess(session, item));
+                }
+                return type == com.vaadin.testing.unified.spi.LinkAccess.class
+                        ? Optional.of(new BrowserlessLinks(session, item)) : Optional.empty();
+            }
+        });
         register(Grid.class, new Support() {
             @Override
             public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {

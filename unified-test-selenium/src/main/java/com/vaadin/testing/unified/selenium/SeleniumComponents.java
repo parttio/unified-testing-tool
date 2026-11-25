@@ -288,6 +288,10 @@ final class SeleniumComponents {
                 (element, session) -> new SeleniumCoreSetAccess.DetailsAccessImpl(session, element)));
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
                 (element, session) -> new SeleniumCoreSetAccess.MenuBarAccessImpl(session, element)));
+        register(com.vaadin.flow.component.sidenav.SideNav.class, access(com.vaadin.testing.unified.spi.SideNavAccess.class,
+                (element, session) -> new SeleniumSideNav.NavAccess(session, element)));
+        register(com.vaadin.flow.component.sidenav.SideNavItem.class, access(com.vaadin.testing.unified.spi.SideNavItemAccess.class,
+                (element, session) -> new SeleniumSideNav.ItemAccess(session, element)));
         register(com.vaadin.flow.component.upload.Upload.class, access(com.vaadin.testing.unified.spi.UploadAccess.class,
                 (element, session) -> new SeleniumCoreSetAccess.UploadAccessImpl(session, element)));
         register(com.vaadin.flow.component.messages.MessageInput.class, access(com.vaadin.testing.unified.spi.MessageInputAccess.class,

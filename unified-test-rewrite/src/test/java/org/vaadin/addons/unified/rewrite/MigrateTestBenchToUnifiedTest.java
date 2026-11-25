@@ -375,6 +375,39 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void sideNavItemLookupsFindTheUnifiedSideNavItem() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.sidenav.testbench.SideNavItemElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class NavigationTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void opensOrders() {
+                        $(SideNavItemElement.class).withId("orders").single().navigate();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedSideNavItem;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class NavigationTest {
+
+                    @Test
+                    void opensOrders(UnifiedPage page) {
+                        page.find(UnifiedSideNavItem.class).withId("orders").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void assertEqualsOnValueOrTextBecomesARetryingAssertion() {
         rewriteRun(java(
                 """

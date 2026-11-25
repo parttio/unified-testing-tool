@@ -19,7 +19,7 @@ import org.openqa.selenium.interactions.Actions;
  * <p>
  * The scripts left here have no TestBench API yet; each names the issue that would replace it.
  */
-final class SeleniumElement implements UnifiedElement {
+final class SeleniumElement implements UnifiedElement, com.vaadin.testing.unified.spi.ElementIdentity {
 
     private final SeleniumSession session;
     private final WebElement element;
@@ -38,6 +38,11 @@ final class SeleniumElement implements UnifiedElement {
         this.element = element;
         this.support = support;
         this.roots = roots;
+    }
+
+    @Override
+    public boolean isSameElement(UnifiedElement other) {
+        return other instanceof SeleniumElement o && o.element.equals(element);
     }
 
     WebElement webElement() {
