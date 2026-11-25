@@ -628,6 +628,12 @@ final class PlaywrightSession implements AdapterSession {
         AutoWait.afterAction(page);
     }
 
+    /** Exact, for this page only, any size: Playwright emulates the Viewport (ADR 0011). */
+    @Override
+    public void setViewport(com.vaadin.testing.unified.ViewportSize size) {
+        page.setViewportSize(size.width(), size.height());
+    }
+
     @Override
     public void screenshot(Path file) {
         page.screenshot(new Page.ScreenshotOptions().setPath(file));
