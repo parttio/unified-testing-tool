@@ -78,6 +78,9 @@ public final class SeleniumAdapter implements TestingToolAdapter {
             if (headless) {
                 options.addArguments("-headless");
             }
+            // a window big enough for any Viewport the tests set; the Viewport itself through WebDriver BiDi
+            options.addArguments("-width=1280", "-height=1024");
+            options.setCapability("webSocketUrl", true);
             executable.ifPresent(options::setBinary);
             return new FirefoxDriver(options);
         }

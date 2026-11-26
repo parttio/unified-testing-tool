@@ -409,22 +409,56 @@ final class SeleniumSession implements AdapterSession {
         waitForVaadin();
     }
 
+    /** The first Firefox whose WebDriver BiDi sets an exact Viewport ({@code browsingContext.setViewport}). */
+    static final int FIREFOX_WITH_VIEWPORT = 132;
+
     /**
-     * Exact, for this tab only, any size, through WebDriver BiDi's {@code browsingContext.setViewport}: the page sees
-     * an emulated Viewport inside the browser's window (ADR 0011). A window handle is its BiDi browsing context.
+     * Exact, for this tab only, any size, through WebDriver BiDi's {@code browsingContext.setViewport}, on Chrome and
+     * Firefox: the page sees an emulated Viewport inside the browser's window (ADR 0011). A window handle is its BiDi
+     * browsing context. A browser without BiDi refuses with its reason.
      */
     @Override
     public void setViewport(com.vaadin.testing.unified.ViewportSize size) {
         Object raw = driver().getWrappedDriver();
-        if (!(raw instanceof org.openqa.selenium.chrome.ChromeDriver chrome)) {
-            throw new UnsupportedOperationException("The Selenium adapter sets exact Viewports on Chrome only, so far"
-                    + " (Firefox: #490)");
+        if (!(raw instanceof org.openqa.selenium.bidi.HasBiDi bidi)
+                || !(raw instanceof org.openqa.selenium.HasCapabilities withCapabilities)) {
+            throw new UnsupportedOperationException("This browser's driver has no WebDriver BiDi");
         }
-        if (!(chrome.getCapabilities().getCapability("webSocketUrl") instanceof String)) {
-            throw new UnsupportedOperationException("This Chrome has no WebDriver BiDi (webSocketUrl)");
+        org.openqa.selenium.Capabilities capabilities = withCapabilities.getCapabilities();
+        String refusal = viewportRefusal(capabilities.getBrowserName(), capabilities.getBrowserVersion(),
+                capabilities.getCapability("webSocketUrl") instanceof String);
+        if (refusal != null) {
+            throw new UnsupportedOperationException(refusal);
         }
-        new org.openqa.selenium.bidi.browsingcontext.BrowsingContext(chrome, handle)
+        new org.openqa.selenium.bidi.browsingcontext.BrowsingContext((org.openqa.selenium.WebDriver) bidi, handle)
                 .setViewport(size.width(), size.height());
+    }
+
+    /**
+     * Why this browser can't have an exact Viewport, or null when it can: it needs WebDriver BiDi, which a browser
+     * started without {@code webSocketUrl} (an old browser, a grid without BiDi) lacks, and Firefox 132 or later.
+     */
+    static String viewportRefusal(String browserName, String browserVersion, boolean bidi) {
+        String name = "firefox".equalsIgnoreCase(browserName) ? "Firefox" : "chrome".equalsIgnoreCase(browserName)
+                ? "Chrome" : browserName;
+        if (!bidi) {
+            return "This " + name + " has no WebDriver BiDi (webSocketUrl)";
+        }
+        if ("Firefox".equals(name)) {
+            int major = major(browserVersion);
+            if (major >= 0 && major < FIREFOX_WITH_VIEWPORT) {
+                return "Viewport control needs Firefox " + FIREFOX_WITH_VIEWPORT + " or later, this is " + major;
+            }
+        }
+        return null;
+    }
+
+    private static int major(String version) {
+        try {
+            return Integer.parseInt(version.split("\\.")[0]);
+        } catch (RuntimeException e) {
+            return -1;
+        }
     }
 
     /** The core's layout script, unchanged, with the subject's WebElement (ADR 0011). One round trip. */
