@@ -86,6 +86,15 @@ public class ViewportsWritten extends Recipe {
                 J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
                 J.MethodDeclaration enclosing = getCursor().firstEnclosing(J.MethodDeclaration.class);
                 String page = enclosing == null ? null : Pages.parameterName(enclosing);
+                String dimension = Viewports.windowDimension(m);
+                if (page != null && dimension != null) { // window().getSize().getWidth() → page.viewport().width()
+                    getCursor().putMessageOnFirstEnclosing(J.MethodDeclaration.class, NEEDS_BROWSER, true);
+                    return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.viewport()." + dimension + "()")
+                            .javaParser(Stubs.parser())
+                            .build()
+                            .<J.MethodInvocation>apply(getCursor(), m.getCoordinates().replace(), Stubs.page(page))
+                            .withPrefix(m.getPrefix());
+                }
                 Viewports.Resize resize = Viewports.resize(m);
                 if (page == null || resize == null) {
                     return m;

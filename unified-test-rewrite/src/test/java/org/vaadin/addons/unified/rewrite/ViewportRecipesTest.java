@@ -239,4 +239,100 @@ class ViewportRecipesTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void theWindowsWidthAndHeightAreReadAsTheViewports() {
+        rewriteRun(ViewportRecipesTest::testBench, java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void editsTheProfile() {
+                        getDriver().get("http://localhost:8080/profile");
+                        if (getDriver().manage().window().getSize().getWidth() < 600
+                                || getDriver().manage().window().getSize().getHeight() < 600) {
+                            $(ButtonElement.class).withText("Menu").single().click();
+                        }
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresBrowser;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class ProfileTest {
+
+                    @Test
+                    @RequiresBrowser
+                    void editsTheProfile(UnifiedPage page) {
+                        page.navigate("profile");
+                        if (page.viewport().width() < 600
+                                || page.viewport().height() < 600) {
+                            page.find(UnifiedButton.class).withText("Menu").click();
+                        }
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aDriverStartedWithAWindowSizeGetsAMarkerPointingAtTheRunsViewport() {
+        rewriteRun(ViewportRecipesTest::testBench, java(
+                """
+                import com.vaadin.flow.component.button.testbench.ButtonElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+                import org.junit.jupiter.api.BeforeEach;
+                import org.openqa.selenium.chrome.ChromeDriver;
+                import org.openqa.selenium.chrome.ChromeOptions;
+
+                class ProfileTest extends BrowserTestBase {
+
+                    @BeforeEach
+                    void startTheBrowser() {
+                        ChromeOptions options = new ChromeOptions();
+                        options.addArguments("--headless=new", "--window-size=1024,768");
+                        setDriver(new ChromeDriver(options));
+                    }
+
+                    @BrowserTest
+                    void editsTheProfile() {
+                        getDriver().get("http://localhost:8080/profile");
+                        $(ButtonElement.class).withText("Edit").single().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedButton;
+                import org.junit.jupiter.api.Test;
+                import org.openqa.selenium.chrome.ChromeOptions;
+
+                // TODO unified: the browser was started with --window-size=1024,768: tests now run at an exact Viewport, 1280 × 720 unless they have @Viewport; for this size, set vaadin.testing.viewport=1024x768 for the run, or add @Viewport(width = 1024, height = 768)
+                @UnifiedUITest
+                class ProfileTest {
+
+                    void startTheBrowser(UnifiedPage page) {
+                        ChromeOptions options = new ChromeOptions();
+                        options.addArguments("--headless=new", "--window-size=1024,768");
+                    }
+
+                    @Test
+                    void editsTheProfile(UnifiedPage page) {
+                        startTheBrowser(page);
+                        page.navigate("profile");
+                        page.find(UnifiedButton.class).withText("Edit").click();
+                    }
+                }
+                """));
+    }
 }

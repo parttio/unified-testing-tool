@@ -88,6 +88,20 @@ final class Viewports {
         return null;
     }
 
+    /**
+     * {@code width} or {@code height} for Selenium's {@code window().getSize().getWidth()} or {@code getHeight()}:
+     * the Viewport's, now that the test sets that; null for any other call.
+     */
+    static String windowDimension(J.MethodInvocation m) {
+        if (!(m.getSimpleName().equals("getWidth") || m.getSimpleName().equals("getHeight"))
+                || !(m.getSelect() instanceof J.MethodInvocation size) || !size.getSimpleName().equals("getSize")
+                || size.getMethodType() == null
+                || !size.getMethodType().getDeclaringType().getFullyQualifiedName().replace('$', '.').equals(SELENIUM_WINDOW)) {
+            return null;
+        }
+        return m.getSimpleName().equals("getWidth") ? "width" : "height";
+    }
+
     /** {@code maximize} or {@code fullscreen} when the statement is Selenium's {@code window().maximize()} or such. */
     static String screenFilling(Statement statement) {
         return statement instanceof J.MethodInvocation m && m.getArguments().stream().allMatch(a -> a instanceof J.Empty)

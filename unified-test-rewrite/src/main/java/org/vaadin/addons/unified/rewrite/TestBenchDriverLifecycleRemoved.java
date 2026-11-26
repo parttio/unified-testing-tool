@@ -70,6 +70,13 @@ public class TestBenchDriverLifecycleRemoved extends Recipe {
                             .visitNonNull(c, ctx, getCursor().getParentOrThrow());
                     maybeRemoveImport(runner);
                 }
+                String windowSize = windowSize(classDecl);
+                if (windowSize != null && !markedWindowSize(c)) {
+                    c = MigrationMarkers.onClass(c, "the browser was started with --window-size=" + windowSize
+                            + ": tests now run at an exact Viewport, 1280 × 720 unless they have @Viewport; for this size,"
+                            + " set vaadin.testing.viewport=" + windowSize.replace(',', 'x') + " for the run, or add"
+                            + " @Viewport(width = " + windowSize.replace(",", ", height = ") + ")");
+                }
                 if (!browserSetup.isEmpty()) {
                     List<Comment> comments = new ArrayList<>(c.getPrefix().getComments());
                     comments.add(new TextComment(false, " TODO unified: browser setup removed (" + String.join(", ", browserSetup)
@@ -96,6 +103,32 @@ public class TestBenchDriverLifecycleRemoved extends Recipe {
                 return b.withStatements(ListUtils.map(b.getStatements(), s -> isDriverLifecycle(s) ? null : s));
             }
         };
+    }
+
+    /** Whether the class has the window size's marker already, above it or above its first annotation. */
+    private static boolean markedWindowSize(J.ClassDeclaration c) {
+        List<Comment> comments = new ArrayList<>(c.getPrefix().getComments());
+        c.getLeadingAnnotations().forEach(a -> comments.addAll(a.getPrefix().getComments()));
+        return comments.stream().anyMatch(comment -> comment instanceof TextComment t
+                && t.getText().contains("the browser was started with --window-size="));
+    }
+
+    /** {@code 1024,768} when the class starts its browser with {@code --window-size=1024,768}; null otherwise. */
+    private static String windowSize(J.ClassDeclaration c) {
+        java.util.concurrent.atomic.AtomicReference<String> found = new java.util.concurrent.atomic.AtomicReference<>();
+        new JavaIsoVisitor<Integer>() {
+            @Override
+            public J.Literal visitLiteral(J.Literal literal, Integer p) {
+                if (literal.getValue() instanceof String text) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("--window-size=(\\d+),(\\d+)").matcher(text);
+                    if (m.find() && found.get() == null) {
+                        found.set(m.group(1) + "," + m.group(2));
+                    }
+                }
+                return literal;
+            }
+        }.visit(c, 0);
+        return found.get();
     }
 
     private static boolean isBrowserConfiguration(Statement s) {

@@ -3345,17 +3345,16 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
                         import com.vaadin.testbench.TestBenchElement;
                         import com.vaadin.testing.unified.UnifiedPage;
                         import com.vaadin.testing.unified.UnifiedUITest;
+                        import com.vaadin.testing.unified.Viewport;
                         import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
-                        import org.openqa.selenium.Dimension;
                         import org.openqa.selenium.WebDriver;
 
+                        // TODO unified: was a window size: the viewport is now exactly 1024 × 800, about 143 px taller than before on Chrome
                         @UnifiedUITest
+                        @Viewport(width = 1024, height = 800)
                         public abstract class AbstractIT<E extends TestBenchElement> {
 
                             void setup(UnifiedPage page) throws Exception {
-                                TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
-                                // TODO unified: TestBench Escape Hatch: getDriver()
-                                testBench.getDriver().manage().window().setSize(new Dimension(1024, 800));
                             }
 
                             public TestBenchDriverProxy getDriver(UnifiedPage page) {
