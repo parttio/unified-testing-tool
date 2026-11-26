@@ -81,8 +81,11 @@ Then:
 2. Run it on Browserless:
 
    ```bash
-   mvn -o -q -pl unified-test-demo test -Dtest=ProfileViewTest
+   mvn -o -q -pl unified-test-demo test -Dtest=ProfileViewTest -Dvaadin.testing.timeout=2s
    ```
+
+   A failed lookup waits for the timeout (10 s by default) in case the component is still coming. That is why the run
+   uses 2 s: ten silent seconds on stage feel long. Say why it waits.
 
    Read the failure aloud: `Failed at` (the User Step), `Expected`, `Found none`, `Nearby` (the Near Miss),
    `Did you mean find(UnifiedTextField.class).withLabel("Email")`. Scroll to the Findable View: one line per
