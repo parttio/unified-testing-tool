@@ -3,7 +3,7 @@ package org.vaadin.addons.unified.rewrite;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
-import org.openrewrite.java.JavaIsoVisitor;
+import org.openrewrite.java.JavaVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.tree.J;
 
@@ -27,12 +27,12 @@ public class ViewportsWritten extends Recipe {
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaIsoVisitor<>() {
+        return new JavaVisitor<ExecutionContext>() {
             private static final String NEEDS_BROWSER = "unified.viewport.needs-browser";
 
             @Override
-            public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
-                J.ClassDeclaration c = super.visitClassDeclaration(classDecl, ctx);
+            public J visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
+                J.ClassDeclaration c = (J.ClassDeclaration) super.visitClassDeclaration(classDecl, ctx);
                 if (getCursor().getMessage(NEEDS_BROWSER) != null) { // a helper resizes: the class's tests need a browser
                     c = requiresBrowser(c);
                 }
@@ -48,9 +48,9 @@ public class ViewportsWritten extends Recipe {
             }
 
             @Override
-            public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
+            public J visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 var markers = MigrationMarkers.collect(getCursor());
-                J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
+                J.MethodDeclaration m = (J.MethodDeclaration) super.visitMethodDeclaration(method, ctx);
                 java.util.List<String> unplaced = withoutScreenFilling(m, markers);
                 m = MigrationMarkers.write(withoutScreenFilling(m), markers);
                 for (String note : unplaced) {
@@ -82,8 +82,11 @@ public class ViewportsWritten extends Recipe {
              * {@code page.setViewport(w, h)}, in a method with the page.
              */
             @Override
-            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
-                J.MethodInvocation m = super.visitMethodInvocation(method, ctx);
+            public J visitMethodInvocation(J.MethodInvocation method, ExecutionContext ctx) {
+                J visited = super.visitMethodInvocation(method, ctx);
+                if (!(visited instanceof J.MethodInvocation m)) {
+                    return visited;
+                }
                 J.MethodDeclaration enclosing = getCursor().firstEnclosing(J.MethodDeclaration.class);
                 String page = enclosing == null ? null : Pages.parameterName(enclosing);
                 String dimension = Viewports.windowDimension(m);
@@ -150,6 +153,24 @@ public class ViewportsWritten extends Recipe {
                 }
                 return kept.size() == m.getBody().getStatements().size() ? m
                         : m.withBody(m.getBody().withStatements(kept));
+            }
+
+            /** Playwright's {@code page.viewportSize().width} → {@code page.viewport().width()}, in a method with the page. */
+            @Override
+            public J visitFieldAccess(J.FieldAccess fieldAccess, ExecutionContext ctx) {
+                J visited = super.visitFieldAccess(fieldAccess, ctx);
+                J.MethodDeclaration enclosing = getCursor().firstEnclosing(J.MethodDeclaration.class);
+                String page = enclosing == null ? null : Pages.parameterName(enclosing);
+                if (page == null || !(visited instanceof J.FieldAccess f) || !Viewports.isPlaywrightViewportDimension(f)) {
+                    return visited;
+                }
+                getCursor().putMessageOnFirstEnclosing(J.MethodDeclaration.class, NEEDS_BROWSER, true);
+                return JavaTemplate.builder("#{any(" + TestBenchSetupToUnified.UNIFIED_PAGE + ")}.viewport()."
+                                + f.getSimpleName() + "()")
+                        .javaParser(Stubs.parser())
+                        .build()
+                        .apply(getCursor(), f.getCoordinates().replace(), Stubs.page(page))
+                        .withPrefix(f.getPrefix());
             }
 
             private <T extends J> T requiresBrowser(T tree) {

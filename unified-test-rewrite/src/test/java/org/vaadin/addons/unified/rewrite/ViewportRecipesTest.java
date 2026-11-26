@@ -436,4 +436,47 @@ class ViewportRecipesTest implements RewriteTest {
                 }
                 """));
     }
+
+    @Test
+    void aPlaywrightViewportSizeIsReadAsTheViewport() {
+        rewriteRun(ViewportRecipesTest::dramafinder, java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opensPeople() {
+                        navigate(PeopleView.class);
+                        if (page.viewportSize().width < 600 || page.viewportSize().height < 600) {
+                            assertAt(PeopleView.class);
+                        }
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.RequiresBrowser;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    @RequiresBrowser
+                    void opensPeople(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        if (page.viewport().width() < 600 || page.viewport().height() < 600) {
+                            assertThat(page).isAt(PeopleView.class);
+                        }
+                    }
+                }
+                """));
+    }
 }

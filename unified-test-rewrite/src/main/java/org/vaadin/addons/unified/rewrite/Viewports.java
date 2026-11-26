@@ -107,6 +107,13 @@ final class Viewports {
         return m.getSimpleName().equals("getWidth") ? "width" : "height";
     }
 
+    /** Playwright's {@code page.viewportSize().width} or {@code .height}. */
+    static boolean isPlaywrightViewportDimension(J.FieldAccess f) {
+        return (f.getSimpleName().equals("width") || f.getSimpleName().equals("height"))
+                && f.getTarget() instanceof J.MethodInvocation size && size.getSimpleName().equals("viewportSize")
+                && size.getMethodType() != null && TypeUtils.isOfClassType(size.getMethodType().getDeclaringType(), PLAYWRIGHT_PAGE);
+    }
+
     /** {@code maximize} or {@code fullscreen} when the statement is Selenium's {@code window().maximize()} or such. */
     static String screenFilling(Statement statement) {
         return statement instanceof J.MethodInvocation m && m.getArguments().stream().allMatch(a -> a instanceof J.Empty)
