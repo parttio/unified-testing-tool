@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.internal;
 
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.component.UnifiedAppLayout;
 import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
 import com.vaadin.testing.unified.component.UnifiedLogin;
@@ -27,9 +28,12 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
     /** The Wrapper types the script reports on: the Findable View's built-in ones. */
     static final List<Class<?>> TYPES = FindableView.BUILT_IN;
 
-    /** Wrapper types whose components a user doesn't act on: one over another is not an overlap. */
+    /**
+     * Wrapper types whose components a user doesn't act on: one over another is not an overlap. An app layout holds
+     * the whole page: everything is over it.
+     */
     private static final Set<Class<?>> NOT_INTERACTIVE = Set.of(UnifiedDialog.class, UnifiedConfirmDialog.class,
-            UnifiedLogin.class, UnifiedNotification.class, UnifiedMessageList.class);
+            UnifiedLogin.class, UnifiedNotification.class, UnifiedMessageList.class, UnifiedAppLayout.class);
 
     /**
      * A Layout Finding.

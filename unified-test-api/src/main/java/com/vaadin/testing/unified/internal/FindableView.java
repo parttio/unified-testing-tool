@@ -35,6 +35,7 @@ import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
+import com.vaadin.testing.unified.component.UnifiedAppLayout;
 import com.vaadin.testing.unified.component.UnifiedSideNav;
 import com.vaadin.testing.unified.component.UnifiedSideNavItem;
 import com.vaadin.testing.unified.component.UnifiedTabSheet;
@@ -54,6 +55,7 @@ import com.vaadin.testing.unified.spi.Filter;
 import com.vaadin.testing.unified.spi.GridAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
 import com.vaadin.testing.unified.spi.QuerySpec;
+import com.vaadin.testing.unified.spi.AppLayoutAccess;
 import com.vaadin.testing.unified.spi.SideNavItemAccess;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -103,7 +105,7 @@ public final class FindableView {
             UnifiedDatePicker.class, UnifiedDateTimePicker.class, UnifiedRadioButtonGroup.class,
             UnifiedCheckbox.class, UnifiedButton.class, UnifiedLink.class, UnifiedGrid.class, UnifiedTabs.class,
             UnifiedTabSheet.class, UnifiedMenuBar.class, UnifiedSideNav.class, UnifiedSideNavItem.class, UnifiedDetails.class, UnifiedUpload.class,
-            UnifiedMessageList.class, UnifiedMessageInput.class);
+            UnifiedMessageList.class, UnifiedMessageInput.class, UnifiedAppLayout.class);
 
     /**
      * Plain HTML Wrappers listed only for the components that say they are clickable (#523): a role a user
@@ -405,7 +407,8 @@ public final class FindableView {
         }
         String summary = UnifiedGrid.class.isAssignableFrom(type) ? safely(() -> grid(e), null)
                 : UnifiedMessageList.class.isAssignableFrom(type) ? safely(() -> messageList(e), null) : null;
-        String state = UnifiedSideNavItem.class.isAssignableFrom(type) ? safely(() -> sideNavItem(e), null) : null;
+        String state = UnifiedSideNavItem.class.isAssignableFrom(type) ? safely(() -> sideNavItem(e), null)
+                : UnifiedAppLayout.class.isAssignableFrom(type) ? safely(() -> appLayout(e), null) : null;
         return new Read(e, f, values, value, hidden, disabled, summary, null, state, position);
     }
 
@@ -424,6 +427,25 @@ public final class FindableView {
         }
         if (!access.get().items().isEmpty() && !access.get().isExpanded()) {
             state.add("collapsed");
+        }
+        return state.isEmpty() ? null : String.join("; ", state);
+    }
+
+    /**
+     * {@code overlay; drawer closed}: what a user sees of an app layout, when it isn't the desktop's drawer beside the
+     * content. Only a browser lays the drawer out as an overlay.
+     */
+    private static String appLayout(UnifiedElement e) {
+        Optional<AppLayoutAccess> access = e.tryUnwrap(AppLayoutAccess.class);
+        if (access.isEmpty()) {
+            return null;
+        }
+        List<String> state = new ArrayList<>();
+        if (Boolean.TRUE.equals(e.getPropertyBoolean("overlay"))) {
+            state.add("overlay");
+        }
+        if (!access.get().drawerOpened()) {
+            state.add("drawer closed");
         }
         return state.isEmpty() ? null : String.join("; ", state);
     }

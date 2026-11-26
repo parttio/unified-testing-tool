@@ -31,6 +31,7 @@ class AppLayoutTest {
         assertThat(page.find(UnifiedAppLayout.class)).isNotOverlay().isDrawerOpened();
     }
 
+    // --8<-- [start:drawerIsAnOverlay]
     @Test
     @Viewport(width = 375, height = 667, name = "phone")
     @DisplayName("At 375 px the drawer is an overlay, closed until the user opens it")
@@ -39,6 +40,7 @@ class AppLayoutTest {
 
         assertThat(page.find(UnifiedAppLayout.class)).isOverlay().isDrawerClosed();
     }
+    // --8<-- [end:drawerIsAnOverlay]
 
     @Test
     @RequiresTestingTool(TestingTool.BROWSERLESS)
@@ -55,6 +57,7 @@ class AppLayoutTest {
                 + "@RequiresBrowser to skip it on BROWSERLESS.", e.getMessage());
     }
 
+    // --8<-- [start:opensTheDrawer]
     @Test
     @Viewport(width = 375, height = 667, name = "phone")
     @DisplayName("On a phone the user opens the drawer with its toggle and closes it again")
@@ -68,6 +71,7 @@ class AppLayoutTest {
         layout.closeDrawer();
         assertThat(layout).isDrawerClosed();
     }
+    // --8<-- [end:opensTheDrawer]
 
     @Test
     @DisplayName("The user hides the drawer with its toggle and shows it again")
@@ -91,5 +95,18 @@ class AppLayoutTest {
         page.findComponent(DrawerToggle.class).element().click();
 
         assertThat(page.find(UnifiedAppLayout.class)).isDrawerClosed();
+    }
+
+    @Test
+    @Viewport(width = 375, height = 667, name = "phone")
+    @DisplayName("The Findable View says the app layout's drawer is a closed overlay")
+    void theFindableViewSaysTheDrawerIsAClosedOverlay(UnifiedPage page) {
+        page.navigate(LayoutAppLayoutView.class);
+        assertThat(page.find(UnifiedAppLayout.class)).isOverlay().isDrawerClosed();
+
+        String line = page.describe().lines().filter(l -> l.startsWith("app layout")).findFirst().orElseThrow();
+
+        assertEquals("app layout (overlay; drawer closed)  page.find(UnifiedAppLayout.class)",
+                line.replaceAll("\\s{2,}", "  "));
     }
 }

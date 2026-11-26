@@ -36,6 +36,7 @@ class MenuBarOverflowTest {
         assertEquals(ITEMS, menu.getItems());
     }
 
+    // --8<-- [start:overflowItems]
     @Test
     @Viewport(width = 375, height = 667, name = "phone")
     @DisplayName("At 375 px Share and Print move into the overflow menu, and are still the menu bar's items")
@@ -46,7 +47,9 @@ class MenuBarOverflowTest {
         assertThat(menu).hasOverflowItems("Share", "Print");
         assertEquals(ITEMS, menu.getItems());
     }
+    // --8<-- [end:overflowItems]
 
+    // --8<-- [start:clicksAnOverflowedItem]
     @Test
     @Viewport(width = 375, height = 667, name = "phone")
     @DisplayName("At 375 px the user chooses Print from the overflow menu, as clickItem(\"Print\") does at every size")
@@ -59,6 +62,7 @@ class MenuBarOverflowTest {
 
         assertThat(page.find(UnifiedSpan.class).withId("chosen")).hasText("Chose Print");
     }
+    // --8<-- [end:clicksAnOverflowedItem]
 
     @Test
     @RequiresTestingTool(TestingTool.BROWSERLESS)

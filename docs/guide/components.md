@@ -117,6 +117,24 @@ click it:
 
 `getItems(..)` and `isItemEnabled(..)` read the same now, without waiting.
 
+*(unreleased)* A menu bar too narrow for its items, as on a phone, moves the trailing ones into its overflow menu,
+"More options". They are still its items: `getItems()` lists them, never the overflow button, the same on every
+Testing Tool. In a browser, `assertThat(menu).hasOverflowItems(..)` checks which moved, in order, and
+`hasNoOverflowItems()` that they all fit; `getOverflowItems()` reads them now:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/MenuBarOverflowTest.java:overflowItems"
+```
+
+`clickItem(..)` and `isItemEnabled(..)` reach an item that moved through the overflow menu, as a user does, so the
+same line works at every [Viewport](configuration.md#viewports):
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/MenuBarOverflowTest.java:clicksAnOverflowedItem"
+```
+
+Only a browser lays the menu bar out: on Browserless, the overflow checks fail asking for `@RequiresBrowser`.
+
 ## Links
 
 `UnifiedLink` finds a `RouterLink`, an `Anchor`, or any other `<a>`: by its text, its accessible name, or where it
@@ -138,6 +156,30 @@ Tool: `profile` for a `RouterLink` to the profile view, not the absolute URL a b
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/LinkTest.java:readsALink"
 ```
+
+## App layout
+
+> **Unreleased:** on `main`, not in `0.1.0-alpha5`. See [what is unreleased](../releases/unreleased.md).
+
+`UnifiedAppLayout` is an `AppLayout`, the application's frame. On a narrow [Viewport](configuration.md#viewports) its
+drawer becomes an overlay over the content, closed until the user opens it. `assertThat(layout)` checks
+`isOverlay()` or `isNotOverlay()`, and `isDrawerOpened()` or `isDrawerClosed()`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/AppLayoutTest.java:drawerIsAnOverlay"
+```
+
+`openDrawer()`, `closeDrawer()` and `toggleDrawer()` use the layout's `DrawerToggle`, as a user does; an opened
+overlay drawer covers the toggle, so it is closed with Escape. `openDrawer()` and `closeDrawer()` do nothing when the
+drawer already is so, and a layout without a `DrawerToggle` fails them:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/AppLayoutTest.java:opensTheDrawer"
+```
+
+Browserless reads the drawer as the server has it, and opens and closes it as the browser would tell the server.
+Whether it is an overlay is up to the browser: on Browserless, `isOverlay()` fails asking for `@RequiresBrowser`. The
+[Findable View](finding-components.md) lists the layout with `(overlay)` and `(drawer closed)`.
 
 ## Side navigation
 
