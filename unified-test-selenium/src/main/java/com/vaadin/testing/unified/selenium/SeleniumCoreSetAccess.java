@@ -147,8 +147,8 @@ final class SeleniumCoreSetAccess {
         }
 
         @Override
-        public void click(List<String> path) {
-            MenuBarSubMenuElement subMenu = holding(path);
+        public void click(List<String> path, boolean throughOverflow) {
+            MenuBarSubMenuElement subMenu = holding(path, throughOverflow, "clickItem");
             if (subMenu == null) {
                 button(path.get(0)).click();
             } else {
@@ -158,8 +158,8 @@ final class SeleniumCoreSetAccess {
         }
 
         @Override
-        public boolean isEnabled(List<String> path) {
-            MenuBarSubMenuElement subMenu = holding(path);
+        public boolean isEnabled(List<String> path, boolean throughOverflow) {
+            MenuBarSubMenuElement subMenu = holding(path, throughOverflow, "isItemEnabled");
             if (subMenu == null) {
                 return enabled(button(path.get(0)));
             }
@@ -211,18 +211,21 @@ final class SeleniumCoreSetAccess {
         private MenuBarSubMenuElement open(List<String> path) {
             List<String> below = new java.util.ArrayList<>(path);
             below.add(null);
-            return holding(below);
+            return holding(below, true, null); // reading a sub-menu's items opens the menus along its path
         }
 
         /**
          * Opens the sub-menus down to the one that holds the path's last item, and returns it; null for a top-level
-         * item on the menu bar itself. A top-level item moved into the overflow menu is in the overflow button's
-         * sub-menu, which a user opens first.
+         * item on the menu bar itself. A top-level item folded into the overflow menu is in the overflow button's
+         * sub-menu, which a user opens first: only {@code throughOverflow}, else refused for {@code call}.
          */
-        private MenuBarSubMenuElement holding(List<String> path) {
+        private MenuBarSubMenuElement holding(List<String> path, boolean throughOverflow, String call) {
             MenuBarSubMenuElement subMenu = null;
             int from = 1;
             if (strings(topLevel().get("overflow")).contains(path.get(0))) {
+                if (!throughOverflow) {
+                    throw MenuBarAccess.folded(path, call);
+                }
                 subMenu = menuBar().getOverflowButton().openSubMenu();
                 from = 0;
             } else if (path.size() > 1) {

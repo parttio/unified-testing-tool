@@ -268,12 +268,16 @@ public final class BrowserQueries {
      */
     public static final String MENU_BAR_ITEMS = """
             e => {
-              const name = %s;
+              const label = %s;
+              // opening the overflow menu moves a folded item's content into it, until the next relayout: the
+              // button is empty then, so the name is read from the item's content, wherever it sits
+              const name = b => label(b) || (b.item && b.item.component ? label(b.item.component) : '')
+                  || (b.item && b.item.text) || '';
               const buttons = [...e.querySelectorAll(':scope > vaadin-menu-bar-button:not([slot="overflow"]):not([hidden])')];
               return {
                 items: buttons.map(name),
                 overflow: buttons.filter(b => b.style.visibility === 'hidden').map(name),
-                overflowButton: name(e.querySelector(':scope > vaadin-menu-bar-button[slot="overflow"]'))
+                overflowButton: label(e.querySelector(':scope > vaadin-menu-bar-button[slot="overflow"]'))
               };
             }""".formatted(ITEM_NAME);
 

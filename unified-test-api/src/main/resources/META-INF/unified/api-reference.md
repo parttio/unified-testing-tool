@@ -296,6 +296,7 @@ Menu bar, Flow's `MenuBar`. Guide: [Working with components, Buttons and menus](
 - **Actions**, each with the User Step it reports:
   - `clickItem(String, String...)`: click “… › …” in menu bar “…”
 - **Reads:** `getItems() → List<String>`, `getItems(String, String...) → List<String>`, `getOverflowItems() → List<String>`, `isItemEnabled(String, String...) → boolean`
+- **Also:** `unfoldingOverflow() → Unfolding`
 - **Checks:** those of every Wrapper, and `hasItem(String, String...)`, `hasItemDisabled(String, String...)`, `hasItemEnabled(String, String...)`, `hasItems(List<String>, String...)`, `hasItems(String...)`, `hasNoOverflowItems()`, `hasOverflowItems(String...)`
 
 ### `UnifiedMessageInput`

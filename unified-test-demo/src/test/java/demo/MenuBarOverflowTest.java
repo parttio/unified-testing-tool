@@ -3,6 +3,7 @@ package demo;
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.testing.unified.RequiresBrowser;
 import com.vaadin.testing.unified.RequiresTestingTool;
@@ -49,18 +50,35 @@ class MenuBarOverflowTest {
     }
     // --8<-- [end:overflowItems]
 
-    // --8<-- [start:clicksAnOverflowedItem]
     @Test
     @Viewport(width = 375, height = 667, name = "phone")
-    @DisplayName("At 375 px the user chooses Print from the overflow menu, as clickItem(\"Print\") does at every size")
-    void anOverflowedItemIsClickedThroughTheOverflowMenu(UnifiedPage page) {
+    @DisplayName("At 375 px Print is not on the menu bar: clicking it there fails at once, pointing to the overflow menu")
+    void aFoldedItemIsNotClickedOnTheMenuBar(UnifiedPage page) {
         page.navigate(LayoutAppLayoutView.class);
         UnifiedMenuBar menu = page.find(UnifiedMenuBar.class);
         assertThat(menu).hasOverflowItems("Share", "Print");
 
-        menu.clickItem("Print");
+        RuntimeException e = assertThrows(RuntimeException.class, () -> menu.clickItem("Print"));
+
+        assertTrue(e.getMessage().contains("“Print” is in the menu bar's overflow menu"), e.getMessage());
+        assertTrue(e.getMessage().contains("unfoldingOverflow().clickItem(\"Print\")"), e.getMessage());
+        assertThat(page.find(UnifiedSpan.class).withId("chosen")).hasText("");
+    }
+
+    // --8<-- [start:clicksAnOverflowedItem]
+    @Test
+    @Viewport(width = 375, height = 667, name = "phone")
+    @DisplayName("At 375 px the user opens the overflow menu and chooses Print, as unfoldingOverflow() says")
+    void aFoldedItemIsClickedThroughTheOverflowMenuWhenTheTestSaysSo(UnifiedPage page) {
+        page.navigate(LayoutAppLayoutView.class);
+        UnifiedMenuBar menu = page.find(UnifiedMenuBar.class);
+        assertThat(menu).hasOverflowItems("Share", "Print");
+
+        menu.unfoldingOverflow().clickItem("Print");
 
         assertThat(page.find(UnifiedSpan.class).withId("chosen")).hasText("Chose Print");
+        assertEquals(ITEMS, menu.getItems());
+        assertThat(menu).hasOverflowItems("Share", "Print");
     }
     // --8<-- [end:clicksAnOverflowedItem]
 
