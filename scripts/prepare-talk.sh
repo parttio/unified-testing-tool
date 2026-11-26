@@ -164,6 +164,8 @@ migration_worktree() {
         cd "$migration_dir" || exit 1
         find unified-test-demo/src/test/java -type f ! -path '*/demo/ProfileTestBenchTest.java' -delete
         find unified-test-demo/src/test/java -type d -empty -delete
+        # The Performance Pairs' listener and extension are registered as services; their classes are gone now
+        rm -rf unified-test-demo/src/test/resources/META-INF/services
         git add -A && git commit -q -m "Talk: the demo with one TestBench test class, before the migration" || exit 1
         # A rehearsal: downloads the rewrite plugin now, and keeps the diff as the fallback
         recipe || exit 1
@@ -171,18 +173,20 @@ migration_worktree() {
         git diff >"$out/migration/ProfileTestBenchTest.diff"
         git status --short >"$out/migration/changed-files.txt"
         # The migrated test runs on Browserless, with no TestBench licence and no browser
+        rm -rf unified-test-demo/target
         mvn -B -ntp -pl unified-test-demo test >"$out/migration/migrated-test-browserless.txt" 2>&1 || exit 1
         git reset -q --hard && git clean -qfd
     )
 }
 find_classes() {
+    rm -rf target/rewrite/datatables
     mvn -B -ntp -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:dryRun -pl unified-test-demo \
         -Drewrite.recipeArtifactCoordinates="org.vaadin.addons:unified-test-rewrite:$version" \
         -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.FindTestClassesToMigrate \
         -Drewrite.exportDatatables=true || return 1
     mkdir -p "$out/migration"
-    find target/rewrite/datatables -name 'FindTestClassesToMigrate*.csv' -exec cp {} "$out/migration/" \;
-    ls "$out"/migration/FindTestClassesToMigrate*.csv >/dev/null
+    find target/rewrite/datatables -name '*FindTestClassesToMigrate*.csv' -exec cp {} "$out/migration/" \;
+    ls "$out"/migration/*FindTestClassesToMigrate*.csv >/dev/null
 }
 if $migration; then
     step migration-worktree migration_worktree
@@ -195,7 +199,7 @@ for f in \
     evidence-playwright/report.html evidence-playwright/summary.md tool-comparison.md \
     failure-browserless.txt evidence-failure-playwright/report.html \
     viewport-comparison/viewport-comparison.html benchmark/compare-browserless-playwright.md \
-    migration/ProfileTestBenchTest.diff migration/FindTestClassesToMigrate*.csv; do
+    migration/ProfileTestBenchTest.diff migration/*FindTestClassesToMigrate*.csv; do
     for path in "$out"/$f; do
         if [ -e "$path" ]; then echo "  ${path#"$root"/}"; else echo "  (missing) target/talk/$f"; fi
     done

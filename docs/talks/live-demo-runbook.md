@@ -128,15 +128,19 @@ Work in the migration worktree (`../unified-testing-tool-talk-migration`). Its d
 
 3. `git diff`: walk through it. `BrowserTestBase` becomes `@UnifiedSpringBootTest`. `$(…Element.class)…single()`
    becomes `page.find(Unified….class)…`. The URL becomes `page.navigate(…)`. Point at any `// TODO unified:`
-   Migration Marker: what the recipe couldn't convert, left running through the Escape Hatch.
+   Migration Marker: what the recipe couldn't convert, left running through the Escape Hatch. In `pom.xml`, the recipe
+   removed the TestBench and JUnit 4 dependencies, because no test uses them any more.
 4. Run the migrated test on Browserless, with no licence and no browser:
 
    ```bash
    mvn -o -q -pl unified-test-demo test
    ```
 
+   About 15 seconds, most of them Spring starting.
+
 5. Scale it up in one sentence: the same recipe runs on a whole project. `FindTestClassesToMigrate` lists, as a dry
-   run, which classes it converts and why. Show `target/talk/migration/FindTestClassesToMigrate*.csv` from the main
+   run, which classes it converts and why. On the demo: 18 classes migrate, 2 migrate partly and 2 are
+   skipped, across TestBench, Browserless and Dramafinder. Show `target/talk/migration/*FindTestClassesToMigrate*.csv` from the main
    checkout. Then the `resolve-migration-markers` agent skill works through the markers.
 
 **Reset:** `git reset --hard && git clean -fd` in the worktree.
