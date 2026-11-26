@@ -11,7 +11,11 @@ import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 /** A test runs at an exact Viewport on every browser Testing Tool, and the server hears of a change (ADR 0011). */
 @UnifiedSpringBootTest
@@ -65,5 +69,34 @@ class ViewportTest {
 
         measures(other, "375 × 667");
         measures(page, "1024 × 768");
+    }
+
+    /**
+     * The run's browser is shared by its tests on Selenium ({@code reuse-browser}, the default): a size one test sets
+     * stays with that test.
+     */
+    @Nested
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+    class OneAfterAnother {
+
+        @Test
+        @Order(1)
+        @DisplayName("A test makes the page as small as an old phone, exactly 320 × 568")
+        void resizesToAnOldPhone(UnifiedPage page) {
+            page.navigate(ViewportView.class);
+
+            page.setViewport(320, 568);
+
+            measures(page, "320 × 568");
+        }
+
+        @Test
+        @Order(2)
+        @DisplayName("The next test starts at its own Viewport, not the size the one before left")
+        void theNextStartsAtItsOwn(UnifiedPage page) {
+            page.navigate(ViewportView.class);
+
+            measures(page, "1280 × 720");
+        }
     }
 }
