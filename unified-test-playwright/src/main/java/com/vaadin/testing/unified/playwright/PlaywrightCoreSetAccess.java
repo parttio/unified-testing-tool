@@ -223,14 +223,14 @@ final class PlaywrightCoreSetAccess {
         }
 
         @Override
-        public void click(List<String> path) {
-            MenuElement menu = holding(path);
+        public void click(List<String> path, boolean throughOverflow) {
+            MenuElement menu = holding(path, throughOverflow, "clickItem");
             (menu == null ? topLevel(path.get(0)) : item(menu, path)).click(); // Dramafinder's click waits for the round-trip
         }
 
         @Override
-        public boolean isEnabled(List<String> path) {
-            MenuElement menu = holding(path);
+        public boolean isEnabled(List<String> path, boolean throughOverflow) {
+            MenuElement menu = holding(path, throughOverflow, "isItemEnabled");
             if (menu == null) {
                 return topLevel(path.get(0)).isEnabled();
             }
@@ -259,19 +259,22 @@ final class PlaywrightCoreSetAccess {
         private MenuElement open(List<String> path) {
             List<String> below = new java.util.ArrayList<>(path);
             below.add(null);
-            return holding(below);
+            return holding(below, true, null); // reading a sub-menu's items opens the menus along its path
         }
 
         /**
          * Opens the menus down to the one that holds the path's last item, and returns it; null for a top-level item
-         * on the menu bar itself. A top-level item moved into the overflow menu is in the overflow button's menu,
-         * which a user opens first.
+         * on the menu bar itself. A top-level item folded into the overflow menu is in the overflow button's menu,
+         * which a user opens first: only {@code throughOverflow}, else refused for {@code call}.
          */
-        private MenuElement holding(List<String> path) {
+        private MenuElement holding(List<String> path, boolean throughOverflow, String call) {
             java.util.Map<?, ?> top = topLevel();
             MenuElement menu = null;
             int from = 1;
             if (strings(top.get("overflow")).contains(path.get(0))) {
+                if (!throughOverflow) {
+                    throw MenuBarAccess.folded(path, call);
+                }
                 menu = bar().openSubMenu((String) top.get("overflowButton"));
                 from = 0;
             } else if (path.size() > 1) {

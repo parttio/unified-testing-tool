@@ -126,14 +126,18 @@ Testing Tool. In a browser, `assertThat(menu).hasOverflowItems(..)` checks which
 --8<-- "unified-test-demo/src/test/java/demo/MenuBarOverflowTest.java:overflowItems"
 ```
 
-`clickItem(..)` and `isItemEnabled(..)` reach an item that moved through the overflow menu, as a user does, so the
-same line works at every [Viewport](configuration.md#viewports):
+The API works on what the user sees: in a browser, `clickItem("Print")` on an item that moved fails at once, since
+the user doesn't see it on the menu bar, and says to open the overflow menu. `unfoldingOverflow()` is how a test says
+it does: `menu.unfoldingOverflow().clickItem("Print")` opens "More options" first for an item that moved, and clicks it
+where it is otherwise, so the same line works at every [Viewport](configuration.md#viewports). It has `isItemEnabled(..)`
+too:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/MenuBarOverflowTest.java:clicksAnOverflowedItem"
 ```
 
-Only a browser lays the menu bar out: on Browserless, the overflow checks fail asking for `@RequiresBrowser`.
+Only a browser lays the menu bar out: on Browserless nothing moves, `clickItem(..)` reaches every item, and the overflow
+checks fail asking for `@RequiresBrowser`.
 
 ## Links
 

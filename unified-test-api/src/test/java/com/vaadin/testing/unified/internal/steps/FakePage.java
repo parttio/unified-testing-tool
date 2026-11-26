@@ -332,10 +332,10 @@ final class FakePage {
             }
 
             @Override
-            public void click(List<String> path) { }
+            public void click(List<String> path, boolean throughOverflow) { }
 
             @Override
-            public boolean isEnabled(List<String> path) {
+            public boolean isEnabled(List<String> path, boolean throughOverflow) {
                 return !List.of(component.getOrDefault("disabled", "").split(",")).contains(String.join("/", path));
             }
         };

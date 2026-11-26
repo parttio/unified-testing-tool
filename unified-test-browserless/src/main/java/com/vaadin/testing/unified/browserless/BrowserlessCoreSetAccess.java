@@ -232,7 +232,7 @@ final class BrowserlessCoreSetAccess {
         }
 
         @Override
-        public void click(List<String> path) {
+        public void click(List<String> path, boolean throughOverflow) { // no layout: nothing is folded
             session.act(menuBar, () -> {
                 List<MenuItem> chosen = resolve(path);
                 int[] positions = new int[path.size()];
@@ -248,7 +248,7 @@ final class BrowserlessCoreSetAccess {
         }
 
         @Override
-        public boolean isEnabled(List<String> path) {
+        public boolean isEnabled(List<String> path, boolean throughOverflow) {
             return resolve(path).get(path.size() - 1).isEnabled();
         }
 

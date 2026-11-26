@@ -28,9 +28,34 @@ public interface UnifiedMenuBar extends UnifiedWrapper, CommonFilters<UnifiedMen
     }
 
     // actions (Auto-Wait): opens the menus along the path, as a user would
+    /**
+     * Fails at once on an item the menu bar has folded into its overflow menu, which the user doesn't see on it: use
+     * {@link #unfoldingOverflow()}.
+     */
     default void clickItem(String topLevel, String... nested) {
-        List<String> path = path(topLevel, nested);
-        Wrappers.lazyElementOf(this).act("click " + path + " in", e -> e.unwrap(MenuBarAccess.class).click(path));
+        click(this, path(topLevel, nested), false);
+    }
+
+    /**
+     * This menu bar, reaching an item it has folded into its overflow menu ("More options") through that menu, as a
+     * user does when they open it: {@code menu.unfoldingOverflow().clickItem("Print")} works at every Viewport. Without
+     * it, a click on a folded item fails (ADR 0011).
+     */
+    default Unfolding unfoldingOverflow() {
+        return new Unfolding(this);
+    }
+
+    /** A menu bar whose folded items are reached through its overflow menu: {@link #unfoldingOverflow()}. */
+    record Unfolding(UnifiedMenuBar menuBar) {
+        /** {@link UnifiedMenuBar#clickItem}, opening "More options" first for a folded item. */
+        public void clickItem(String topLevel, String... nested) {
+            click(menuBar, path(topLevel, nested), true);
+        }
+
+        /** {@link UnifiedMenuBar#isItemEnabled}, opening "More options" first for a folded item. */
+        public boolean isItemEnabled(String topLevel, String... nested) {
+            return menuBar.element().unwrap(MenuBarAccess.class).isEnabled(path(topLevel, nested), true);
+        }
     }
 
     // getters (immediate)
@@ -57,7 +82,12 @@ public interface UnifiedMenuBar extends UnifiedWrapper, CommonFilters<UnifiedMen
      * the menus along the path in a browser.
      */
     default boolean isItemEnabled(String topLevel, String... nested) {
-        return element().unwrap(MenuBarAccess.class).isEnabled(path(topLevel, nested));
+        return element().unwrap(MenuBarAccess.class).isEnabled(path(topLevel, nested), false);
+    }
+
+    private static void click(UnifiedMenuBar menuBar, List<String> path, boolean throughOverflow) {
+        Wrappers.lazyElementOf(menuBar).act("click " + path + " in",
+                e -> e.unwrap(MenuBarAccess.class).click(path, throughOverflow));
     }
 
     private static List<String> path(String first, String... rest) {
