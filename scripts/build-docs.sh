@@ -27,19 +27,21 @@ cp unified-test-api/src/main/resources/META-INF/unified/api-reference.md "$src"/
 cp README.md "$src"/index.md
 
 # README.md sits at the site root: docs/x -> x; the API reference is a page of the site
-sed -i -E -e 's#\]\(docs/#](#g' \
+sed -i.bak -E -e 's#\]\(docs/#](#g' \
   -e 's#\]\(unified-test-api/src/main/resources/META-INF/unified/api-reference\.md#](api-reference.md#g' "$src"/index.md
 # Pages under spec/, adr/ and guide/: ../../README.md -> ../index.md, ../../GLOSSARY.md -> ../GLOSSARY.md,
 # other ../../ links (source code) -> GitHub
-find "$src"/spec "$src"/adr "$src"/guide -name '*.md' -exec sed -i -E \
+find "$src"/spec "$src"/adr "$src"/guide -name '*.md' -exec sed -i.bak -E \
   -e 's#\]\(\.\./\.\./unified-test-api/src/main/resources/META-INF/unified/api-reference\.md#](../api-reference.md#g' \
   -e 's#\]\(\.\./\.\./README\.md#](../index.md#g' \
   -e 's#\]\(\.\./\.\./GLOSSARY\.md#](../GLOSSARY.md#g' \
   -e "s#\]\(\.\./\.\./#](${repo_url}/#g" \
   -e 's#\]\(\.\./adr\)#](../adr/index.md)#g' {} +
-sed -i -E 's#\]\(adr\)#](adr/index.md)#g' "$src"/index.md
+sed -i.bak -E 's#\]\(adr\)#](adr/index.md)#g' "$src"/index.md
 # CONTRIBUTING.md is for this repository, not the site: link it on GitHub
-sed -i -E "s#\]\(CONTRIBUTING\.md#](${repo_url}/CONTRIBUTING.md#g" "$src"/index.md
+sed -i.bak -E "s#\]\(CONTRIBUTING\.md#](${repo_url}/CONTRIBUTING.md#g" "$src"/index.md
+# -i.bak, a suffix joined to -i, is the in-place edit GNU sed and macOS (BSD) sed both read the same way
+find "$src" -name '*.bak' -delete
 
 # Index page for the ADRs
 {
