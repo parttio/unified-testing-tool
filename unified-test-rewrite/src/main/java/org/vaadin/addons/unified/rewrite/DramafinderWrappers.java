@@ -25,6 +25,7 @@ final class DramafinderWrappers {
     /** The Wrapper of any component: a raw locator's when no other has it, and a chat element's scope. */
     static final String CONTAINER = COMPONENT + "UnifiedContainer";
     static final String QUERIES = "org.vaadin.addons.dramafinder.element.query.ElementQueries";
+    static final String APP_LAYOUT_ELEMENT = ELEMENT + "AppLayoutElement";
 
     /** A Wrapper: its filters, the element methods it has (Dramafinder name to Unified name) and assertions. */
     record Wrapper(String fqn, Set<String> filters, Map<String, String> methods, Map<String, String> assertions) {
@@ -127,11 +128,18 @@ final class DramafinderWrappers {
                     with(VISIBILITY, Map.of("assertExpanded", "isExpanded", "assertCollapsed", "isCollapsed",
                             "assertCurrent", "isCurrent", "assertNotCurrent", "isNotCurrent"))),
             ELEMENT + "SideNavigationElement", new Wrapper(COMPONENT + "UnifiedSideNav",
-                    union(COMMON_FILTERS, Set.of("withLabel")), same("isVisible"), VISIBILITY)))
+                    union(COMMON_FILTERS, Set.of("withLabel")), same("isVisible"), VISIBILITY),
+            // the application's frame (#669)
+            APP_LAYOUT_ELEMENT, new Wrapper(AppLayouts.APP_LAYOUT, COMMON_FILTERS,
+                    with(same("isDrawerOpened", "openDrawer", "closeDrawer", "toggleDrawer"),
+                            // isOverlayMode: the test then requires a browser (Viewports.NeedsBrowser)
+                            Map.of("closeDrawerWithEscape", "closeDrawer", "isOverlayMode", "isOverlay")),
+                    Map.of("assertDrawerOpened", "isDrawerOpened", "assertDrawerClosed", "isDrawerClosed",
+                            "assertOverlayMode", "isOverlay", "assertNotOverlayMode", "isNotOverlay"))))
             .flatMap(m -> m.entrySet().stream()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
 
     /** Elements whose {@code get(page)} finds the first one on the page: the Wrapper finds it, and a second one fails loudly. */
-    private static final Set<String> GET_FIRST = Set.of(ELEMENT + "GridElement", ELEMENT + "LoginFormElement",
+    private static final Set<String> GET_FIRST = Set.of(APP_LAYOUT_ELEMENT, ELEMENT + "GridElement", ELEMENT + "LoginFormElement",
             ELEMENT + "LoginOverlayElement", ELEMENT + "MessageInputElement",
             ELEMENT + "MessageListElement");
 

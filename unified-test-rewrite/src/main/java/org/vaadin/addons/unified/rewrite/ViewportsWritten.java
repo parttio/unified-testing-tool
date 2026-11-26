@@ -56,7 +56,9 @@ public class ViewportsWritten extends Recipe {
                 for (String note : unplaced) {
                     m = MigrationMarkers.above(m, note);
                 }
-                boolean needsBrowser = getCursor().getMessage(NEEDS_BROWSER) != null; // before updateCursor drops it
+                boolean needsBrowser = getCursor().getMessage(NEEDS_BROWSER) != null // before updateCursor drops it
+                        || m.getMarkers().findFirst(Viewports.NeedsBrowser.class).isPresent();
+                m = m.withMarkers(m.getMarkers().removeByType(Viewports.NeedsBrowser.class));
                 var start = m.getMarkers().findFirst(Viewports.StartsAt.class);
                 if (start.isPresent()) {
                     m = m.withMarkers(m.getMarkers().removeByType(Viewports.StartsAt.class));

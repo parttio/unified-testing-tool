@@ -44,6 +44,35 @@ final class Viewports {
         }
     }
 
+    /**
+     * A test or helper that makes a check only a browser can answer, such as whether an AppLayout's drawer is an
+     * overlay (#669): read by {@link ViewportsRead} while the Testing Tool's types are still there, written as
+     * {@code @RequiresBrowser} by {@link ViewportsWritten}.
+     */
+    record NeedsBrowser(java.util.UUID id) implements org.openrewrite.marker.Marker {
+        @Override
+        public NeedsBrowser withId(java.util.UUID id) {
+            return new NeedsBrowser(id);
+        }
+
+        @Override
+        public java.util.UUID getId() {
+            return id;
+        }
+    }
+
+    /** Testing Tool methods only a browser can answer, as {@code declaring type#method}. */
+    private static final java.util.Set<String> BROWSER_ONLY = java.util.Set.of(
+            Wrappers.APP_LAYOUT_ELEMENT + "#isOverlay", DramafinderWrappers.APP_LAYOUT_ELEMENT + "#isOverlayMode",
+            DramafinderWrappers.APP_LAYOUT_ELEMENT + "#assertOverlayMode",
+            DramafinderWrappers.APP_LAYOUT_ELEMENT + "#assertNotOverlayMode");
+
+    /** Whether the call is to a Testing Tool method only a browser can answer. */
+    static boolean isBrowserOnly(J.MethodInvocation call) {
+        return call.getMethodType() != null && BROWSER_ONLY.contains(
+                call.getMethodType().getDeclaringType().getFullyQualifiedName() + "#" + call.getSimpleName());
+    }
+
     /** {@code tree} marked to start at {@code size}, with the Migration Marker {@code note} or none. */
     static <T extends J> T startsAt(T tree, Size size, String note) {
         return tree.withMarkers(tree.getMarkers().add(new StartsAt(org.openrewrite.Tree.randomId(), size, note)));

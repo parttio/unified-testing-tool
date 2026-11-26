@@ -66,6 +66,32 @@ public class ViewportsRead extends Recipe {
                 return forClass == null ? c : Viewports.startsAt(c, forClass, classNote);
             }
 
+            /** A method that makes a check only a browser can answer: marked to need one (#669). */
+            @Override
+            public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
+                J.MethodDeclaration m = super.visitMethodDeclaration(method, ctx);
+                J.ClassDeclaration enclosing = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                if (requiresBrowser(m.getLeadingAnnotations())
+                        || enclosing != null && requiresBrowser(enclosing.getLeadingAnnotations())) {
+                    return m; // already written: a converted call keeps the Testing Tool's method type
+                }
+                boolean browserOnly = new JavaIsoVisitor<java.util.concurrent.atomic.AtomicBoolean>() {
+                    @Override
+                    public J.MethodInvocation visitMethodInvocation(J.MethodInvocation call,
+                            java.util.concurrent.atomic.AtomicBoolean found) {
+                        found.compareAndSet(false, Viewports.isBrowserOnly(call));
+                        return super.visitMethodInvocation(call, found);
+                    }
+                }.reduce(m, new java.util.concurrent.atomic.AtomicBoolean()).get();
+                return browserOnly && m.getMarkers().findFirst(Viewports.NeedsBrowser.class).isEmpty()
+                        ? m.withMarkers(m.getMarkers().add(new Viewports.NeedsBrowser(org.openrewrite.Tree.randomId())))
+                        : m;
+            }
+
+            private boolean requiresBrowser(List<J.Annotation> annotations) {
+                return annotations.stream().anyMatch(a -> TypeUtils.isOfClassType(a.getType(), Viewports.REQUIRES_BROWSER));
+            }
+
             private boolean isBeforeEach(J.MethodDeclaration m) {
                 return m.getLeadingAnnotations().stream()
                         .anyMatch(a -> TypeUtils.isOfClassType(a.getType(), TestBenchSetupToUnified.BEFORE_EACH));

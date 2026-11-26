@@ -190,6 +190,10 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                     if (assertion != null && statement) {
                         return typed(assertion(m, "#{any()}", assertion, List.of(m.getSelect()), wrapper), wrapper);
                     }
+                    String drawer = drawerAction(wrapper, method);
+                    if (drawer != null) { // setDrawerOpened(true) → openDrawer(), as Dramafinder's does (#669)
+                        return onWrapper(m.withName(m.getName().withSimpleName(drawer)).withArguments(noArguments()), wrapper);
+                    }
                     String renamed = wrapper.methods().get(method.getSimpleName());
                     if (renamed != null && renamed.contains(".")) { // focus() is element().focus()
                         List<Object> parameters = new ArrayList<>(List.of(m.getSelect()));
@@ -218,9 +222,10 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
                 if (assertion != null) {
                     return typed(assertion(m, code, assertion, parameters, wrapper), wrapper);
                 }
-                List<Expression> arguments = arguments(m);
+                String drawer = drawerAction(wrapper, method);
+                List<Expression> arguments = drawer != null ? List.of() : arguments(m);
                 parameters.addAll(arguments);
-                return typed(template(code + "." + wrapper.methods().get(method.getSimpleName()) + "("
+                return typed(template(code + "." + (drawer != null ? drawer : wrapper.methods().get(method.getSimpleName())) + "("
                                 + String.join(", ", java.util.Collections.nCopies(arguments.size(), "#{any()}")) + ")", wrapper)
                         .<J>apply(getCursor(), m.getCoordinates().replace(), parameters.toArray()).withId(m.getId()), wrapper);
             }
@@ -453,9 +458,22 @@ public class DramafinderLookupsToUnified extends ScanningRecipe<Set<String>> {
         return m.getArguments().stream().filter(a -> !(a instanceof J.Empty)).toList();
     }
 
+    /**
+     * {@code setDrawerOpened(true)} or {@code (false)} on an app layout: {@code openDrawer} or {@code closeDrawer},
+     * what Dramafinder's calls (#669); else {@code null}, as for a non-literal, which stays behind the Escape Hatch.
+     */
+    private static String drawerAction(DramafinderWrappers.Wrapper wrapper, J.MethodInvocation call) {
+        return wrapper.fqn().equals(AppLayouts.APP_LAYOUT) ? AppLayouts.drawerAction(call) : null;
+    }
+
+    private static List<Expression> noArguments() {
+        return List.of(new J.Empty(org.openrewrite.Tree.randomId(), org.openrewrite.java.tree.Space.EMPTY,
+                org.openrewrite.marker.Markers.EMPTY));
+    }
+
     /** A call the Wrapper has; an assertion only as a statement of its own. */
     private static boolean supportedCall(DramafinderWrappers.Wrapper wrapper, J.MethodInvocation call, boolean statement) {
-        return wrapper.methods().containsKey(call.getSimpleName())
+        return wrapper.methods().containsKey(call.getSimpleName()) || drawerAction(wrapper, call) != null
                 || statement && wrapper.assertions().containsKey(call.getSimpleName());
     }
 

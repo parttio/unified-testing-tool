@@ -62,7 +62,9 @@ final class Wrappers {
      */
     static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst", "id");
 
-    static final String UNIFIED_TEMPLATE = "com.vaadin.testing.unified.component.UnifiedTemplate";
+    static final String APP_LAYOUT_ELEMENT = "com.vaadin.flow.component.applayout.testbench.AppLayoutElement";
+
+    static final String UNIFIED_TEMPLATE ="com.vaadin.testing.unified.component.UnifiedTemplate";
 
     private static final Set<String> COMMON_FILTERS = Set.of("withId", "withClassName", "withTheme");
 
@@ -99,6 +101,16 @@ final class Wrappers {
                     Map.of("navigate", "click"))),
             Map.entry("com.vaadin.flow.component.sidenav.testbench.SideNavElement", new Wrapper(
                     "com.vaadin.testing.unified.component.UnifiedSideNav", COMMON_FILTERS, Set.of("getLabel"))),
+            // the application's frame (#669)
+            Map.entry(APP_LAYOUT_ELEMENT, new Wrapper(
+                    AppLayouts.APP_LAYOUT, COMMON_FILTERS,
+                    // isOverlay: the test then requires a browser (Viewports.NeedsBrowser); the actions are the
+                    // Unified names AppLayouts writes
+                    Set.of("isDrawerOpened", "isOverlay", "openDrawer", "closeDrawer", "toggleDrawer"),
+                    AppLayouts::converts)),
+            // a DrawerToggle: clicking it toggles its layout's drawer; no filters, which would filter the layout
+            Map.entry("com.vaadin.flow.component.applayout.testbench.DrawerToggleElement", new Wrapper(
+                    AppLayouts.APP_LAYOUT, Set.of(), Set.of(), Map.of("click", "toggleDrawer"))),
             Map.entry("com.vaadin.flow.component.notification.testbench.NotificationElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedNotification",
                     with(COMMON_FILTERS, "withText"),
                     Set.of("getText", "isOpen"))),
