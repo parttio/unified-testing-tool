@@ -158,7 +158,7 @@ On another CI server the command is the same: give it the evidence directories t
 
 ### A weekly responsive run: comparing Viewports
 
-*(unreleased)* Whether the application still works on a phone is worth a run of its own, not a cost on every build ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)): run the same tests once per Viewport, with the [layout checks](assertions-and-waiting.md#layout) on, then `CompareRuns` compares the runs with the widest. A scheduled workflow:
+Whether the application still works on a phone is worth a run of its own, not a cost on every build ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)): run the same tests once per Viewport, with the [layout checks](assertions-and-waiting.md#layout) on, then `CompareRuns` compares the runs with the widest. A scheduled workflow:
 
 ```yaml
 name: Responsive

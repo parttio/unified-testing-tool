@@ -32,7 +32,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha6 \
       -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified
     ```
 
@@ -51,7 +51,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha6 \
       -Drewrite.activeRecipes=com.example.MigrateDramafinder
     ```
 
@@ -65,7 +65,7 @@ Commit or stash your work first: the recipe changes files in place.
         activeRecipe("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified")
     }
     dependencies {
-        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5")
+        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha6")
     }
     ```
 
@@ -113,7 +113,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `getView()` returning `"people"` | each test that doesn't navigate first starts with `page.navigate(PeopleView.class)`, when exactly one `@Route("people")` is among the migrated sources; else, with no such view, several, or one under a layout with a `@RoutePrefix`, `page.navigate("people")` |
 | `@EnabledIfSystemProperty(named = "vaadin.testing.tool", ..)` | removed: the run's Testing Tool decides |
 | test methods, `@BeforeEach` and helper methods that use the base class | a `UnifiedPage page` parameter; a `@BeforeEach` becomes a call at the start of each test |
-| `page.setViewportSize(w, h)`, `page.viewportSize().width` *(unreleased)* | the size a test starts at becomes `@Viewport(width = w, height = h)`, on the class from a `@BeforeEach`; a later resize `page.setViewport(w, h)`; `viewportSize().width` `page.viewport().width()` ([Viewports](guide/configuration.md#viewports)) |
+| `page.setViewportSize(w, h)`, `page.viewportSize().width` | the size a test starts at becomes `@Viewport(width = w, height = h)`, on the class from a `@BeforeEach`; a later resize `page.setViewport(w, h)`; `viewportSize().width` `page.viewport().width()` ([Viewports](guide/configuration.md#viewports)) |
 | `navigate(View.class)`, `assertAt(View.class)`, `assertPath(..)`, `assertQueryParameter(..)` | `page.navigate(View.class)`, `assertThat(page).isAt(View.class)`, `hasPath(..)`, `hasQueryParameter(..)` |
 | `page.navigate(getUrl() + "/plan")`, `page.navigate(getUrl() + "/plan?week=" + monday)` | `page.navigate(PlanView.class)`, `page.navigate(PlanView.class, QueryParameters.of("week", String.valueOf(monday)))` (no `String.valueOf` for a `String`), when exactly one `@Route("plan")` is among the migrated sources, as for `getView()`; else, with no such view, several, a path computed at run time, or more than one query parameter, the path after the base URL: `page.navigate("plan?week=" + monday)` |
 | `TextFieldElement.getByLabel(page, "Name")`, `getByText`, `getById`, `getByTestId`, `…Containing` | `page.find(UnifiedTextField.class).withLabel("Name")`, `withText`, `withId`, `withTestId`, `…Containing` |
@@ -128,8 +128,8 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `EmailFieldElement`, `PasswordFieldElement` | `UnifiedEmailField`, `UnifiedPasswordField`, converted as a `TextFieldElement` is |
 | `ConfirmDialogElement`: `getByHeaderText(page, s)`, `confirm()`, `reject()`, `cancel()`, `getMessage()`, `assertMessage(s)` | `page.find(UnifiedConfirmDialog.class).withHeaderTitle(s)`, `confirm()`, `reject()`, `cancel()`, `getText()`, `assertThat(d).hasText(s)`; the rest as a `DialogElement` |
 | `LoginFormElement.get(page)`, `LoginOverlayElement.get(page)`, `getByTitle(page, s)`: `login(u, p)`, `isOpen()`, `isErrorVisible()`, `assertOpen()`, `assertClosed()`, `assertErrorVisible()`, `assertNoError()`, `assertHeaderTitle(s)` | `page.find(UnifiedLogin.class)`, `withTitle(s)`: `login(u, p)`, `isOpen()`, `isError()`, `assertThat(l).isOpen()`, `isClosed()`, `hasError()`, `hasNoError()`, `hasTitle(s)` |
-| `SideNavigationItemElement.getByLabel(page, s)`: `navigate()`, `isExpanded()`, `assertExpanded()`, `assertCollapsed()`, `assertCurrent()`, `assertNotCurrent()` *(unreleased)* | `page.find(UnifiedSideNavItem.class).withLabel(s)`: `click()`, `isExpanded()`, `assertThat(i).isExpanded()`, `isCollapsed()`, `isCurrent()`, `isNotCurrent()`. `toggle()` stays Dramafinder: write `expand()` or `collapse()` by hand ([Side navigation](guide/components.md#side-navigation)) |
-| `AppLayoutElement.get(page)`: `isDrawerOpened()`, `openDrawer()`, `closeDrawer()`, `toggleDrawer()`, `closeDrawerWithEscape()`, `setDrawerOpened(true)` / `(false)`, `assertDrawerOpened()`, `assertDrawerClosed()`, `isOverlayMode()`, `assertOverlayMode()`, `assertNotOverlayMode()` *(unreleased)* | `page.find(UnifiedAppLayout.class)`: the same names, `closeDrawer()` for `closeDrawerWithEscape()`, `openDrawer()` / `closeDrawer()`, `assertThat(l).isDrawerOpened()`, `isDrawerClosed()`, `isOverlay()`, `assertThat(l).isOverlay()`, `isNotOverlay()`; an overlay check adds `@RequiresBrowser` to the test. `setDrawerOpened(b)` with a variable, `clickBackdrop()` and the locator getters stay Dramafinder ([App layout](guide/components.md#app-layout)) |
+| `SideNavigationItemElement.getByLabel(page, s)`: `navigate()`, `isExpanded()`, `assertExpanded()`, `assertCollapsed()`, `assertCurrent()`, `assertNotCurrent()` | `page.find(UnifiedSideNavItem.class).withLabel(s)`: `click()`, `isExpanded()`, `assertThat(i).isExpanded()`, `isCollapsed()`, `isCurrent()`, `isNotCurrent()`. `toggle()` stays Dramafinder: write `expand()` or `collapse()` by hand ([Side navigation](guide/components.md#side-navigation)) |
+| `AppLayoutElement.get(page)`: `isDrawerOpened()`, `openDrawer()`, `closeDrawer()`, `toggleDrawer()`, `closeDrawerWithEscape()`, `setDrawerOpened(true)` / `(false)`, `assertDrawerOpened()`, `assertDrawerClosed()`, `isOverlayMode()`, `assertOverlayMode()`, `assertNotOverlayMode()` | `page.find(UnifiedAppLayout.class)`: the same names, `closeDrawer()` for `closeDrawerWithEscape()`, `openDrawer()` / `closeDrawer()`, `assertThat(l).isDrawerOpened()`, `isDrawerClosed()`, `isOverlay()`, `assertThat(l).isOverlay()`, `isNotOverlay()`; an overlay check adds `@RequiresBrowser` to the test. `setDrawerOpened(b)` with a variable, `clickBackdrop()` and the locator getters stay Dramafinder ([App layout](guide/components.md#app-layout)) |
 | a local `TextFieldElement name = ...` | `UnifiedTextField name = page.find(..)...` |
 | `GridElement.get(page)` | `page.find(UnifiedGrid.class)` |
 | `grid.findRow(i).orElseThrow()` | `grid.row(i)` |
@@ -142,7 +142,7 @@ On Gradle, make it the `activeRecipe` and run `gradle rewriteDryRun`: the patch 
 | `assertThat(list.getMessage(i)).containsText(s)`, `hasText(s)` | `assertThat(list.message(i)).hasTextContaining(s)`, `hasText(s)`: both count from 0 |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()`, `waitForGridToStopLoading()`, `scrollToRow(i)` | removed: Auto-Wait |
 
-A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays, except a chat element's `get(..)` inside an id or test id locator). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog, ConfirmDialog, LoginForm and LoginOverlay, Grid, MessageInput and MessageList, SideNavigation and SideNavigationItem, AppLayout *(unreleased)*; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
+A lookup converts only when its Wrapper has every call the test makes on what it finds, and only on the test's page (a lookup inside a `Locator` or another element stays, except a chat element's `get(..)` inside an id or test id locator). The Wrappers the recipe knows today: TextField, TextArea, Button, Notification, Checkbox, Dialog, ConfirmDialog, LoginForm and LoginOverlay, Grid, MessageInput and MessageList, SideNavigation and SideNavigationItem, AppLayout; other components stay behind the Escape Hatch. The full list of what the recipe writes is in [Appendix: mapping](spec/appendix-mapping.md#dramafinder-calls-the-migration-recipe-converts).
 
 A test class that uses a base class member the recipe doesn't convert (`loginAs(..)`, `newPageAs(..)`, `getBrowser()`, an override of `prepareBrowserContext(..)`, a `getView()` that computes its view) is left as it is, with a Migration Marker above the class naming those members (`// TODO unified: not migrated: calls loginAs(..) of SpringPlaywrightIT; ...`): convert those by hand (`openAsUser(..)` for another user, [users](spec/11-users.md)), then run the migration again. `getUrl()` is one of them only where the test does something else with it than `page.navigate(getUrl() + ..)`, such as keep it in a variable. A `setupTest()` override that seeds data and then calls `super.setupTest()` is not one of them: it becomes a plain `@BeforeEach` without the `super.setupTest()`, since each test now navigates itself.
 

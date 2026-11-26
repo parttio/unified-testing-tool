@@ -72,8 +72,8 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | dialog `assertOpen` / `assertClosed` / `assertHeaderText`, `getHeaderText()`, `closeWithEscape()` | `isOpen` / `isClosed` / `hasHeaderTitle`, `getHeaderTitle()`, `close()` |
 | confirm dialog: as a dialog, and `confirm()` / `reject()` / `cancel()`, `getMessage()`, `assertMessage(s)` | `UnifiedConfirmDialog`: `confirm()` / `reject()` / `cancel()`, `getText()`, `hasText(s)` |
 | login form or overlay: `login(u, p)`, `isErrorVisible()`, `assertErrorVisible` / `assertNoError`, overlay `getByTitle(page, s)` / `assertHeaderTitle` | `UnifiedLogin`: `login(u, p)`, `isError()`, `hasError` / `hasNoError`, `withTitle(s)` / `hasTitle` |
-| side navigation item: `getByLabel(page, s)`, `navigate()`, `isExpanded()`, `assertExpanded` / `assertCollapsed`, `assertCurrent` / `assertNotCurrent` *(unreleased)* | `UnifiedSideNavItem`: `withLabel(s)`, `click()`, `isExpanded()`, `isExpanded` / `isCollapsed`, `isCurrent` / `isNotCurrent` |
-| `AppLayoutElement.get(page)`: `isDrawerOpened()`, `openDrawer()` / `closeDrawer()` / `toggleDrawer()`, `closeDrawerWithEscape()`, `setDrawerOpened(true)` / `(false)`, `assertDrawerOpened` / `assertDrawerClosed`, `isOverlayMode()`, `assertOverlayMode` / `assertNotOverlayMode` *(unreleased)* | `page.find(UnifiedAppLayout.class)`: the same names, `closeDrawer()`, `openDrawer()` / `closeDrawer()`, `isDrawerOpened` / `isDrawerClosed`, `isOverlay()`, `isOverlay` / `isNotOverlay`, and `@RequiresBrowser` (see [App layout](#app-layout-the-migration-recipes-convert)) |
+| side navigation item: `getByLabel(page, s)`, `navigate()`, `isExpanded()`, `assertExpanded` / `assertCollapsed`, `assertCurrent` / `assertNotCurrent` | `UnifiedSideNavItem`: `withLabel(s)`, `click()`, `isExpanded()`, `isExpanded` / `isCollapsed`, `isCurrent` / `isNotCurrent` |
+| `AppLayoutElement.get(page)`: `isDrawerOpened()`, `openDrawer()` / `closeDrawer()` / `toggleDrawer()`, `closeDrawerWithEscape()`, `setDrawerOpened(true)` / `(false)`, `assertDrawerOpened` / `assertDrawerClosed`, `isOverlayMode()`, `assertOverlayMode` / `assertNotOverlayMode` | `page.find(UnifiedAppLayout.class)`: the same names, `closeDrawer()`, `openDrawer()` / `closeDrawer()`, `isDrawerOpened` / `isDrawerClosed`, `isOverlay()`, `isOverlay` / `isNotOverlay`, and `@RequiresBrowser` (see [App layout](#app-layout-the-migration-recipes-convert)) |
 | notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
 | `GridElement.get(page)` | `page.find(UnifiedGrid.class)` (no marker: a second grid fails loudly) |
@@ -93,7 +93,7 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 
 ## Viewport and window sizes the Migration Recipes convert
 
-*(unreleased)* [ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md), [#496](https://github.com/parttio/unified-testing-tool/issues/496). A test starts at one Viewport and may change it any number of times: the size it starts at becomes `@Viewport`, a later change `page.setViewport(..)`.
+[ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md), [#496](https://github.com/parttio/unified-testing-tool/issues/496). A test starts at one Viewport and may change it any number of times: the size it starts at becomes `@Viewport`, a later change `page.setViewport(..)`.
 
 | TestBench or Dramafinder | Unified API |
 |---|---|
@@ -108,7 +108,7 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 
 ## App layout the Migration Recipes convert
 
-*(unreleased)* [#669](https://github.com/parttio/unified-testing-tool/issues/669). The Unified API opens and closes the drawer as a user does: it clicks the DrawerToggle, or presses Escape on an opened overlay.
+[#669](https://github.com/parttio/unified-testing-tool/issues/669). The Unified API opens and closes the drawer as a user does: it clicks the DrawerToggle, or presses Escape on an opened overlay.
 
 | TestBench | Dramafinder | Unified API |
 |---|---|---|

@@ -14,7 +14,7 @@ Each assertion retries until it holds or the timeout (10 s by default) passes, t
 
 | Wrapper | Assertions (besides the common ones) |
 |---|---|
-| every Wrapper | `exists()`, `doesNotExist()`, `hasCount(n)`, `isVisible()`, `isHidden()`, `isEnabled()`, `isDisabled()`, `hasText(..)`, `hasTextContaining(..)`, `hasProperty(name, value)`, `hasCssValue(..)` (browser only), `isInViewport()`, `isNotClipped()` (browser only, *unreleased*, [Layout](#layout)) |
+| every Wrapper | `exists()`, `doesNotExist()`, `hasCount(n)`, `isVisible()`, `isHidden()`, `isEnabled()`, `isDisabled()`, `hasText(..)`, `hasTextContaining(..)`, `hasProperty(name, value)`, `hasCssValue(..)` (browser only), `isInViewport()`, `isNotClipped()` (browser only, [Layout](#layout)) |
 | fields | `hasValue(..)`, `isEmpty()`, `isValid()`, `isInvalid()`, `hasErrorMessage(..)`, `isRequired()`, `hasLabel(..)` |
 | `UnifiedCheckbox` | `isChecked()`, `isNotChecked()`, `isIndeterminate()`, `hasLabel(..)` |
 | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | `hasSelectedItem(..)`, `hasNoSelectedItem()`, `hasItems(..)` |
@@ -28,11 +28,11 @@ Each assertion retries until it holds or the timeout (10 s by default) passes, t
 | `UnifiedGrid` | `hasRowCount(..)`, `isEmpty()`, `hasColumn(..)`, `doesNotHaveColumn(..)`, `hasColumnHeaders(..)` |
 | grid row | `exists()`, `doesNotExist()`, `hasCount(n)`, `hasCellText(column, text)`, `isSelected()`, `isNotSelected()`, `hasDetailsOpen()`, `hasDetailsClosed()` |
 | grid column | `hasCellTexts(..)`, `isSortedAscending()`, `isSortedDescending()` |
-| `UnifiedPage` | `isAt(View.class)`, `hasPath(..)`, `hasPathMatching(regex)` *(unreleased)*, `hasQueryParameter(..)`, `hasTitle(..)`, `hasNoErrors()` ([what the application logged](reports-and-failures.md#what-the-application-logged)), `hasNoHorizontalScroll()`, `hasNoLayoutFindings()` (browser only, *unreleased*, [Layout](#layout)) |
+| `UnifiedPage` | `isAt(View.class)`, `hasPath(..)`, `hasPathMatching(regex)`, `hasQueryParameter(..)`, `hasTitle(..)`, `hasNoErrors()` ([what the application logged](reports-and-failures.md#what-the-application-logged)), `hasNoHorizontalScroll()`, `hasNoLayoutFindings()` (browser only, [Layout](#layout)) |
 
 ## Layout
 
-*(unreleased)* In a browser, four assertions check the layout at the current [Viewport](configuration.md#viewports), as a user sees it ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)):
+In a browser, four assertions check the layout at the current [Viewport](configuration.md#viewports), as a user sees it ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)):
 
 - `assertThat(page).hasNoHorizontalScroll()`: neither the page nor a container in it, such as AppLayout's content area, scrolls sideways. Grid, Tabs, TabSheet and VirtualList scroll sideways by design and don't count.
 - `assertThat(page).hasNoLayoutFindings()`: no **Layout Finding**: nothing scrolls sideways, no component is clipped out of reach, and no component a user acts on overlaps another. What an open dialog or popover covers is meant to be covered.

@@ -20,7 +20,7 @@ page.find(UnifiedButton.class).withLabel("Save");     // does not compile: a but
 
 So your IDE's completion after `find(UnifiedX.class).` lists what you can filter by, next to what you can do with the component.
 
-Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedEmailField`, `UnifiedPasswordField`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedLink`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedMessageInput`, `UnifiedMessageList`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedSideNav` and `UnifiedSideNavItem` *(unreleased)*, `UnifiedAppLayout` *(unreleased)*, `UnifiedContainer` and the plain HTML Wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a Wrapper](#components-without-a-wrapper).
+Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `UnifiedTextArea`, `UnifiedEmailField`, `UnifiedPasswordField`, `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedMultiSelectComboBox`, `UnifiedRadioButtonGroup`, `UnifiedButton`, `UnifiedMenuBar`, `UnifiedLink`, `UnifiedDialog`, `UnifiedNotification`, `UnifiedDetails`, `UnifiedUpload`, `UnifiedMessageInput`, `UnifiedMessageList`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedTabs`, `UnifiedSideNav` and `UnifiedSideNavItem`, `UnifiedAppLayout`, `UnifiedContainer` and the plain HTML Wrappers (`UnifiedDiv`, `UnifiedSpan`, `UnifiedSection`, …). For any other component, see [Components without a Wrapper](#components-without-a-wrapper).
 
 ## 2. Filters
 
@@ -36,7 +36,7 @@ Wrappers live in `com.vaadin.testing.unified.component`: `UnifiedTextField`, `Un
 | `withTab("Security")` | a TabSheet or Tabs that has this tab | `page.find(UnifiedTabSheet.class).withTab("Security")` |
 | `withItem("File")` | a MenuBar that has this top-level item | `page.find(UnifiedMenuBar.class).withItem("File")` |
 | `withSummaryText("Advanced")` | a Details by its summary | `page.find(UnifiedDetails.class).withSummaryText("Advanced")` |
-| `withLabel("Orders")` *(unreleased)* | a side nav item by its own text, or a side nav by the label above its items | `page.find(UnifiedSideNavItem.class).withLabel("Orders")` |
+| `withLabel("Orders")` | a side nav item by its own text, or a side nav by the label above its items | `page.find(UnifiedSideNavItem.class).withLabel("Orders")` |
 
 A field in a FormLayout item has no label of its own: `formLayout.addFormItem(field, "Nickname")` labels the item. `withLabel` finds it by that label too, on every Testing Tool, and a failure lists it under that name:
 
@@ -188,7 +188,7 @@ A page has many "City" fields, "Save" buttons and "Email" fields. Narrow the sea
 | plain HTML Wrappers | `page.find(UnifiedSection.class)…`, `UnifiedDiv`, … | that element |
 | `findComponent(..)` result | `page.findComponent(VerticalLayout.class)…` | that component |
 | `UnifiedDetails.content()` | `details.content()` | the Details content |
-| `UnifiedSideNav`, `UnifiedSideNavItem` *(unreleased)* | `page.find(UnifiedSideNav.class).withLabel("Help")`, `page.find(UnifiedSideNavItem.class).withLabel("Admin")` | its items; an item's child items |
+| `UnifiedSideNav`, `UnifiedSideNavItem` | `page.find(UnifiedSideNav.class).withLabel("Help")`, `page.find(UnifiedSideNavItem.class).withLabel("Admin")` | its items; an item's child items |
 | `UnifiedTabSheet.content()` | `tabs.content()` | the selected tab's content |
 | Grid cells, header, row details | `row.cell("Actions")`, `column.header()`, `row.details()` | see [Grid](grid.md) |
 | a Template | `page.findTemplate(SearchBar.class)`, or a Wrapper with `TemplateScope` | its shadow root and light DOM: see [Templates](#templates) |
@@ -251,14 +251,14 @@ A `LitTemplate`'s `@Id` components live in its shadow root, and no lookup enters
 - **Ids are per Template.** The same id in two Templates is not ambiguous: the lookup only sees the Template it entered.
 - **Slotted content** (what the view adds to the Template) is found inside it, and on the page, once.
 - **A web component that renders its content in the browser** (not a `LitTemplate`) is entered the same way, but Browserless has nothing inside it: such a test declares `@RequiresBrowser`.
-- **The Template's element is its host** *(unreleased)*. `findTemplate(X.class).element()` is the `<x-tag>` element, and its `findDescendants(..)` and `findChildren(..)` stay in the light DOM, as on any element: they don't enter the shadow root. Plain HTML in the template, with no `@Id`, can't be found on any Testing Tool. Give it an `@Id` (and an `id` in the template) to reach it.
+- **The Template's element is its host**. `findTemplate(X.class).element()` is the `<x-tag>` element, and its `findDescendants(..)` and `findChildren(..)` stay in the light DOM, as on any element: they don't enter the shadow root. Plain HTML in the template, with no `@Id`, can't be found on any Testing Tool. Give it an `@Id` (and an `id` in the template) to reach it.
 - **Plain HTML in a template, in a test for one browser.** When the template can't get an `@Id`, the Escape Hatch reaches its HTML: Playwright's CSS enters open shadow roots, and TestBench's `$` on an element searches its shadow root. The Unified API won't get a lookup for it, because Browserless can't see it ([ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md), [#617](https://github.com/parttio/unified-testing-tool/issues/617)):
 
     ```java
     --8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:templateHtmlEscapeHatch"
     ```
 
-When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. The lookup names the Template's class (`findTemplate(SearchBar.class)`) even before your test has used it, when one class in your application's packages declares that `@Tag` *(unreleased)*. When no class there declares the tag, or two do, it reads `findTemplate(<the class with @Tag("search-bar")>.class)`. `describe()` on a Template lists what is inside it, by `withId(..)` first *(unreleased)*:
+When a lookup finds nothing, its failure names the Templates in which it would, with the lookup that enters them, and the Findable View lists each Template as one line. The lookup names the Template's class (`findTemplate(SearchBar.class)`) even before your test has used it, when one class in your application's packages declares that `@Tag`. When no class there declares the tag, or two do, it reads `findTemplate(<the class with @Tag("search-bar")>.class)`. `describe()` on a Template lists what is inside it, by `withId(..)` first:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/TemplateTest.java:describeTemplate"

@@ -88,7 +88,7 @@ Values typed into a password field are shown as `••••` in every report. 
 
 From then on the value is masked wherever it appears in the test's reports, in every window: `fill text field “Email” with “••••”` in the scenario above, and again in the assertion that expects it. It is masked even inside a longer word: a log line or an error that echoes it is covered.
 
-Two places keep their text *(unreleased)*:
+Two places keep their text:
 
 - **The login's user name.** A password given to `UnifiedLogin.login(..)` is not masked inside that login's own user name: `login("barista@vaadin.com", "barista")` reads `sign in as “barista@vaadin.com”`, and so does a step you named `Sign in as barista@vaadin.com`. If the password equals the user name (`admin` / `admin`), it is masked there too.
 - **The scenario's name you wrote.** A `@DisplayName`, or the method's name, is shown as written, because it comes from your source. The name of a parameterized or repeated test's invocation (`[1] barista`) is built from its arguments, so it is masked.

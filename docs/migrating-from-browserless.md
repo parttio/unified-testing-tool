@@ -32,7 +32,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha6 \
       -Drewrite.activeRecipes=org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified
     ```
 
@@ -52,7 +52,7 @@ Commit or stash your work first: the recipe changes files in place.
 
     ```bash
     mvn -U org.openrewrite.maven:rewrite-maven-plugin:6.46.1:run \
-      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5 \
+      -Drewrite.recipeArtifactCoordinates=org.vaadin.addons:unified-test-rewrite:0.1.0-alpha6 \
       -Drewrite.activeRecipes=com.example.MigrateBrowserless
     ```
 
@@ -66,7 +66,7 @@ Commit or stash your work first: the recipe changes files in place.
         activeRecipe("org.vaadin.addons.unified.rewrite.MigrateBrowserlessToUnified")
     }
     dependencies {
-        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha5")
+        rewrite("org.vaadin.addons:unified-test-rewrite:0.1.0-alpha6")
     }
     ```
 

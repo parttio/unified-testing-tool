@@ -43,7 +43,7 @@ flowchart LR
     N[mvn verify -Dvaadin.testing.tool=playwright] -->|Failsafe, nightly| P[Playwright run]
 ```
 
-All other settings stay with each tool: browser type, headless mode, TestBench license key, Browserless view packages. The Selenium adapter creates its browser itself and always runs it locally: it has no remote Selenium grid setting *(unreleased)* ([ADR 0020](../adr/0020-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md), [#645](https://github.com/parttio/unified-testing-tool/issues/645)).
+All other settings stay with each tool: browser type, headless mode, TestBench license key, Browserless view packages. The Selenium adapter creates its browser itself and always runs it locally: it has no remote Selenium grid setting ([ADR 0020](../adr/0020-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md), [#645](https://github.com/parttio/unified-testing-tool/issues/645)).
 
 ## Reaching the application
 
