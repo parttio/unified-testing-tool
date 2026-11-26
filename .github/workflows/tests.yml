@@ -230,6 +230,46 @@ jobs:
           path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 
+  # Selenium on Firefox, for what differs by browser: the exact Viewport through WebDriver BiDi, and the layout
+  # script's measurements (ADR 0011, #490). The other tests run on Chrome only.
+  selenium-firefox:
+    name: Selenium on Firefox (Viewport and layout)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VAADIN_OFFLINE_KEY: ${{ secrets.VAADIN_OFFLINE_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Cache the Maven repository
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ github.job }}-
+            ${{ runner.os }}-maven-
+      - name: Build without tests
+        run: mvn -B -ntp install -DskipTests
+      - name: Firefox version
+        run: firefox --version
+      - name: Viewport and layout tests on Selenium with Firefox (installed Firefox, driver from Selenium Manager)
+        run: >-
+          mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=selenium
+          -Dvaadin.testing.selenium.browser=firefox -Dsurefire.failIfNoSpecifiedTests=false
+          -Dtest='ViewportTest*,LayoutTest,ReachTest,LayoutChecksFilesTest*,AppLayoutTest,MenuBarOverflowTest'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports-selenium-firefox
+          path: '**/target/surefire-reports/'
+
   # after the three: where the same scenarios end differently, or take different User Steps, on two Testing Tools
   compare:
     name: Compare Testing Tools
