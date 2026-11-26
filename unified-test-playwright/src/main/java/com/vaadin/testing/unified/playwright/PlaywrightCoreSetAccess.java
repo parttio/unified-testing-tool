@@ -212,7 +212,7 @@ final class PlaywrightCoreSetAccess {
         @Override
         public List<String> items(List<String> path) {
             if (path.isEmpty()) {
-                return bar().getItemLabels();
+                return strings(topLevel().get("items"));
             }
             MenuElement menu = open(path);
             try {
@@ -224,19 +224,16 @@ final class PlaywrightCoreSetAccess {
 
         @Override
         public void click(List<String> path) {
-            if (path.size() == 1) {
-                topLevel(path.get(0)).click();
-            } else {
-                item(open(path.subList(0, path.size() - 1)), path).click();
-            } // Dramafinder's click waits for the round-trip
+            MenuElement menu = holding(path);
+            (menu == null ? topLevel(path.get(0)) : item(menu, path)).click(); // Dramafinder's click waits for the round-trip
         }
 
         @Override
         public boolean isEnabled(List<String> path) {
-            if (path.size() == 1) {
+            MenuElement menu = holding(path);
+            if (menu == null) {
                 return topLevel(path.get(0)).isEnabled();
             }
-            MenuElement menu = open(path.subList(0, path.size() - 1));
             try {
                 return item(menu, path).isEnabled();
             } finally {
@@ -244,15 +241,53 @@ final class PlaywrightCoreSetAccess {
             }
         }
 
+        @Override
+        public List<String> overflowItems() {
+            return strings(topLevel().get("overflow"));
+        }
+
+        /**
+         * The top-level items, all and in the overflow menu, and the overflow button's name, in one round trip:
+         * Dramafinder's labels include the overflow button and can't tell the overflowed items apart
+         * (parttio/dramafinder#334).
+         */
+        private java.util.Map<?, ?> topLevel() {
+            return (java.util.Map<?, ?>) locator.evaluate(BrowserQueries.MENU_BAR_ITEMS);
+        }
+
         /** Opens the menus of every item of the path; returns the last one opened. */
         private MenuElement open(List<String> path) {
-            topLevel(path.get(0));
-            MenuElement menu = bar().openSubMenu(path.get(0));
-            for (int i = 1; i < path.size(); i++) {
+            List<String> below = new java.util.ArrayList<>(path);
+            below.add(null);
+            return holding(below);
+        }
+
+        /**
+         * Opens the menus down to the one that holds the path's last item, and returns it; null for a top-level item
+         * on the menu bar itself. A top-level item moved into the overflow menu is in the overflow button's menu,
+         * which a user opens first.
+         */
+        private MenuElement holding(List<String> path) {
+            java.util.Map<?, ?> top = topLevel();
+            MenuElement menu = null;
+            int from = 1;
+            if (strings(top.get("overflow")).contains(path.get(0))) {
+                menu = bar().openSubMenu((String) top.get("overflowButton"));
+                from = 0;
+            } else if (path.size() > 1) {
+                topLevel(path.get(0));
+                menu = bar().openSubMenu(path.get(0));
+            }
+            for (int i = from; i < path.size() - 1; i++) {
                 item(menu, path.subList(0, i + 1));
                 menu = menu.openSubMenu(path.get(i));
             }
             return menu;
+        }
+
+        @SuppressWarnings("unchecked")
+        private static List<String> strings(Object list) {
+            return (List<String>) list;
         }
 
         private MenuItemElement topLevel(String name) {

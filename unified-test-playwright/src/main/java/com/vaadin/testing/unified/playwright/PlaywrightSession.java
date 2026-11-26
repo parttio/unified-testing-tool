@@ -141,7 +141,7 @@ final class PlaywrightSession implements AdapterSession {
         if (spec.inTemplate()) {
             return findInTemplate(support, scope, spec);
         }
-        if (support.dramafinderElement() != null && sameTag(support.dramafinderElement(), spec.tag())) {
+        if (support.dramafinderElement() != null) {
             return findWithDramafinder(support, scope, spec.filters());
         }
         if (spec.tag() == null) {
@@ -294,18 +294,6 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public String browserName() {
         return context.browser() == null ? null : context.browser().browserType().name();
-    }
-
-    /**
-     * Whether Dramafinder's element is for this tag: a subclass with a tag of its own, such as {@code DrawerToggle}
-     * extending {@code Button}, is found by its own tag, not as its superclass's element (#656).
-     */
-    private static boolean sameTag(Class<? extends VaadinElement> element, String tag) {
-        try {
-            return tag == null || tag.equals(element.getField("FIELD_TAG_NAME").get(null));
-        } catch (ReflectiveOperationException e) {
-            return true; // an element without its tag as a constant: as before
-        }
     }
 
     private List<UnifiedElement> findWithDramafinder(PlaywrightComponents.Support support, Locator scope,

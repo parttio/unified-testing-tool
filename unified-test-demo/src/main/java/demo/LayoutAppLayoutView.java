@@ -5,6 +5,7 @@ import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.menubar.MenuBar;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.sidenav.SideNav;
@@ -25,9 +26,11 @@ import java.util.List;
 public class LayoutAppLayoutView extends AppLayout {
 
     public LayoutAppLayoutView() {
+        Span chosen = new Span();
+        chosen.setId("chosen");
         MenuBar menu = new MenuBar();
         for (String item : List.of("File", "Edit", "View", "Insert", "Format", "Share", "Print")) {
-            menu.addItem(item);
+            menu.addItem(item, e -> chosen.setText("Chose " + item));
         }
         addToNavbar(new DrawerToggle(), menu);
         SideNav nav = new SideNav();
@@ -51,7 +54,7 @@ public class LayoutAppLayoutView extends AppLayout {
         // opens the drawer from the content, the same way on every Testing Tool
         Button openDrawer = new Button("Open the drawer", e -> setDrawerOpened(true));
         VerticalLayout content = new VerticalLayout(openDrawer, new TextField("Search"), tabs, grid, wideRow,
-                new Button("Save"));
+                new Button("Save"), chosen);
         setContent(content);
     }
 }

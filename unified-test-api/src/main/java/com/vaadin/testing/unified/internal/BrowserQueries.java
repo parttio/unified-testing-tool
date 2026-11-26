@@ -261,6 +261,23 @@ public final class BrowserQueries {
             }""";
 
     /**
+     * A {@code <vaadin-menu-bar>}'s top-level items as {@code MenuBarAccess} reads them (#493): {@code {items,
+     * overflow, overflowButton}}, the Item Names ({@link #ITEM_NAME}) of all its items, of those it has moved into its
+     * overflow menu, which it hides with {@code visibility: hidden}, and of the overflow button itself
+     * ({@code slot="overflow"}, "More options" in English), which is none of its items.
+     */
+    public static final String MENU_BAR_ITEMS = """
+            e => {
+              const name = %s;
+              const buttons = [...e.querySelectorAll(':scope > vaadin-menu-bar-button:not([slot="overflow"]):not([hidden])')];
+              return {
+                items: buttons.map(name),
+                overflow: buttons.filter(b => b.style.visibility === 'hidden').map(name),
+                overflowButton: name(e.querySelector(':scope > vaadin-menu-bar-button[slot="overflow"]'))
+              };
+            }""".formatted(ITEM_NAME);
+
+    /**
      * A {@code <vaadin-side-nav>} as {@code SideNavAccess} reads it (#658): {@code {label, items}}, its label the
      * text of its {@code slot="label"} child or null, its items its top-level items' labels ({@link #ITEM_NAME}).
      */

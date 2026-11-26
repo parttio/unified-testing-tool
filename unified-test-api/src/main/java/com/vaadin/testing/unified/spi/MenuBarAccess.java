@@ -17,4 +17,12 @@ public interface MenuBarAccess {
 
     /** Whether the user can click the last item of the path; opens the menus along it in a browser. */
     boolean isEnabled(List<String> path);
+
+    /**
+     * Item Names of the top-level items the menu bar has moved into its overflow menu ("More options") for lack of
+     * room, in order; empty when they all fit. Only a browser lays the menu bar out: the core asks a browser only.
+     */
+    default List<String> overflowItems() {
+        throw new UnsupportedOperationException("This Testing Tool can't tell which menu items overflow");
+    }
 }

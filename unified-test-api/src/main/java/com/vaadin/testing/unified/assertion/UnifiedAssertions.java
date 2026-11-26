@@ -962,6 +962,22 @@ public final class UnifiedAssertions {
 
         MenuBarAssert(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { super(menuBar); this.menuBar = menuBar; }
 
+        /**
+         * Exactly these top-level items, in this order, are in the overflow menu ("More options") for lack of room
+         * (ADR 0011). Needs {@code @RequiresBrowser}.
+         */
+        public MenuBarAssert hasOverflowItems(String... expected) {
+            run.requireBrowser("hasOverflowItems");
+            List<String> list = List.of(expected);
+            return check("to have overflow items", list, menuBar::getOverflowItems, list::equals);
+        }
+
+        /** Every top-level item fits: the overflow menu is not shown. Needs {@code @RequiresBrowser}. */
+        public MenuBarAssert hasNoOverflowItems() {
+            run.requireBrowser("hasNoOverflowItems");
+            return check("to have no overflow items", null, menuBar::getOverflowItems, v -> ((List<?>) v).isEmpty());
+        }
+
         /** Exactly these top-level items, in this order. */
         public MenuBarAssert hasItems(String... expected) {
             List<String> list = List.of(expected);
