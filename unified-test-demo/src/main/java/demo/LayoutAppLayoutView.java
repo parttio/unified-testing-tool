@@ -4,6 +4,7 @@ import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.menubar.MenuBar;
@@ -29,10 +30,15 @@ public class LayoutAppLayoutView extends AppLayout {
         Span chosen = new Span();
         chosen.setId("chosen");
         MenuBar menu = new MenuBar();
+        menu.setId("app-menu");
         for (String item : List.of("File", "Edit", "View", "Insert", "Format", "Share", "Print")) {
             menu.addItem(item, e -> chosen.setText("Chose " + item));
         }
-        addToNavbar(new DrawerToggle(), menu);
+        // items of one width, whatever the browser's font: at 375 px, exactly Share and Print overflow (#490)
+        Html fixedWidths = new Html("<style>#app-menu > vaadin-menu-bar-button:not([slot='overflow']) {"
+                + " box-sizing: border-box; width: 48px; min-width: 48px; padding: 0; overflow: hidden;"
+                + " text-overflow: ellipsis; }</style>");
+        addToNavbar(new DrawerToggle(), menu, fixedWidths);
         SideNav nav = new SideNav();
         nav.addItem(new SideNavItem("Dashboard", "dashboard"), new SideNavItem("Persons", "persons"),
                 new SideNavItem("Plan", "plan"));
