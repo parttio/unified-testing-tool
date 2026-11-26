@@ -78,7 +78,7 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
                 kinds.add(annotation.kind().isBlank() ? StepTarget.kindOf(type) : annotation.kind());
             }
         }
-        return parse(run.session().measureLayout(targets, subject), kinds);
+        return parse(run.session().measureLayout(targets, subject), (t, i) -> name(kinds, t, i));
     }
 
     /**
@@ -88,7 +88,13 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
     @SuppressWarnings("unchecked")
     static List<List<Reach>> matches(TestRun run, List<LayoutScript.Target> targets) {
         run.requireBrowser("Measuring the layout");
-        Map<String, Object> root = (Map<String, Object>) JsonReader.parse(run.session().measureLayout(targets, null));
+        return matches(run.session().measureLayout(targets, null));
+    }
+
+    /** The Reach of every match of each target in the layout script's JSON. */
+    @SuppressWarnings("unchecked")
+    static List<List<Reach>> matches(String json) {
+        Map<String, Object> root = (Map<String, Object>) JsonReader.parse(json);
         List<List<Reach>> matches = new ArrayList<>();
         for (Object list : (List<Object>) root.getOrDefault("matches", List.of())) {
             matches.add(((List<Object>) list).stream().map(m -> (Map<String, Object>) m)
@@ -100,8 +106,12 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
         return matches;
     }
 
+    /**
+     * The layout script's JSON as findings and the subject's Reach; {@code namer} names a match by its target and
+     * position.
+     */
     @SuppressWarnings("unchecked")
-    static LayoutMeasurement parse(String json, List<String> kinds) {
+    static LayoutMeasurement parse(String json, java.util.function.BiFunction<Object, Object, String> namer) {
         Map<String, Object> root = (Map<String, Object>) JsonReader.parse(json);
         List<Finding> findings = new ArrayList<>();
         for (Object f : (List<Object>) root.getOrDefault("findings", List.of())) {
@@ -111,10 +121,10 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
                     ? b.stream().map(n -> n instanceof Number num ? num.doubleValue() : 0d).toList() : List.of();
             findings.add(new Finding(kind, switch (kind) {
                 case "scroll" -> finding.get("container") + " scrolls sideways by " + number(finding.get("by")) + " px";
-                case "clipped" -> name(kinds, finding.get("target"), finding.get("index")) + " is clipped by "
+                case "clipped" -> namer.apply(finding.get("target"), finding.get("index")) + " is clipped by "
                         + finding.get("by");
-                case "overlap" -> name(kinds, finding.get("target"), finding.get("index")) + " is overlapped by "
-                        + name(kinds, finding.get("byTarget"), finding.get("byIndex"));
+                case "overlap" -> namer.apply(finding.get("target"), finding.get("index")) + " is overlapped by "
+                        + namer.apply(finding.get("byTarget"), finding.get("byIndex"));
                 default -> kind;
             }, box));
         }
@@ -125,8 +135,13 @@ public record LayoutMeasurement(List<Finding> findings, Reach subject) {
         return new LayoutMeasurement(List.copyOf(findings), subject);
     }
 
-    /** {@code the 2nd button}: a match by its Wrapper kind and position, until the Findable View names it (#494). */
-    private static String name(List<String> kinds, Object target, Object index) {
+    /** Whether the components of this Wrapper type take user actions, so that overlapping one counts. */
+    static boolean interactive(Class<?> type) {
+        return !NOT_INTERACTIVE.contains(type);
+    }
+
+    /** {@code the 2nd button}: a match by its Wrapper kind and position. */
+    static String name(List<String> kinds, Object target, Object index) {
         int t = (int) number(target);
         int i = (int) number(index);
         String kind = t >= 0 && t < kinds.size() ? kinds.get(t) : "component";

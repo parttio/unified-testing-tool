@@ -156,6 +156,67 @@ It needs `actions: read`, and the evidence artifacts named as above (`unified-ev
 
 On another CI server the command is the same: give it the evidence directories the jobs kept.
 
+### A weekly responsive run: comparing Viewports
+
+*(unreleased)* Whether the application still works on a phone is worth a run of its own, not a cost on every build ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)): run the same tests once per Viewport, with the [layout checks](assertions-and-waiting.md#layout) on, then `CompareRuns` compares the runs with the widest. A scheduled workflow:
+
+```yaml
+name: Responsive
+on:
+  schedule:
+    - cron: '17 3 * * 1'   # Mondays
+  workflow_dispatch:
+jobs:
+  viewport:
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: ['phone:375x667', 'tablet:768x1024', 'desktop:1280x720']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: >-
+          mvn -B -ntp test -Dvaadin.testing.tool=playwright
+          -Dvaadin.testing.viewport=${{ matrix.viewport }}
+          -Dvaadin.testing.layout-checks=on -Dvaadin.testing.layout-checks.screenshots=on
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unified-evidence-${{ strategy.job-index }}
+          path: target/surefire-reports/unified-evidence/
+  compare:
+    needs: viewport
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unified-evidence-*
+          path: evidence
+      - run: |
+          mvn -B -ntp -q dependency:copy -Dartifact=org.vaadin.addons:unified-test-api:<version> -DoutputDirectory=tools
+          java -cp "tools/*" com.vaadin.testing.unified.report.CompareRuns --out comparison evidence/* || [ $? -eq 2 ]
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: viewport-comparison
+          path: |
+            comparison/
+            evidence/
+```
+
+Which tests take part is the build's choice: a Maven profile or JUnit tags. A test with its own `@Viewport` runs at that size in every run and is listed as not compared.
+
+The job summary gets a table of scenarios against Viewports (✘ fails, ⚠ Layout Findings, components lost, ⑂ where the runs take other User Steps), then each finding and each lost component that needs review. `comparison/viewport-comparison.html` is the page to review: click a cell for that size against the widest. You see its screenshots side by side, its findings, the components it loses (those hidden in the AppLayout drawer or the MenuBar overflow are explained, the others need review), and the User Steps, once, forking where the runs part. Keep `evidence/` in the artifact next to it: the page links to the screenshots there. `viewport-comparison.json` is the same for an agent. It reports and fails nothing.
+
 ### Surefire and Failsafe in one build
 
 The evidence directory is `target/surefire-reports/unified-evidence` whichever plugin runs the tests. A build that runs its Browserless tests with Surefire and its ITs with Failsafe would put both phases in it: one `summary.md` with the counts of both runs, Failsafe's over Surefire's. The migration recipes give every `maven-failsafe-plugin` in `<build><plugins>` and in each profile its own directory, unless it sets one already ([#512](https://github.com/parttio/unified-testing-tool/issues/512)):

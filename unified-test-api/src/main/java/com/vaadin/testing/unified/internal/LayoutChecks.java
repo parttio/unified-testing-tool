@@ -38,11 +38,11 @@ final class LayoutChecks {
     /** Measures the run's page for the running User Step, whether or not the automatic checks are on. */
     static void measureNow(TestRun run) {
         StepRecorder steps = run.steps();
-        LayoutMeasurement measured = LayoutMeasurement.measure(run, null);
+        FindableView.Point measured = FindableView.measurePoint(run);
         int point = steps.nextLayoutPoint();
         steps.layout(new StepRecorder.Layout(point, measured.findings().stream()
                 .map(f -> new StepRecorder.LayoutFinding(f.kind(), f.text(), f.box())).toList(),
-                screenshot(run, steps.layoutScreenshots(), point)));
+                screenshot(run, steps.layoutScreenshots(), point), measured.components()));
         if (steps.layoutChecksFail() && !measured.findings().isEmpty()) {
             throw run.failure(com.vaadin.testing.unified.internal.failures.FailureParts.of(
                     "the page to have no Layout Findings", measured.findings().get(0).text()), null);
