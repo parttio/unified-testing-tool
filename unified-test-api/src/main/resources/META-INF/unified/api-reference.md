@@ -26,6 +26,17 @@ Guide: [Navigation, users and windows](https://parttio.github.io/unified-testing
 
 ## Wrappers
 
+### `UnifiedAppLayout`
+
+App layout, Flow's `AppLayout`. Guide: [Working with components, App layout](https://parttio.github.io/unified-testing-tool/guide/components/#app-layout).
+
+- **Actions**, each with the User Step it reports:
+  - `closeDrawer()`: close drawer app layout “…”
+  - `openDrawer()`: open drawer app layout “…”
+  - `toggleDrawer()`: toggle drawer app layout “…”
+- **Reads:** `isDrawerOpened() → boolean`, `isOverlay() → boolean`
+- **Checks:** those of every Wrapper, and `isDrawerClosed()`, `isDrawerOpened()`, `isNotOverlay()`, `isOverlay()`
+
 ### `UnifiedArticle`
 
 Article, Flow's `Article`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
@@ -284,8 +295,8 @@ Menu bar, Flow's `MenuBar`. Guide: [Working with components, Buttons and menus](
 - **Filters:** `withItem(String)`
 - **Actions**, each with the User Step it reports:
   - `clickItem(String, String...)`: click “… › …” in menu bar “…”
-- **Reads:** `getItems() → List<String>`, `getItems(String, String...) → List<String>`, `isItemEnabled(String, String...) → boolean`
-- **Checks:** those of every Wrapper, and `hasItem(String, String...)`, `hasItemDisabled(String, String...)`, `hasItemEnabled(String, String...)`, `hasItems(List<String>, String...)`, `hasItems(String...)`
+- **Reads:** `getItems() → List<String>`, `getItems(String, String...) → List<String>`, `getOverflowItems() → List<String>`, `isItemEnabled(String, String...) → boolean`
+- **Checks:** those of every Wrapper, and `hasItem(String, String...)`, `hasItemDisabled(String, String...)`, `hasItemEnabled(String, String...)`, `hasItems(List<String>, String...)`, `hasItems(String...)`, `hasNoOverflowItems()`, `hasOverflowItems(String...)`
 
 ### `UnifiedMessageInput`
 

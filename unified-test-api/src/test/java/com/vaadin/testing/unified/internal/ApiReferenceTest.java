@@ -70,6 +70,7 @@ class ApiReferenceTest {
                     "components.md#selection-combobox-radiobuttongroup-multiselectcombobox"),
             entry("UnifiedButton", "components.md#buttons-and-menus"),
             entry("UnifiedMenuBar", "components.md#buttons-and-menus"),
+            entry("UnifiedAppLayout", "components.md#app-layout"),
             entry("UnifiedSideNav", "components.md#side-navigation"),
             entry("UnifiedSideNavItem", "components.md#side-navigation"),
             entry("UnifiedLink", "components.md#links"),

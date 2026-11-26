@@ -136,7 +136,7 @@ final class SeleniumCoreSetAccess {
         @Override
         public List<String> items(List<String> path) {
             if (path.isEmpty()) {
-                return names(menuBar().getButtons());
+                return strings(topLevel().get("items"));
             }
             MenuBarSubMenuElement subMenu = open(path);
             try {
@@ -148,24 +148,45 @@ final class SeleniumCoreSetAccess {
 
         @Override
         public void click(List<String> path) {
-            if (path.size() == 1) {
+            MenuBarSubMenuElement subMenu = holding(path);
+            if (subMenu == null) {
                 button(path.get(0)).click();
             } else {
-                item(open(path.subList(0, path.size() - 1)), path, path.size() - 1).click();
+                item(subMenu, path, path.size() - 1).click();
             }
             session.waitForVaadin();
         }
 
         @Override
         public boolean isEnabled(List<String> path) {
-            if (path.size() == 1) {
+            MenuBarSubMenuElement subMenu = holding(path);
+            if (subMenu == null) {
                 return enabled(button(path.get(0)));
             }
             try {
-                return enabled(item(open(path.subList(0, path.size() - 1)), path, path.size() - 1));
+                return enabled(item(subMenu, path, path.size() - 1));
             } finally {
                 close();
             }
+        }
+
+        @Override
+        public List<String> overflowItems() {
+            return strings(topLevel().get("overflow"));
+        }
+
+        /**
+         * The top-level items, all and in the overflow menu, and the overflow button's name, in one round trip:
+         * TestBench's {@code getButtons()} leaves the overflowed ones out.
+         */
+        private java.util.Map<?, ?> topLevel() {
+            return (java.util.Map<?, ?>) session.js("return (" + BrowserQueries.MENU_BAR_ITEMS + ")(arguments[0]);",
+                    element);
+        }
+
+        @SuppressWarnings("unchecked")
+        private static List<String> strings(Object list) {
+            return (List<String>) list;
         }
 
         /** A disabled item keeps focus with aria-disabled, which TestBench's isEnabled() misses: #162. */
@@ -188,8 +209,26 @@ final class SeleniumCoreSetAccess {
 
         /** Opens the sub-menus along the path; returns the last one. */
         private MenuBarSubMenuElement open(List<String> path) {
-            MenuBarSubMenuElement subMenu = button(path.get(0)).openSubMenu();
-            for (int i = 1; i < path.size(); i++) {
+            List<String> below = new java.util.ArrayList<>(path);
+            below.add(null);
+            return holding(below);
+        }
+
+        /**
+         * Opens the sub-menus down to the one that holds the path's last item, and returns it; null for a top-level
+         * item on the menu bar itself. A top-level item moved into the overflow menu is in the overflow button's
+         * sub-menu, which a user opens first.
+         */
+        private MenuBarSubMenuElement holding(List<String> path) {
+            MenuBarSubMenuElement subMenu = null;
+            int from = 1;
+            if (strings(topLevel().get("overflow")).contains(path.get(0))) {
+                subMenu = menuBar().getOverflowButton().openSubMenu();
+                from = 0;
+            } else if (path.size() > 1) {
+                subMenu = button(path.get(0)).openSubMenu();
+            }
+            for (int i = from; i < path.size() - 1; i++) {
                 subMenu = item(subMenu, path, i).openSubMenu();
             }
             return subMenu;

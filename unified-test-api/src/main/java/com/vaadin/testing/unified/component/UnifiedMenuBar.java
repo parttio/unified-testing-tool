@@ -34,8 +34,18 @@ public interface UnifiedMenuBar extends UnifiedWrapper, CommonFilters<UnifiedMen
     }
 
     // getters (immediate)
-    /** The top-level items' Item Names. */
+    /** The top-level items' Item Names, those in the overflow menu included. */
     default List<String> getItems() { return element().unwrap(MenuBarAccess.class).items(List.of()); }
+
+    /**
+     * The Item Names of the top-level items moved into the overflow menu ("More options") because the menu bar is too
+     * narrow for them, in order; empty when they all fit (ADR 0011). Needs
+     * {@link com.vaadin.testing.unified.RequiresBrowser}.
+     */
+    default List<String> getOverflowItems() {
+        Wrappers.lazyElementOf(this).run().requireBrowser("getOverflowItems");
+        return element().unwrap(MenuBarAccess.class).overflowItems();
+    }
 
     /** The Item Names of the items in the sub-menu at this path; opens the menus in a browser. */
     default List<String> getItems(String topLevel, String... nested) {

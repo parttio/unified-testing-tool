@@ -39,6 +39,8 @@ Each assertion retries until it holds or the timeout (10 s by default) passes, t
 - `assertThat(wrapper).isInViewport()`: on screen without scrolling, even if something covers it.
 - `assertThat(wrapper).isNotClipped()`: no box with hidden overflow, and not the page, cuts it off. A user may have to scroll to it.
 
+Two Wrappers say how Vaadin adapts to a narrow Viewport: `assertThat(appLayout).isOverlay()` and `isDrawerClosed()` ([App layout](components.md#app-layout)), and `assertThat(menuBar).hasOverflowItems("Share", "Print")` ([Buttons and menus](components.md#buttons-and-menus)).
+
 Each measures the page in one round trip, waits for AppLayout's drawer to finish sliding, and retries until the timeout like any assertion. The failure says what it found: `the page scrolls sideways by 325 px`, `after scroll`, `clipped by div#box`.
 
 To check every page a test visits, turn on the **automatic layout checks** with `vaadin.testing.layout-checks=on` ([Configuration](configuration.md)). The layout is then measured after every navigation, reload and `setViewport`, and at `page.checkLayout()`, a User Step of its own for any other moment, such as after opening the drawer. Each Layout Finding shows in amber under the User Step that measured it, in `report.html` and `user-steps.json`. They only report, unless `vaadin.testing.layout-findings=fail` makes the step fail, and `vaadin.testing.layout-checks.screenshots=on` keeps a screenshot per measurement with the finding's box on it. With the checks off, the default, nothing is measured: no extra round trip.

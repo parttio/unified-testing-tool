@@ -10,6 +10,7 @@ import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.Viewport;
+import com.vaadin.testing.unified.component.UnifiedAppLayout;
 import com.vaadin.testing.unified.spi.LayoutScript;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import java.util.Arrays;
@@ -63,10 +64,8 @@ class LayoutScriptOnVaadinTest {
     @DisplayName("With the drawer opened at 375 px, the content's button is behind the AppLayout drawer, and no overlap")
     void openedDrawerCoversTheContent(UnifiedPage page) {
         page.navigate(LayoutAppLayoutView.class);
-        Page playwright = page.unwrap(Page.class);
-        playwright.click("vaadin-drawer-toggle");
-        // set as the drawer starts to slide in: the script itself waits for the slide to end
-        playwright.waitForSelector("vaadin-app-layout[drawer-opened]");
+        // drawer-opened is set as the drawer starts to slide in: the script itself waits for the slide to end
+        page.find(UnifiedAppLayout.class).openDrawer();
 
         JsonObject result = measure(page);
 

@@ -311,6 +311,8 @@ final class PlaywrightComponents {
                 PlaywrightCoreSetAccess.TabsAccess::new));
         register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
                 PlaywrightCoreSetAccess.DetailsAccessImpl::new));
+        register(com.vaadin.flow.component.applayout.AppLayout.class, access(com.vaadin.testing.unified.spi.AppLayoutAccess.class,
+                PlaywrightAppLayout.Access::new));
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
                 PlaywrightCoreSetAccess.MenuBarAccessImpl::new));
         register(com.vaadin.flow.component.sidenav.SideNav.class, access(com.vaadin.testing.unified.spi.SideNavAccess.class,
@@ -354,11 +356,22 @@ final class PlaywrightComponents {
         Support found = DEFAULT;
         Class<?> best = null;
         for (Map.Entry<Class<? extends Component>, Support> e : REGISTRY.entrySet()) {
-            if (e.getKey().isAssignableFrom(type) && (best == null || best.isAssignableFrom(e.getKey()))) {
+            if (e.getKey().isAssignableFrom(type) && sameTag(e.getKey(), type)
+                    && (best == null || best.isAssignableFrom(e.getKey()))) {
                 best = e.getKey();
                 found = e.getValue();
             }
         }
         return found;
+    }
+
+    /**
+     * Whether a subclass renders its superclass's element: {@code DrawerToggle} extends {@code Button} but is a
+     * {@code <vaadin-drawer-toggle>}, which Button's support, and its Dramafinder element, would not find (#656).
+     */
+    private static boolean sameTag(Class<?> registered, Class<?> type) {
+        com.vaadin.flow.component.Tag own = type.getAnnotation(com.vaadin.flow.component.Tag.class);
+        com.vaadin.flow.component.Tag theirs = registered.getAnnotation(com.vaadin.flow.component.Tag.class);
+        return own == null || theirs == null || own.value().equals(theirs.value());
     }
 }
