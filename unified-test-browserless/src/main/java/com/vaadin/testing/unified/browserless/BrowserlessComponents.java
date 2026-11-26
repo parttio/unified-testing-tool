@@ -216,6 +216,8 @@ final class BrowserlessComponents {
         register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
                 (session, c) -> new BrowserlessCoreSetAccess.DetailsAccessImpl(session,
                         (com.vaadin.flow.component.details.Details) c)));
+        register(com.vaadin.flow.component.applayout.AppLayout.class, access(com.vaadin.testing.unified.spi.AppLayoutAccess.class,
+                (session, c) -> new BrowserlessAppLayout.Access(session, (com.vaadin.flow.component.applayout.AppLayout) c)));
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
                 (session, c) -> new BrowserlessCoreSetAccess.MenuBarAccessImpl(session,
                         (com.vaadin.flow.component.menubar.MenuBar) c)));

@@ -286,6 +286,8 @@ final class SeleniumComponents {
                 (element, session) -> SeleniumTabSheetAccess.tabs(session, element)));
         register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
                 (element, session) -> new SeleniumCoreSetAccess.DetailsAccessImpl(session, element)));
+        register(com.vaadin.flow.component.applayout.AppLayout.class, access(com.vaadin.testing.unified.spi.AppLayoutAccess.class,
+                (element, session) -> new SeleniumAppLayout.Access(session, element)));
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
                 (element, session) -> new SeleniumCoreSetAccess.MenuBarAccessImpl(session, element)));
         register(com.vaadin.flow.component.sidenav.SideNav.class, access(com.vaadin.testing.unified.spi.SideNavAccess.class,

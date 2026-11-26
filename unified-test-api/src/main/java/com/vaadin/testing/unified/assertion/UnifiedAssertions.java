@@ -75,6 +75,7 @@ public final class UnifiedAssertions {
     public static DateTimePickerAssert assertThat(com.vaadin.testing.unified.component.UnifiedDateTimePicker field) { return new DateTimePickerAssert(field); }
     public static TabsAssert assertThat(com.vaadin.testing.unified.component.UnifiedTabs tabs) { return new TabsAssert(tabs); }
     public static DetailsAssert assertThat(com.vaadin.testing.unified.component.UnifiedDetails details) { return new DetailsAssert(details); }
+    public static AppLayoutAssert assertThat(com.vaadin.testing.unified.component.UnifiedAppLayout layout) { return new AppLayoutAssert(layout); }
     public static MenuBarAssert assertThat(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { return new MenuBarAssert(menuBar); }
     public static SideNavAssert assertThat(com.vaadin.testing.unified.component.UnifiedSideNav sideNav) { return new SideNavAssert(sideNav); }
     public static SideNavItemAssert assertThat(com.vaadin.testing.unified.component.UnifiedSideNavItem item) { return new SideNavItemAssert(item); }
@@ -890,6 +891,29 @@ public final class UnifiedAssertions {
 
         public DetailsAssert hasSummaryText(String expected) {
             return check("to have summary text", expected, details::getSummaryText, v -> Objects.equals(v, expected));
+        }
+    }
+
+    /** Retrying checks of an app layout's drawer (ADR 0011). */
+    public static final class AppLayoutAssert extends WrapperAssert<AppLayoutAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedAppLayout layout;
+
+        AppLayoutAssert(com.vaadin.testing.unified.component.UnifiedAppLayout layout) { super(layout); this.layout = layout; }
+
+        /** The drawer is shown ({@code UnifiedAppLayout.isDrawerOpened()}). */
+        public AppLayoutAssert isDrawerOpened() { return check("to have the drawer opened", null, layout::isDrawerOpened, Boolean.TRUE::equals); }
+        public AppLayoutAssert isDrawerClosed() { return check("to have the drawer closed", null, layout::isDrawerOpened, Boolean.FALSE::equals); }
+
+        /** The drawer is an overlay over the content, as on a narrow Viewport. Needs {@code @RequiresBrowser}. */
+        public AppLayoutAssert isOverlay() {
+            run.requireBrowser("isOverlay");
+            return check("to have an overlay drawer", null, layout::isOverlay, Boolean.TRUE::equals);
+        }
+
+        /** The drawer sits beside the content. Needs {@code @RequiresBrowser}. */
+        public AppLayoutAssert isNotOverlay() {
+            run.requireBrowser("isNotOverlay");
+            return check("not to have an overlay drawer", null, layout::isOverlay, Boolean.FALSE::equals);
         }
     }
 
