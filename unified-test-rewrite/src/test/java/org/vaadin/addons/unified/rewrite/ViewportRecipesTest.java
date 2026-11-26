@@ -479,4 +479,63 @@ class ViewportRecipesTest implements RewriteTest {
                 }
                 """));
     }
+    @Test
+    void aCopiedBaseClassThatOpensItsPagesAtASizeNamesItInTheMarkerOfTheTestsItKeepsFromMigrating() {
+        rewriteRun(ViewportRecipesTest::dramafinder, java(VIEW), java(
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Browser;
+                import org.junit.jupiter.api.BeforeEach;
+                import org.springframework.boot.test.context.SpringBootTest;
+                import org.springframework.boot.test.web.server.LocalServerPort;
+                import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+                public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+
+                    @LocalServerPort
+                    private int port;
+
+                    @Override
+                    public String getUrl() {
+                        return "http://localhost:" + port + "/";
+                    }
+
+                    @BeforeEach
+                    @Override
+                    public void setupTest() throws Exception {
+                        page = getBrowser().newContext(new Browser.NewContextOptions().setViewportSize(1920, 1080)).newPage();
+                        page.navigate(getUrl() + getView());
+                    }
+                }
+                """), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opensPeople() {
+                        navigate(PeopleView.class);
+                        assertAt(PeopleView.class);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+
+                // TODO unified: not migrated: overrides setupTest() of AbstractBasePlaywrightIT in SpringPlaywrightIT, whose pages open at 1920 × 1080: keep that with @Viewport(width = 1920, height = 1080) on the converted test; convert them by hand, then run the migration again
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opensPeople() {
+                        navigate(PeopleView.class);
+                        assertAt(PeopleView.class);
+                    }
+                }
+                """));
+    }
 }

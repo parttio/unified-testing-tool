@@ -104,7 +104,10 @@ final class DramafinderCopies {
             String label = label(s, name) + " of " + copySimpleName;
             String base = s instanceof J.MethodDeclaration m ? Dramafinder.overriddenBaseOf(copy, m) : null;
             if (base != null) {
-                blockers.add("overrides " + label(s, name) + " of " + base + " in " + copySimpleName);
+                Viewports.Size size = Viewports.contextSize(s);
+                blockers.add("overrides " + label(s, name) + " of " + base + " in " + copySimpleName + (size == null ? ""
+                        : ", whose pages open at " + size.width() + " × " + size.height() + ": keep that with @Viewport(width = "
+                                + size.width() + ", height = " + size.height() + ") on the converted test"));
             } else if (s instanceof J.VariableDeclarations v && v.getVariables().stream()
                     .anyMatch(var -> var.getInitializer() != null && usesTestBase(var.getInitializer()))) {
                 blockers.add("uses " + label + ", which uses the test base" + (onlyWritesEvidence(v)

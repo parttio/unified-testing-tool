@@ -16,6 +16,7 @@ final class Viewports {
     static final String REQUIRES_BROWSER = "com.vaadin.testing.unified.RequiresBrowser";
     static final String TESTBENCH_COMMANDS = "com.vaadin.testbench.commands.TestBenchCommands";
     static final String PLAYWRIGHT_PAGE = "com.microsoft.playwright.Page";
+    static final String PLAYWRIGHT_CONTEXT_OPTIONS = "com.microsoft.playwright.Browser.NewContextOptions";
     static final String SELENIUM_WINDOW = "org.openqa.selenium.WebDriver.Window";
     static final String SELENIUM_DIMENSION = "org.openqa.selenium.Dimension";
 
@@ -105,6 +106,31 @@ final class Viewports {
             return null;
         }
         return m.getSimpleName().equals("getWidth") ? "width" : "height";
+    }
+
+    /**
+     * The size a method of a copied {@code SpringPlaywrightIT} opens its pages at, through Playwright's
+     * {@code new Browser.NewContextOptions().setViewportSize(w, h)} in plain numbers; null when it sets none, or sets
+     * Playwright's own 1280 × 720.
+     */
+    static Size contextSize(J tree) {
+        java.util.concurrent.atomic.AtomicReference<Size> found = new java.util.concurrent.atomic.AtomicReference<>();
+        new org.openrewrite.java.JavaIsoVisitor<Integer>() {
+            @Override
+            public J.MethodInvocation visitMethodInvocation(J.MethodInvocation m, Integer p) {
+                if (m.getSimpleName().equals("setViewportSize") && m.getArguments().size() == 2 && m.getMethodType() != null
+                        && m.getMethodType().getDeclaringType().getFullyQualifiedName().replace('$', '.')
+                                .equals(PLAYWRIGHT_CONTEXT_OPTIONS)) {
+                    Integer w = intLiteral(m.getArguments().get(0));
+                    Integer h = intLiteral(m.getArguments().get(1));
+                    if (w != null && h != null && !(w == 1280 && h == 720) && found.get() == null) {
+                        found.set(new Size(w, h));
+                    }
+                }
+                return super.visitMethodInvocation(m, p);
+            }
+        }.visit(tree, 0);
+        return found.get();
     }
 
     /** Playwright's {@code page.viewportSize().width} or {@code .height}. */
