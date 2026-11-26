@@ -73,6 +73,7 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | confirm dialog: as a dialog, and `confirm()` / `reject()` / `cancel()`, `getMessage()`, `assertMessage(s)` | `UnifiedConfirmDialog`: `confirm()` / `reject()` / `cancel()`, `getText()`, `hasText(s)` |
 | login form or overlay: `login(u, p)`, `isErrorVisible()`, `assertErrorVisible` / `assertNoError`, overlay `getByTitle(page, s)` / `assertHeaderTitle` | `UnifiedLogin`: `login(u, p)`, `isError()`, `hasError` / `hasNoError`, `withTitle(s)` / `hasTitle` |
 | side navigation item: `getByLabel(page, s)`, `navigate()`, `isExpanded()`, `assertExpanded` / `assertCollapsed`, `assertCurrent` / `assertNotCurrent` *(unreleased)* | `UnifiedSideNavItem`: `withLabel(s)`, `click()`, `isExpanded()`, `isExpanded` / `isCollapsed`, `isCurrent` / `isNotCurrent` |
+| `AppLayoutElement.get(page)`: `isDrawerOpened()`, `openDrawer()` / `closeDrawer()` / `toggleDrawer()`, `closeDrawerWithEscape()`, `setDrawerOpened(true)` / `(false)`, `assertDrawerOpened` / `assertDrawerClosed`, `isOverlayMode()`, `assertOverlayMode` / `assertNotOverlayMode` *(unreleased)* | `page.find(UnifiedAppLayout.class)`: the same names, `closeDrawer()`, `openDrawer()` / `closeDrawer()`, `isDrawerOpened` / `isDrawerClosed`, `isOverlay()`, `isOverlay` / `isNotOverlay`, and `@RequiresBrowser` (see [App layout](#app-layout-the-migration-recipes-convert)) |
 | notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
 | `GridElement.get(page)` | `page.find(UnifiedGrid.class)` (no marker: a second grid fails loudly) |
@@ -104,6 +105,20 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `window().getSize().getWidth()` / `getHeight()`, Playwright `page.viewportSize().width` / `.height` | `page.viewport().width()` / `.height()`, and `@RequiresBrowser` |
 | a TestBench driver started with `--window-size=w,h` | a Migration Marker on the class pointing at `vaadin.testing.viewport` or `@Viewport` |
 | a copied `SpringPlaywrightIT` whose `setupTest()` opens its pages with `NewContextOptions().setViewportSize(w, h)` | its tests stay unmigrated, as for any `setupTest()` override; their marker names the size and the `@Viewport` to keep |
+
+## App layout the Migration Recipes convert
+
+*(unreleased)* [#669](https://github.com/parttio/unified-testing-tool/issues/669). The Unified API opens and closes the drawer as a user does: it clicks the DrawerToggle, or presses Escape on an opened overlay.
+
+| TestBench | Dramafinder | Unified API |
+|---|---|---|
+| `$(AppLayoutElement.class).single()` / `.first()` | `AppLayoutElement.get(page)` | `page.find(UnifiedAppLayout.class)` (`first()` with its `was first()` Migration Marker) |
+| `isDrawerOpened()` | `isDrawerOpened()`, `assertDrawerOpened()` / `assertDrawerClosed()` | `isDrawerOpened()`, `assertThat(layout).isDrawerOpened()` / `isDrawerClosed()` |
+| `isOverlay()` | `isOverlayMode()`, `assertOverlayMode()` / `assertNotOverlayMode()` | `isOverlay()`, `assertThat(layout).isOverlay()` / `isNotOverlay()`, and `@RequiresBrowser` on the test (on the class when a helper calls it) |
+| `setDrawerOpened(true)` / `(false)` | `setDrawerOpened(true)` / `(false)` | `openDrawer()` / `closeDrawer()`; from TestBench with a Migration Marker, as TestBench set the property |
+| | `openDrawer()`, `closeDrawer()`, `toggleDrawer()`, `closeDrawerWithEscape()` | `openDrawer()`, `closeDrawer()`, `toggleDrawer()`, `closeDrawer()` |
+| `getDrawerToggle().click()`, `$(DrawerToggleElement.class)...click()` | | `toggleDrawer()`, `page.find(UnifiedAppLayout.class).toggleDrawer()` |
+| `setDrawerOpened(b)`, `b` not a literal; `getContent()`, `isDrawerFirst()`, `setDrawerFirst(..)` | `setDrawerOpened(b)`, `b` not a literal; `clickBackdrop()`, `getNavbarLocator()`, `getDrawerLocator()`, `getContentLocator()`, ... | stay behind the Escape Hatch |
 
 ## Escape Hatch
 

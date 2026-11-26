@@ -1046,6 +1046,302 @@ class MigrateDramafinderToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void theAppLayoutBecomesTheUnifiedAppLayout() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LayoutTest extends SpringPlaywrightIT {
+                    @Test
+                    void drawerStartsOpen() {
+                        navigate(PeopleView.class);
+                        boolean opened = AppLayoutElement.get(page).isDrawerOpened();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class LayoutTest {
+                    @Test
+                    void drawerStartsOpen(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        boolean opened = page.find(UnifiedAppLayout.class).isDrawerOpened();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void appLayoutDrawerActionsKeepTheirNames() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LayoutTest extends SpringPlaywrightIT {
+                    @Test
+                    void drawer() {
+                        navigate(PeopleView.class);
+                        AppLayoutElement layout = AppLayoutElement.get(page);
+                        layout.openDrawer();
+                        layout.closeDrawer();
+                        layout.toggleDrawer();
+                        layout.closeDrawerWithEscape();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedSpringBootTest
+                class LayoutTest {
+                    @Test
+                    void drawer(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedAppLayout layout = page.find(UnifiedAppLayout.class);
+                        layout.openDrawer();
+                        layout.closeDrawer();
+                        layout.toggleDrawer();
+                        layout.closeDrawer();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void appLayoutDrawerAssertionsBecomeRetryingAssertions() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LayoutTest extends SpringPlaywrightIT {
+                    @Test
+                    void drawer() {
+                        navigate(PeopleView.class);
+                        AppLayoutElement layout = AppLayoutElement.get(page);
+                        layout.assertDrawerOpened();
+                        layout.toggleDrawer();
+                        layout.assertDrawerClosed();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class LayoutTest {
+                    @Test
+                    void drawer(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedAppLayout layout = page.find(UnifiedAppLayout.class);
+                        assertThat(layout).isDrawerOpened();
+                        layout.toggleDrawer();
+                        assertThat(layout).isDrawerClosed();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void appLayoutOverlayChecksRequireABrowser() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LayoutTest extends SpringPlaywrightIT {
+                    @Test
+                    void drawerIsAnOverlay() {
+                        navigate(PeopleView.class);
+                        AppLayoutElement layout = AppLayoutElement.get(page);
+                        boolean overlay = layout.isOverlayMode();
+                        layout.assertOverlayMode();
+                    }
+
+                    @Test
+                    void drawerIsBesideTheContent() {
+                        navigate(PeopleView.class);
+                        AppLayoutElement.get(page).assertNotOverlayMode();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.RequiresBrowser;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class LayoutTest {
+                    @Test
+                    @RequiresBrowser
+                    void drawerIsAnOverlay(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedAppLayout layout = page.find(UnifiedAppLayout.class);
+                        boolean overlay = layout.isOverlay();
+                        assertThat(layout).isOverlay();
+                    }
+
+                    @Test
+                    @RequiresBrowser
+                    void drawerIsBesideTheContent(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        assertThat(page.find(UnifiedAppLayout.class)).isNotOverlay();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void settingTheDrawerOpenedToALiteralOpensOrClosesIt() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LayoutTest extends SpringPlaywrightIT {
+                    @Test
+                    void drawer() {
+                        navigate(PeopleView.class);
+                        AppLayoutElement layout = AppLayoutElement.get(page);
+                        layout.setDrawerOpened(true);
+                        AppLayoutElement.get(page).setDrawerOpened(false);
+                    }
+
+                    @Test
+                    void drawerAsWanted() {
+                        navigate(PeopleView.class);
+                        boolean open = true;
+                        AppLayoutElement.get(page).setDrawerOpened(open);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+
+                @UnifiedSpringBootTest
+                class LayoutTest {
+                    @Test
+                    void drawer(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        UnifiedAppLayout layout = page.find(UnifiedAppLayout.class);
+                        layout.openDrawer();
+                        page.find(UnifiedAppLayout.class).closeDrawer();
+                    }
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void drawerAsWanted(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PeopleView.class);
+                        boolean open = true;
+                        // TODO unified: Dramafinder Escape Hatch: AppLayoutElement.get(playwright).setDrawerOpened(open)
+                        AppLayoutElement.get(playwright).setDrawerOpened(open);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void appLayoutCallsWithNoUnifiedFormStayBehindTheEscapeHatch() {
+        rewriteRun(java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class LayoutTest extends SpringPlaywrightIT {
+                    @Test
+                    void backdropClosesTheDrawer() {
+                        navigate(PeopleView.class);
+                        AppLayoutElement layout = AppLayoutElement.get(page);
+                        layout.clickBackdrop();
+                        layout.getNavbarLocator().isVisible();
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.microsoft.playwright.Page;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.element.AppLayoutElement;
+
+                @UnifiedSpringBootTest
+                class LayoutTest {
+                    @Test
+                    @RequiresTestingTool(TestingTool.PLAYWRIGHT)
+                    void backdropClosesTheDrawer(UnifiedPage page) {
+                        Page playwright = page.unwrap(Page.class);
+                        page.navigate(PeopleView.class);
+                        // TODO unified: Dramafinder Escape Hatch: AppLayoutElement.get(playwright)
+                        AppLayoutElement layout = AppLayoutElement.get(playwright);
+                        // TODO unified: Dramafinder Escape Hatch: layout.clickBackdrop()
+                        layout.clickBackdrop();
+                        // TODO unified: Dramafinder Escape Hatch: layout.getNavbarLocator().isVisible()
+                        layout.getNavbarLocator().isVisible();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void sideNavigationItemsBecomeUnifiedSideNavItems() {
         rewriteRun(java(VIEW), java(
                 """

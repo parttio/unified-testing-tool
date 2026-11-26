@@ -408,6 +408,195 @@ class MigrateTestBenchToUnifiedTest implements RewriteTest {
     }
 
     @Test
+    void appLayoutLookupsFindTheUnifiedAppLayout() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.applayout.testbench.AppLayoutElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class LayoutTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void drawerStartsOpen() {
+                        boolean opened = $(AppLayoutElement.class).single().isDrawerOpened();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LayoutTest {
+
+                    @Test
+                    void drawerStartsOpen(UnifiedPage page) {
+                        boolean opened = page.find(UnifiedAppLayout.class).isDrawerOpened();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void anAppLayoutOverlayCheckRequiresABrowser() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.applayout.testbench.AppLayoutElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class LayoutTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void drawerIsAnOverlay() {
+                        boolean overlay = $(AppLayoutElement.class).single().isOverlay();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.RequiresBrowser;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LayoutTest {
+
+                    @Test
+                    @RequiresBrowser
+                    void drawerIsAnOverlay(UnifiedPage page) {
+                        boolean overlay = page.find(UnifiedAppLayout.class).isOverlay();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void settingTheDrawerOpenedOpensOrClosesItAsAUserDoes() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.applayout.testbench.AppLayoutElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class LayoutTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void drawer() {
+                        AppLayoutElement layout = $(AppLayoutElement.class).single();
+                        layout.setDrawerOpened(true);
+                        layout.setDrawerOpened(false);
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LayoutTest {
+
+                    @Test
+                    void drawer(UnifiedPage page) {
+                        UnifiedAppLayout layout = page.find(UnifiedAppLayout.class);
+                        // TODO unified: was setDrawerOpened(true), which set the property; openDrawer() clicks the DrawerToggle as a user does
+                        layout.openDrawer();
+                        // TODO unified: was setDrawerOpened(false), which set the property; closeDrawer() clicks the DrawerToggle, or presses Escape on an opened overlay, as a user does
+                        layout.closeDrawer();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void clickingTheDrawerToggleTogglesTheAppLayoutDrawer() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.applayout.testbench.AppLayoutElement;
+                import com.vaadin.flow.component.applayout.testbench.DrawerToggleElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class LayoutTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void togglesTheDrawer() {
+                        $(AppLayoutElement.class).single().getDrawerToggle().click();
+                        $(DrawerToggleElement.class).first().click();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.component.UnifiedAppLayout;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LayoutTest {
+
+                    @Test
+                    void togglesTheDrawer(UnifiedPage page) {
+                        page.find(UnifiedAppLayout.class).toggleDrawer();
+                        // TODO unified: was first(); the lookup fails when several components match
+                        page.find(UnifiedAppLayout.class).toggleDrawer();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void appLayoutCallsWithNoUnifiedFormStayBehindTheEscapeHatch() {
+        rewriteRun(java(
+                """
+                import com.vaadin.flow.component.applayout.testbench.AppLayoutElement;
+                import com.vaadin.testbench.BrowserTest;
+                import com.vaadin.testbench.BrowserTestBase;
+
+                class LayoutTest extends BrowserTestBase {
+
+                    @BrowserTest
+                    void drawerComesFirst() {
+                        AppLayoutElement layout = $(AppLayoutElement.class).single();
+                        layout.setDrawerFirst(true);
+                        boolean first = layout.isDrawerFirst();
+                        layout.getContent();
+                    }
+                }
+                """,
+                """
+                import com.vaadin.flow.component.applayout.testbench.AppLayoutElement;
+                import com.vaadin.testing.unified.RequiresTestingTool;
+                import com.vaadin.testing.unified.TestingTool;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.UnifiedUITest;
+                import com.vaadin.testing.unified.selenium.TestBenchEscapeHatch;
+                import org.junit.jupiter.api.Test;
+
+                @UnifiedUITest
+                class LayoutTest {
+
+                    @Test
+                    @RequiresTestingTool(TestingTool.SELENIUM)
+                    void drawerComesFirst(UnifiedPage page) {
+                        TestBenchEscapeHatch testBench = TestBenchEscapeHatch.of(page);
+                        // TODO unified: TestBench Escape Hatch: $(AppLayoutElement.class)
+                        AppLayoutElement layout = testBench.$(AppLayoutElement.class).single();
+                        layout.setDrawerFirst(true);
+                        boolean first = layout.isDrawerFirst();
+                        layout.getContent();
+                    }
+                }
+                """));
+    }
+
+    @Test
     void assertEqualsOnValueOrTextBecomesARetryingAssertion() {
         rewriteRun(java(
                 """
