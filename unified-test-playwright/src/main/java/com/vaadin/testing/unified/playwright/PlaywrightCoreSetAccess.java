@@ -203,7 +203,11 @@ final class PlaywrightCoreSetAccess {
         }
     }
 
-    /** Through Dramafinder's MenuBarElement: items by their Item Name, each sub-menu scoped to its level. */
+    /**
+     * Through Dramafinder's MenuBarElement: items by their Item Name, each sub-menu scoped to its level. A top-level item
+     * folded into the overflow menu ("More options") is reached through that menu only when the test says so
+     * ({@code unfoldingOverflow()}, Dramafinder's too); otherwise refused with the Unified API's reason.
+     */
     record MenuBarAccessImpl(PlaywrightSession session, Locator locator) implements MenuBarAccess {
         private MenuBarElement bar() {
             return new MenuBarElement(locator);
@@ -212,9 +216,9 @@ final class PlaywrightCoreSetAccess {
         @Override
         public List<String> items(List<String> path) {
             if (path.isEmpty()) {
-                return strings(topLevel().get("items"));
+                return bar().getItemLabels();
             }
-            MenuElement menu = open(path);
+            MenuElement menu = open(barFor(path, true, null), path); // reading a sub-menu opens the menus along it
             try {
                 return menu.getItemLabels();
             } finally {
@@ -224,16 +228,21 @@ final class PlaywrightCoreSetAccess {
 
         @Override
         public void click(List<String> path, boolean throughOverflow) {
-            MenuElement menu = holding(path, throughOverflow, "clickItem");
-            (menu == null ? topLevel(path.get(0)) : item(menu, path)).click(); // Dramafinder's click waits for the round-trip
+            MenuBarElement bar = barFor(path, throughOverflow, "clickItem");
+            if (path.size() == 1) {
+                topLevel(bar, path.get(0)).click();
+            } else {
+                item(open(bar, path.subList(0, path.size() - 1)), path).click();
+            } // Dramafinder's click waits for the round-trip
         }
 
         @Override
         public boolean isEnabled(List<String> path, boolean throughOverflow) {
-            MenuElement menu = holding(path, throughOverflow, "isItemEnabled");
-            if (menu == null) {
-                return topLevel(path.get(0)).isEnabled();
+            MenuBarElement bar = barFor(path, throughOverflow, "isItemEnabled");
+            if (path.size() == 1) {
+                return topLevel(bar, path.get(0)).isEnabled();
             }
+            MenuElement menu = open(bar, path.subList(0, path.size() - 1));
             try {
                 return item(menu, path).isEnabled();
             } finally {
@@ -243,59 +252,37 @@ final class PlaywrightCoreSetAccess {
 
         @Override
         public List<String> overflowItems() {
-            return strings(topLevel().get("overflow"));
+            return bar().getOverflowItemLabels();
         }
 
         /**
-         * The top-level items, all and in the overflow menu, and the overflow button's name, in one round trip:
-         * Dramafinder's labels include the overflow button and can't tell the overflowed items apart
-         * (parttio/dramafinder#334).
+         * The menu bar to reach the path's first item on: unfolding the overflow menu for a folded item when
+         * {@code throughOverflow}, else refused for {@code call}, as on every Testing Tool.
          */
-        private java.util.Map<?, ?> topLevel() {
-            return (java.util.Map<?, ?>) locator.evaluate(BrowserQueries.MENU_BAR_ITEMS);
+        private MenuBarElement barFor(List<String> path, boolean throughOverflow, String call) {
+            if (!bar().getOverflowItemLabels().contains(path.get(0))) {
+                return bar();
+            }
+            if (!throughOverflow) {
+                throw MenuBarAccess.folded(path, call);
+            }
+            return bar().unfoldingOverflow();
         }
 
         /** Opens the menus of every item of the path; returns the last one opened. */
-        private MenuElement open(List<String> path) {
-            List<String> below = new java.util.ArrayList<>(path);
-            below.add(null);
-            return holding(below, true, null); // reading a sub-menu's items opens the menus along its path
-        }
-
-        /**
-         * Opens the menus down to the one that holds the path's last item, and returns it; null for a top-level item
-         * on the menu bar itself. A top-level item folded into the overflow menu is in the overflow button's menu,
-         * which a user opens first: only {@code throughOverflow}, else refused for {@code call}.
-         */
-        private MenuElement holding(List<String> path, boolean throughOverflow, String call) {
-            java.util.Map<?, ?> top = topLevel();
-            MenuElement menu = null;
-            int from = 1;
-            if (strings(top.get("overflow")).contains(path.get(0))) {
-                if (!throughOverflow) {
-                    throw MenuBarAccess.folded(path, call);
-                }
-                menu = bar().openSubMenu((String) top.get("overflowButton"));
-                from = 0;
-            } else if (path.size() > 1) {
-                topLevel(path.get(0));
-                menu = bar().openSubMenu(path.get(0));
-            }
-            for (int i = from; i < path.size() - 1; i++) {
+        private static MenuElement open(MenuBarElement bar, List<String> path) {
+            topLevel(bar, path.get(0));
+            MenuElement menu = bar.openSubMenu(path.get(0));
+            for (int i = 1; i < path.size(); i++) {
                 item(menu, path.subList(0, i + 1));
                 menu = menu.openSubMenu(path.get(i));
             }
             return menu;
         }
 
-        @SuppressWarnings("unchecked")
-        private static List<String> strings(Object list) {
-            return (List<String>) list;
-        }
-
-        private MenuItemElement topLevel(String name) {
-            requireName(bar().getItemLabels(), name, "menu item");
-            return bar().getMenuItemElement(name);
+        private static MenuItemElement topLevel(MenuBarElement bar, String name) {
+            requireName(bar.getItemLabels(), name, "menu item");
+            return bar.getMenuItemElement(name);
         }
 
         /** The last item of {@code path}, in {@code menu}. */

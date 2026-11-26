@@ -261,7 +261,8 @@ public final class BrowserQueries {
             }""";
 
     /**
-     * A {@code <vaadin-menu-bar>}'s top-level items as {@code MenuBarAccess} reads them (#493): {@code {items,
+     * A {@code <vaadin-menu-bar>}'s top-level items as Selenium's {@code MenuBarAccess} reads them (#493; TestBench's
+     * {@code getButtons()} leaves the folded ones out, and Playwright reads Dramafinder's, #666): {@code {items,
      * overflow, overflowButton}}, the Item Names ({@link #ITEM_NAME}) of all its items, of those it has moved into its
      * overflow menu, which it hides with {@code visibility: hidden}, and of the overflow button itself
      * ({@code slot="overflow"}, "More options" in English), which is none of its items.
