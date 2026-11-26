@@ -90,6 +90,21 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | message list `assertMessageCount(n)` / `assertEmpty()` | `assertThat(list).hasMessageCount(n)` / `isEmpty()` |
 | `assertThat(list.getMessage(i)).containsText(s)` / `hasText(s)` | `assertThat(list.message(i)).hasTextContaining(s)` / `hasText(s)` |
 
+## Viewport and window sizes the Migration Recipes convert
+
+*(unreleased)* [ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md), [#496](https://github.com/parttio/unified-testing-tool/issues/496). A test starts at one Viewport and may change it any number of times: the size it starts at becomes `@Viewport`, a later change `page.setViewport(..)`.
+
+| TestBench or Dramafinder | Unified API |
+|---|---|
+| `testBench().resizeViewPortTo(w, h)` / Playwright `page.setViewportSize(w, h)`, plain numbers, first in a `@BeforeEach` | `@Viewport(width = w, height = h)` on the class (inherited by subclasses); a test class's `@BeforeEach` left empty goes |
+| the same, first in a test that no `@BeforeEach` runs before | `@Viewport(width = w, height = h)` on the test |
+| the same anywhere else, or with a size that isn't plain numbers | `page.setViewport(w, h)`, and `@RequiresBrowser` on the test (on the class when a helper calls it) |
+| `getDriver().manage().window().setSize(new Dimension(w, h))` | as above, numbers kept, with a Migration Marker: `was a window size: the viewport is now exactly w × h, about 143 px taller than before on Chrome` |
+| `window().maximize()` / `fullscreen()` | removed, with a Migration Marker asking for an exact size |
+| `window().getSize().getWidth()` / `getHeight()`, Playwright `page.viewportSize().width` / `.height` | `page.viewport().width()` / `.height()`, and `@RequiresBrowser` |
+| a TestBench driver started with `--window-size=w,h` | a Migration Marker on the class pointing at `vaadin.testing.viewport` or `@Viewport` |
+| a copied `SpringPlaywrightIT` whose `setupTest()` opens its pages with `NewContextOptions().setViewportSize(w, h)` | its tests stay unmigrated, as for any `setupTest()` override; their marker names the size and the `@Viewport` to keep |
+
 ## Escape Hatch
 
 | `unwrap(…)` | Browserless | Dramafinder | TestBench |
