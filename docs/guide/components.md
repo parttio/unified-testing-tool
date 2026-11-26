@@ -117,7 +117,7 @@ click it:
 
 `getItems(..)` and `isItemEnabled(..)` read the same now, without waiting.
 
-*(unreleased)* A menu bar too narrow for its items, as on a phone, moves the trailing ones into its overflow menu,
+A menu bar too narrow for its items, as on a phone, moves the trailing ones into its overflow menu,
 "More options". They are still its items: `getItems()` lists them, never the overflow button, the same on every
 Testing Tool. In a browser, `assertThat(menu).hasOverflowItems(..)` checks which moved, in order, and
 `hasNoOverflowItems()` that they all fit; `getOverflowItems()` reads them now:
@@ -163,8 +163,6 @@ Tool: `profile` for a `RouterLink` to the profile view, not the absolute URL a b
 
 ## App layout
 
-> **Unreleased:** on `main`, not in `0.1.0-alpha5`. See [what is unreleased](../releases/unreleased.md).
-
 `UnifiedAppLayout` is an `AppLayout`, the application's frame. On a narrow [Viewport](configuration.md#viewports) its
 drawer becomes an overlay over the content, closed until the user opens it. `assertThat(layout)` checks
 `isOverlay()` or `isNotOverlay()`, and `isDrawerOpened()` or `isDrawerClosed()`:
@@ -186,8 +184,6 @@ Whether it is an overlay is up to the browser: on Browserless, `isOverlay()` fai
 [Findable View](finding-components.md) lists the layout with `(overlay)` and `(drawer closed)`.
 
 ## Side navigation
-
-> **Unreleased:** on `main`, not in `0.1.0-alpha5`. See [what is unreleased](../releases/unreleased.md).
 
 `UnifiedSideNavItem` finds an item of a `SideNav` by its label, the item's own text: `withLabel("Orders")`, or by
 where it goes with `withPath(..)`. `click()` clicks it as a user does. An item with a path is followed as
@@ -263,7 +259,7 @@ A `LoginOverlay` or a `LoginForm` is a `UnifiedLogin`. There is normally one per
 --8<-- "unified-test-demo/src/test/java/demo/LoginTest.java:signsIn"
 ```
 
-The password is never shown: not in the User Steps, the reports or a failure, wherever it would appear (an application log line included), as with `page.secret(..)`. The exception is the user name it was typed with *(unreleased)*: a password that is part of its user name (`barista@vaadin.com` / `barista`) leaves the user name readable ([Secret values](structuring-a-scenario.md#secret-values)). In a browser, `login(..)` types into the form's fields and presses its submit button, which also posts a form with an `action` (Spring Security's `/login`). On Browserless, it fires the component's `LoginEvent`, which the application's listener handles; a component with an `action` fails there, as Browserless can't submit a form post: give that test `@RequiresBrowser`, or sign in with [`@WithMockUser`](navigation-and-users.md) when the test isn't about the login itself.
+The password is never shown: not in the User Steps, the reports or a failure, wherever it would appear (an application log line included), as with `page.secret(..)`. The exception is the user name it was typed with: a password that is part of its user name (`barista@vaadin.com` / `barista`) leaves the user name readable ([Secret values](structuring-a-scenario.md#secret-values)). In a browser, `login(..)` types into the form's fields and presses its submit button, which also posts a form with an `action` (Spring Security's `/login`). On Browserless, it fires the component's `LoginEvent`, which the application's listener handles; a component with an `action` fails there, as Browserless can't submit a form post: give that test `@RequiresBrowser`, or sign in with [`@WithMockUser`](navigation-and-users.md) when the test isn't about the login itself.
 
 `forgotPassword()` presses "Forgot password" (the `ForgotPasswordEvent`), and fails when the application hid that button. `isOpen()`, `isError()`, `isEnabled()`, `isForgotPasswordButtonVisible()`, `getTitle()` and `getDescription()` read the same on every Testing Tool (a form is open while it is on the page, and has no title or description); `assertThat(login)` checks `isOpen()`, `isClosed()`, `hasError()`, `hasNoError()` and `hasTitle(..)`.
 

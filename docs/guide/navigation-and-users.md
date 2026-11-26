@@ -26,7 +26,7 @@ Spec: [3. Navigation](../spec/03-navigation.md), [11. Users](../spec/11-users.md
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:redirected"
 ```
 
-`isAt(..)` matches the route template, so it can't tell `shipment` from `shipment/42`, and `hasPath(..)` needs the whole path. When part of the path isn't known in advance, such as the id of an item the test just created, use `hasPathMatching(..)` *(unreleased)* with a regular expression that matches the whole path. It retries like `hasPath`:
+`isAt(..)` matches the route template, so it can't tell `shipment` from `shipment/42`, and `hasPath(..)` needs the whole path. When part of the path isn't known in advance, such as the id of an item the test just created, use `hasPathMatching(..)` with a regular expression that matches the whole path. It retries like `hasPath`:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/NavigationTest.java:hasPathMatching"

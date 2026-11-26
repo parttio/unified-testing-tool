@@ -62,7 +62,7 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 |---|---|
 | A lookup's walk leaves out a `LitTemplate`'s `@Id` components (its virtual children), unless a global setting exposes every template's; the adapter walks them itself for a Template the test entered | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
 | Text, labels and attributes written in a `LitTemplate`'s HTML are empty on the server, so filters on them don't match on Browserless: a limit of Flow, which no Testing Tool can close; inside a Template, `withId(..)` is the portable lookup | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
-| Markup a Grid's `LitRenderer` draws (Crud's `vaadin-crud-edit`, a clickable card) exists only in a browser: a lookup in such a cell fails on Browserless and names `@RequiresBrowser`. Its functions run on Browserless only through the Escape Hatch, `GridTester.invokeLitRendererFunction` *(unreleased)* | [#608](https://github.com/parttio/unified-testing-tool/issues/608) |
+| Markup a Grid's `LitRenderer` draws (Crud's `vaadin-crud-edit`, a clickable card) exists only in a browser: a lookup in such a cell fails on Browserless and names `@RequiresBrowser`. Its functions run on Browserless only through the Escape Hatch, `GridTester.invokeLitRendererFunction` | [#608](https://github.com/parttio/unified-testing-tool/issues/608) |
 
 | Gap | Issue |
 |---|---|

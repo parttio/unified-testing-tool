@@ -32,11 +32,11 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.selenium.executable` | the installed browser |
 | `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
-The Selenium adapter always runs its browser locally *(unreleased)*: it has no remote Selenium grid setting, and it reads none of TestBench's grid parameters (`com.vaadin.testbench.Parameters.gridBrowsers`, `hubHostname`) or Sauce Labs options. A remote grid is on the roadmap ([#645](https://github.com/parttio/unified-testing-tool/issues/645)). Until then, run browser tests where the browser is installed, or on Playwright.
+The Selenium adapter always runs its browser locally: it has no remote Selenium grid setting, and it reads none of TestBench's grid parameters (`com.vaadin.testbench.Parameters.gridBrowsers`, `hubHostname`) or Sauce Labs options. A remote grid is on the roadmap ([#645](https://github.com/parttio/unified-testing-tool/issues/645)). Until then, run browser tests where the browser is installed, or on Playwright.
 
 ## Viewports
 
-In a browser, every test runs at an **exact** Viewport *(unreleased)*: 1280 × 720 unless the run's `vaadin.testing.viewport` or the test's `@Viewport` says otherwise. A method's `@Viewport` wins over its class's, and it is inherited from base classes. `@Viewport` implies `@RequiresBrowser`.
+In a browser, every test runs at an **exact** Viewport: 1280 × 720 unless the run's `vaadin.testing.viewport` or the test's `@Viewport` says otherwise. A method's `@Viewport` wins over its class's, and it is inherited from base classes. `@Viewport` implies `@RequiresBrowser`.
 
 ```java
 @Test

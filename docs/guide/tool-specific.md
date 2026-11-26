@@ -59,7 +59,7 @@ page.unwrap(Page.class).getByText("Alan Turing").click();   // the server loads 
 name.setValue("Alan M. Turing");                             // ...and Auto-Wait waits for that before typing
 ```
 
-The next Unified action waits for that answer before it acts, on every Testing Tool *(unreleased)*: TestBench waits for the server around its own commands, and on Playwright Auto-Wait waits until Flow is idle, for at most 5 s, then acts anyway ([5. Waiting](../spec/05-waiting.md#auto-wait), [#604](https://github.com/parttio/unified-testing-tool/issues/604)). Before that, on Playwright, the answer could arrive after the next action and overwrite it.
+The next Unified action waits for that answer before it acts, on every Testing Tool: TestBench waits for the server around its own commands, and on Playwright Auto-Wait waits until Flow is idle, for at most 5 s, then acts anyway ([5. Waiting](../spec/05-waiting.md#auto-wait), [#604](https://github.com/parttio/unified-testing-tool/issues/604)). Before that, on Playwright, the answer could arrive after the next action and overwrite it.
 
 Escape Hatch code that comes next, reading the page itself, gets no such wait, and neither does an action after an answer that takes longer than 5 s. Make it wait in one of two ways:
 

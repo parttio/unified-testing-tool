@@ -45,7 +45,7 @@ Changing a person's email updates the grid
 | `Found` | `none`; several matches (`2: …`, each with where it is); `1, but disabled` (or hidden, read-only, covered by an open dialog); or, for an assertion, the values it saw while waiting |
 | `Nearby` | the Near Misses: components the lookup almost matched |
 | `Did you mean` | the lookup you probably meant, when one Near Miss is clearly best |
-| `Cause` *(unreleased)* | the error the step's last attempt threw, such as what this Testing Tool can't do: `UnsupportedOperationException: …` |
+| `Cause` | the error the step's last attempt threw, such as what this Testing Tool can't do: `UnsupportedOperationException: …` |
 | `Waited` | how long, and where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` |
 | `Tool` | the Testing Tool, and its browser |
 | `Code` | where it happened: the line that called the step, then the line inside it |
@@ -129,7 +129,7 @@ A component that is there but can't be used:
   Found         1, but disabled
 ```
 
-What the Testing Tool can't do *(unreleased)*. It fails at the first attempt, since waiting won't change it, and its `Cause` line says why. Here it's a lookup inside a cell that a LitRenderer draws, on Browserless:
+What the Testing Tool can't do. It fails at the first attempt, since waiting won't change it, and its `Cause` line says why. Here it's a lookup inside a cell that a LitRenderer draws, on Browserless:
 
 ```
   Failed at     User Step 2 of 2: click edit pencil in cell at index 1 in row where Name is “Bob” in grid (test id “editable”)
@@ -155,9 +155,9 @@ button “Save”        page.find(UnifiedButton.class).withText("Save")
 button “Cancel”      page.find(UnifiedButton.class).withText("Cancel")
 ```
 
-In a browser *(unreleased)*, the header names the Viewport, and a line says when a user can't get to its component as it shows: `(clipped)` when a box with hidden overflow cuts it off, `(behind the AppLayout drawer)` or `(behind button “Menu”)` when something covers it, `(hidden in the AppLayout drawer)` or `(hidden in the MenuBar overflow)` when Vaadin tucked it away. A component a user scrolls to says nothing. A container's `describe()` doesn't say this, only the page's. An action on a component something covers or clips fails with that in `Found`, the same on Playwright and Selenium: `Expected a reachable button with text “Save”`, `Found behind the AppLayout drawer`.
+In a browser, the header names the Viewport, and a line says when a user can't get to its component as it shows: `(clipped)` when a box with hidden overflow cuts it off, `(behind the AppLayout drawer)` or `(behind button “Menu”)` when something covers it, `(hidden in the AppLayout drawer)` or `(hidden in the MenuBar overflow)` when Vaadin tucked it away. A component a user scrolls to says nothing. A container's `describe()` doesn't say this, only the page's. An action on a component something covers or clips fails with that in `Found`, the same on Playwright and Selenium: `Expected a reachable button with text “Save”`, `Found behind the AppLayout drawer`.
 
-A kind of component whose lookup threw is not left out: the view ends with `Not listed: link (UnsupportedOperationException: …)` *(unreleased)*.
+A kind of component whose lookup threw is not left out: the view ends with `Not listed: link (UnsupportedOperationException: …)`.
 
 When `Did you mean` has nothing to say, look for the component here. The same view is `page.describe()` in a test ([Finding components](finding-components.md#what-is-there-to-find)).
 

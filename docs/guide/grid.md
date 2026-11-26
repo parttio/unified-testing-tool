@@ -39,7 +39,7 @@ Whether a row is there, and how many match, are retrying assertions: `assertThat
 
 Row actions (`click()`, `select()`, `toggleDetails()`) are actions like any other: they wait for the grid and the row (Auto-Wait), and show in the reports as `click row where Name is “Alan Turing” in grid`.
 
-A row's `toString()` *(unreleased)* reads the same way, and a column too (`column “Name” in grid`), so a [User Task](structuring-a-scenario.md#user-tasks) named after a row reads as the reports do. Reading it as text asks the grid nothing:
+A row's `toString()` reads the same way, and a column too (`column “Name” in grid`), so a [User Task](structuring-a-scenario.md#user-tasks) named after a row reads as the reports do. Reading it as text asks the grid nothing:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/GridTest.java:namesAUserTaskAfterARow"
@@ -61,13 +61,13 @@ A row's `toString()` *(unreleased)* reads the same way, and a column too (`colum
 --8<-- "unified-test-demo/src/test/java/demo/GridInteractionTest.java:clicksAComponentInACell"
 ```
 
-`row.cell(1)` *(unreleased)* finds the cell by its index among the visible columns, as `getCellText(1)` reads it: for a column without header text, such as an action column. The reports name it `cell at index 1`. Prefer the header: an index breaks when columns are reordered.
+`row.cell(1)` finds the cell by its index among the visible columns, as `getCellText(1)` reads it: for a column without header text, such as an action column. The reports name it `cell at index 1`. Prefer the header: an index breaks when columns are reordered.
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/GridInteractionTest.java:clicksAComponentInACellByIndex"
 ```
 
-### Markup a renderer draws *(unreleased)*
+### Markup a renderer draws
 
 A `LitRenderer` draws plain markup, not Flow components: Crud's `vaadin-crud-edit` pencil, a clickable card. Find it in the cell with a [custom Wrapper](custom-wrappers.md) bound to its tag only, `@UnifiedComponent(value = Component.class, tag = "demo-edit")`, with a `click()`:
 
@@ -115,7 +115,7 @@ When the application adds or removes columns while the test runs, check the head
 
 The multi-select checkbox column is not a column: column indexes count only the application's columns.
 
-`row.click()` clicks a spot of the row free of interactive content (a link, a button, a renderer's card), so it selects the row or opens its details rather than pressing what is in a cell. When such content covers the whole row, it fails, the same on Playwright and Selenium *(unreleased)*, and names `row.cell(..).find(..).click()` for clicking that content. Browserless sees no layout and clicks the row.
+`row.click()` clicks a spot of the row free of interactive content (a link, a button, a renderer's card), so it selects the row or opens its details rather than pressing what is in a cell. When such content covers the whole row, it fails, the same on Playwright and Selenium, and names `row.cell(..).find(..).click()` for clicking that content. Browserless sees no layout and clicks the row.
 
 ## The item behind a row
 

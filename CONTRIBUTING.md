@@ -66,7 +66,7 @@ A change a user of the Unified API would notice gets a release note: a file of i
 The site documents `main`, so mark what the latest release doesn't have, where a reader of that release meets it. Mark the item, not its surroundings: a row, a bullet or a sentence gets `*(unreleased)*` next to its name. Only a section whose every line is new gets the banner instead:
 
 ```markdown
-> **Unreleased:** on `main`, not in `0.1.0-alpha5`. See [what is unreleased](../releases/unreleased.md).
+> **Unreleased:** on `main`, not in `0.1.0-alpha6`. See [what is unreleased](../releases/unreleased.md).
 ```
 
 A section that keeps released content under a new heading, or a sentence that names a released and an unreleased item, is marked per item, so a reader of the release can tell which half they have.

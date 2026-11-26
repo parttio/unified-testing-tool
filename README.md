@@ -54,7 +54,7 @@ class ProfileViewTest {
 
 ## Try it
 
-Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha5`. The API can still change between alphas.
+Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha6`. The API can still change between alphas.
 
 It needs Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the build passes and the tests fail when they run: each Unified UI Test fails at once, with a message that names the Vaadin version it found. Move the application to Vaadin 25.3 first.
 
@@ -66,7 +66,7 @@ Import the BOM and add the adapters you run on as test dependencies (here for a 
         <dependency>
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-bom</artifactId>
-            <version>0.1.0-alpha5</version>
+            <version>0.1.0-alpha6</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
