@@ -26,6 +26,8 @@ final class Stubs {
                 Object find(Class<?> type);
                 com.vaadin.testing.unified.component.UnifiedTemplate findTemplate(Class<?> type);
                 void pressKey(String key);
+                void setViewport(int width, int height);
+                ViewportSize viewport();
                 <T> T unwrap(Class<T> type);
             }
             """,
@@ -84,6 +86,14 @@ final class Stubs {
             """
             package com.vaadin.testing.unified;
             public enum TestingTool { BROWSERLESS, PLAYWRIGHT, SELENIUM }
+            """,
+            """
+            package com.vaadin.testing.unified;
+            public record ViewportSize(String name, int width, int height) {}
+            """,
+            """
+            package com.vaadin.testing.unified;
+            public @interface RequiresBrowser {}
             """,
             """
             package com.vaadin.testing.unified;

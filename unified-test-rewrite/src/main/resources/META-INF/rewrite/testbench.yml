@@ -71,11 +71,15 @@ recipeList:
       oldFullyQualifiedTypeName: org.junit.Ignore
       newFullyQualifiedTypeName: org.junit.jupiter.api.Disabled
   - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
+  # the size a test starts at, while the @BeforeEach methods are still there (#496)
+  - org.vaadin.addons.unified.rewrite.TestBenchViewportsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchRenamesToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchGridCellsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchLookupsToUnified
+  # @Viewport where the test starts at a size, once the class has its Unified annotation (#496)
+  - org.vaadin.addons.unified.rewrite.ViewportsWritten
   - org.vaadin.addons.unified.rewrite.TestBenchLeftoversToEscapeHatch
   - org.openrewrite.java.RemoveAnnotationAttribute:
       annotationType: org.springframework.boot.test.context.SpringBootTest
