@@ -20,6 +20,22 @@ class ViewportRecipesTest implements RewriteTest {
                 .parser(JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath()));
     }
 
+    private static void dramafinder(RecipeSpec spec) {
+        spec.recipe(Environment.builder().scanRuntimeClasspath("org.vaadin.addons.unified.rewrite").build()
+                        .activateRecipes("org.vaadin.addons.unified.rewrite.MigrateDramafinderToUnified"))
+                .parser(JavaParser.fromJavaVersion().classpath(JavaParser.runtimeClasspath()));
+    }
+
+    private static final String VIEW = """
+            package com.example;
+
+            import com.vaadin.flow.component.Component;
+            import com.vaadin.flow.router.Route;
+
+            @Route("people")
+            public class PeopleView extends Component {}
+            """;
+
     @Test
     void aResizeBeforeTheFirstNavigationOfABeforeEachBecomesTheClassViewport() {
         rewriteRun(ViewportRecipesTest::testBench, java(
@@ -331,6 +347,91 @@ class ViewportRecipesTest implements RewriteTest {
                         startTheBrowser(page);
                         page.navigate("profile");
                         page.find(UnifiedButton.class).withText("Edit").click();
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void aPlaywrightViewportSizeBecomesTheClassOrTestViewportOrSetViewport() {
+        rewriteRun(ViewportRecipesTest::dramafinder, java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.BeforeEach;
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleOnAPhoneTest extends SpringPlaywrightIT {
+                    @BeforeEach
+                    void onAPhone() {
+                        page.setViewportSize(375, 667);
+                    }
+
+                    @Test
+                    void opensPeople() {
+                        navigate(PeopleView.class);
+                        assertAt(PeopleView.class);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.Viewport;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                @Viewport(width = 375, height = 667)
+                class PeopleOnAPhoneTest {
+
+                    @Test
+                    void opensPeople(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        assertThat(page).isAt(PeopleView.class);
+                    }
+                }
+                """), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+                import org.vaadin.addons.dramafinder.spring.SpringPlaywrightIT;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void foldsOnAPhone() {
+                        page.setViewportSize(1920, 1080);
+                        navigate(PeopleView.class);
+                        page.setViewportSize(375, 667);
+                        assertAt(PeopleView.class);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import com.vaadin.testing.unified.RequiresBrowser;
+                import com.vaadin.testing.unified.UnifiedPage;
+                import com.vaadin.testing.unified.Viewport;
+                import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
+                import org.junit.jupiter.api.Test;
+
+                import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
+
+                @UnifiedSpringBootTest
+                class PeopleTest {
+                    @Test
+                    @Viewport(width = 1920, height = 1080)
+                    @RequiresBrowser
+                    void foldsOnAPhone(UnifiedPage page) {
+                        page.navigate(PeopleView.class);
+                        page.setViewport(375, 667);
+                        assertThat(page).isAt(PeopleView.class);
                     }
                 }
                 """));

@@ -76,8 +76,12 @@ description: >-
 preconditions:
   - org.vaadin.addons.unified.rewrite.FindDramafinderTests
 recipeList:
+  # the size a test starts at, while the @BeforeEach methods are still there (#496)
+  - org.vaadin.addons.unified.rewrite.ViewportsRead
   - org.vaadin.addons.unified.rewrite.DramafinderSetupToUnified
   - org.vaadin.addons.unified.rewrite.DramafinderLookupsToUnified
+  # @Viewport where the test starts at a size; other resizes become page.setViewport (#496)
+  - org.vaadin.addons.unified.rewrite.ViewportsWritten
   - org.vaadin.addons.unified.rewrite.DramafinderLeftoversToEscapeHatch
   - org.openrewrite.java.RemoveAnnotationAttribute:
       annotationType: org.springframework.boot.test.context.SpringBootTest

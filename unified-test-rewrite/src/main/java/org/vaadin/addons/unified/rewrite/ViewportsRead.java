@@ -16,11 +16,11 @@ import org.openrewrite.java.tree.TypeUtils;
  * runs before it. Runs before
  * {@code TestBenchSetupToUnified} turns the {@code @BeforeEach} methods into helpers.
  */
-public class TestBenchViewportsToUnified extends Recipe {
+public class ViewportsRead extends Recipe {
 
     @Override
     public String getDisplayName() {
-        return "TestBench: the size a test starts at becomes @Viewport";
+        return "The size a TestBench or Dramafinder test starts at becomes @Viewport";
     }
 
     @Override
@@ -39,7 +39,8 @@ public class TestBenchViewportsToUnified extends Recipe {
                 String classNote = null;
                 // a test starts with its own first statement only when no @BeforeEach, here or inherited, runs before
                 boolean testsRunFirst = c.getExtends() != null
-                        && TestBenchSetupToUnified.isTestBenchBase(c.getExtends().getType())
+                        && (TestBenchSetupToUnified.isTestBenchBase(c.getExtends().getType())
+                                || Dramafinder.isBaseType(c.getExtends().getType()))
                         && c.getBody().getStatements().stream()
                                 .noneMatch(st -> st instanceof J.MethodDeclaration md && isBeforeEach(md));
                 List<Statement> statements = new ArrayList<>();
@@ -51,6 +52,10 @@ public class TestBenchViewportsToUnified extends Recipe {
                             forClass = resize.size();
                             classNote = note;
                             s = withoutFirst(m);
+                            if (((J.MethodDeclaration) s).getBody().getStatements().isEmpty()
+                                    && !c.hasModifier(J.Modifier.Type.Abstract)) {
+                                continue; // nothing left to run before each test
+                            }
                         } else if (resize != null && testsRunFirst && Helpers.isBrowserTest(m)) {
                             s = Viewports.startsAt(withoutFirst(m), resize.size(), note);
                         }

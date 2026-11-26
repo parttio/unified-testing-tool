@@ -15,6 +15,7 @@ final class Viewports {
     static final String VIEWPORT = "com.vaadin.testing.unified.Viewport";
     static final String REQUIRES_BROWSER = "com.vaadin.testing.unified.RequiresBrowser";
     static final String TESTBENCH_COMMANDS = "com.vaadin.testbench.commands.TestBenchCommands";
+    static final String PLAYWRIGHT_PAGE = "com.microsoft.playwright.Page";
     static final String SELENIUM_WINDOW = "org.openqa.selenium.WebDriver.Window";
     static final String SELENIUM_DIMENSION = "org.openqa.selenium.Dimension";
 
@@ -26,7 +27,7 @@ final class Viewports {
     }
 
     /**
-     * The size a class or test starts at, carried from {@link TestBenchViewportsToUnified}, which reads it while the
+     * The size a class or test starts at, carried from {@link ViewportsRead}, which reads it while the
      * {@code @BeforeEach} methods are still there, to {@link ViewportsWritten}, which writes it as {@code @Viewport}
      * once the class has its Unified annotation.
      */
@@ -67,8 +68,8 @@ final class Viewports {
     }
 
     /**
-     * TestBench's {@code testBench().resizeViewPortTo(w, h)} and Selenium's
-     * {@code window().setSize(new Dimension(w, h))}; null for any other call.
+     * TestBench's {@code testBench().resizeViewPortTo(w, h)}, Playwright's {@code page.setViewportSize(w, h)} and
+     * Selenium's {@code window().setSize(new Dimension(w, h))}; null for any other call.
      */
     static Resize resize(J.MethodInvocation m) {
         if (m.getMethodType() == null || m.getArguments().isEmpty()) {
@@ -77,6 +78,10 @@ final class Viewports {
         var declaring = m.getMethodType().getDeclaringType();
         if (m.getSimpleName().equals("resizeViewPortTo") && m.getArguments().size() == 2
                 && TypeUtils.isOfClassType(declaring, TESTBENCH_COMMANDS)) {
+            return new Resize(m.getArguments().get(0), m.getArguments().get(1), false);
+        }
+        if (m.getSimpleName().equals("setViewportSize") && m.getArguments().size() == 2
+                && TypeUtils.isOfClassType(declaring, PLAYWRIGHT_PAGE)) {
             return new Resize(m.getArguments().get(0), m.getArguments().get(1), false);
         }
         if (m.getSimpleName().equals("setSize") && m.getArguments().size() == 1

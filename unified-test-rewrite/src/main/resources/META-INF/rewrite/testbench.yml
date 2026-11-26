@@ -72,7 +72,7 @@ recipeList:
       newFullyQualifiedTypeName: org.junit.jupiter.api.Disabled
   - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
   # the size a test starts at, while the @BeforeEach methods are still there (#496)
-  - org.vaadin.addons.unified.rewrite.TestBenchViewportsToUnified
+  - org.vaadin.addons.unified.rewrite.ViewportsRead
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchRenamesToUnified
