@@ -81,6 +81,8 @@ nav:
       - Migrating from TestBench: migrating-from-testbench.md
       - Migrating from Browserless: migrating-from-browserless.md
       - Migrating from Dramafinder: migrating-from-dramafinder.md
+  - Field feedback:
+      - "Plain Playwright migration (Project A, alpha6)": feedback/2026-11-plain-playwright-migration-project-a.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md
