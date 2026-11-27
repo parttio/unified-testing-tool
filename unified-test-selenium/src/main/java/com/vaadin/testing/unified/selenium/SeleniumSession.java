@@ -80,6 +80,8 @@ final class SeleniumSession implements AdapterSession {
 
     private final Browser browser;
     private final java.util.function.Supplier<TestBenchDriverProxy> browsers;
+    /** What the Escape Hatch answers for {@code getRunLocallyBrowser()}. */
+    private final LocalBrowser local;
     private final List<SeleniumSession> children = new ArrayList<>();
     private final TestBenchDriverProxy driver;
     private final String baseUrl;
@@ -90,24 +92,26 @@ final class SeleniumSession implements AdapterSession {
     private final Runnable release;
 
     /** A page in a new browser from {@code browsers}; {@code openAsUser} starts its own browser the same way. */
-    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, String baseUrl, Duration timeout) {
-        this(browsers, new Browser(browsers.get()), baseUrl, timeout, true, null);
+    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local, String baseUrl,
+            Duration timeout) {
+        this(browsers, local, new Browser(browsers.get()), baseUrl, timeout, true, null);
     }
 
     /** A page in a browser shared by the run's tests: {@code release} gives it back when the test ends. */
-    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, TestBenchDriverProxy shared,
-            Runnable release, String baseUrl, Duration timeout) {
-        this(browsers, new Browser(shared), baseUrl, timeout, true, release);
+    SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local,
+            TestBenchDriverProxy shared, Runnable release, String baseUrl, Duration timeout) {
+        this(browsers, local, new Browser(shared), baseUrl, timeout, true, release);
     }
 
-    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
-            String baseUrl, Duration timeout, boolean ownsDriver, Runnable release) {
-        this(browsers, browser, baseUrl, timeout, browser.current, ownsDriver, release);
+    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local,
+            Browser browser, String baseUrl, Duration timeout, boolean ownsDriver, Runnable release) {
+        this(browsers, local, browser, baseUrl, timeout, browser.current, ownsDriver, release);
     }
 
-    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, Browser browser,
-            String baseUrl, Duration timeout, String handle, boolean ownsDriver, Runnable release) {
+    private SeleniumSession(java.util.function.Supplier<TestBenchDriverProxy> browsers, LocalBrowser local,
+            Browser browser, String baseUrl, Duration timeout, String handle, boolean ownsDriver, Runnable release) {
         this.browsers = browsers;
+        this.local = local;
         this.browser = browser;
         this.driver = browser.driver;
         this.baseUrl = baseUrl;
@@ -207,12 +211,14 @@ final class SeleniumSession implements AdapterSession {
         String selector = BrowserQueries.selector(tag, spec.filters());
         List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
         List<SearchContext> roots = spec.parent() == null ? List.of(driver())
+                : spec.inTemplate() ? List.of(((SeleniumElement) spec.parent()).webElement())
                 : new ArrayList<>(((SeleniumElement) spec.parent()).roots());
         List<UnifiedElement> result = new ArrayList<>();
         try {
             for (SearchContext root : roots) {
                 List<WebElement> candidates = new ArrayList<>();
-                for (WebElement candidate : root.findElements(By.cssSelector(selector))) {
+                for (WebElement candidate : spec.inTemplate() ? inTemplate((WebElement) root, selector)
+                        : root.findElements(By.cssSelector(selector))) {
                     if (support.include(candidate, this)) {
                         candidates.add(candidate);
                     }
@@ -239,11 +245,27 @@ final class SeleniumSession implements AdapterSession {
         return result;
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        WebElement scope = parent == null ? null : ((SeleniumElement) parent).webElement();
+        SeleniumComponents.Support support = SeleniumComponents.of(Component.class);
+        return ((List<WebElement>) js("return (" + BrowserQueries.TEMPLATES + ")(arguments[0], arguments[1]);",
+                scope, inTemplate)).stream().map(e -> (UnifiedElement) new SeleniumElement(this, e, support)).toList();
+    }
+
+    /** The candidates inside a Template the test entered, in one round trip ({@link BrowserQueries#IN_TEMPLATE}). */
+    @SuppressWarnings("unchecked")
+    private List<WebElement> inTemplate(WebElement host, String selector) {
+        return (List<WebElement>) js("return (" + BrowserQueries.IN_TEMPLATE + ")(arguments[0], arguments[1]);",
+                host, selector);
+    }
+
     // ---------------------------------------------------------------- navigation
 
     @Override
     public void navigate(Class<? extends Component> view) {
-        open(RoutePaths.pathOf(view));
+        open(RoutePaths.pathOf(view, RouteParameters.empty()));
     }
 
     @Override
@@ -292,7 +314,7 @@ final class SeleniumSession implements AdapterSession {
                     baseUrl + CurrentView.PATH);
             return CurrentView.shows((String) answer, view);
         }
-        return currentPath().equals(RoutePaths.pathOf(view));
+        return RoutePaths.matches(view, currentPath());
     }
 
     @Override
@@ -338,14 +360,14 @@ final class SeleniumSession implements AdapterSession {
     public AdapterSession openWindow() {
         driver().switchTo().newWindow(WindowType.TAB);
         browser.current = driver.getWindowHandle();
-        return new SeleniumSession(browsers, browser, baseUrl, timeout, browser.current, false, null);
+        return new SeleniumSession(browsers, local, browser, baseUrl, timeout, browser.current, false, null);
     }
 
     /** A browser of its own (own cookies, own session), logged in through the test-only endpoint. */
     @Override
     public AdapterSession openAsUser(String username, String... roles) {
         String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
-        SeleniumSession session = new SeleniumSession(browsers, new Browser(browsers.get()), baseUrl, timeout, true,
+        SeleniumSession session = new SeleniumSession(browsers, local, new Browser(browsers.get()), baseUrl, timeout, true,
                 null);
         children.add(session);
         session.logIn(loginUrl);
@@ -385,6 +407,68 @@ final class SeleniumSession implements AdapterSession {
     public void pressKey(String key) {
         new Actions(driver()).sendKeys(SeleniumKeys.chord(key)).perform();
         waitForVaadin();
+    }
+
+    /** The first Firefox whose WebDriver BiDi sets an exact Viewport ({@code browsingContext.setViewport}). */
+    static final int FIREFOX_WITH_VIEWPORT = 132;
+
+    /**
+     * Exact, for this tab only, any size, through WebDriver BiDi's {@code browsingContext.setViewport}, on Chrome and
+     * Firefox: the page sees an emulated Viewport inside the browser's window (ADR 0011). A window handle is its BiDi
+     * browsing context. A browser without BiDi refuses with its reason.
+     */
+    @Override
+    public void setViewport(com.vaadin.testing.unified.ViewportSize size) {
+        Object raw = driver().getWrappedDriver();
+        if (!(raw instanceof org.openqa.selenium.bidi.HasBiDi bidi)
+                || !(raw instanceof org.openqa.selenium.HasCapabilities withCapabilities)) {
+            throw new UnsupportedOperationException("This browser's driver has no WebDriver BiDi");
+        }
+        org.openqa.selenium.Capabilities capabilities = withCapabilities.getCapabilities();
+        String refusal = viewportRefusal(capabilities.getBrowserName(), capabilities.getBrowserVersion(),
+                capabilities.getCapability("webSocketUrl") instanceof String);
+        if (refusal != null) {
+            throw new UnsupportedOperationException(refusal);
+        }
+        new org.openqa.selenium.bidi.browsingcontext.BrowsingContext((org.openqa.selenium.WebDriver) bidi, handle)
+                .setViewport(size.width(), size.height());
+    }
+
+    /**
+     * Why this browser can't have an exact Viewport, or null when it can: it needs WebDriver BiDi, which a browser
+     * started without {@code webSocketUrl} (an old browser, a grid without BiDi) lacks, and Firefox 132 or later.
+     */
+    static String viewportRefusal(String browserName, String browserVersion, boolean bidi) {
+        String name = "firefox".equalsIgnoreCase(browserName) ? "Firefox" : "chrome".equalsIgnoreCase(browserName)
+                ? "Chrome" : browserName;
+        if (!bidi) {
+            return "This " + name + " has no WebDriver BiDi (webSocketUrl)";
+        }
+        if ("Firefox".equals(name)) {
+            int major = major(browserVersion);
+            if (major >= 0 && major < FIREFOX_WITH_VIEWPORT) {
+                return "Viewport control needs Firefox " + FIREFOX_WITH_VIEWPORT + " or later, this is " + major;
+            }
+        }
+        return null;
+    }
+
+    private static int major(String version) {
+        try {
+            return Integer.parseInt(version.split("\\.")[0]);
+        } catch (RuntimeException e) {
+            return -1;
+        }
+    }
+
+    /** The core's layout script, unchanged, with the subject's WebElement (ADR 0011). One round trip. */
+    @Override
+    public String measureLayout(java.util.List<com.vaadin.testing.unified.spi.LayoutScript.Target> targets,
+            com.vaadin.testing.unified.UnifiedElement subject) {
+        Object element = subject instanceof SeleniumElement e ? e.webElement() : null;
+        return (String) js("return (" + com.vaadin.testing.unified.spi.LayoutScript.SOURCE
+                + ")([arguments[0], arguments[1]])", com.vaadin.testing.unified.spi.LayoutScript.argument(targets),
+                element);
     }
 
     @Override
@@ -454,6 +538,9 @@ final class SeleniumSession implements AdapterSession {
 
     @Override
     public <T> Optional<T> unwrap(Class<T> type) {
+        if (type == LocalBrowser.class) { // package-private: for the TestBench Escape Hatch only
+            return Optional.of(type.cast(local));
+        }
         if (type.isInstance(driver())) {
             return Optional.of(type.cast(driver()));
         }

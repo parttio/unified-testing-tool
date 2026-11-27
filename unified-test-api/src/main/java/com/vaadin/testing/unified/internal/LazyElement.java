@@ -70,6 +70,14 @@ public final class LazyElement implements UnifiedElement {
         return StaleRetry.call(run, () -> source.resolve().size());
     }
 
+    /**
+     * Whether the lookup still finds this element, without waiting: after an action whose check couldn't read the
+     * result, an element the app replaced or navigated away from has nothing to check (#377, #554).
+     */
+    public boolean stillFound() {
+        return countNow() > Math.max(index, 0);
+    }
+
     /** The adapter's element, waiting until it can be singled out. */
     public UnifiedElement concrete() {
         int[] lastCount = {0};
@@ -103,19 +111,36 @@ public final class LazyElement implements UnifiedElement {
     }
 
     private void act(Supplier<Phrase> phrase, String action, Consumer<UnifiedElement> body) {
+        act(phrase, action, LazyElement::usable, body);
+    }
+
+    /**
+     * {@link #act(String, Consumer)} for a component the user can also act on in another state than visible and
+     * enabled, such as a date picker whose calendar is open while its field is hidden: Auto-Wait waits for
+     * {@code ready} instead. The User Step reads as {@code phrase}.
+     */
+    public void act(Supplier<Phrase> phrase, String action, java.util.function.Predicate<UnifiedElement> ready,
+            Consumer<UnifiedElement> body) {
         run.steps().action(phrase, run.window(), () -> StaleRetry.call(run, () -> {
             UnifiedElement element = run.pollFor(() -> {
                 UnifiedElement e = concrete();
-                return usable(e) ? e : null;
+                return ready.test(e) ? e : null;
             }, () -> LookupFailures.notUsable(this));
-            body.accept(element);
+            try {
+                body.accept(element);
+            } catch (com.vaadin.testing.unified.spi.StaleElementException | UnsupportedOperationException e) {
+                throw e;
+            } catch (RuntimeException e) {
+                LookupFailures.failIfUnreachable(this, element, e);
+                throw e;
+            }
             run.session().settle();
             return null;
         }));
     }
 
     /** Auto-Wait's check: visible and enabled, in one read where the adapter offers it (#402). */
-    private static boolean usable(UnifiedElement e) {
+    public static boolean usable(UnifiedElement e) {
         return e instanceof com.vaadin.testing.unified.spi.UsabilityCheck check ? check.isVisibleAndEnabled()
                 : e.isVisible() && e.isEnabled();
     }

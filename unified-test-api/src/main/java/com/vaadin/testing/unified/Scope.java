@@ -2,6 +2,7 @@ package com.vaadin.testing.unified;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
+import com.vaadin.testing.unified.component.UnifiedTemplate;
 import com.vaadin.testing.unified.query.CommonFilters;
 
 /** Something a test can search in: the page, a dialog, a container. */
@@ -19,6 +20,14 @@ public interface Scope {
      * {@link UnifiedGenericComponent} with the shared filters.
      */
     <C extends Component> UnifiedGenericComponent findComponent(Class<C> componentType);
+
+    /**
+     * Lookup of a Template without a Wrapper of its own, such as a {@code LitTemplate}; the tag comes from its
+     * {@code @Tag}. Lookups on the result search inside the Template, which no other lookup does:
+     * {@code page.findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new")}. A Wrapper that extends
+     * {@link TemplateScope} does the same. See {@link TemplateScope}.
+     */
+    <C extends Component> UnifiedTemplate findTemplate(Class<C> templateType);
 
     /**
      * The Findable View: the components a test can find in here as they are now, one line each, with the lookup

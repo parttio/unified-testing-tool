@@ -71,6 +71,45 @@ class LookupFailureMessagesTest {
     }
 
     @Test
+    void severalMatchesMarkTheHiddenOnes() {
+        fake.add("vaadin-button", "text", "Cancel").add("vaadin-button", "text", "Cancel", "visible", "false")
+                .add("vaadin-button", "text", "Cancel", "visible", "false");
+
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class,
+                () -> page.find(UnifiedButton.class).withText("Cancel").click());
+
+        assertEquals("3: button “Cancel”, button “Cancel” (hidden), button “Cancel” (hidden)", e.getFound());
+        assertTrue(e.getMessage().contains(
+                "\n  Found         3: button “Cancel”, button “Cancel” (hidden), button “Cancel” (hidden)\n"),
+                e.getMessage());
+        assertEquals(Optional.empty(), e.getSuggestion());
+    }
+
+    @Test
+    void theHiddenMarkGoesAfterTheContainer() {
+        fake.add("vaadin-button", "text", "Cancel", "in", "form")
+                .add("vaadin-button", "text", "Cancel", "in", "confirm", "visible", "false");
+
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class,
+                () -> page.find(UnifiedButton.class).withText("Cancel").click());
+
+        assertEquals("2: button “Cancel” in container (test id “form”), button “Cancel” in container"
+                + " (test id “confirm”) (hidden)", e.getFound());
+    }
+
+    @Test
+    void aFailingVisibilityReadLeavesTheMatchUnmarked() {
+        fake.add("vaadin-button", "text", "Save", "visible", "throws")
+                .add("vaadin-button", "text", "Save", "visible", "false");
+
+        UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class,
+                () -> page.find(UnifiedButton.class).withText("Save").click());
+
+        assertEquals("exactly one button with text “Save”", e.getExpected());
+        assertEquals("2: button “Save”, button “Save” (hidden)", e.getFound());
+    }
+
+    @Test
     void aDisabledButtonIsFoundButNotUsable() {
         fake.add("vaadin-button", "text", "Save", "enabled", "false");
 

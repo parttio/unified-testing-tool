@@ -17,7 +17,7 @@ import java.util.Optional;
  * Unified Element on Browserless: reads the server-side element and component; user actions go through
  * the component's tester (events fire as from the browser), then a round-trip.
  */
-final class BrowserlessElement implements UnifiedElement {
+final class BrowserlessElement implements UnifiedElement, com.vaadin.testing.unified.spi.ElementIdentity {
 
     private final BrowserlessSession session;
     private final Component component;
@@ -54,6 +54,11 @@ final class BrowserlessElement implements UnifiedElement {
      */
     static BrowserlessElement found(BrowserlessSession session, Component component) {
         return new BrowserlessElement(session, component, List.of(component), false);
+    }
+
+    @Override
+    public boolean isSameElement(UnifiedElement other) {
+        return other instanceof BrowserlessElement e && e.component == component;
     }
 
     /** Where queries scoped to this element search: these components and their descendants. */
@@ -104,10 +109,14 @@ final class BrowserlessElement implements UnifiedElement {
         return value == null || value.isBlank() ? null : value.strip();
     }
 
-    /** The same computation as the {@code withAccessibleName(..)} filter: {@link #accessibleName(Component)}. */
+    /**
+     * The same computation as the {@code withAccessibleName(..)} filter: {@link AccessibleNames}, what a browser
+     * computes. A component named by its content is named by {@link #getText()}'s text when the support reads it
+     * (a notification's renderer).
+     */
     @Override
     public String getAccessibleName() {
-        return accessibleName(component);
+        return AccessibleNames.of(component, () -> support.text(component, session.window()));
     }
 
     @Override
@@ -163,7 +172,8 @@ final class BrowserlessElement implements UnifiedElement {
 
     @Override
     public String getAttribute(String name) {
-        return element().getAttribute(name);
+        // an @Id component's id is in its binding, not an attribute on the server; a browser reads it as one
+        return "id".equals(name) ? BrowserlessSession.idOf(element()) : element().getAttribute(name);
     }
 
     @Override
@@ -352,38 +362,6 @@ final class BrowserlessElement implements UnifiedElement {
     }
 
     // ---------------------------------------------------------------- helpers
-
-    /** What a screen reader announces, approximated: aria-label, accessibleName, aria-labelledby target, label, text. */
-    static String accessibleName(Component c) {
-        Element e = c.getElement();
-        String ariaLabel = e.getAttribute("aria-label");
-        if (ariaLabel != null && !ariaLabel.isBlank()) {
-            return ariaLabel;
-        }
-        // a field's setAriaLabel(..): the web component forwards it to its input as aria-label
-        String accessibleName = e.getProperty("accessibleName");
-        if (accessibleName != null && !accessibleName.isBlank()) {
-            return accessibleName;
-        }
-        String labelledBy = e.getAttribute("aria-labelledby");
-        if (labelledBy != null && !labelledBy.isBlank()) {
-            Optional<UI> ui = c.getUI();
-            if (ui.isPresent()) {
-                Optional<String> text = ui.get().getElement().getChildren()
-                        .flatMap(BrowserlessElement::descendants)
-                        .filter(el -> labelledBy.equals(el.getAttribute("id")))
-                        .map(Element::getTextRecursively).findFirst();
-                if (text.isPresent()) {
-                    return text.get();
-                }
-            }
-        }
-        String label = e.getProperty("label");
-        if (label != null && !label.isBlank()) {
-            return label;
-        }
-        return e.getTextRecursively();
-    }
 
     private static java.util.stream.Stream<Element> descendants(Element e) {
         return java.util.stream.Stream.concat(java.util.stream.Stream.of(e), e.getChildren().flatMap(BrowserlessElement::descendants));

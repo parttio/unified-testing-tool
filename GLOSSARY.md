@@ -25,7 +25,7 @@ The Vaadin components the Unified API spec designs in full, one per interaction 
 _Avoid_: Supported components, MVP components
 
 **Auto-Wait**:
-The Unified API's guarantee that an action waits for its component to be usable before acting and for the server round-trip to finish after, on every Testing Tool.
+The Unified API's guarantee that an action waits, before acting, for its component to be usable and for a server round-trip already under way to finish, and after acting, for the round-trip it started, on every Testing Tool.
 _Avoid_: Implicit wait, waitForVaadin
 
 **Unified UI Test**:
@@ -52,6 +52,14 @@ _Avoid_: Element, tester, locator, page object
 The Unified API's view of one browser tab or window showing the application: what a Unified UI Test receives, navigates and searches in.
 _Avoid_: UI, window, driver, browser
 
+**Template**:
+A component whose own content a test reaches only by entering it, one Template at a time: an app's LitTemplate on every Testing Tool, or a client-rendered web component on browser Testing Tools only.
+_Avoid_: Shadow host, web component, LitTemplate, app template
+
+**Application's packages**:
+The packages the Unified API takes as the application's own, read from the test the same way on every Testing Tool: the test class's, the `@SpringBootApplication`'s, the configured view packages and those of the routes the test opened, with their subpackages. A Template's class is looked up in them by its tag (ADR 0018).
+_Avoid_: classpath, scan packages, base packages
+
 **Viewport**:
 The visible area of a Unified Page, as width × height in CSS pixels, which the application lays itself out for; a test runs at one unless it changes it.
 _Avoid_: Window size, screen size, resolution, breakpoint
@@ -69,7 +77,7 @@ An OpenRewrite recipe that rewrites a Testing Tool's existing tests into Unified
 _Avoid_: Converter, codemod, migration script
 
 **Migration Marker**:
-The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch.
+The `// TODO unified:` comment a Migration Recipe leaves on code it couldn't convert, usually kept running through the Escape Hatch. In a `pom.xml` it is an XML comment, `<!-- TODO unified: ... -->`, on what the build must change (an old Vaadin, a Failsafe profile that tested a server or browser outside the test).
 _Avoid_: TODO, FIXME, warning
 
 **Component Reference**:
@@ -91,6 +99,10 @@ _Avoid_: Highlighted element, focus, subject
 **Step Change**:
 A component that appeared, vanished or changed state during one action User Step, as seen by comparing the Findable View before and after it; one that no later check reads is an unchecked Step Change.
 _Avoid_: Effect, side effect, diff, delta
+
+**Secret Value**:
+A value of the test that its reports show as `••••` wherever it occurs: a sign-in password or a value the test marks as secret. Exceptions: the password inside its own sign-in's user name, and the scenario name the author wrote.
+_Avoid_: Sensitive data, credential, redacted value
 
 **Base Run**:
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.

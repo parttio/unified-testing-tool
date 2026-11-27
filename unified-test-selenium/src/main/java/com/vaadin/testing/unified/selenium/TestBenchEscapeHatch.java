@@ -1,6 +1,7 @@
 package com.vaadin.testing.unified.selenium;
 
 import com.vaadin.testbench.AbstractBrowserDriverTestBase;
+import com.vaadin.testbench.parallel.Browser;
 import com.vaadin.testing.unified.UnifiedPage;
 import java.util.List;
 import java.util.function.Predicate;
@@ -30,13 +31,33 @@ import org.openqa.selenium.support.ui.ExpectedCondition;
  */
 public final class TestBenchEscapeHatch extends AbstractBrowserDriverTestBase {
 
-    private TestBenchEscapeHatch(WebDriver driver) {
+    private final LocalBrowser local;
+
+    TestBenchEscapeHatch(WebDriver driver, LocalBrowser local) {
         setDriver(driver);
+        this.local = local;
     }
 
     /** TestBench's test base API on the page's browser; fails when the test does not run on Selenium. */
     public static TestBenchEscapeHatch of(UnifiedPage page) {
-        return new TestBenchEscapeHatch(page.unwrap(WebDriver.class));
+        return new TestBenchEscapeHatch(page.unwrap(WebDriver.class), page.unwrap(LocalBrowser.class));
+    }
+
+    /**
+     * {@code BrowserTestBase.getRunLocallyBrowser()}: the browser {@code vaadin.testing.selenium.browser}
+     * configures ({@code CHROME} or {@code FIREFOX}), or null when the setting is absent and the adapter runs its
+     * default browser.
+     */
+    public Browser getRunLocallyBrowser() {
+        return local.browser();
+    }
+
+    /**
+     * {@code BrowserTestBase.getRunLocallyBrowserVersion()}: always {@code ""}, any version, as for a
+     * {@code @RunLocally} without one: the adapter runs the installed browser and has no version setting.
+     */
+    public String getRunLocallyBrowserVersion() {
+        return local.version();
     }
 
     /**

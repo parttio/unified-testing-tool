@@ -82,32 +82,8 @@ final class PlaywrightSession implements AdapterSession {
             }
         });
         page.onPageError(error -> consoleErrors.add(error));
-        page.onRequest(request -> {
-            if (request.isNavigationRequest() && request.frame() == page.mainFrame()) {
-                pageLoaded = true;
-                loaded = false;
-            }
-        });
-        page.onLoad(p -> loaded = true);
-        page.addInitScript(SEE_LEAVING);
     }
 
-    /** Whether the page has fired {@code load} since it last started loading another document. */
-    private volatile boolean loaded = true;
-
-    /**
-     * Notes in the page when it starts loading another document: the Navigation API's {@code navigate} event fires
-     * inside the location change, the link's click or the form's submit, before the request goes out (#397).
-     */
-    private static final String SEE_LEAVING = """
-            window.navigation?.addEventListener('navigate', e => {
-              if (!e.destination.sameDocument && e.downloadRequest === null) {
-                window.__unifiedLeaving = true;
-              }
-            });""";
-
-    /** Whether the page has started loading another document since {@link #settle()} last ran (#397). */
-    private volatile boolean pageLoaded;
 
     /** What the page logged with console.error, and the exceptions no script caught, since they were last read. */
     private final List<String> consoleErrors = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
@@ -146,7 +122,6 @@ final class PlaywrightSession implements AdapterSession {
     /** Opens the test-only login URL: the browser context's session belongs to that user afterwards. */
     void logIn(String loginUrl) {
         com.microsoft.playwright.Response response = page.navigate(loginUrl);
-        loadWaitedFor();
         if (response == null || !response.ok()) {
             throw new IllegalStateException("Test login failed: " + (response == null ? "no response" : response.status()
                     + " " + response.text()));
@@ -163,6 +138,9 @@ final class PlaywrightSession implements AdapterSession {
     public List<UnifiedElement> find(QuerySpec spec) {
         PlaywrightComponents.Support support = PlaywrightComponents.of(spec.componentType());
         Locator scope = spec.parent() == null ? null : ((PlaywrightElement) spec.parent()).locator();
+        if (spec.inTemplate()) {
+            return findInTemplate(support, scope, spec);
+        }
         if (support.dramafinderElement() != null) {
             return findWithDramafinder(support, scope, spec.filters());
         }
@@ -173,6 +151,12 @@ final class PlaywrightSession implements AdapterSession {
         // Dramafinder's tag query takes the filters CSS can express; the rest are checked in the page with the
         // Unified API's matching, for every candidate in one round trip: no browser call per element, and no
         // element detaching between two calls.
+        if (BrowserQueries.isTagList(spec.tag())) {
+            // several tags (UnifiedLogin): Dramafinder's tag query takes one, so a plain CSS locator, with the
+            // filters CSS can express, as findInTemplate builds it
+            String selector = BrowserQueries.selector(spec.tag(), spec.filters());
+            return matching(support, scope == null ? page.locator(selector) : scope.locator(selector), spec);
+        }
         // "*" (VaadinElement.ANY_TAG) queries every light-DOM element, whatever its tag
         TagQuery<GenericElement> query = scope == null ? ElementQueries.find(page, spec.tag())
                 : ElementQueries.find(scope, spec.tag());
@@ -188,7 +172,14 @@ final class PlaywrightSession implements AdapterSession {
                 };
             }
         }
-        Locator candidates = query.getLocator();
+        return matching(support, query.getLocator(), spec);
+    }
+
+    /**
+     * The {@code candidates} that pass the filters CSS can't express, checked in the page with the Unified API's
+     * matching, and that {@code support} includes.
+     */
+    private List<UnifiedElement> matching(PlaywrightComponents.Support support, Locator candidates, QuerySpec spec) {
         List<Map<String, Object>> remaining = BrowserQueries.remaining(spec.filters());
         List<Integer> indices = new ArrayList<>();
         for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH, remaining)) {
@@ -202,6 +193,73 @@ final class PlaywrightSession implements AdapterSession {
             }
         }
         return result;
+    }
+
+    /**
+     * A lookup inside a Template the test entered (spec 04, "Templates"). Playwright's CSS enters every shadow root
+     * under the Template, so the candidates are filtered in the page, in one round trip with the other filters
+     * ({@link BrowserQueries#MATCH_IN_TEMPLATE}), down to what Selenium's query finds there.
+     */
+    private List<UnifiedElement> findInTemplate(PlaywrightComponents.Support support, Locator template,
+            QuerySpec spec) {
+        if (spec.tag() == null) {
+            throw new IllegalArgumentException(spec.componentType().getName()
+                    + " has no @Tag; set @UnifiedComponent(tag = \"...\")");
+        }
+        Locator candidates = template.locator(BrowserQueries.selector(spec.tag(), spec.filters()));
+        com.microsoft.playwright.ElementHandle host = template.elementHandle();
+        List<UnifiedElement> result = new ArrayList<>();
+        try {
+            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.MATCH_IN_TEMPLATE,
+                    Map.of("host", host, "filters", BrowserQueries.remaining(spec.filters())))) {
+                int index = ((Number) i).intValue();
+                Locator locator = candidates.nth(index);
+                if (support.include(locator)) {
+                    result.add(new PlaywrightElement(this, locator, dramafinderElement(support, locator), support,
+                            candidates, index));
+                }
+            }
+        } finally {
+            host.dispose();
+        }
+        return result;
+    }
+
+    /** One round trip: every element under the scope, kept in the page as {@link BrowserQueries#TEMPLATES} would. */
+    @Override
+    public List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        Locator scope = parent == null ? null : ((PlaywrightElement) parent).locator();
+        Locator candidates = scope == null ? page.locator("*") : scope.locator("*");
+        com.microsoft.playwright.ElementHandle host = scope == null ? null : scope.elementHandle();
+        PlaywrightComponents.Support support = PlaywrightComponents.of(Component.class);
+        Map<String, Object> arg = new java.util.HashMap<>();
+        arg.put("scope", host);
+        arg.put("inTemplate", inTemplate);
+        try {
+            List<UnifiedElement> result = new ArrayList<>();
+            for (Object i : (List<?>) candidates.evaluateAll(BrowserQueries.TEMPLATES_AMONG, arg)) {
+                int index = ((Number) i).intValue();
+                result.add(new PlaywrightElement(this, candidates.nth(index), null, support, candidates, index));
+            }
+            return result;
+        } finally {
+            if (host != null) {
+                host.dispose();
+            }
+        }
+    }
+
+    /** Dramafinder's element of the component's type over {@code locator}, for the actions it offers; or null. */
+    private static VaadinElement dramafinderElement(PlaywrightComponents.Support support, Locator locator) {
+        Class<? extends VaadinElement> type = support.dramafinderElement();
+        if (type == null) {
+            return null;
+        }
+        try {
+            return type.getConstructor(Locator.class).newInstance(locator);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(type.getName() + " has no constructor taking a Locator", e);
+        }
     }
 
     /**
@@ -246,9 +304,13 @@ final class PlaywrightSession implements AdapterSession {
                 : invokeStatic("find", new Class<?>[] { Locator.class, Class.class }, scope, type);
         List<Filter> inPage = new ArrayList<>();
         for (Filter f : filters) {
-            if (f.kind() == Filter.Kind.LABEL) {
+            if (f.kind() == Filter.Kind.LABEL || f.kind() == Filter.Kind.ACCESSIBLE_NAME
+                    || f.kind() == Filter.Kind.ATTRIBUTE && f.value() == null
+                    || f.kind() == Filter.Kind.WITHOUT_ATTRIBUTE) {
                 // Dramafinder's withLabel reads the field's own label slot only; the label property or a FormLayout
-                // item's label is checked in the page, with the Unified API's matching, as on Selenium (#93)
+                // item's label is checked in the page, with the Unified API's matching, as on Selenium (#93).
+                // Dramafinder's withAccessibleName matches each aria-labelledby target on its own: the name is
+                // checked in the page as getAccessibleName() reads it, all targets joined (#641)
                 inPage.add(f);
                 continue;
             }
@@ -260,7 +322,7 @@ final class PlaywrightSession implements AdapterSession {
                 case TEST_ID -> "withTestId";
                 case ID -> "withId";
                 case CLASS_NAME -> "withClassName";
-                case THEME, ATTRIBUTE -> null;
+                case THEME, ATTRIBUTE, WITHOUT_ATTRIBUTE -> null;
             };
             if (f.kind() == Filter.Kind.THEME) {
                 query = invoke(query, "withTheme", new Class<?>[] { String.class }, f.value());
@@ -330,19 +392,16 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public void navigate(Class<? extends Component> view) {
         RouteNavigation.navigate(page, baseUrl, view);
-        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, Object urlParameter) {
         RouteNavigation.navigate(page, baseUrl, view, urlParameter);
-        loadWaitedFor();
     }
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters));
-        loadWaitedFor();
     }
 
     @Override
@@ -350,7 +409,6 @@ final class PlaywrightSession implements AdapterSession {
         String queryString = query.getQueryString();
         RouteNavigation.open(page, baseUrl, RouteNavigation.pathOf(view, parameters)
                 + (queryString.isEmpty() ? "" : "?" + queryString));
-        loadWaitedFor();
     }
 
     @Override
@@ -361,30 +419,21 @@ final class PlaywrightSession implements AdapterSession {
         } else {
             RouteNavigation.open(page, baseUrl, path.startsWith("/") ? path.substring(1) : path);
         }
-        loadWaitedFor();
     }
 
     @Override
     public void reload() {
         page.reload();
         AutoWait.waitForVaadinIdle(page);
-        loadWaitedFor();
     }
 
-    /**
-     * The session loaded the page itself and has waited for it: the next action's {@link #settle()} has no page
-     * load of its own to wait for, and no extra calls to make (#397).
-     */
-    private void loadWaitedFor() {
-        pageLoaded = false;
-        loaded = true;
-    }
 
     @Override
     public boolean isAt(Class<? extends Component> view) {
         if (!CurrentView.hasRoute(view)) {
             return CurrentView.shows(currentViews(), view);
         }
+        // the route's template and each @RouteAlias of the view (Dramafinder 2.2.2+, #530)
         return RouteNavigation.isAt(page, baseUrl, view);
     }
 
@@ -426,89 +475,56 @@ final class PlaywrightSession implements AdapterSession {
     }
 
     /**
-     * Waits for Flow to change the address bar after a navigation it handled, then for the round trip that may
-     * start: both in one call to the page (#402). When the action loaded another page, or Flow stays busy
-     * longer than {@link #SETTLE_IDLE_MS}, Dramafinder's own wait takes over, with its timeout; after a page load,
-     * only once Flow has started the new page's UI (#397).
+     * Waits after an action, in one call to the page when nothing is pending (#402): for the round trip it started,
+     * for a server-side navigation to reach the address bar (#233), and for a page load it started, until Flow has
+     * started the new page's UI (#397). All of it is Dramafinder's wait since 2.2.3 (parttio/dramafinder#304, #305,
+     * #320). It sees a page load through the Navigation API listener it installs in each page on its first wait
+     * there, and the session waits on every page it opens.
      */
     @Override
     public void settle() {
-        try {
-            Object state = page.evaluate(SETTLE_AND_IDLE, List.of(BrowserQueries.SETTLE_NAVIGATION_CAP, SETTLE_IDLE_MS));
-            if ("leaving".equals(state)) {
-                // the request for the next page may not be out yet: its load is still to come
-                pageLoaded = true;
-                loaded = false;
-            } else if ("idle".equals(state) && !pageLoaded) {
-                return;
-            }
-        } catch (com.microsoft.playwright.PlaywrightException e) {
-            // the action loaded another page: nothing of Flow's left to wait for in this one
-        }
-        if (pageLoaded) {
-            waitForFlowStart();
-        }
         AutoWait.waitForVaadinIdle(page);
     }
 
     /**
-     * After a page load: waits for the new page's {@code load}, then until Flow has started the page's UI. Before
-     * that, only Flow's TypeScript client is registered, or none, and the page reads as idle while it shows nothing
-     * yet (#397).
+     * How long an action waits, before acting, for a Flow client that is still busy (#604, ADR 0014): then it acts
+     * anyway, so an app that stays busy (a short {@code @Poll} interval, a long request) can still be driven.
      */
-    private void waitForFlowStart() {
-        pageLoaded = false;
+    static final int FLOW_IDLE_CAP_MS = 5000;
+
+    /** What {@link #awaitFlowIdle()} found. */
+    enum FlowIdle {
+        /** No Flow client was busy: nothing waited. */
+        IDLE,
+        /** A Flow client was busy: waited until it was idle, or for the cap. */
+        WAITED,
+        /** The page navigated meanwhile. */
+        GONE
+    }
+
+    /** Waits until no Flow client is busy, at most {@link #FLOW_IDLE_CAP_MS}; one call to the page. */
+    FlowIdle awaitFlowIdle() {
         try {
-            page.waitForCondition(() -> loaded, new Page.WaitForConditionOptions().setTimeout(timeoutMillis));
-        } catch (com.microsoft.playwright.TimeoutError e) {
-            // the navigation loaded no page (a 204, a cancelled one): the page in place is the one to wait for
-        }
-        page.waitForLoadState(com.microsoft.playwright.options.LoadState.LOAD);
-        try {
-            page.waitForFunction(FLOW_STARTED, null, new Page.WaitForFunctionOptions().setTimeout(FLOW_START_CAP_MS));
-        } catch (com.microsoft.playwright.TimeoutError e) {
-            // Flow runs in the page but shows no Flow UI (a Hilla view): nothing more to wait for
+            return Boolean.TRUE.equals(page.evaluate(AWAIT_FLOW_IDLE, FLOW_IDLE_CAP_MS)) ? FlowIdle.WAITED
+                    : FlowIdle.IDLE;
+        } catch (com.microsoft.playwright.PlaywrightException e) {
+            return FlowIdle.GONE;
         }
     }
 
-    /** How long {@link #FLOW_STARTED} may take after a page load, in ms: a page with no Flow UI never passes it. */
-    private static final int FLOW_START_CAP_MS = 5000;
-
-    /** True once Flow has registered the UI's client next to its TypeScript one, or when the page doesn't run Flow. */
-    private static final String FLOW_STARTED = """
-            () => { const clients = window.Vaadin?.Flow?.clients;
-                    return !clients || Object.keys(clients).some(id => id !== 'TypeScript'); }""";
-
-    /** How long {@link #SETTLE_AND_IDLE} waits for Flow to be idle before Dramafinder's wait takes over, in ms. */
-    private static final int SETTLE_IDLE_MS = 5000;
-
-    /**
-     * {@link BrowserQueries#SETTLE_NAVIGATION}, then Dramafinder's idle condition (no Flow client active, the dev
-     * server loaded), polled: {@code idle}, {@code busy} when still busy after the given time, or {@code leaving}
-     * once the page has started loading another document ({@link #SEE_LEAVING}).
-     */
-    private static final String SETTLE_AND_IDLE = """
-            async ([cap, idleMs]) => {
-              const tick = (ms) => new Promise(r => setTimeout(r, ms));
-              await tick(0);
-              for (let t = 0; window.Vaadin?.Flow?.navigation && t < cap; t += 10) {
-                await tick(10);
-              }
-              await tick(0);
-              const idle = () => {
-                const flow = window.Vaadin && window.Vaadin.Flow;
-                if (flow && flow.clients) {
-                  return !Object.values(flow.clients).some(c => c.isActive());
-                }
-                return !(flow && flow.devServerIsNotLoaded);
+    private static final String AWAIT_FLOW_IDLE = """
+            async (idleMs) => {
+              const busy = () => {
+                const clients = window.Vaadin?.Flow?.clients;
+                return !!clients && Object.values(clients).some(c => c.isActive && c.isActive());
               };
-              let state = 'busy';
-              for (let t = 0; t <= idleMs; t += 10) {
-                if (idle()) { state = 'idle'; break; }
-                await tick(10);
+              if (!busy()) return false;
+              for (let t = 0; t < idleMs && busy(); t += 10) {
+                await new Promise(r => setTimeout(r, 10));
               }
-              return window.__unifiedLeaving ? 'leaving' : state;
+              return true;
             }""";
+
 
     /** A full-page screenshot, with where it shows the failed step's Step Target. */
     @Override
@@ -610,6 +626,25 @@ final class PlaywrightSession implements AdapterSession {
     public void pressKey(String key) {
         page.keyboard().press(key);
         AutoWait.afterAction(page);
+    }
+
+    /** Exact, for this page only, any size: Playwright emulates the Viewport (ADR 0011). */
+    @Override
+    public void setViewport(com.vaadin.testing.unified.ViewportSize size) {
+        page.setViewportSize(size.width(), size.height());
+    }
+
+    /** The core's layout script, unchanged, with the subject's element (ADR 0011). One round trip. */
+    @Override
+    public String measureLayout(java.util.List<com.vaadin.testing.unified.spi.LayoutScript.Target> targets,
+            com.vaadin.testing.unified.UnifiedElement subject) {
+        String argument = com.vaadin.testing.unified.spi.LayoutScript.argument(targets);
+        if (subject instanceof PlaywrightElement element) {
+            return (String) element.locator().evaluate("(element, argument) => ("
+                    + com.vaadin.testing.unified.spi.LayoutScript.SOURCE + ")([argument, element])", argument);
+        }
+        return (String) page.evaluate(com.vaadin.testing.unified.spi.LayoutScript.SOURCE,
+                java.util.Arrays.asList(argument, null));
     }
 
     @Override

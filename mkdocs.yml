@@ -81,6 +81,10 @@ nav:
       - Migrating from TestBench: migrating-from-testbench.md
       - Migrating from Browserless: migrating-from-browserless.md
       - Migrating from Dramafinder: migrating-from-dramafinder.md
+  - Field feedback:
+      - "Plain Playwright migration (Project A, alpha6)": feedback/2026-11-plain-playwright-migration-project-a.md
+      - "Dramafinder migration (Project B, alpha4)": feedback/2026-11-dramafinder-migration-project-b.md
+      - "TestBench migration (Bakery, alpha5)": feedback/2026-11-testbench-migration-bakery.md
   - Specification:
       - Overview: spec/README.md
       - 1. Concepts: spec/01-concepts.md
@@ -111,8 +115,20 @@ nav:
       - adr/0008-adapter-spi-is-test-runner-neutral.md
       - adr/0009-findable-view-in-lookups-not-aria-yaml.md
       - adr/0010-browser-screenshots-are-highlighted-by-the-report.md
+      - adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md
+      - adr/0012-lookups-enter-templates-explicitly.md
+      - adr/0013-migrated-spring-boot-tests-start-the-app.md
+      - adr/0014-secrets-are-masked-as-substrings-except-the-login-user-name-and-display-name.md
+      - adr/0015-renderer-markup-is-found-by-tag-wrappers-row-click-avoids-it.md
+      - adr/0016-accessible-name-follows-the-browser.md
+      - adr/0017-the-page-path-is-checked-not-read.md
+      - adr/0018-template-class-from-the-application-packages.md
+      - adr/0019-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md
+      - adr/0020-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md
   - Release notes:
       - Unreleased: releases/unreleased.md
+      - 0.1.0-alpha6: releases/0.1.0-alpha6.md
+      - 0.1.0-alpha5: releases/0.1.0-alpha5.md
       - 0.1.0-alpha4: releases/0.1.0-alpha4.md
       - 0.1.0-alpha3: releases/0.1.0-alpha3.md
       - 0.1.0-alpha2: releases/0.1.0-alpha2.md

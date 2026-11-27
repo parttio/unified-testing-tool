@@ -6,6 +6,7 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.tabs.TabSheet;
@@ -63,11 +64,38 @@ final class BrowserlessComponents {
         }
     }
 
+    /**
+     * An overlay host (spec 04, "What a lookup sees"): a component whose content its overlay shows. It is part
+     * of the page, and visible, while its overlay is open, as in a browser adapter: its {@code opened}
+     * property, which Dialog, ConfirmDialog and Notification keep in sync with the browser. A closed one is not
+     * part of the page. Another overlay component opts in by registering one.
+     */
+    static class OverlayHost implements Support {
+        @Override
+        public boolean include(Component component) {
+            return opened(component);
+        }
+
+        @Override
+        public Optional<Boolean> visible(Component component) {
+            return Optional.of(opened(component));
+        }
+
+        @Override
+        public Optional<Boolean> booleanProperty(Component component, String name) {
+            return "opened".equals(name) ? Optional.of(opened(component)) : Optional.empty();
+        }
+
+        static boolean opened(Component component) {
+            return component.getElement().getProperty("opened", false);
+        }
+    }
+
     private static final Support DEFAULT = new Support() {};
     private static final Map<Class<? extends Component>, Support> REGISTRY = new LinkedHashMap<>();
 
     static {
-        register(Notification.class, new Support() {
+        register(Notification.class, new OverlayHost() {
             @Override
             public Optional<String> text(Component component, BrowserlessUIContext window) {
                 // the text is in a renderer: read it through the tester
@@ -78,43 +106,58 @@ final class BrowserlessComponents {
                     throw new IllegalStateException("NotificationTester.getText() not available", e);
                 }
             }
+        });
+    }
 
-            @Override
-            public Optional<Boolean> booleanProperty(Component component, String name) {
-                return "opened".equals(name) ? Optional.of(((Notification) component).isOpened()) : Optional.empty();
-            }
+    /** A LoginOverlay or a LoginForm: signs in through {@link BrowserlessCoreSetAccess.LoginAccessImpl}. */
+    private static Optional<Object> loginAccess(Class<?> type, Component component, BrowserlessSession session) {
+        return type == com.vaadin.testing.unified.spi.LoginAccess.class
+                ? Optional.of(new BrowserlessCoreSetAccess.LoginAccessImpl(session,
+                        (com.vaadin.flow.component.login.AbstractLogin) component))
+                : Optional.empty();
+    }
 
-            @Override
-            public Optional<Boolean> visible(Component component) {
-                return Optional.of(((Notification) component).isOpened());
-            }
-
-            /** Open notifications only: a browser adapter finds the open card. */
+    static {
+        // UnifiedLogin's lookup, over both: an overlay counts while it is open, a form always
+        register(com.vaadin.flow.component.login.AbstractLogin.class, new Support() {
             @Override
             public boolean include(Component component) {
-                return ((Notification) component).isOpened();
+                return !(component instanceof com.vaadin.flow.component.login.LoginOverlay) || OverlayHost.opened(component);
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return loginAccess(type, component, session);
+            }
+        });
+        register(com.vaadin.flow.component.login.LoginOverlay.class, new OverlayHost() {
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return loginAccess(type, component, session);
             }
         });
     }
 
     static {
-        register(Dialog.class, new Support() {
+        register(ConfirmDialog.class, new OverlayHost() {
             @Override
-            public Optional<Boolean> booleanProperty(Component component, String name) {
-                return "opened".equals(name) ? Optional.of(((Dialog) component).isOpened()) : Optional.empty();
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                return type == com.vaadin.testing.unified.spi.ConfirmDialogAccess.class
+                        ? Optional.of(new BrowserlessCoreSetAccess.ConfirmDialogAccessImpl(session, (ConfirmDialog) component))
+                        : Optional.empty();
             }
 
+            /** Escape cancels, as the web component does: the cancel event, then the dialog closes. */
             @Override
-            public Optional<Boolean> visible(Component component) {
-                return Optional.of(((Dialog) component).isOpened());
+            public boolean pressKey(Component component, String key, BrowserlessUIContext window) {
+                if (!"Escape".equals(key)) {
+                    return false;
+                }
+                BrowserlessCoreSetAccess.ConfirmDialogAccessImpl.escape((ConfirmDialog) component);
+                return true;
             }
-
-            /** Open dialogs only, as in a browser adapter: a closed dialog is not part of the page. */
-            @Override
-            public boolean include(Component component) {
-                return ((Dialog) component).isOpened();
-            }
-
+        });
+        register(Dialog.class, new OverlayHost() {
             @Override
             public boolean pressKey(Component component, String key, BrowserlessUIContext window) {
                 if (!"Escape".equals(key)) {
@@ -173,6 +216,8 @@ final class BrowserlessComponents {
         register(com.vaadin.flow.component.details.Details.class, access(com.vaadin.testing.unified.spi.DetailsAccess.class,
                 (session, c) -> new BrowserlessCoreSetAccess.DetailsAccessImpl(session,
                         (com.vaadin.flow.component.details.Details) c)));
+        register(com.vaadin.flow.component.applayout.AppLayout.class, access(com.vaadin.testing.unified.spi.AppLayoutAccess.class,
+                (session, c) -> new BrowserlessAppLayout.Access(session, (com.vaadin.flow.component.applayout.AppLayout) c)));
         register(com.vaadin.flow.component.menubar.MenuBar.class, access(com.vaadin.testing.unified.spi.MenuBarAccess.class,
                 (session, c) -> new BrowserlessCoreSetAccess.MenuBarAccessImpl(session,
                         (com.vaadin.flow.component.menubar.MenuBar) c)));
@@ -233,6 +278,29 @@ final class BrowserlessComponents {
                     throw new IllegalStateException(e);
                 }
                 return true;
+            }
+        });
+        // a link: navigates as a user's click does, or says why Browserless can't (BrowserlessLinks)
+        Support link = access(com.vaadin.testing.unified.spi.LinkAccess.class, BrowserlessLinks::new);
+        register(com.vaadin.flow.router.RouterLink.class, link);
+        register(com.vaadin.flow.component.html.Anchor.class, link);
+        // SideNav (#658): an item is hidden in a collapsed item, and follows its path as a link does
+        register(com.vaadin.flow.component.sidenav.SideNav.class, access(com.vaadin.testing.unified.spi.SideNavAccess.class,
+                (session, c) -> new BrowserlessSideNav.NavAccess((com.vaadin.flow.component.sidenav.SideNav) c)));
+        register(com.vaadin.flow.component.sidenav.SideNavItem.class, new Support() {
+            @Override
+            public Optional<Boolean> visible(Component component) {
+                return BrowserlessSideNav.hiddenByParent(component) ? Optional.of(false) : Optional.empty();
+            }
+
+            @Override
+            public Optional<Object> unwrap(Class<?> type, Component component, BrowserlessSession session) {
+                var item = (com.vaadin.flow.component.sidenav.SideNavItem) component;
+                if (type == com.vaadin.testing.unified.spi.SideNavItemAccess.class) {
+                    return Optional.of(new BrowserlessSideNav.ItemAccess(session, item));
+                }
+                return type == com.vaadin.testing.unified.spi.LinkAccess.class
+                        ? Optional.of(new BrowserlessLinks(session, item)) : Optional.empty();
             }
         });
         register(Grid.class, new Support() {

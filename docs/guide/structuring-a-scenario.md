@@ -86,7 +86,14 @@ Values typed into a password field are shown as `••••` in every report. 
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:secret"
 ```
 
-From then on the value is masked wherever it appears in the test's reports, in every window: `fill text field “Email” with “••••”` in the scenario above, and again in the assertion that expects it.
+From then on the value is masked wherever it appears in the test's reports, in every window: `fill text field “Email” with “••••”` in the scenario above, and again in the assertion that expects it. It is masked even inside a longer word: a log line or an error that echoes it is covered.
+
+Two places keep their text:
+
+- **The login's user name.** A password given to `UnifiedLogin.login(..)` is not masked inside that login's own user name: `login("barista@vaadin.com", "barista")` reads `sign in as “barista@vaadin.com”`, and so does a step you named `Sign in as barista@vaadin.com`. If the password equals the user name (`admin` / `admin`), it is masked there too.
+- **The scenario's name you wrote.** A `@DisplayName`, or the method's name, is shown as written, because it comes from your source. The name of a parameterized or repeated test's invocation (`[1] barista`) is built from its arguments, so it is masked.
+
+Reports are for tests that run on test data or anonymised data, so masking keeps a value out of what a reader sees but isn't a security boundary ([ADR 0014](../adr/0014-secrets-are-masked-as-substrings-except-the-login-user-name-and-display-name.md)).
 
 ## Page objects: optional, structure only
 

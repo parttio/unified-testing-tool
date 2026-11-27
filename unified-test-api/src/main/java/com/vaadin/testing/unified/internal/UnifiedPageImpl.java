@@ -3,10 +3,14 @@ package com.vaadin.testing.unified.internal;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.QueryParameters;
+import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteParameters;
+import com.vaadin.testing.unified.internal.failures.FailureParts;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedGenericComponent;
+import com.vaadin.testing.unified.component.UnifiedTemplate;
 import com.vaadin.testing.unified.query.CommonFilters;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -23,9 +27,12 @@ public final class UnifiedPageImpl implements UnifiedPage {
     static final String WAIT_UNTIL = "waitUntil";
 
     private final TestRun run;
+    /** This window's Viewport: the test's until {@link #setViewport} changes it. */
+    private ViewportSize viewport;
 
     public UnifiedPageImpl(TestRun run) {
         this.run = run;
+        this.viewport = run.viewport();
     }
 
     public TestRun run() {
@@ -43,24 +50,58 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
+    public <C extends Component> UnifiedTemplate findTemplate(Class<C> templateType) {
+        return Wrappers.newTemplate(run, templateType, null);
+    }
+
+    @Override
     public String describe() {
         return FindableView.ofPage(run);
     }
 
     @Override
     public void navigate(Class<? extends Component> view) {
-        record(() -> Phrases.open(view, null), () -> run.session().navigate(view));
+        run.steps().routeUsed(view);
+        record(() -> Phrases.open(view, null), () -> {
+            requireNoRouteParameters(view);
+            run.session().navigate(view);
+            LayoutChecks.measure(run);
+        });
+    }
+
+    /** A route template with a required {@code :x} can't be opened without parameters: say so, not the server. */
+    private void requireNoRouteParameters(Class<? extends Component> view) {
+        if (view.getAnnotation(Route.class) == null) {
+            return;
+        }
+        List<String> required = RoutePaths.requiredParameters(view);
+        if (!required.isEmpty()) {
+            String names = String.join(", ", required.stream().map(n -> "“" + n + "”").toList());
+            throw run.failure(FailureParts.of("route parameter" + (required.size() == 1 ? " " : "s ") + names
+                            + " to open " + view.getSimpleName() + " (route “" + RoutePaths.pathOf(view) + "”)",
+                            "navigate(" + view.getSimpleName() + ".class) without parameters")
+                    .suggestion("navigate(" + view.getSimpleName() + ".class, new RouteParameters(\"" + required.get(0)
+                            + "\", ..))"), null);
+        }
     }
 
     @Override
     public <T, C extends Component & HasUrlParameter<T>> void navigate(Class<C> view, T parameter) {
-        record(() -> Phrases.open(view, parameter), () -> run.session().navigate(view, parameter));
+        run.steps().routeUsed(view);
+        record(() -> Phrases.open(view, parameter), () -> {
+            run.session().navigate(view, parameter);
+            LayoutChecks.measure(run);
+        });
     }
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters) {
+        run.steps().routeUsed(view);
         record(() -> Phrases.open(view, named(parameters, QueryParameters.empty())),
-                () -> run.session().navigate(view, parameters));
+                () -> {
+                    run.session().navigate(view, parameters);
+                    LayoutChecks.measure(run);
+                });
     }
 
     @Override
@@ -70,8 +111,12 @@ public final class UnifiedPageImpl implements UnifiedPage {
 
     @Override
     public void navigate(Class<? extends Component> view, RouteParameters parameters, QueryParameters query) {
+        run.steps().routeUsed(view);
         record(() -> Phrases.open(view, named(parameters, query)),
-                () -> run.session().navigate(view, parameters, query));
+                () -> {
+                    run.session().navigate(view, parameters, query);
+                    LayoutChecks.measure(run);
+                });
     }
 
     /** {@code owner=ada, week=2026-11-02}, or null for none: route parameters first, then the query's. */
@@ -89,12 +134,16 @@ public final class UnifiedPageImpl implements UnifiedPage {
                 run.requireBrowser("Navigating to an absolute URL");
             }
             run.session().navigate(path);
+            LayoutChecks.measure(run);
         });
     }
 
     @Override
     public void reload() {
-        record(() -> Phrases.page("reload", "reload the page"), () -> run.session().reload());
+        record(() -> Phrases.page("reload", "reload the page"), () -> {
+            run.session().reload();
+            LayoutChecks.measure(run);
+        });
     }
 
     /** A condition the User Steps can't read: recorded as a gap, whatever it calls while polling. */
@@ -145,6 +194,43 @@ public final class UnifiedPageImpl implements UnifiedPage {
     @Override
     public boolean hasRealBrowser() {
         return run.tool().hasRealBrowser();
+    }
+
+    @Override
+    public void setViewport(ViewportSize size) {
+        record(() -> Phrases.page("set", "set viewport to " + size), () -> {
+            run.requireBrowser("setViewport");
+            run.session().setViewport(size);
+            pause(RESIZE_HEARD_AFTER);
+            run.session().settle();
+            viewport = size;
+            run.steps().viewportChanged(run.window(), size);
+            LayoutChecks.measure(run);
+        });
+    }
+
+    @Override
+    public void checkLayout() {
+        record(() -> Phrases.page("check", "check the layout"), () -> {
+            run.requireBrowser("checkLayout");
+            LayoutChecks.measureNow(run);
+        });
+    }
+
+    @Override
+    public ViewportSize viewport() {
+        return viewport;
+    }
+
+    /** Flow sends a window resize to the server this long after the browser's last resize event (debounced). */
+    private static final java.time.Duration RESIZE_HEARD_AFTER = java.time.Duration.ofMillis(300);
+
+    private static void pause(java.time.Duration duration) {
+        try {
+            Thread.sleep(duration.toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override

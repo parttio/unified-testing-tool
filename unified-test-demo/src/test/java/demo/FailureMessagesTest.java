@@ -64,6 +64,14 @@ class FailureMessagesTest {
         }
 
         @Test
+        @DisplayName("A button repeated in a hidden bar is ambiguous")
+        void ambiguousWithHidden(UnifiedPage page) {
+            page.navigate(NoteView.class);
+            page.find(UnifiedButton.class).withText("Restore").click(); // hides the bar, with its own Cancel
+            page.find(UnifiedButton.class).withText("Cancel").click();
+        }
+
+        @Test
         @DisplayName("A lookup without a filter matches every field of the view")
         void noFilter(UnifiedPage page) {
             page.navigate(ProfileView.class);
@@ -141,7 +149,7 @@ class FailureMessagesTest {
         SummaryGeneratingListener listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);
         TestExecutionSummary summary = listener.getSummary();
-        assertEquals(10, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
+        assertEquals(11, summary.getTotalFailureCount(), () -> summary.getFailures().toString());
         failures = summary.getFailures().stream().collect(Collectors.toMap(
                 f -> f.getTestIdentifier().getDisplayName(),
                 f -> assertInstanceOf(UnifiedAssertionError.class, f.getException(), f.getException()::toString)));
@@ -171,7 +179,9 @@ class FailureMessagesTest {
         assertTrue(lines.get(9).matches("  Code          FailureMessagesTest\\.java:\\d+ \\(renamedLabel\\)"
                 + " ← FailureMessagesTest\\.java:\\d+ \\(renamedLabel\\)"), lines.get(9));
         Path evidence = dir.resolve("FailureMessagesTest$Failing").resolve("renamedLabel");
-        assertEquals("  Evidence      " + evidence.toString().replace('\\', '/') + "/", lines.get(10));
+        // the test's evidence directory, and the failure evidence in it
+        assertEquals("  Evidence      " + evidence.toString().replace('\\', '/') + "/  ("
+                + (tool.hasRealBrowser() ? "failure.png" : "failure.tree.txt") + ", failure.view.txt)", lines.get(10));
         assertEquals(11, lines.size(), failure.getMessage());
 
         // the same parts in user-steps.json
@@ -185,7 +195,8 @@ class FailureMessagesTest {
         // the lookup as the test wrote it, in the same form: what ApplyDidYouMean changes into the suggestion
         assertEquals("find(UnifiedTextField.class).withLabel(\"Email\")", json.get("lookup").asString());
         assertTrue(Files.readString(evidence.resolve("user-steps.txt")).contains(
-                "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Email”, found none\n"));
+                "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Email”, found none\n"
+                        + "     Did you mean  find(UnifiedTextField.class).withLabel(\"E-mail\")\n"));
     }
 
     /** The quick pick by filter (#403) finds nothing: every item is read for the Near Misses, as before. */
@@ -216,6 +227,16 @@ class FailureMessagesTest {
         assertEquals("2: text field “City” in container (test id “billing”), text field “City” in container"
                 + " (id “shipping”)", failure.getFound(), failure.getMessage());
         assertEquals(List.of(), failure.getNearMisses());
+        assertEquals(Optional.empty(), failure.getSuggestion());
+    }
+
+    @Test
+    void severalMatchesMarkTheHiddenOnes() {
+        UnifiedAssertionError failure = failures.get("A button repeated in a hidden bar is ambiguous");
+
+        assertEquals("exactly one button with text “Cancel”", failure.getExpected());
+        // the hidden bar's Cancel is found too, and marked
+        assertEquals("2: button “Cancel” (hidden), button “Cancel”", failure.getFound(), failure.getMessage());
         assertEquals(Optional.empty(), failure.getSuggestion());
     }
 

@@ -6,7 +6,7 @@ Every Wrapper has:
 
 | Method | Does |
 |---|---|
-| `isVisible()`, `isEnabled()` | reads the state now |
+| `isVisible()`, `isEnabled()` | waits until exactly one component matches, then reads its state once; a missing component fails after the timeout, it doesn't read `false`. To check that a component is gone, use `assertThat(wrapper).doesNotExist()`, or `isHidden()` for one still on the page ([Assertions and waiting](assertions-and-waiting.md)) |
 | `withTimeout(Duration)` | the same Wrapper with its own timeout |
 | `element()` | the [Unified Element](../spec/06-wrappers.md#unified-element) underneath: text, properties, attributes, `click()`, `pressKey(..)` |
 | `unwrap(..)`, `tryUnwrap(..)` | the Testing Tool's own object ([Escape Hatch](tool-specific.md)) |
@@ -17,7 +17,16 @@ Every Wrapper has:
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:textFields"
 ```
 
-`UnifiedTextArea` works the same way.
+`UnifiedTextArea`, `UnifiedEmailField` and `UnifiedPasswordField` work the same way: they share the text-value
+contract (`setValue`, `clear`, `getValue`, the label, helper text and validation getters) and the same checks.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/SignUpTest.java:signsUp"
+```
+
+Whether an email address is well formed is the field's validation: `isInvalid()` and `hasErrorMessage(..)` read it
+as they do on any field. What is typed into a password field reads `••••` in the User Steps, and a failed check on it
+shows `“••••”` for its values, expected and found: `Expected password field “Password” to have value “••••”`.
 
 ## Typed values
 
@@ -33,6 +42,16 @@ Number and date fields take and return Java types, `null` when empty:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/ExpenseTest.java:fillsTheValueFields"
+```
+
+`setValue(LocalDate)` is the way to choose a date, whether the user types it or picks it in the calendar: the
+calendar is the date picker's own business, tested in Vaadin. It also works on a picker whose field
+is hidden, such as a week picker the application opens from a badge of its own, as long as its calendar is open:
+the date is set as a pick sets it, and the calendar closes. A hidden picker whose calendar is closed can't be set,
+as the user can't reach it. Browserless sees no CSS, so there the field counts as visible.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/WeekPickerTest.java:picksAWeekFromTheOpenCalendar"
 ```
 
 To check how the field handles text it can't parse, type it:
@@ -98,6 +117,101 @@ click it:
 
 `getItems(..)` and `isItemEnabled(..)` read the same now, without waiting.
 
+A menu bar too narrow for its items, as on a phone, moves the trailing ones into its overflow menu,
+"More options". They are still its items: `getItems()` lists them, never the overflow button, the same on every
+Testing Tool. In a browser, `assertThat(menu).hasOverflowItems(..)` checks which moved, in order, and
+`hasNoOverflowItems()` that they all fit; `getOverflowItems()` reads them now:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/MenuBarOverflowTest.java:overflowItems"
+```
+
+The API works on what the user sees: in a browser, `clickItem("Print")` on an item that moved fails at once, since
+the user doesn't see it on the menu bar, and says to open the overflow menu. `unfoldingOverflow()` is how a test says
+it does: `menu.unfoldingOverflow().clickItem("Print")` opens "More options" first for an item that moved, and clicks it
+where it is otherwise, so the same line works at every [Viewport](configuration.md#viewports). It has `isItemEnabled(..)`
+too:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/MenuBarOverflowTest.java:clicksAnOverflowedItem"
+```
+
+Only a browser lays the menu bar out: on Browserless nothing moves, `clickItem(..)` reaches every item, and the overflow
+checks fail asking for `@RequiresBrowser`.
+
+## Links
+
+`UnifiedLink` finds a `RouterLink`, an `Anchor`, or any other `<a>`: by its text, its accessible name, or where it
+goes with `withHref(..)`. `click()` follows the link as a user's click does and waits for the new page:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/LinkTest.java:followsALink"
+```
+
+In a browser the click is a real click on the `<a>`. Browserless has no browser: a link to a route of the
+application navigates to that route. A link out of the application (another host, a servlet path such as
+`/logout`, a download) or one that opens another window (`target="_blank"`) fails on Browserless, saying the test
+needs `@RequiresBrowser`. A disabled link fails the click, as a disabled button does. The User Steps read
+`click link “Profile”`, then `open “profile”` when the click navigated.
+
+`getHref()` and `assertThat(link).hasHref(..)` read the `href` as the application set it, the same on every Testing
+Tool: `profile` for a `RouterLink` to the profile view, not the absolute URL a browser resolves it to.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/LinkTest.java:readsALink"
+```
+
+## App layout
+
+`UnifiedAppLayout` is an `AppLayout`, the application's frame. On a narrow [Viewport](configuration.md#viewports) its
+drawer becomes an overlay over the content, closed until the user opens it. `assertThat(layout)` checks
+`isOverlay()` or `isNotOverlay()`, and `isDrawerOpened()` or `isDrawerClosed()`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/AppLayoutTest.java:drawerIsAnOverlay"
+```
+
+`openDrawer()`, `closeDrawer()` and `toggleDrawer()` use the layout's `DrawerToggle`, as a user does; an opened
+overlay drawer covers the toggle, so it is closed with Escape. `openDrawer()` and `closeDrawer()` do nothing when the
+drawer already is so, and a layout without a `DrawerToggle` fails them:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/AppLayoutTest.java:opensTheDrawer"
+```
+
+Browserless reads the drawer as the server has it, and opens and closes it as the browser would tell the server.
+Whether it is an overlay is up to the browser: on Browserless, `isOverlay()` fails asking for `@RequiresBrowser`. The
+[Findable View](finding-components.md) lists the layout with `(overlay)` and `(drawer closed)`.
+
+## Side navigation
+
+`UnifiedSideNavItem` finds an item of a `SideNav` by its label, the item's own text: `withLabel("Orders")`, or by
+where it goes with `withPath(..)`. `click()` clicks it as a user does. An item with a path is followed as
+[`UnifiedLink.click()`](#links) follows a link, and waits for the new page:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/SideNavTest.java:clicksASideNavItem"
+```
+
+An item is a [Scope](finding-components.md#scopes) for its child items, and `UnifiedSideNav`, found by the label
+above its items, is one for its items. Either tells apart two items of the same label. A click on a nested item first
+expands the collapsed items it is in, by their toggle buttons, as a user does:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/SideNavTest.java:clicksANestedItem"
+```
+
+An item without a path expands or collapses its child items when clicked, as in a browser; `expand()` and
+`collapse()` use its toggle button and do nothing when it is already so. On Browserless, an item whose path leaves the
+application, or opens another window, fails the click, saying the test needs `@RequiresBrowser`. The User Steps read
+`click side nav item “Users” in side nav item “Admin”`, then `open “shop/admin/users”`.
+
+`assertThat(item)` checks `isCurrent()` (the page the user is on), `isExpanded()`, `isCollapsed()`, `hasPath(..)`
+and `hasItems(..)`; `getPath()` reads the path as the application set it, the same on every Testing Tool. As in a
+browser, opening a page expands the items holding its item on every Testing Tool, and the item itself when it has
+child items. The [Findable View](finding-components.md) lists each item, with `(current)` and `(collapsed)`, and a
+nested item in a collapsed one as `(hidden)`.
+
 ## Tabs and Details
 
 ```java
@@ -105,6 +219,19 @@ click it:
 ```
 
 A tab holding a `RouterLink` is named by the link's text.
+
+A `Tabs` used as a navigation menu, with a `RouterLink` or an `Anchor` in each tab, navigates: `selectTab` follows
+the tab's link, as a user's click on the tab does and as [`UnifiedLink.click()`](#links) does, then waits for the new
+page:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/MenuTest.java:followsATabsLink"
+```
+
+A tab that navigated isn't checked for its selection: the tabs may be gone, or rendered again by the new view. A
+tab without a link is selected and checked, as before. On Browserless, a tab whose link leaves the application
+fails, saying the test needs `@RequiresBrowser`. The User Steps read `select tab “Profile” in tabs`, then
+`open “profile”`.
 
 ## Dialogs and notifications
 
@@ -115,6 +242,26 @@ Only open dialogs and notifications are found. A dialog is a [Scope](finding-com
 ```
 
 When several notifications can be open at once, filter by text: an unfiltered `find(UnifiedNotification.class)` fails with "found 2".
+
+A `ConfirmDialog` is a `UnifiedConfirmDialog`, found by `withHeaderTitle(..)` or `withTextContaining(..)` (its message). `confirm()`, `reject()` and `cancel()` press the button of that role, whatever text the application or its translation gave it, and wait for the server; the User Step reads `confirm “Delete order?”`, naming the dialog by its header, or its message when it has none:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ConfirmDialogTest.java:confirms"
+```
+
+`reject()` or `cancel()` on a dialog that doesn't show that button fails, listing the buttons it has. `getHeaderTitle()`, `getText()`, `getConfirmText()`, `getRejectText()` and `getCancelText()` read what the user sees (null for a button the dialog doesn't show); `hasText(..)` and `hasTextContaining(..)` check the message. `close()` presses Escape, which fires the dialog's cancel event, as in a browser.
+
+## Login
+
+A `LoginOverlay` or a `LoginForm` is a `UnifiedLogin`. There is normally one per page, so `page.find(UnifiedLogin.class)` needs no filter; `withTitle(..)` filters by an overlay's title. An overlay is found while it is open. `login(username, password)` signs in as a user does and waits for the server, or for the page a form post opened; the User Step reads `sign in as “barista@vaadin.com” in login`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/LoginTest.java:signsIn"
+```
+
+The password is never shown: not in the User Steps, the reports or a failure, wherever it would appear (an application log line included), as with `page.secret(..)`. The exception is the user name it was typed with: a password that is part of its user name (`barista@vaadin.com` / `barista`) leaves the user name readable ([Secret values](structuring-a-scenario.md#secret-values)). In a browser, `login(..)` types into the form's fields and presses its submit button, which also posts a form with an `action` (Spring Security's `/login`). On Browserless, it fires the component's `LoginEvent`, which the application's listener handles; a component with an `action` fails there, as Browserless can't submit a form post: give that test `@RequiresBrowser`, or sign in with [`@WithMockUser`](navigation-and-users.md) when the test isn't about the login itself.
+
+`forgotPassword()` presses "Forgot password" (the `ForgotPasswordEvent`), and fails when the application hid that button. `isOpen()`, `isError()`, `isEnabled()`, `isForgotPasswordButtonVisible()`, `getTitle()` and `getDescription()` read the same on every Testing Tool (a form is open while it is on the page, and has no title or description); `assertThat(login)` checks `isOpen()`, `isClosed()`, `hasError()`, `hasNoError()` and `hasTitle(..)`.
 
 ## Upload
 
@@ -133,6 +280,14 @@ An app built on Vaadin's AI components has a `MessageInput` and a `MessageList`.
 ```
 
 A message's text is the text the application gave it: with Markdown on, the Markdown source (`**Pancakes**`), not the rendered text, so that it reads the same on every Testing Tool. `getMessages()` gives each message's user name and text, `getMessageTexts()` the texts only. `hasMessageTexts(..)` checks every message, in order; `isEmpty()` checks there are none.
+
+One message is a lazy lookup, as a [grid row](grid.md) is: `message(i)` by its index among all messages, from 0, or `message()` narrowed by `withUserName(..)`, `withText(..)` and `withTextContaining(..)`, with `last()` taking the last of the matches so far. Its checks wait for a reply that comes later: `chat.describe()` lists the first 20 messages with the lookup that finds each.
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/ChatTest.java:checksOneMessage"
+```
+
+`hasText(..)`, `hasTextContaining(..)` and `hasUserName(..)` need exactly one matching message, `exists()`, `doesNotExist()` and `hasCount(n)` count them. Use `hasMessageContaining(..)` when any message will do, and `message()` for a message at a position, from someone, the last one, or none.
 
 ## Keyboard and DOM events
 

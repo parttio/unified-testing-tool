@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.openrewrite.ExecutionContext;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
@@ -123,6 +124,52 @@ final class Dramafinder {
                     next.withPrefix(Space.SINGLE_SPACE), JavaType.Primitive.String);
         }
         return path;
+    }
+
+    /**
+     * The view a {@code page.navigate(getUrl() + ..)} opens, when its path is a literal exactly one {@code @Route}
+     * has, as for {@code getView()}: {@code queryName} and {@code queryValue} are {@code null} for a URL without a
+     * query, else its one parameter, whose value is an expression ({@code "/plan?week=" + monday}).
+     */
+    record RouteNavigation(String viewClass, String queryName, Expression queryValue) {
+    }
+
+    /**
+     * {@code page.navigate(getUrl() + "/plan")} or {@code page.navigate(getUrl() + "/plan?week=" + monday)} on the
+     * base class's page, where one {@code @Route} has the path; {@code null} for any other call, which keeps its
+     * string path.
+     */
+    static RouteNavigation routeNavigation(J.MethodInvocation m, ExecutionContext ctx) {
+        List<Expression> operands = baseUrlNavigation(m);
+        if (operands == null) {
+            return null;
+        }
+        StringBuilder literal = new StringBuilder();
+        int rest = 1;
+        while (rest < operands.size() && operands.get(rest) instanceof J.Literal l && l.getValue() instanceof String s) {
+            literal.append(s);
+            rest++;
+        }
+        List<Expression> values = operands.subList(rest, operands.size());
+        int query = literal.indexOf("?");
+        String path = query < 0 ? literal.toString() : literal.substring(0, query);
+        if (path.contains("#")) {
+            return null;
+        }
+        String view = Routes.viewAt(path, ctx);
+        if (view == null) {
+            return null;
+        }
+        if (query < 0) {
+            return values.isEmpty() ? new RouteNavigation(view, null, null) : null;
+        }
+        String name = literal.substring(query + 1);
+        if (values.size() != 1 || !name.endsWith("=")) {
+            return null;
+        }
+        name = name.substring(0, name.length() - 1);
+        return name.isEmpty() || name.matches(".*[=&#?].*") ? null
+                : new RouteNavigation(view, name, values.get(0).withPrefix(Space.EMPTY));
     }
 
     /**

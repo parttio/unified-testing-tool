@@ -3,18 +3,24 @@ package com.vaadin.testing.unified.playwright;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.FilePayload;
 import com.vaadin.testing.unified.UnifiedElement;
+import com.vaadin.testing.unified.spi.ConfirmDialogAccess;
 import com.vaadin.testing.unified.spi.DateTimePickerAccess;
 import com.vaadin.testing.unified.spi.DetailsAccess;
+import com.vaadin.testing.unified.spi.LoginAccess;
 import com.vaadin.testing.unified.component.UnifiedMessageList;
 import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.MenuBarAccess;
 import com.vaadin.testing.unified.spi.MessageInputAccess;
 import com.vaadin.testing.unified.spi.MessageListAccess;
+import com.vaadin.testing.unified.spi.StaleElementException;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import com.vaadin.testing.unified.spi.UploadAccess;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.vaadin.addons.dramafinder.AutoWait;
+import org.vaadin.addons.dramafinder.element.ConfirmDialogElement;
 import org.vaadin.addons.dramafinder.element.DateTimePickerElement;
 import org.vaadin.addons.dramafinder.element.DetailsElement;
 import org.vaadin.addons.dramafinder.element.MenuBarElement;
@@ -26,7 +32,7 @@ import org.vaadin.addons.dramafinder.element.TabsElement;
 import org.vaadin.addons.dramafinder.element.UploadElement;
 
 /**
- * Access to Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Playwright, through
+ * Access to LoginOverlay and LoginForm, ConfirmDialog, Tabs, Details, MenuBar, Upload, DateTimePicker, MessageInput and MessageList on Playwright, through
  * Dramafinder's elements.
  * Dramafinder's element actions wait for the server round-trip themselves; only actions on raw locators
  * wait here.
@@ -48,7 +54,14 @@ final class PlaywrightCoreSetAccess {
     static final class Tabs {
         private Tabs() {}
 
+        /**
+         * Dramafinder's read waits Playwright's timeout (10 s) for the bar: tabs gone from the page, e.g. after a tab
+         * that sent the user to another page, are stale at once (#554), as a replaced selection field (#377).
+         */
         static String selected(TabsElement bar) {
+            if (bar.getLocator().count() == 0) {
+                throw new StaleElementException("The tabs are gone (the page changed?)", null);
+            }
             int index = bar.getSelectedIndex();
             return index < 0 ? null : bar.getTab(index).getLabel();
         }
@@ -61,6 +74,14 @@ final class PlaywrightCoreSetAccess {
         static void select(PlaywrightSession session, TabsElement bar, String label) {
             tab(bar, label).select();
             AutoWait.waitForVaadinIdle(session.page());
+        }
+
+        /** The tab's only {@code <a>}, which a user's click on the tab lands on (#531); the core clicks it. */
+        static Optional<UnifiedElement> link(PlaywrightSession session, TabsElement bar, String label) {
+            Locator links = tab(bar, label).getLocator().locator("a");
+            return links.count() == 1
+                    ? Optional.of(new PlaywrightElement(session, links, null, PlaywrightComponents.DEFAULT))
+                    : Optional.empty();
         }
     }
 
@@ -91,8 +112,67 @@ final class PlaywrightCoreSetAccess {
         }
 
         @Override
+        public Optional<UnifiedElement> link(String label) {
+            return Tabs.link(session, bar(), label);
+        }
+
+        @Override
         public UnifiedElement content() {
             throw new UnsupportedOperationException("A Tabs bar has no content; use UnifiedTabSheet for a TabSheet");
+        }
+    }
+
+    /** Through Dramafinder's ConfirmDialogElement: each button by its slot, never by its text. */
+    record ConfirmDialogAccessImpl(PlaywrightSession session, Locator locator) implements ConfirmDialogAccess {
+        @Override
+        public Map<Role, String> buttons() {
+            return BrowserQueries.confirmDialogButtons(locator.evaluate(BrowserQueries.CONFIRM_DIALOG_BUTTONS));
+        }
+
+        @Override
+        public void press(Role role) {
+            ConfirmDialogElement dialog = new ConfirmDialogElement(locator);
+            switch (role) {
+                case CONFIRM -> dialog.getConfirmButton().click();
+                case REJECT -> dialog.getRejectButton().click();
+                case CANCEL -> dialog.getCancelButton().click();
+            }
+        }
+    }
+
+    /**
+     * Through Dramafinder's login elements: the form's fields and buttons, inside the overlay for a LoginOverlay.
+     * A form that posts is submitted with a plain click, without Dramafinder's wait after it: the post loads
+     * another page, which the session's settle after the action waits for, as for any other click.
+     */
+    record LoginAccessImpl(PlaywrightSession session, Locator locator) implements LoginAccess {
+        private org.vaadin.addons.dramafinder.element.AbstractLoginElement login() {
+            return "vaadin-login-overlay".equals(locator.evaluate("e => e.localName"))
+                    ? new org.vaadin.addons.dramafinder.element.LoginOverlayElement(locator)
+                    : new org.vaadin.addons.dramafinder.element.LoginFormElement(locator);
+        }
+
+        @Override
+        public boolean postsForms() {
+            return true;
+        }
+
+        @Override
+        public void login(String username, String password) {
+            org.vaadin.addons.dramafinder.element.AbstractLoginElement login = login();
+            if (!Boolean.TRUE.equals(locator.evaluate("e => !!e.action"))) {
+                // the LoginEvent: Dramafinder types, presses submit and waits for the round trip it starts
+                login.login(username, password);
+                return;
+            }
+            login.getUsernameField().setValue(username);
+            login.getPasswordField().setValue(password);
+            login.getSubmitButton().getLocator().click();
+        }
+
+        @Override
+        public void forgotPassword() {
+            login().getForgotPasswordButton().getLocator().click();
         }
     }
 
@@ -123,7 +203,11 @@ final class PlaywrightCoreSetAccess {
         }
     }
 
-    /** Through Dramafinder's MenuBarElement: items by their Item Name, each sub-menu scoped to its level. */
+    /**
+     * Through Dramafinder's MenuBarElement: items by their Item Name, each sub-menu scoped to its level. A top-level item
+     * folded into the overflow menu ("More options") is reached through that menu only when the test says so
+     * ({@code unfoldingOverflow()}, Dramafinder's too); otherwise refused with the Unified API's reason.
+     */
     record MenuBarAccessImpl(PlaywrightSession session, Locator locator) implements MenuBarAccess {
         private MenuBarElement bar() {
             return new MenuBarElement(locator);
@@ -134,7 +218,7 @@ final class PlaywrightCoreSetAccess {
             if (path.isEmpty()) {
                 return bar().getItemLabels();
             }
-            MenuElement menu = open(path);
+            MenuElement menu = open(barFor(path, true, null), path); // reading a sub-menu opens the menus along it
             try {
                 return menu.getItemLabels();
             } finally {
@@ -143,20 +227,22 @@ final class PlaywrightCoreSetAccess {
         }
 
         @Override
-        public void click(List<String> path) {
+        public void click(List<String> path, boolean throughOverflow) {
+            MenuBarElement bar = barFor(path, throughOverflow, "clickItem");
             if (path.size() == 1) {
-                topLevel(path.get(0)).click();
+                topLevel(bar, path.get(0)).click();
             } else {
-                item(open(path.subList(0, path.size() - 1)), path).click();
+                item(open(bar, path.subList(0, path.size() - 1)), path).click();
             } // Dramafinder's click waits for the round-trip
         }
 
         @Override
-        public boolean isEnabled(List<String> path) {
+        public boolean isEnabled(List<String> path, boolean throughOverflow) {
+            MenuBarElement bar = barFor(path, throughOverflow, "isItemEnabled");
             if (path.size() == 1) {
-                return topLevel(path.get(0)).isEnabled();
+                return topLevel(bar, path.get(0)).isEnabled();
             }
-            MenuElement menu = open(path.subList(0, path.size() - 1));
+            MenuElement menu = open(bar, path.subList(0, path.size() - 1));
             try {
                 return item(menu, path).isEnabled();
             } finally {
@@ -164,10 +250,29 @@ final class PlaywrightCoreSetAccess {
             }
         }
 
+        @Override
+        public List<String> overflowItems() {
+            return bar().getOverflowItemLabels();
+        }
+
+        /**
+         * The menu bar to reach the path's first item on: unfolding the overflow menu for a folded item when
+         * {@code throughOverflow}, else refused for {@code call}, as on every Testing Tool.
+         */
+        private MenuBarElement barFor(List<String> path, boolean throughOverflow, String call) {
+            if (!bar().getOverflowItemLabels().contains(path.get(0))) {
+                return bar();
+            }
+            if (!throughOverflow) {
+                throw MenuBarAccess.folded(path, call);
+            }
+            return bar().unfoldingOverflow();
+        }
+
         /** Opens the menus of every item of the path; returns the last one opened. */
-        private MenuElement open(List<String> path) {
-            topLevel(path.get(0));
-            MenuElement menu = bar().openSubMenu(path.get(0));
+        private static MenuElement open(MenuBarElement bar, List<String> path) {
+            topLevel(bar, path.get(0));
+            MenuElement menu = bar.openSubMenu(path.get(0));
             for (int i = 1; i < path.size(); i++) {
                 item(menu, path.subList(0, i + 1));
                 menu = menu.openSubMenu(path.get(i));
@@ -175,9 +280,9 @@ final class PlaywrightCoreSetAccess {
             return menu;
         }
 
-        private MenuItemElement topLevel(String name) {
-            requireName(bar().getItemLabels(), name, "menu item");
-            return bar().getMenuItemElement(name);
+        private static MenuItemElement topLevel(MenuBarElement bar, String name) {
+            requireName(bar.getItemLabels(), name, "menu item");
+            return bar.getMenuItemElement(name);
         }
 
         /** The last item of {@code path}, in {@code menu}. */

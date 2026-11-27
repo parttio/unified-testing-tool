@@ -20,7 +20,7 @@ import java.util.List;
  *   Waited        10 s (vaadin.testing.timeout)
  *   Tool          playwright (chromium)
  *   Code          EditPersonTest.java:13 (editsAPersonInTheDialog) ← EditPersonTest.java:24 (editPerson)
- *   Evidence      target/surefire-reports/unified-evidence/EditPersonTest/editsAPersonInTheDialog/
+ *   Evidence      target/surefire-reports/unified-evidence/EditPersonTest/editsAPersonInTheDialog/  (failure.png, failure.view.txt)
  * </pre>
  */
 public final class FailureMessage {
@@ -46,6 +46,7 @@ public final class FailureMessage {
             line(sb, "Nearby", String.join(", ", parts.nearMisses()));
         }
         line(sb, "Did you mean", parts.suggestion());
+        line(sb, "Cause", parts.cause());
         if (parts.waited() != null) {
             line(sb, "Waited", duration(parts.waited())
                     + (parts.waitedSetting() == null ? "" : " (" + parts.waitedSetting() + ")"));
@@ -54,7 +55,8 @@ public final class FailureMessage {
         if (!parts.codePath().isEmpty()) {
             line(sb, "Code", String.join(" ← ", parts.codePath()));
         }
-        line(sb, "Evidence", parts.evidenceDir());
+        line(sb, "Evidence", parts.evidenceDir() == null || parts.evidenceFiles().isEmpty() ? parts.evidenceDir()
+                : parts.evidenceDir() + "  (" + String.join(", ", parts.evidenceFiles()) + ")");
         return sb.toString();
     }
 

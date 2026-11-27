@@ -5,6 +5,8 @@ import com.vaadin.testing.unified.RequiresTestingTool;
 import com.vaadin.testing.unified.TestingTool;
 import com.vaadin.testing.unified.UnifiedAssertionError;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.Viewport;
+import com.vaadin.testing.unified.ViewportSize;
 import com.vaadin.testing.unified.internal.logs.ServerLogs;
 import com.vaadin.testing.unified.internal.steps.StepRecorder;
 import com.vaadin.testing.unified.internal.steps.UserStepsReport;
@@ -46,12 +48,17 @@ public final class TestLifecycle {
      * @param invocation the n-th run of a parameterized or repeated test, or null
      */
     public record TestId(String className, String methodName, String displayName, Integer invocation) {
-
-        /** The name of its failure evidence files, such as {@code com.example.LoginTest.logsIn}. */
-        String evidenceName() {
-            return className + "." + methodName;
+        /**
+         * Whether the test's author wrote its name ({@code @DisplayName}, the method's name), which the reports show
+         * unmasked; a parameterized or repeated invocation's name is built from its arguments (ADR 0014).
+         */
+        public boolean authoredName() {
+            return invocation == null;
         }
     }
+
+    /** The name of a test's failure evidence files in its evidence directory: {@code failure.png}, … */
+    static final String FAILURE_EVIDENCE = "failure";
 
     private final Settings settings;
     private final Function<TestingTool, TestingToolAdapter> adapters;
@@ -151,11 +158,36 @@ public final class TestLifecycle {
      */
     public OpenTest open(AdapterContext context, StepRecorder steps, TestId test) {
         if (test != null) {
-            steps.describeTest(test.displayName(), evidenceDirName(test));
+            steps.describeTest(test.displayName(), test.authoredName(), evidenceDirName(test));
         }
+        steps.applicationPackages(ApplicationPackages.of(context));
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
+        ViewportSize viewport = viewport(context);
+        String skipReason = null;
+        if (tool.hasRealBrowser()) {
+            steps.viewport(viewport, find(context.testMethod().orElse(null), context.testClass().orElse(null),
+                    Viewport.class).isPresent());
+            try {
+                session.setViewport(viewport);
+            } catch (UnsupportedOperationException e) {
+                if (needsItsViewport(context)) {
+                    skipReason = "Can't set the Viewport " + viewport + " exactly: " + e.getMessage();
+                } else {
+                    steps.logged(new StepRecorder.LogLine(UNIFIED, "WARN", null,
+                            "Runs at the browser's own size, not at " + viewport + ": " + e.getMessage(), null));
+                }
+            }
+        }
         steps.session(null, session);
+        if (tool.hasRealBrowser() && settings.layoutChecks()) {
+            Path layoutScreenshots = null;
+            if (test != null && settings.layoutChecksScreenshots()) {
+                layoutScreenshots = testEvidenceDir(test).resolve(LAYOUT_DIR);
+                deleteSnapshots(layoutScreenshots);
+            }
+            steps.layoutChecks(settings.layoutFindings() == Settings.LayoutFindings.FAIL, layoutScreenshots);
+        }
         if (test != null && settings.userStepsSnapshots()) {
             Path snapshots = testEvidenceDir(test).resolve(StepRecorder.SNAPSHOT_DIR);
             deleteSnapshots(snapshots);
@@ -163,8 +195,33 @@ public final class TestLifecycle {
         }
         ServerLogs.Listening logs = settings.userStepsServerLog().map(level -> ServerLogs.start(steps, level))
                 .orElse(null);
-        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null)),
-                logs);
+        return new OpenTest(session, steps, new UnifiedPageImpl(new TestRun(tool, session, settings.timeout(), steps, null, false, viewport)),
+                logs, skipReason);
+    }
+
+    /**
+     * The Viewport the test runs at: its method's {@link Viewport}, else its class's, else the run's
+     * {@code vaadin.testing.viewport}, else 1280 × 720 (ADR 0011).
+     */
+    /** The folder of a test's evidence directory that holds the layout checks' screenshots. */
+    static final String LAYOUT_DIR = "layout";
+
+    /** Where the Unified API's own warnings come from, in the reports' log lines. */
+    static final String UNIFIED = "unified";
+
+    /**
+     * Whether the test must run at its Viewport or not at all: one it declares, or the run's, which a Viewport
+     * Comparison compares. Only the implicit 1280 × 720 may be missed, with a warning.
+     */
+    private boolean needsItsViewport(AdapterContext context) {
+        return find(context.testMethod().orElse(null), context.testClass().orElse(null), Viewport.class).isPresent()
+                || settings.get(Settings.VIEWPORT).isPresent();
+    }
+
+    ViewportSize viewport(AdapterContext context) {
+        return find(context.testMethod().orElse(null), context.testClass().orElse(null), Viewport.class)
+                .map(v -> new ViewportSize(v.name(), v.width(), v.height()))
+                .orElseGet(settings::viewport);
     }
 
     /** One open test. Close it exactly once, when the test ends. */
@@ -173,12 +230,23 @@ public final class TestLifecycle {
         private final StepRecorder steps;
         private final UnifiedPage page;
         private final ServerLogs.Listening logs;
+        private final String skipReason;
 
-        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page, ServerLogs.Listening logs) {
+        private OpenTest(AdapterSession session, StepRecorder steps, UnifiedPage page, ServerLogs.Listening logs,
+                String skipReason) {
             this.session = session;
             this.steps = steps;
             this.page = page;
             this.logs = logs;
+            this.skipReason = skipReason;
+        }
+
+        /**
+         * Why the test must not run although its page opened, such as a Viewport the Testing Tool can't set: the Test
+         * Runner integration skips it with this reason before the test's body, and still closes it.
+         */
+        public java.util.Optional<String> skipReason() {
+            return java.util.Optional.ofNullable(skipReason);
         }
 
         public UnifiedPage page() {
@@ -201,10 +269,12 @@ public final class TestLifecycle {
                 if (logs != null) {
                     logs.close();
                 }
-                // the Testing Tool's evidence first: user-steps.json names where its screenshot shows the Step Target
-                ToolEvidence tool = failure == null ? null : toolEvidence(failure, test.evidenceName());
+                // the failure evidence first: user-steps.json and the failure name it, and where the screenshot
+                // shows the Step Target
+                Path directory = testEvidenceDir(test);
+                deleteFailureEvidence(directory);
+                List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, directory);
                 reportUserSteps(steps, failure, test);
-                List<Path> evidence = failure == null ? List.of() : writeEvidence(failure, test.evidenceName(), tool);
                 keepRecording(failure, test);
                 return evidence;
             } finally {
@@ -230,9 +300,9 @@ public final class TestLifecycle {
         private record ToolEvidence(List<Path> files, String problem) {
         }
 
-        private ToolEvidence toolEvidence(Throwable failure, String name) {
+        private ToolEvidence toolEvidence(Throwable failure, Path directory) {
             try {
-                Evidence evidence = session.writeFailureEvidence(settings.evidenceDir(), name,
+                Evidence evidence = session.writeFailureEvidence(directory, FAILURE_EVIDENCE,
                         steps.targetOf(failure));
                 steps.failureHighlight(evidence.highlight());
                 return new ToolEvidence(evidence.files(), null);
@@ -241,23 +311,42 @@ public final class TestLifecycle {
             }
         }
 
-        /** The Testing Tool's evidence, then the Findable View, each written even when the other can't be. */
-        private List<Path> writeEvidence(Throwable failure, String name, ToolEvidence tool) {
+        /**
+         * The Testing Tool's evidence, then the Findable View, into the test's evidence directory, each written even
+         * when the other can't be; their names go to the failure and to {@code user-steps.json}.
+         */
+        private List<Path> writeEvidence(Throwable failure, Path directory) {
+            ToolEvidence tool = toolEvidence(failure, directory);
             List<Path> files = new ArrayList<>(tool.files());
             if (tool.problem() != null) {
                 failure.addSuppressed(new FailureEvidence(tool.problem()));
             }
-            findableView(name).ifPresent(files::add);
+            findableView(directory, failure).ifPresent(files::add);
             if (!files.isEmpty()) {
                 failure.addSuppressed(new FailureEvidence("Failure evidence: " + describe(files)));
+            }
+            List<String> names = files.stream().map(f -> nameIn(directory, f)).toList();
+            steps.failureEvidence(names);
+            if (failure instanceof UnifiedAssertionError unified) {
+                unified.parts().evidenceFiles(names);
             }
             return List.copyOf(files);
         }
 
-        /** The Findable View of the test's first window, {@code <name>.view.txt}; none if it can't be read. */
-        private Optional<Path> findableView(String name) {
+        /** The file's path relative to the test's evidence directory, or its name when it lies elsewhere. */
+        private static String nameIn(Path directory, Path file) {
+            Path dir = directory.toAbsolutePath().normalize();
+            Path path = file.toAbsolutePath().normalize();
+            return (path.startsWith(dir) ? dir.relativize(path) : path.getFileName()).toString().replace('\\', '/');
+        }
+
+        /** The Findable View of the test's first window, {@code failure.view.txt}; none if it can't be read. */
+        private Optional<Path> findableView(Path directory, Throwable failure) {
             try {
-                return Optional.of(FindableView.write(((UnifiedPageImpl) page).run(), settings.evidenceDir(), name));
+                TestRun run = ((UnifiedPageImpl) page).run();
+                // the items of the grid or message list a failed row or message step was about, after it (#590)
+                String items = ItemsView.ofFailedStep(run, steps, failure);
+                return Optional.of(FindableView.write(run, directory, FAILURE_EVIDENCE, items));
             } catch (Exception | LinkageError e) {
                 return Optional.empty();
             }
@@ -277,9 +366,10 @@ public final class TestLifecycle {
                 : failure.getClass().getName().equals("org.opentest4j.TestAbortedException") ? "aborted" : "failed";
         UserStepsReport report = new UserStepsReport(test.className(), test.methodName(), test.displayName(),
                 settings.tool().name().toLowerCase(Locale.ROOT), status, failure, steps);
+        // the test may have been opened before it was named; the reports' scenario and a failure need its name
+        steps.describeTest(test.displayName(), test.authoredName(), evidenceDirName(test));
         if (failure instanceof UnifiedAssertionError unified) {
-            // a failure outside any User Step (or before the test was named) gets the rest here, before it is shown
-            steps.describeTest(test.displayName(), evidenceDirName(test));
+            // a failure outside any User Step gets the rest here, before it is shown
             steps.completeFailure(unified, report.codePath());
         }
         String text = report.text();
@@ -312,6 +402,21 @@ public final class TestLifecycle {
         String classDir = className.substring(className.lastIndexOf('.') + 1);
         String methodDir = test.methodName() + (test.invocation() == null ? "" : "[" + test.invocation() + "]");
         return settings.evidenceDir().resolve(classDir).resolve(methodDir);
+    }
+
+    /** Removes the failure evidence an earlier run of the test left, so a passing test has none. */
+    private static void deleteFailureEvidence(Path directory) {
+        if (!Files.isDirectory(directory)) {
+            return;
+        }
+        try (java.util.stream.Stream<Path> files = Files.list(directory)) {
+            for (Path file : files.filter(f -> f.getFileName().toString().startsWith(FAILURE_EVIDENCE + "."))
+                    .toList()) {
+                Files.deleteIfExists(file);
+            }
+        } catch (java.io.IOException e) {
+            System.err.println("Old failure evidence could not be removed from " + directory + ": " + e);
+        }
     }
 
     /** Removes the snapshots an earlier run of the test left, so the directory holds this run's only. */

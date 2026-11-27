@@ -50,6 +50,33 @@ Without the annotation, `unwrap(..)` on a tool that doesn't have the type fails 
 !!! warning
     Inside the Escape Hatch, the Unified API guarantees stop: no Auto-Wait, no lazy lookup, no retrying assertions, no User Steps. Go back to Wrappers and `assertThat` as soon as you can.
 
+### After an Escape Hatch action
+
+An Escape Hatch action that reaches the server, such as a click through Playwright's own `Locator`, returns before the server has answered. Here the click opens Alan Turing in the editor, and the server loads the person into the form a moment later:
+
+```java
+page.unwrap(Page.class).getByText("Alan Turing").click();   // the server loads the person into the form...
+name.setValue("Alan M. Turing");                             // ...and Auto-Wait waits for that before typing
+```
+
+The next Unified action waits for that answer before it acts, on every Testing Tool: TestBench waits for the server around its own commands, and on Playwright Auto-Wait waits until Flow is idle, for at most 5 s, then acts anyway ([5. Waiting](../spec/05-waiting.md#auto-wait), [#604](https://github.com/parttio/unified-testing-tool/issues/604)). Before that, on Playwright, the answer could arrive after the next action and overwrite it.
+
+Escape Hatch code that comes next, reading the page itself, gets no such wait, and neither does an action after an answer that takes longer than 5 s. Make it wait in one of two ways:
+
+- **Check the state the server produces.** An assertion retries until the server's answer is there, on every Testing Tool. Prefer this wherever the answer changes something the user sees:
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/EscapeHatchRoundTripTest.java:assertTheServersValue"
+    ```
+
+- **Wait for the server inside the Escape Hatch**, with Dramafinder's `AutoWait.waitForVaadinIdle(Page)`, when the answer has nothing to check. It is Playwright's code, so the test declares `@RequiresTestingTool(TestingTool.PLAYWRIGHT)`:
+
+    ```java
+    --8<-- "unified-test-demo/src/test/java/demo/EscapeHatchRoundTripTest.java:waitForVaadinIdle"
+    ```
+
+Playwright's `Locator.waitFor()` waits for an element's state, not for the server: it doesn't help here.
+
 The reports can't see what runs inside the Escape Hatch, so they show a gap line where the test used it, instead of User Steps:
 
 ```

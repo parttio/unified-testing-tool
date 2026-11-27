@@ -112,6 +112,59 @@ class FindTestClassesToMigrateTest implements RewriteTest {
     }
 
     @Test
+    void aScreenshotExtensionOfACopiedBaseIsListedWithAdviceToRemoveIt() {
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactly(new FindTestClassesToMigrate.TestClasses.Row("com/example/PeopleTest.java",
+                                "com.example.PeopleTest", "Dramafinder", "skipped",
+                                "uses screenshots of SpringPlaywrightIT, which uses the test base; the Unified API writes failure evidence itself: remove it"))),
+                java(VIEW), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.extension.ExtensionContext;
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import org.junit.jupiter.api.extension.TestWatcher;
+                import org.springframework.boot.test.context.SpringBootTest;
+                import org.vaadin.addons.dramafinder.AbstractBasePlaywrightIT;
+
+                @SpringBootTest
+                public abstract class SpringPlaywrightIT extends AbstractBasePlaywrightIT {
+                    @RegisterExtension
+                    TestWatcher screenshots = new TestWatcher() {
+                        @Override
+                        public void testFailed(ExtensionContext context, Throwable cause) {
+                            page.screenshot();
+                        }
+                    };
+                }
+                """), java(
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+
+                class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        navigate(PeopleView.class);
+                    }
+                }
+                """,
+                """
+                package com.example;
+
+                import org.junit.jupiter.api.Test;
+
+                /*~~(skipped: uses screenshots of SpringPlaywrightIT, which uses the test base; the Unified API writes failure evidence itself: remove it)~~>*/class PeopleTest extends SpringPlaywrightIT {
+                    @Test
+                    void opens() {
+                        navigate(PeopleView.class);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void aBrowserlessClassPassingItselfToAPageObjectIsListedAsSkipped() {
         rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
                         .containsExactly(new FindTestClassesToMigrate.TestClasses.Row("LoginTest.java", "LoginTest",
@@ -171,6 +224,292 @@ class FindTestClassesToMigrateTest implements RewriteTest {
                         import com.vaadin.testbench.BrowserTestBase;
 
                         /*~~(migrates)~~>*/class ProfileTest extends BrowserTestBase {
+                        }
+                        """));
+    }
+
+    @Test
+    void aTestBenchClassUsingAPageObjectThatStaysTestBenchMigratesPartlyAndListsIt() {
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactly(new FindTestClassesToMigrate.TestClasses.Row("LoginIT.java", "LoginIT",
+                                "TestBench", "migrates partly", "",
+                                "LoginViewElement: stays TestBench (Escape Hatch), a custom element extending "
+                                        + "LoginOverlayElement: write a Wrapper (ADR 0003); ProfilePage: converts with "
+                                        + "includePageObjects; SettingsPage: stays TestBench (Escape Hatch), uses the "
+                                        + "TestBench test for more than lookups a Wrapper expresses"))),
+                java(
+                        """
+                        import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("login-view")
+                        public class LoginViewElement extends LoginOverlayElement {
+                            public void login(String user, String password) {
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testbench.HasElementQuery;
+
+                        class ProfilePage {
+                            private final HasElementQuery test;
+
+                            ProfilePage(HasElementQuery test) {
+                                this.test = test;
+                            }
+
+                            void save() {
+                                test.$(ButtonElement.class).withText("Save").single().click();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class SettingsPage {
+                            private final BrowserTestBase test;
+
+                            SettingsPage(BrowserTestBase test) {
+                                this.test = test;
+                            }
+
+                            void reload() {
+                                test.getDriver().navigate().refresh();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class LoginIT extends BrowserTestBase {
+                            @BrowserTest
+                            void logsIn() {
+                                new SettingsPage(this).reload();
+                                new ProfilePage(this).save();
+                                $(LoginViewElement.class).single().login("barista", "barista");
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        /*~~(migrates partly: LoginViewElement: stays TestBench (Escape Hatch), a custom element extending LoginOverlayElement: write a Wrapper (ADR 0003); ProfilePage: converts with includePageObjects; SettingsPage: stays TestBench (Escape Hatch), uses the TestBench test for more than lookups a Wrapper expresses)~~>*/class LoginIT extends BrowserTestBase {
+                            @BrowserTest
+                            void logsIn() {
+                                new SettingsPage(this).reload();
+                                new ProfilePage(this).save();
+                                $(LoginViewElement.class).single().login("barista", "barista");
+                            }
+                        }
+                        """));
+    }
+
+    /** Issue #606: Bakery's page objects are in {@code com.vaadin.starter.bakery}, not a package TestBench ships. */
+    @Test
+    void customElementsInAnApplicationPackageUnderComVaadinAreListed() {
+        String loginView = "LoginViewElement: stays TestBench (Escape Hatch), a custom element extending "
+                + "LoginOverlayElement: write a Wrapper (ADR 0003)";
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactlyInAnyOrder(
+                                new FindTestClassesToMigrate.TestClasses.Row("com/vaadin/starter/bakery/testbench/AbstractIT.java",
+                                        "com.vaadin.starter.bakery.testbench.AbstractIT", "TestBench", "migrates partly", "",
+                                        loginView),
+                                new FindTestClassesToMigrate.TestClasses.Row("com/vaadin/starter/bakery/testbench/LoginIT.java",
+                                        "com.vaadin.starter.bakery.testbench.LoginIT", "TestBench", "migrates partly", "",
+                                        loginView),
+                                new FindTestClassesToMigrate.TestClasses.Row("com/vaadin/starter/bakery/testbench/StorefrontIT.java",
+                                        "com.vaadin.starter.bakery.testbench.StorefrontIT", "TestBench", "migrates partly", "",
+                                        "OrderCardElement: stays TestBench (Escape Hatch), a custom element extending "
+                                                + "DivElement: write a Wrapper (ADR 0003); StorefrontViewElement: stays "
+                                                + "TestBench (Escape Hatch), a custom element extending TestBenchElement: "
+                                                + "write a Wrapper (ADR 0003)"))),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.flow.component.login.testbench.LoginOverlayElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("login-view")
+                        public class LoginViewElement extends LoginOverlayElement {
+                            public void login(String user, String password) {
+                            }
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.flow.component.html.testbench.DivElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("order-card")
+                        public class OrderCardElement extends DivElement {
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.TestBenchElement;
+                        import com.vaadin.testbench.elementsbase.Element;
+
+                        @Element("storefront-view")
+                        public class StorefrontViewElement extends TestBenchElement {
+                            public OrderCardElement getOrderCard(int index) {
+                                return $(OrderCardElement.class).get(index);
+                            }
+                        }
+                        """),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        public abstract class AbstractIT extends BrowserTestBase {
+
+                            protected LoginViewElement openLoginView() {
+                                return $(LoginViewElement.class).waitForFirst();
+                            }
+                        }
+                        """, spec -> spec.after(after -> after)),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        public class LoginIT extends AbstractIT {
+
+                            @BrowserTest
+                            void logsIn() {
+                                openLoginView().login("barista", "barista");
+                            }
+                        }
+                        """, spec -> spec.after(after -> after)),
+                java("""
+                        package com.vaadin.starter.bakery.testbench;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        public class StorefrontIT extends AbstractIT {
+
+                            @BrowserTest
+                            void opensAnOrder() {
+                                StorefrontViewElement storefront = $(StorefrontViewElement.class).first();
+                                storefront.getOrderCard(0).click();
+                            }
+                        }
+                        """, spec -> spec.after(after -> after)));
+    }
+
+    @Test
+    void aTestBenchClassUsingOnlyPageObjectsThatConvertMigrates() {
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactly(new FindTestClassesToMigrate.TestClasses.Row("ProfileIT.java", "ProfileIT",
+                                "TestBench", "migrates", "", "ProfilePage: converts with includePageObjects"))),
+                java(
+                        """
+                        import com.vaadin.flow.component.button.testbench.ButtonElement;
+                        import com.vaadin.testbench.HasElementQuery;
+
+                        class ProfilePage {
+                            private final HasElementQuery test;
+
+                            ProfilePage(HasElementQuery test) {
+                                this.test = test;
+                            }
+
+                            void save() {
+                                test.$(ButtonElement.class).withText("Save").single().click();
+                            }
+                        }
+                        """),
+                java(
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        class ProfileIT extends BrowserTestBase {
+                            @BrowserTest
+                            void saves() {
+                                new ProfilePage(this).save();
+                            }
+                        }
+                        """,
+                        """
+                        import com.vaadin.testbench.BrowserTest;
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        /*~~(migrates: ProfilePage: converts with includePageObjects)~~>*/class ProfileIT extends BrowserTestBase {
+                            @BrowserTest
+                            void saves() {
+                                new ProfilePage(this).save();
+                            }
+                        }
+                        """));
+    }
+
+    @Test
+    void aSpringBootAppsTestBenchClassWithoutSpringBootTestNamesTheAnnotationItGetsAndTheOption() {
+        rewriteRun(spec -> spec.dataTable(FindTestClassesToMigrate.TestClasses.Row.class, rows -> assertThat(rows)
+                        .containsExactlyInAnyOrder(
+                                new FindTestClassesToMigrate.TestClasses.Row("com/example/AbstractIT.java",
+                                        "com.example.AbstractIT", "TestBench", "migrates", "", "",
+                                        FindTestClassesToMigrate.SPRING_BOOT_TEST),
+                                new FindTestClassesToMigrate.TestClasses.Row("com/example/UsersIT.java",
+                                        "com.example.UsersIT", "TestBench", "migrates", ""))),
+                java("""
+                        package org.springframework.boot.autoconfigure;
+
+                        public @interface SpringBootApplication {}
+                        """),
+                java("""
+                        package com.example;
+
+                        import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+                        @SpringBootApplication
+                        public class Application {}
+                        """),
+                java("""
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        public abstract class AbstractIT extends BrowserTestBase {
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTestBase;
+
+                        /*~~(migrates: %s)~~>*/public abstract class AbstractIT extends BrowserTestBase {
+                        }
+                        """.formatted(FindTestClassesToMigrate.SPRING_BOOT_TEST)),
+                java("""
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        class UsersIT extends AbstractIT {
+                            @BrowserTest
+                            void opensUsers() {
+                            }
+                        }
+                        """,
+                        """
+                        package com.example;
+
+                        import com.vaadin.testbench.BrowserTest;
+
+                        /*~~(migrates)~~>*/class UsersIT extends AbstractIT {
+                            @BrowserTest
+                            void opensUsers() {
+                            }
                         }
                         """));
     }

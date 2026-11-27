@@ -5,8 +5,8 @@
 #
 #   scripts/download-base-user-steps.sh <artifact name> <directory>
 #
-# Tries the base branch's last 5 finished push runs, newest first: a cancelled run, or one whose job didn't get as
-# far as uploading, has no artifact.
+# Tries the base branch's last 20 finished push runs, newest first: a cancelled run, one whose job didn't get as far
+# as uploading, and one that changed only documentation (Playwright and Selenium skipped) have no artifact.
 set -uo pipefail
 
 artifact="$1"
@@ -16,7 +16,7 @@ workflow="${workflow%@*}"   # owner/repo/.github/workflows/tests.yml
 workflow="${workflow##*/}"  # tests.yml
 
 runs=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "$workflow" --branch "${GITHUB_BASE_REF:?not a pull request}" \
-    --event push --status completed --limit 5 --json databaseId --jq '.[].databaseId') || {
+    --event push --status completed --limit 20 --json databaseId --jq '.[].databaseId') || {
     echo "No base run: the base branch's runs could not be listed"
     exit 0
 }

@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.textfield.PasswordField;
+import com.vaadin.testing.unified.component.UnifiedEmailField;
+import com.vaadin.testing.unified.component.UnifiedPasswordField;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.UserStepVerb;
@@ -16,7 +18,11 @@ import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedCheckbox;
 import com.vaadin.testing.unified.component.UnifiedComboBox;
 import com.vaadin.testing.unified.component.UnifiedDateTimePicker;
+import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedLink;
+import com.vaadin.testing.unified.component.UnifiedLogin;
+import com.vaadin.testing.unified.component.UnifiedTabs;
 import com.vaadin.testing.unified.component.UnifiedMenuBar;
 import com.vaadin.testing.unified.component.UnifiedMessageInput;
 import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
@@ -96,6 +102,36 @@ public class UserStepWordingTest {
     }
 
     @Test
+    void aLinkClickThatNavigatesIsFollowedByTheOpenStep() {
+        fake.add("a", "text", "Top", "href", "#top").add("a", "text", "Users", "href", "users");
+
+        fake.page.find(UnifiedLink.class).withText("Top").click(); // stays on the page
+        fake.onClick = () -> fake.path = "users";
+        fake.page.find(UnifiedLink.class).withHref("users").click();
+
+        assertEquals(List.of(
+                "click link “Top”",
+                "click link (href “users”)",
+                "open “users”"), texts());
+        assertEquals(List.of("click a", "click a"), fake.actions);
+    }
+
+    @Test
+    void aTabHoldingALinkIsFollowedAndTheOpenStepFollows() {
+        fake.add("vaadin-tabs", "tabs", "Orders,Users", "links", "Users", "selected", "Orders");
+
+        fake.page.find(UnifiedTabs.class).selectTab("Orders"); // a plain tab: selected, stays on the page
+        fake.onClick = () -> fake.path = "users";
+        fake.page.find(UnifiedTabs.class).selectTab("Users"); // the browser clicks the tab's link
+
+        assertEquals(List.of(
+                "select tab “Orders” in tabs",
+                "select tab “Users” in tabs",
+                "open “users”"), texts());
+        assertEquals(List.of("select Orders", "click a"), fake.actions);
+    }
+
+    @Test
     void nestedWrapperCallsAndGettersAreNotSteps() {
         fake.add("vaadin-checkbox", "label", "Terms", "checked", "false");
         UnifiedCheckbox terms = fake.page.find(UnifiedCheckbox.class).withLabel("Terms");
@@ -129,6 +165,126 @@ public class UserStepWordingTest {
                 "fill text field (placeholder “you@example.com”) with “a@b.c” in dialog “Edit person”",
                 "click button (text containing “Sav”)",
                 "click the 1st button"), texts());
+    }
+
+    @Test
+    void aConfirmDialogsAnswerNamesTheDialogByItsHeaderOrItsText() {
+        fake.add("vaadin-confirm-dialog", "header", "Delete order?", "message", "It can't be restored.",
+                "opened", "true", "buttons", "CONFIRM=Delete,REJECT=Keep,CANCEL=Back");
+        fake.add("vaadin-confirm-dialog", "message", "Leave the page?", "opened", "true", "buttons", "CONFIRM=Leave",
+                "testId", "leave");
+
+        fake.page.find(UnifiedConfirmDialog.class).withHeaderTitle("Delete order?").confirm();
+        fake.page.find(UnifiedConfirmDialog.class).withTextContaining("restored").reject();
+        fake.page.find(UnifiedConfirmDialog.class).withHeaderTitle("Delete order?").cancel();
+        fake.page.find(UnifiedConfirmDialog.class).withTestId("leave").confirm();
+
+        assertEquals(List.of(
+                "confirm “Delete order?”",
+                "reject “Delete order?” (text containing “restored”)",
+                "cancel “Delete order?”",
+                "confirm “Leave the page?” (test id “leave”)"), texts());
+        assertEquals(List.of("press CONFIRM", "press REJECT", "press CANCEL", "press CONFIRM"), fake.actions);
+    }
+
+    @Test
+    void aConfirmDialogWithoutTheButtonFailsListingTheButtonsItHas() {
+        fake.add("vaadin-confirm-dialog", "header", "Discard draft?", "opened", "true",
+                "buttons", "CONFIRM=Discard,CANCEL=Keep editing");
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> fake.page.find(UnifiedConfirmDialog.class).withHeaderTitle("Discard draft?").reject());
+
+        assertTrue(error.getMessage().contains("to press the Reject button of confirm dialog “Discard draft?”"),
+                error.getMessage());
+        assertTrue(error.getMessage().contains("no Reject button; its buttons: Confirm “Discard”, Cancel “Keep editing”"),
+                error.getMessage());
+        assertEquals(List.of(), fake.actions);
+    }
+
+    @Test
+    void signingInNamesTheUserNeverThePassword() {
+        fake.add("vaadin-login-overlay", "title", "Bakery", "opened", "true");
+
+        fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "coffee-beans");
+        fake.page.find(UnifiedLogin.class).withTitle("Bakery").forgotPassword();
+
+        assertEquals(List.of(
+                "sign in as “barista@vaadin.com” in login",
+                "press “Forgot password” in login “Bakery”"), texts());
+        assertEquals(List.of("login barista@vaadin.com coffee-beans", "forgot password"), fake.actions);
+        assertEquals("a log line with ••••", fake.steps.mask("a log line with coffee-beans"));
+    }
+
+    @Test
+    void aPasswordInsideItsUserNameIsNotMaskedThereButEverywhereElse() {
+        fake.add("vaadin-login-overlay", "opened", "true");
+
+        fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "barista");
+
+        assertEquals("sign in as “barista@vaadin.com” in login", fake.steps.mask(texts().get(0)));
+        assertEquals("Sign in as barista@vaadin.com", fake.steps.mask("Sign in as barista@vaadin.com"));
+        assertEquals("password •••• rejected for barista@vaadin.com",
+                fake.steps.mask("password barista rejected for barista@vaadin.com"));
+        assertEquals("expected “••••”, found “••••2”",
+                fake.steps.mask("expected “barista”, found “barista2”"));
+    }
+
+    @Test
+    void aPasswordEqualToItsUserNameIsMaskedEverywhere() {
+        fake.add("vaadin-login-overlay", "opened", "true");
+
+        fake.page.find(UnifiedLogin.class).login("admin", "admin");
+
+        assertEquals("sign in as “••••” in login", fake.steps.mask(texts().get(0)));
+    }
+
+    @Test
+    void anotherSecretInsideAUserNameIsStillMaskedThere() {
+        fake.add("vaadin-login-overlay", "opened", "true");
+        fake.page.secret("vaadin");
+
+        fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "barista");
+
+        assertEquals("sign in as “barista@••••.com” in login", fake.steps.mask(texts().get(0)));
+    }
+
+    @Test
+    void anAdaptersFailureWhileSigningInIsMaskedInTheReports() {
+        fake.add("vaadin-login-form");
+
+        RuntimeException error = assertThrows(RuntimeException.class,
+                () -> fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "boom"));
+
+        assertEquals(List.of("sign in as “barista@vaadin.com” in login"), texts());
+        assertEquals("the form rejected barista@vaadin.com/••••", fake.steps.mask(error.getMessage()));
+    }
+
+    @Test
+    void aFormThatPostsFailsWithoutABrowserBeforeSigningIn() {
+        fake.add("vaadin-login-form", "action", "login", "postsForms", "false");
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> fake.page.find(UnifiedLogin.class).login("barista@vaadin.com", "coffee-beans"));
+
+        assertTrue(error.getMessage().contains("to sign in through login"), error.getMessage());
+        assertTrue(error.getMessage().contains("a login form that posts to “login”, which BROWSERLESS can't submit"),
+                error.getMessage());
+        assertTrue(error.getMessage().contains("@RequiresBrowser"), error.getMessage());
+        assertTrue(error.getMessage().contains("@WithMockUser"), error.getMessage());
+        assertFalse(error.getMessage().contains("coffee-beans"), error.getMessage());
+        assertEquals(List.of(), fake.actions);
+    }
+
+    @Test
+    void forgotPasswordFailsWhenTheButtonIsHidden() {
+        fake.add("vaadin-login-form", "noForgotPassword", "true");
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> fake.page.find(UnifiedLogin.class).forgotPassword());
+
+        assertTrue(error.getMessage().contains("no “Forgot password” button"), error.getMessage());
+        assertEquals(List.of(), fake.actions);
     }
 
     @Test
@@ -237,6 +393,54 @@ public class UserStepWordingTest {
     }
 
     @Test
+    void aPathPatternReadsAsSeePathMatching() {
+        // issue #610
+        fake.path = "products/42";
+
+        assertThat(fake.page).hasPathMatching("products/\\d+")
+                .hasPathMatching(java.util.regex.Pattern.compile("PRODUCTS/.+", java.util.regex.Pattern.CASE_INSENSITIVE));
+
+        assertEquals(List.of("see path matching “products/\\d+”", "see path matching “PRODUCTS/.+”"), texts());
+    }
+
+    @Test
+    void aPathThatNeverMatchesFailsWithThePatternAndThePathsSeen() {
+        fake.path = "products";
+
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> assertThat(fake.page).hasPathMatching("products/\\d+"));
+
+        assertTrue(error.getMessage().contains("the page to have path matching “products/\\d+”"), error.getMessage());
+        assertTrue(error.getMessage().contains("“products”"), error.getMessage());
+
+        fake.path = "products/42/edit"; // part of the path matching is not enough
+        assertThrows(AssertionError.class, () -> assertThat(fake.page).hasPathMatching("products/\\d+"));
+    }
+
+    @Test
+    void aLeadingSlashOnEitherSideDoesNotAffectThePathMatch() {
+        fake.path = "/products/42";
+        assertThat(fake.page).hasPathMatching("products/\\d+");
+
+        fake.path = "products/42";
+        assertThat(fake.page).hasPathMatching("/products/\\d+")
+                .hasPathMatching(java.util.regex.Pattern.compile("/PRODUCTS/\\d+", java.util.regex.Pattern.CASE_INSENSITIVE));
+
+        assertEquals(List.of("see path matching “products/\\d+”", "see path matching “products/\\d+”",
+                "see path matching “PRODUCTS/\\d+”"), texts());
+    }
+
+    @Test
+    void anInvalidPathPatternFailsAtTheCallWithoutWaiting() {
+        long start = System.nanoTime();
+
+        assertThrows(java.util.regex.PatternSyntaxException.class, () -> assertThat(fake.page).hasPathMatching("products/(\\d+"));
+
+        assertTrue(System.nanoTime() - start < 150_000_000L, "waited for the timeout");
+        assertEquals(List.of(), texts());
+    }
+
+    @Test
     void menuBarAssertionsReadAsSeeWithItems() {
         fake.add("vaadin-menu-bar", "testId", "menu", "items", "File,Help", "items File", "Export,Print",
                 "items File/Export", "PDF,CSV", "disabled", "File/Print");
@@ -274,6 +478,25 @@ public class UserStepWordingTest {
         assertEquals(List.of("open People", "open “profile?tab=2”", "press “Escape”"), texts());
     }
 
+    @Test
+    void openingTheRootRouteReadsSlashHoweverItIsSpelled() {
+        fake.page.navigate("");
+        fake.page.navigate("/");
+        fake.page.navigate("users");
+
+        assertEquals(List.of("open “/”", "open “/”", "open “users”"), texts());
+    }
+
+    @Test
+    void aLinkClickBackToTheRootRouteReadsOpenSlash() {
+        fake.add("a", "text", "Home", "href", "");
+        fake.path = "users";
+        fake.onClick = () -> fake.path = "";
+        fake.page.find(UnifiedLink.class).withText("Home").click();
+
+        assertEquals(List.of("click link “Home”", "open “/”"), texts());
+    }
+
     static class PeopleView extends com.vaadin.flow.component.html.Div {}
 
     @Test
@@ -305,6 +528,26 @@ public class UserStepWordingTest {
         String json = new UserStepsReport("demo.FakeTest", "test", "test", "browserless", "passed", null,
                 fake.steps).json();
         assertFalse(json.contains("hunter2") || json.contains("k-123"), json);
+    }
+
+    /** The Core Set's password field hides what is typed into it, and its values in a failed check (#555). */
+    @Test
+    void corePasswordFieldIsMaskedInStepsAndFailures() {
+        fake.add("vaadin-password-field", "label", "Password", "value", "hunter")
+                .add("vaadin-email-field", "label", "Email");
+
+        fake.page.find(UnifiedPasswordField.class).withLabel("Password").setValue("hunter2");
+        fake.page.find(UnifiedEmailField.class).withLabel("Email").setValue("ada@example.com");
+        AssertionError error = assertThrows(AssertionError.class,
+                () -> assertThat(fake.page.find(UnifiedPasswordField.class).withLabel("Password")).hasValue("hunter3"));
+
+        String lines = fake.lines();
+        assertTrue(lines.contains("fill password field “Password” with “••••”"), lines);
+        assertTrue(lines.contains("fill email field “Email” with “ada@example.com”"), lines);
+        assertTrue(lines.contains("see password field “Password” with value “••••”"), lines);
+        assertFalse(lines.contains("hunter"), lines);
+        assertTrue(error.getMessage().contains("password field “Password” to have value “••••”"), error.getMessage());
+        assertFalse(error.getMessage().contains("hunter"), error.getMessage());
     }
 
     @Test

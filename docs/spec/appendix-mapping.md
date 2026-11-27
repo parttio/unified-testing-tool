@@ -57,17 +57,23 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 
 | Dramafinder | Unified API |
 |---|---|
-| `page.navigate(getUrl() + "/path?q=" + q)` | `page.navigate("path?q=" + q)` |
+| `page.navigate(getUrl() + "/path?q=" + q)` | `page.navigate(View.class, QueryParameters.of("q", String.valueOf(q)))` when exactly one `@Route("path")` is among the migrated sources, else `page.navigate("path?q=" + q)` |
 | `XElement.getByLabel(page, s)` / `getByText` / `getById` / `getByTestId` / `…Containing` | `page.find(UnifiedX.class).withLabel(s)` / `withText` / `withId` / `withTestId` / `…Containing` |
 | `ButtonElement.getByLabel(page, s)` | `.withAccessibleName(s)` |
 | `DialogElement.getByHeaderText(page, s)` | `.withHeaderTitle(s)` |
 | `NotificationElement.getByText(page, s)` (substring, first match) | `.withTextContaining(s)` + Migration Marker |
 | query `first()` / `get(i)` | the plain lookup + `was first()` Migration Marker / `all().get(i)` |
 | `page.locator("#x")` / `locator("[data-testid=x]")` / `getByTestId("x")` | `page.find(W.class).withId("x")` / `withTestId("x")`, `W` the Wrapper of the component the sources give that id, else `UnifiedContainer` + Migration Marker; `fill(s)` / `inputValue()` are `setValue(s)` / `getValue()` |
+| on such a raw locator, `assertThat(l).containsText(s)` / `hasText(s)` / `hasAttribute("disabled", "")` / `not().hasAttribute("disabled", ..)` or `not().hasAttribute("aria-disabled", "true")` / `isAttached()` | `assertThat(w).hasTextContaining(s)` / `hasText(s)` / `isDisabled()` / `isEnabled()` / `exists()` |
+| on such a raw locator, `assertThat(l).hasClass("c")` or `hasClass(Pattern.compile(".*c.*"))` / `not().isVisible()` | `assertThat(w.withClassName("c")).exists()` / `assertThat(w.visible()).doesNotExist()` |
 | `assertVisible` / `assertHidden` / `assertEnabled` / `assertDisabled` | `assertThat(w).isVisible()` / `isHidden()` / `isEnabled()` / `isDisabled()` |
 | `assertValue` / `assertLabel` / `assertValid` / `assertInvalid` / `assertErrorMessage` | `hasValue` / `hasLabel` / `isValid` / `isInvalid` / `hasErrorMessage` |
 | `assertChecked` / `assertNotChecked` / `assertIndeterminate` | `isChecked` / `isNotChecked` / `isIndeterminate` |
 | dialog `assertOpen` / `assertClosed` / `assertHeaderText`, `getHeaderText()`, `closeWithEscape()` | `isOpen` / `isClosed` / `hasHeaderTitle`, `getHeaderTitle()`, `close()` |
+| confirm dialog: as a dialog, and `confirm()` / `reject()` / `cancel()`, `getMessage()`, `assertMessage(s)` | `UnifiedConfirmDialog`: `confirm()` / `reject()` / `cancel()`, `getText()`, `hasText(s)` |
+| login form or overlay: `login(u, p)`, `isErrorVisible()`, `assertErrorVisible` / `assertNoError`, overlay `getByTitle(page, s)` / `assertHeaderTitle` | `UnifiedLogin`: `login(u, p)`, `isError()`, `hasError` / `hasNoError`, `withTitle(s)` / `hasTitle` |
+| side navigation item: `getByLabel(page, s)`, `navigate()`, `isExpanded()`, `assertExpanded` / `assertCollapsed`, `assertCurrent` / `assertNotCurrent` | `UnifiedSideNavItem`: `withLabel(s)`, `click()`, `isExpanded()`, `isExpanded` / `isCollapsed`, `isCurrent` / `isNotCurrent` |
+| `AppLayoutElement.get(page)`: `isDrawerOpened()`, `openDrawer()` / `closeDrawer()` / `toggleDrawer()`, `closeDrawerWithEscape()`, `setDrawerOpened(true)` / `(false)`, `assertDrawerOpened` / `assertDrawerClosed`, `isOverlayMode()`, `assertOverlayMode` / `assertNotOverlayMode` | `page.find(UnifiedAppLayout.class)`: the same names, `closeDrawer()`, `openDrawer()` / `closeDrawer()`, `isDrawerOpened` / `isDrawerClosed`, `isOverlay()`, `isOverlay` / `isNotOverlay`, and `@RequiresBrowser` (see [App layout](#app-layout-the-migration-recipes-convert)) |
 | notification `assertOpen` / `assertContent` | `isOpen` / `hasTextContaining` |
 | `AutoWait.waitForVaadinIdle(page)`, `page.waitForLoadState()` | dropped (Auto-Wait) |
 | `GridElement.get(page)` | `page.find(UnifiedGrid.class)` (no marker: a second grid fails loudly) |
@@ -78,8 +84,41 @@ What `MigrateDramafinderToUnified` writes for Dramafinder code with no row above
 | `getTotalRowCount()`, `assertRowCount(n)`, `row.assertSelected()` | `getRowCount()`, `assertThat(grid).hasRowCount(n)`, `assertThat(row).isSelected()` |
 | `waitForGridToStopLoading()`, `scrollToRow(i)` | dropped (Auto-Wait) |
 | `MessageInputElement.get(page)`, `MessageListElement.get(page)` | `page.find(UnifiedMessageInput.class)`, `page.find(UnifiedMessageList.class)` (no marker: a second one fails loudly) |
+| `MessageInputElement.get(l)` / `MessageListElement.get(l)`, `l` an id or test id locator on the page | `page.find(UnifiedContainer.class).withId(..)` / `withTestId(..)` + `.find(UnifiedMessageInput.class)` / `.find(UnifiedMessageList.class)` |
+| `new MessageInputElement(l)` / `new MessageListElement(l)`, `l` an id or test id locator on the page | `page.find(UnifiedMessageInput.class)` / `page.find(UnifiedMessageList.class)` + `.withId(..)` / `.withTestId(..)` |
 | message input `typeAndSubmit(s)` | `send(s)` |
+| message input `focus()` | `element().focus()` |
 | message list `assertMessageCount(n)` / `assertEmpty()` | `assertThat(list).hasMessageCount(n)` / `isEmpty()` |
+| `assertThat(list.getMessage(i)).containsText(s)` / `hasText(s)` | `assertThat(list.message(i)).hasTextContaining(s)` / `hasText(s)` |
+
+## Viewport and window sizes the Migration Recipes convert
+
+[ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md), [#496](https://github.com/parttio/unified-testing-tool/issues/496). A test starts at one Viewport and may change it any number of times: the size it starts at becomes `@Viewport`, a later change `page.setViewport(..)`.
+
+| TestBench or Dramafinder | Unified API |
+|---|---|
+| `testBench().resizeViewPortTo(w, h)` / Playwright `page.setViewportSize(w, h)`, plain numbers, first in a `@BeforeEach` | `@Viewport(width = w, height = h)` on the class (inherited by subclasses); a test class's `@BeforeEach` left empty goes |
+| the same, first in a test that no `@BeforeEach` runs before | `@Viewport(width = w, height = h)` on the test |
+| the same anywhere else, or with a size that isn't plain numbers | `page.setViewport(w, h)`, and `@RequiresBrowser` on the test (on the class when a helper calls it) |
+| `getDriver().manage().window().setSize(new Dimension(w, h))` | as above, numbers kept, with a Migration Marker: `was a window size: the viewport is now exactly w × h, about 143 px taller than before on Chrome` |
+| `window().maximize()` / `fullscreen()` | removed, with a Migration Marker asking for an exact size |
+| `window().getSize().getWidth()` / `getHeight()`, Playwright `page.viewportSize().width` / `.height` | `page.viewport().width()` / `.height()`, and `@RequiresBrowser` |
+| a TestBench driver started with `--window-size=w,h` | a Migration Marker on the class pointing at `vaadin.testing.viewport` or `@Viewport` |
+| a copied `SpringPlaywrightIT` whose `setupTest()` opens its pages with `NewContextOptions().setViewportSize(w, h)` | its tests stay unmigrated, as for any `setupTest()` override; their marker names the size and the `@Viewport` to keep |
+
+## App layout the Migration Recipes convert
+
+[#669](https://github.com/parttio/unified-testing-tool/issues/669). The Unified API opens and closes the drawer as a user does: it clicks the DrawerToggle, or presses Escape on an opened overlay.
+
+| TestBench | Dramafinder | Unified API |
+|---|---|---|
+| `$(AppLayoutElement.class).single()` / `.first()` | `AppLayoutElement.get(page)` | `page.find(UnifiedAppLayout.class)` (`first()` with its `was first()` Migration Marker) |
+| `isDrawerOpened()` | `isDrawerOpened()`, `assertDrawerOpened()` / `assertDrawerClosed()` | `isDrawerOpened()`, `assertThat(layout).isDrawerOpened()` / `isDrawerClosed()` |
+| `isOverlay()` | `isOverlayMode()`, `assertOverlayMode()` / `assertNotOverlayMode()` | `isOverlay()`, `assertThat(layout).isOverlay()` / `isNotOverlay()`, and `@RequiresBrowser` on the test (on the class when a helper calls it) |
+| `setDrawerOpened(true)` / `(false)` | `setDrawerOpened(true)` / `(false)` | `openDrawer()` / `closeDrawer()`; from TestBench with a Migration Marker, as TestBench set the property |
+| | `openDrawer()`, `closeDrawer()`, `toggleDrawer()`, `closeDrawerWithEscape()` | `openDrawer()`, `closeDrawer()`, `toggleDrawer()`, `closeDrawer()` |
+| `getDrawerToggle().click()`, `$(DrawerToggleElement.class)...click()` | | `toggleDrawer()`, `page.find(UnifiedAppLayout.class).toggleDrawer()` |
+| `setDrawerOpened(b)`, `b` not a literal; `getContent()`, `isDrawerFirst()`, `setDrawerFirst(..)` | `setDrawerOpened(b)`, `b` not a literal; `clickBackdrop()`, `getNavbarLocator()`, `getDrawerLocator()`, `getContentLocator()`, ... | stay behind the Escape Hatch |
 
 ## Escape Hatch
 

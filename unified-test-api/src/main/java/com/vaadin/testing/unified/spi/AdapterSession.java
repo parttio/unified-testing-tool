@@ -18,6 +18,17 @@ public interface AdapterSession extends AutoCloseable {
     /** The components matching the spec right now, in document order. No waiting. */
     List<UnifiedElement> find(QuerySpec spec);
 
+    /**
+     * The Templates in a scope right now, not entering them (spec 04, "Templates"), for failure messages and the
+     * Findable View: elements with a shadow root of the application's own, not Vaadin's components or dev tools
+     * ({@code vaadin-*}, {@code copilot-*}); on Browserless, the {@code LitTemplate}s. Those inside another
+     * Template are not in it. {@code parent} and {@code inTemplate} are as in {@link QuerySpec}. The default finds
+     * none, so that an adapter outside this repository keeps compiling.
+     */
+    default List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        return List.of();
+    }
+
     void navigate(Class<? extends Component> view);
     void navigate(Class<? extends Component> view, Object urlParameter);
     void navigate(Class<? extends Component> view, RouteParameters parameters);
@@ -63,7 +74,8 @@ public interface AdapterSession extends AutoCloseable {
 
     /**
      * Writes what a developer needs to see why a test failed (browsers: a screenshot; Browserless: the
-     * component tree) into {@code directory}, with file names starting with {@code name}.
+     * component tree) into {@code directory}, with file names starting with {@code name}: the core passes the
+     * test's evidence directory and {@code failure}, so a screenshot is {@code failure.png}.
      *
      * @param target the Step Target of the step that failed, as this session found it; null when the failure
      *        was no step's, or its step singled out nothing
@@ -119,6 +131,26 @@ public interface AdapterSession extends AutoCloseable {
      */
     default List<Path> testEnded(Path testEvidenceDirectory, boolean failed) throws java.io.IOException {
         return List.of();
+    }
+
+    /**
+     * Sets this page's Viewport exactly, and returns once the browser has applied it, without waiting for the
+     * server (ADR 0011). The core calls it as soon as a page opens, before its first navigation, and for
+     * {@code UnifiedPage.setViewport}. A Testing Tool that can't set an exact size throws
+     * {@link UnsupportedOperationException} saying why, as the default does: the core then skips, warns or fails.
+     */
+    default void setViewport(com.vaadin.testing.unified.ViewportSize size) {
+        throw new UnsupportedOperationException(getClass().getSimpleName() + " can't set a Viewport");
+    }
+
+    /**
+     * Runs the core's layout script ({@link LayoutScript#SOURCE}) in this page, unchanged, with
+     * {@link LayoutScript#argument} for {@code targets} and the {@code subject}'s own element (null for none), and
+     * returns the JSON string it returns (ADR 0011). One round trip, no waiting. A Testing Tool without a browser
+     * throws {@link UnsupportedOperationException}, as the default does.
+     */
+    default String measureLayout(java.util.List<LayoutScript.Target> targets, com.vaadin.testing.unified.UnifiedElement subject) {
+        throw new UnsupportedOperationException(getClass().getSimpleName() + " can't measure the layout");
     }
 
     /** Another window of the same user and session. This session closes it when it closes. */

@@ -20,10 +20,12 @@ import java.util.Optional;
  * @param steps the entries, as read
  * @param readsBeforeFirstEntry how many values the test read before its first entry
  * @param evidencePath the test's evidence directory, as the summary shows it
+ * @param viewport the Viewport the test ran at; null without a browser
+ * @param fixedViewport whether the test declares its Viewport with {@code @Viewport}
  */
 public record ScenarioResult(String testClass, String testMethod, String displayName, String tool, String status,
         Instant startedAt, long durationMs, Map<String, Object> failure, List<Map<String, Object>> steps, int readsBeforeFirstEntry,
-        String evidencePath) {
+        String evidencePath, com.vaadin.testing.unified.ViewportSize viewport, boolean fixedViewport) {
 
     /**
      * Reads a {@code user-steps.json}.
@@ -46,7 +48,16 @@ public record ScenarioResult(String testClass, String testMethod, String display
         long durationMs = test.get("durationMs") instanceof Number n ? n.longValue() : 0;
         return new ScenarioResult(testClass, testMethod, displayName, string(test, "tool"), string(test, "status"),
                 startedAt, durationMs, failure, entries(test.get("steps")),
-                test.get("readsBeforeFirstEntry") instanceof Number n ? n.intValue() : 0, evidencePath);
+                test.get("readsBeforeFirstEntry") instanceof Number n ? n.intValue() : 0, evidencePath,
+                viewport(test.get("viewport")), test.get("viewport") instanceof Map<?, ?> v && Boolean.TRUE.equals(v.get("fixed")));
+    }
+
+    private static com.vaadin.testing.unified.ViewportSize viewport(Object json) {
+        if (json instanceof Map<?, ?> v && v.get("width") instanceof Number w && v.get("height") instanceof Number h) {
+            return new com.vaadin.testing.unified.ViewportSize(v.get("name") instanceof String n ? n : "", w.intValue(),
+                    h.intValue());
+        }
+        return null;
     }
 
     public boolean passed() {
@@ -88,6 +99,25 @@ public record ScenarioResult(String testClass, String testMethod, String display
         unchecked(steps, pending, checked);
         return pending.isEmpty() && checked[0] ? Optional.empty()
                 : Optional.of(new Unchecked(!checked[0], List.copyOf(pending)));
+    }
+
+    /**
+     * Whether the scenario recorded an Escape Hatch gap anywhere, step groups opened. Its checks may then be in
+     * code the reports can't see (JUnit or AssertJ assertions on what the Escape Hatch read), so a scenario
+     * without a check that has one is counted apart from the others.
+     */
+    public boolean escapeHatch() {
+        return escapeHatch(steps);
+    }
+
+    private static boolean escapeHatch(List<Map<String, Object>> entries) {
+        for (Map<String, Object> entry : entries) {
+            if ("gap".equals(string(entry, "type")) && "Escape Hatch".equals(string(entry, "reason"))
+                    || escapeHatch(entries(entry.get("steps")))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void unchecked(List<Map<String, Object>> entries, List<String> pending, boolean[] checked) {

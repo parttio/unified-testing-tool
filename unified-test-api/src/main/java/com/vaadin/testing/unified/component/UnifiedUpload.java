@@ -10,10 +10,15 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 
 /** An {@link Upload}. Uploading waits until the server has received the file. */
 @UnifiedComponent(Upload.class)
 public interface UnifiedUpload extends UnifiedWrapper, CommonFilters<UnifiedUpload> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedUpload withTimeout(Duration timeout);
 
     /** Uploads content as a file with this name and MIME type, as a user picking it would. */
     default void upload(String fileName, String mimeType, byte[] content) {

@@ -69,6 +69,24 @@ public class UserStepsReportTest {
     }
 
     @Test
+    void aFailureWithASuggestionShowsItsDidYouMeanButNotItsNearMisses() {
+        UnifiedPage page = fake.page;
+        AssertionError failure = assertThrows(AssertionError.class,
+                () -> page.find(UnifiedTextField.class).withLabel("Nmae").setValue("Alan"));
+
+        String text = report(failure).text();
+        List<String> lines = text.lines().toList();
+
+        assertEquals(List.of(
+                "   1  fill text field “Nmae” with “Alan”   ✘",
+                "   ✘ UnifiedAssertionError: Expected exactly one text field labelled “Nmae”, found none",
+                "     Did you mean  find(UnifiedTextField.class).withLabel(\"Name\")"), lines.subList(1, 4), text);
+        assertTrue(lines.get(4).startsWith("     at UserStepsReportTest.java:"), lines.get(4));
+        assertEquals(5, lines.size(), text);
+        assertFalse(text.contains("Nearby"), text);
+    }
+
+    @Test
     void valuesReadBetweenUserStepsAreCountedAndListedNowhere() throws Exception {
         UnifiedPage page = fake.page;
         UnifiedTextField name = page.find(UnifiedTextField.class).withLabel("Name");
@@ -110,6 +128,34 @@ public class UserStepsReportTest {
     }
 
     @Test
+    void jsonNamesTheErrorTheLastAttemptThrew() throws Exception {
+        fake.findErrors.put("vaadin-notification",
+                new UnsupportedOperationException("Browserless can't read this notification"));
+        AssertionError failure = assertThrows(AssertionError.class,
+                () -> assertThat(fake.page.find(UnifiedNotification.class)).exists());
+
+        JsonNode fail = new ObjectMapper().readTree(report(failure).json()).get("failure");
+
+        assertEquals("UnsupportedOperationException: Browserless can't read this notification",
+                fail.get("cause").asString());
+    }
+
+    @Test
+    void jsonGivesTheViewportTheTestRanAt() throws Exception {
+        fake.steps.viewport(new com.vaadin.testing.unified.ViewportSize("phone", 375, 667), true);
+        fake.steps.finish();
+        JsonNode viewport = new ObjectMapper().readTree(new UserStepsReport("demo.EditPersonTest", "editsAPerson",
+                "Editing a person", "playwright", "passed", null, fake.steps).json()).get("viewport");
+
+        assertEquals("{\"name\":\"phone\",\"width\":375,\"height\":667,\"fixed\":true}", viewport.toString());
+    }
+
+    @Test
+    void jsonHasNoViewportWithoutABrowser() throws Exception {
+        assertEquals(null, new ObjectMapper().readTree(report(runFailingScenario()).json()).get("viewport"));
+    }
+
+    @Test
     void jsonFollowsSchemaVersion1() throws Exception {
         AssertionError failure = runFailingScenario();
         JsonNode json = new ObjectMapper().readTree(report(failure).json());
@@ -130,6 +176,7 @@ public class UserStepsReportTest {
         assertEquals("none", fail.get("found").asString());
         assertFalse(fail.has("nearMisses"));
         assertFalse(fail.has("suggestion"));
+        assertFalse(fail.has("cause"));
         assertEquals("4.1", fail.get("stepIndex").asString());
         assertEquals(5, fail.get("stepNumber").asInt());
         assertEquals(2, fail.get("codePath").size());

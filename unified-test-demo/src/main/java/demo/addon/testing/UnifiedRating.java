@@ -5,6 +5,7 @@ import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import demo.addon.Rating;
+import java.time.Duration;
 
 /**
  * The add-on's wrapper, shipped in its own jar (ADR 0003): only the Unified Element, no per-tool code.
@@ -13,6 +14,10 @@ import demo.addon.Rating;
 // --8<-- [start:wrapper]
 @UnifiedComponent(Rating.class)
 public interface UnifiedRating extends UnifiedWrapper, CommonFilters<UnifiedRating>, LabelFilter<UnifiedRating> {
+
+    /** Only to chain after it: {@code rating.withTimeout(..).rate(4)}. The Unified API implements it. */
+    @Override
+    UnifiedRating withTimeout(Duration timeout);
 
     /** A custom filter built from {@code where(..)}. */
     default UnifiedRating withValue(int stars) {

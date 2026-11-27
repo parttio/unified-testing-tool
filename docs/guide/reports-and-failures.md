@@ -33,7 +33,7 @@ Changing a person's email updates the grid
   Waited        10 s (vaadin.testing.timeout)
   Tool          browserless
   Code          EditEmailTest.java:31 (changeEmail) ← EditEmailTest.java:33 (changeEmail)
-  Evidence      target/surefire-reports/unified-evidence/EditEmailTest/changesTheEmail/
+  Evidence      target/surefire-reports/unified-evidence/EditEmailTest/changesTheEmail/  (failure.tree.txt, failure.view.txt)
 ```
 
 | Line | Says |
@@ -45,6 +45,7 @@ Changing a person's email updates the grid
 | `Found` | `none`; several matches (`2: …`, each with where it is); `1, but disabled` (or hidden, read-only, covered by an open dialog); or, for an assertion, the values it saw while waiting |
 | `Nearby` | the Near Misses: components the lookup almost matched |
 | `Did you mean` | the lookup you probably meant, when one Near Miss is clearly best |
+| `Cause` | the error the step's last attempt threw, such as what this Testing Tool can't do: `UnsupportedOperationException: …` |
 | `Waited` | how long, and where the timeout came from: `vaadin.testing.timeout`, or `withTimeout` |
 | `Tool` | the Testing Tool, and its browser |
 | `Code` | where it happened: the line that called the step, then the line inside it |
@@ -61,7 +62,15 @@ When a lookup finds nothing, the failure lists what is there instead, so you can
 
 ### Did you mean
 
-`Did you mean` appears only when one Near Miss is clearly what the test meant: it differs only in case, spacing or punctuation; or it is a small edit away with no equal rival; or it has the exact name but is another kind. It is written as the lookup to paste, from `find(..)` on. A dialog whose title the test misspelled:
+`Did you mean` appears only when one Near Miss is clearly what the test meant. The rules are tried in this order, and the first that applies decides:
+
+1. **Same letters and digits.** Exactly one component of the same kind has the wanted name when case, spaces and punctuation are ignored: `Previous week` and `Previous Week`, `Email` and `E-mail`. If two do, there is no suggestion.
+2. **A few edits away.** Otherwise, exactly one component of the same kind is the fewest edits (characters added, removed or changed, ignoring case) from the wanted name, and that is at most a quarter of the wanted name's length, rounded down, or 2 for a short name. `Previous week` has 13 characters, so up to 3 edits: `Previus week` gets a suggestion, `Go to previous week` (6 edits) does not. Two components equally close get none.
+3. **Another kind, the exact name.** Otherwise, exactly one component of another kind has the exact name: a combo box labelled `Role` when the test looked for a text field. When rule 2 and rule 3 both find one, neither is clearly best, and there is no suggestion.
+
+A component of the same kind with exactly the wanted name rules out every suggestion: it is there, and another filter or the scope left it out. A name that only contains the wanted one, or is contained in it, moves up in `Nearby` but is never suggested. So no `Did you mean` means that no Near Miss was close enough by these rules, not that one was missed, and [`ApplyDidYouMean`](#applying-it) has nothing to apply to that failure: read `Nearby`, or the [Findable View](#the-findable-view), and write the lookup yourself.
+
+It is written as the lookup to paste, from `find(..)` on. A dialog whose title the test misspelled:
 
 ```
   Failed at     User Step 3 of 3: click button “Close” in dialog “Export Report”
@@ -120,12 +129,24 @@ A component that is there but can't be used:
   Found         1, but disabled
 ```
 
-### The Findable View
-
-Next to the screenshot or the component tree, a failed test writes `<test class>.<method>.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Failure evidence` line names it.
+What the Testing Tool can't do. It fails at the first attempt, since waiting won't change it, and its `Cause` line says why. Here it's a lookup inside a cell that a LitRenderer draws, on Browserless:
 
 ```
-Findable view of “/checkout” on playwright (chromium): 6 components
+  Failed at     User Step 2 of 2: click edit pencil in cell at index 1 in row where Name is “Bob” in grid (test id “editable”)
+  Expected      exactly one cell at index 1 in row where Name is “Bob” in grid (test id “editable”)
+  Found         none
+  Cause         UnsupportedOperationException: The cell at index 1 is drawn by a LitRenderer, whose markup exists only in a browser, so Browserless can't search inside it. Annotate the test with @RequiresBrowser to skip it here; to run a renderer function on Browserless, use the Escape Hatch: GridTester.invokeLitRendererFunction.
+  Tool          browserless
+```
+
+Any other error a step's attempts throw is retried until the timeout, and `Cause` names the last one.
+
+### The Findable View
+
+Next to the screenshot or the component tree, a failed test writes `failure.view.txt`, on every Testing Tool: what the page held when the test failed, as lookups. The failure's `Evidence` line names it. When the failed step was about a grid row or a chat message, the grid's columns and first rows, or the list's first messages, follow, each with the lookup that finds it, as `grid.describe()` lists them.
+
+```
+Findable view of “/checkout” on playwright (chromium) at Viewport 1280 × 720: 6 components
 text field “Street”  page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("Street")
 text field “City”    page.find(UnifiedContainer.class).withTestId("billing").find(UnifiedTextField.class).withLabel("City")
 text field “Street”  page.find(UnifiedContainer.class).withId("shipping").find(UnifiedTextField.class).withLabel("Street")
@@ -133,6 +154,10 @@ text field “City”    page.find(UnifiedContainer.class).withId("shipping").fi
 button “Save”        page.find(UnifiedButton.class).withText("Save")
 button “Cancel”      page.find(UnifiedButton.class).withText("Cancel")
 ```
+
+In a browser, the header names the Viewport, and a line says when a user can't get to its component as it shows: `(clipped)` when a box with hidden overflow cuts it off, `(behind the AppLayout drawer)` or `(behind button “Menu”)` when something covers it, `(hidden in the AppLayout drawer)` or `(hidden in the MenuBar overflow)` when Vaadin tucked it away. A component a user scrolls to says nothing. A container's `describe()` doesn't say this, only the page's. An action on a component something covers or clips fails with that in `Found`, the same on Playwright and Selenium: `Expected a reachable button with text “Save”`, `Found behind the AppLayout drawer`.
+
+A kind of component whose lookup threw is not left out: the view ends with `Not listed: link (UnsupportedOperationException: …)`.
 
 When `Did you mean` has nothing to say, look for the component here. The same view is `page.describe()` in a test ([Finding components](finding-components.md#what-is-there-to-find)).
 
@@ -142,7 +167,7 @@ The parts are getters on `UnifiedAssertionError`, for a test that checks a failu
 
 ## The CI log
 
-A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line and where it happened:
+A failed test prints its User Steps to stdout, so the CI log shows them next to the failure. The failed step is marked `✘`, followed by the failure in one line, its `Did you mean` when it has one, and where it happened:
 
 ```
 ✘ EditEmailTest › Changing a person's email updates the grid   browserless · 11.4 s
@@ -151,6 +176,7 @@ A failed test prints its User Steps to stdout, so the CI log shows them next to 
       2.1  click row where Name is “Alan Turing” in grid
       2.2  fill text field “E-mail” with “alan@bletchley.uk”   ✘
    ✘ UnifiedAssertionError: Expected exactly one text field labelled “E-mail”, found none
+     Did you mean  find(UnifiedTextField.class).withLabel("Email")
      at EditEmailTest.java:31 (changeEmail) ← EditEmailTest.java:33 (changeEmail)
 ```
 
@@ -176,7 +202,7 @@ Every test that injects a `UnifiedPage` writes two files to `<evidence dir>/<tes
 }
 ```
 
-Next to them, a failed test leaves its failure evidence: a screenshot on Playwright and Selenium, the component tree as text on Browserless (`<test class>.<method>.tree.txt` in the evidence directory). The evidence directory is `target/surefire-reports/unified-evidence` by default, so CI can upload it with the test reports.
+Next to them, a failed test leaves its failure evidence: `failure.png`, a screenshot, on Playwright and Selenium, or `failure.tree.txt`, the component tree as text, on Browserless; and `failure.view.txt` on every Testing Tool. The failure's `Evidence` line names the directory and these files, and `user-steps.json` lists them as `failure.evidence`. The evidence directory is `target/surefire-reports/unified-evidence` by default, so CI can upload it with the test reports.
 
 ### Reading a User Step
 
@@ -349,8 +375,15 @@ A test that fills a form, clicks *Save* and stops there passes whether or not th
 - **A check** is a retrying assertion, `assertThat(..)` from `UnifiedAssertions`, which shows as a `see` or `see no` User Step. The steps after a scenario's last check are the ones listed.
 - **Reading a value counts too.** `assertEquals("Alan", name.getValue())` records no User Step, but the Unified API counts that the test read a value after its last action, and takes the test to assert on it. Such a scenario is not listed. The retrying form, `assertThat(name).hasValue("Alan")`, is still the better one: it waits for the value on every Testing Tool, and its failure names the User Step ([Assertions and waiting](assertions-and-waiting.md)).
 - **Not listed either:** a scenario that ends on `page.waitUntil(..)` or an Escape Hatch call, since the check may be in there, and a passing scenario with a failed User Step, since the test expected that failure (`assertThrows`).
+- **Escape Hatch scenarios are counted, not listed.** After the Escape Hatch call the Unified API sees nothing: a migrated test that reads TestBench elements and checks them with `assertEquals` or AssertJ looks unchecked. So a scenario without a check that used an Escape Hatch anywhere is counted on one line after the list, with the first three names:
 
-The section reports; it fails no test. It can't tell whether a check is the right one, only that the last steps have none. In `report.html` these scenarios have a section of their own and a *no check* badge, and `summary.json` marks them with `unchecked`.
+    ```markdown
+    13 more end in Escape Hatch code, whose checks the report can't see: Edit an order, Add a product, Log out, … Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them checked here.
+    ```
+
+    The list keeps the scenarios that really check nothing, and the count shrinks as you resolve the Migration Markers ([Migrating from TestBench](../migrating-from-testbench.md#what-it-leaves-for-you)). When only Escape Hatch scenarios are unchecked, the section is that line alone.
+
+The section reports; it fails no test. It can't tell whether a check is the right one, only that the last steps have none. In `report.html` these scenarios have a section of their own and a *no check* badge, the Escape Hatch ones after their count line with an *Escape Hatch* badge, and `summary.json` marks them with `unchecked`, and `escapeHatch` true for the Escape Hatch ones.
 
 ## The HTML report
 
@@ -391,7 +424,7 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the 
       "change": "new",
       "failedStep": "fill text field “E-mail” with “alan@bletchley.uk”",
       "failure": { "type": "com.vaadin.testing.unified.UnifiedAssertionError", "…": "…" },
-      "evidence": ["com.vaadin.testing.unified.demo.EditEmailTest.changesTheEmail.tree.txt"]
+      "evidence": ["EditEmailTest/changesTheEmail/failure.tree.txt", "EditEmailTest/changesTheEmail/failure.view.txt"]
     }
   ]
 }
@@ -402,7 +435,7 @@ Next to `summary.md`, the Unified API writes `<evidence dir>/summary.json`: the 
 - **Every scenario** is listed, passed or failed, with the directory of its files. Paths are relative to the evidence directory, so they work in a downloaded CI artifact too.
 - **A failed scenario** carries the text of the failed User Step, the `failure` object of its `user-steps.json` unchanged (expected, found, Near Misses, *Did you mean*, the code path), and its failure evidence.
 - **A scenario that differs on another Testing Tool** says `differsOn`: the tool, its status there, where the User Steps part, and the failure from there.
-- **A passing scenario without a check** says `unchecked` (`all` or `end`) and lists the User Steps nothing checks.
+- **A passing scenario without a check** says `unchecked` (`all` or `end`) and lists the User Steps nothing checks; `escapeHatch` says whether it used an Escape Hatch, so the summary counts it apart.
 - **A scenario the pull request changed** says `new` or `changed`, the changed files it calls from, and how many User Steps were added and removed against the Base Run.
 
 The User Steps themselves stay in each test's `user-steps.json`. The file is versioned (`schemaVersion`); the fields are in the spec, [`summary.json`, schema version 1](../spec/12-readable-tests.md#summaryjson-schema-version-1).
@@ -419,7 +452,7 @@ mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScop
     -Dexec.args="show-trace target/surefire-reports/unified-evidence/EditPersonTest/editsAPerson/trace.zip"
 ```
 
-A trace is about 1 MB per test, a screenshot about 130 KB per step. With snapshots on, the demo's tests on Playwright took 7 minutes instead of 4 and wrote 542 screenshots (74 MB), so turn them on to look into a test rather than on every CI run. In CI, `trace=on-failure` keeps what you need to see why a test failed and costs little when tests pass. Values passed through `page.secret(..)` are masked in text snapshots, and Browserless trees show a password field's value as `••••`; screenshots and traces show the page as the browser drew it, where password fields show dots.
+A trace is about 1 MB per test, a screenshot about 130 KB per step. With snapshots on, the demo's tests on Playwright took 7 minutes instead of 4 and wrote 542 screenshots (74 MB), so turn them on to look into a test rather than on every CI run. In CI, `trace=on-failure` keeps what you need to see why a test failed, but it records the trace of every test and only drops it when the test passes: on this project's demo it made the Playwright run about a fifth slower. To pay only when a test fails, run without the trace and, if tests failed, run those again with it, as this repository's CI does (`.github/workflows/tests.yml`). Values passed through `page.secret(..)` are masked in text snapshots, and Browserless trees show a password field's value as `••••`; screenshots and traces show the page as the browser drew it, where password fields show dots.
 
 ## The GitHub job summary
 
@@ -444,7 +477,7 @@ To keep every test's User Steps and failure evidence, upload the evidence direct
   uses: actions/upload-artifact@v4
   with:
     name: unified-evidence
-    path: '**/target/surefire-reports/unified-evidence/'
+    path: '**/target/*-reports/unified-evidence/'
     if-no-files-found: ignore
 ```
 

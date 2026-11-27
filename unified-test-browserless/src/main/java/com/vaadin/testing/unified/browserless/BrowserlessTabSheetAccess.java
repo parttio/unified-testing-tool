@@ -8,6 +8,7 @@ import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import java.util.List;
+import java.util.Optional;
 
 /** TabSheet on Browserless through TabSheetTester; tabs are found by their Item Name. */
 final class BrowserlessTabSheetAccess implements TabSheetAccess {
@@ -53,6 +54,11 @@ final class BrowserlessTabSheetAccess implements TabSheetAccess {
             tester().select(ItemNames.visiblePosition(all, ItemNames.find(all, label, "tab \"" + label + "\""), "Tab"));
             session.window().roundTrip();
         });
+    }
+
+    @Override
+    public Optional<UnifiedElement> link(String label) {
+        return BrowserlessLinks.heldBy(session, ItemNames.find(all(), label, "tab \"" + label + "\""));
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.UnifiedComponent;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.query.CommonFilters;
+import java.time.Duration;
 
 /**
  * Any component used to narrow a search, typically a layout (FormLayout, VerticalLayout, Div, …), which has
@@ -18,6 +19,10 @@ import com.vaadin.testing.unified.query.CommonFilters;
  */
 @UnifiedComponent(value = Component.class, tag = "*")
 public interface UnifiedContainer extends UnifiedWrapper, Scope, CommonFilters<UnifiedContainer> {
+
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedContainer withTimeout(Duration timeout);
 
     /** Clicks it as a user does, for a click listener ({@code addClickListener}); Auto-Wait. */
     default void click() { element().click(); }

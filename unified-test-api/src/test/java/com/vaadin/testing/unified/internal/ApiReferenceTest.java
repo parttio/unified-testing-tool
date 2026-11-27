@@ -56,6 +56,8 @@ class ApiReferenceTest {
             entry("UnifiedPage", "navigation-and-users.md"),
             entry("UnifiedTextField", "components.md#text-fields"),
             entry("UnifiedTextArea", "components.md#text-fields"),
+            entry("UnifiedEmailField", "components.md#text-fields"),
+            entry("UnifiedPasswordField", "components.md#text-fields"),
             entry("UnifiedNumberField", "components.md#typed-values"),
             entry("UnifiedIntegerField", "components.md#typed-values"),
             entry("UnifiedBigDecimalField", "components.md#typed-values"),
@@ -68,10 +70,16 @@ class ApiReferenceTest {
                     "components.md#selection-combobox-radiobuttongroup-multiselectcombobox"),
             entry("UnifiedButton", "components.md#buttons-and-menus"),
             entry("UnifiedMenuBar", "components.md#buttons-and-menus"),
+            entry("UnifiedAppLayout", "components.md#app-layout"),
+            entry("UnifiedSideNav", "components.md#side-navigation"),
+            entry("UnifiedSideNavItem", "components.md#side-navigation"),
+            entry("UnifiedLink", "components.md#links"),
             entry("UnifiedTabSheet", "components.md#tabs-and-details"),
             entry("UnifiedTabs", "components.md#tabs-and-details"),
             entry("UnifiedDetails", "components.md#tabs-and-details"),
             entry("UnifiedDialog", "components.md#dialogs-and-notifications"),
+            entry("UnifiedConfirmDialog", "components.md#dialogs-and-notifications"),
+            entry("UnifiedLogin", "components.md#login"),
             entry("UnifiedNotification", "components.md#dialogs-and-notifications"),
             entry("UnifiedUpload", "components.md#upload"),
             entry("UnifiedMessageInput", "components.md#chat"),
@@ -153,6 +161,11 @@ class ApiReferenceTest {
                 are User Steps (`see …`).
                 - A component without a Wrapper: `page.findComponent(FlowClass.class)`, with the filters of every \
                 Wrapper.
+                - **Evidence**: a failed test leaves a screenshot (browser) or the component tree (Browserless) \
+                under `target/surefire-reports/unified-evidence/`. For every User Step, failed or not, set \
+                `vaadin.testing.user-steps.snapshots=true`; for Playwright's trace (`trace.zip`), set \
+                `vaadin.testing.playwright.trace=on` or `on-failure`. Every `vaadin.testing.*` setting, with its \
+                default: the [configuration guide](https://parttio.github.io/unified-testing-tool/guide/configuration/).
 
                 """);
         section(md, "## The page: `UnifiedPage`", "", methods(UnifiedPage.class, Set.of(Object.class)),
@@ -165,8 +178,12 @@ class ApiReferenceTest {
         for (Class<?> wrapper : wrappers()) {
             UnifiedComponent component = wrapper.getAnnotation(UnifiedComponent.class);
             String title = "### `" + wrapper.getSimpleName() + "`";
-            String about = StepTarget.kindOf(wrapper) + (component == null ? "" : ", Flow's `"
-                    + component.value().getSimpleName() + "`");
+            // a Wrapper of Component.class bound to a tag (UnifiedLink: tag "a") wraps whatever renders that tag
+            boolean byTag = component != null && component.value() == com.vaadin.flow.component.Component.class
+                    && !component.tag().isEmpty() && !"*".equals(component.tag());
+            String about = StepTarget.kindOf(wrapper) + (component == null ? ""
+                    : byTag ? ", any Flow component rendered as `<" + component.tag() + ">`"
+                    : ", Flow's `" + component.value().getSimpleName() + "`");
             // a Wrapper that is a Scope lists find(..) and findComponent(..): components are searched inside it
             section(md, title, about, methods(wrapper, Set.of(Object.class, CommonFilters.class, UnifiedWrapper.class,
                     HasEscapeHatch.class)), wrapper);
@@ -207,9 +224,12 @@ class ApiReferenceTest {
     }
 
     private static String kind(Method m, Class<?> type) {
-        // a filter returns its own type (a Wrapper, a grid row); the page's methods that return a page open another
+        // a filter returns its own type (a Wrapper, a grid row), or SELF of a shared mixin (UnifiedOverlayDialog); the
+        // page's methods that return a page open another
         if (m.getDeclaringClass().getPackageName().endsWith(".query")
-                || (m.getReturnType() == type && type != UnifiedPage.class)) {
+                || (m.getReturnType() == type && type != UnifiedPage.class)
+                || m.getGenericReturnType() instanceof java.lang.reflect.TypeVariable<?> self
+                        && self.getGenericDeclaration() instanceof Class<?>) {
             return "Filters";
         }
         if (m.getReturnType() == void.class) {
@@ -325,7 +345,7 @@ class ApiReferenceTest {
         Map<String, Method> bySignature = new TreeMap<>();
         for (Method m : type.getMethods()) {
             if (m.isBridge() || m.isSynthetic() || Modifier.isStatic(m.getModifiers())
-                    || excluded.contains(m.getDeclaringClass())) {
+                    || excluded.contains(m.getDeclaringClass()) || overridesOneOf(m, excluded)) {
                 continue;
             }
             // an override with a narrower return type wins over the one it overrides
@@ -333,6 +353,19 @@ class ApiReferenceTest {
                     .isAssignableFrom(b.getReturnType()) ? b : a);
         }
         return new ArrayList<>(bySignature.values());
+    }
+
+    /** A re-declaration, such as a Wrapper's {@code withTimeout} with its own type, of a method listed elsewhere. */
+    private static boolean overridesOneOf(Method m, Set<Class<?>> types) {
+        for (Class<?> type : types) {
+            try {
+                type.getMethod(m.getName(), m.getParameterTypes());
+                return true;
+            } catch (NoSuchMethodException e) {
+                // not one of its methods
+            }
+        }
+        return false;
     }
 
     private static List<String> signatures(List<Method> methods, boolean withReturnType) {

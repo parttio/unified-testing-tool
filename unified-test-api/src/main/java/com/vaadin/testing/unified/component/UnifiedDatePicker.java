@@ -2,9 +2,11 @@ package com.vaadin.testing.unified.component;
 
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.testing.unified.UnifiedComponent;
+import com.vaadin.testing.unified.internal.datepicker.DatePickerSupport;
 import com.vaadin.testing.unified.query.CommonFilters;
 import com.vaadin.testing.unified.query.LabelFilter;
 import com.vaadin.testing.unified.query.PlaceholderFilter;
+import java.time.Duration;
 import java.time.LocalDate;
 
 /** A {@link DatePicker}: the value is a {@link LocalDate}, {@code null} when empty. */
@@ -12,9 +14,18 @@ import java.time.LocalDate;
 public interface UnifiedDatePicker extends UnifiedField,
         CommonFilters<UnifiedDatePicker>, LabelFilter<UnifiedDatePicker>, PlaceholderFilter<UnifiedDatePicker> {
 
+    /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
+    @Override
+    UnifiedDatePicker withTimeout(Duration timeout);
+
     // actions (Auto-Wait)
-    /** Enters the date as a user would; {@code null} empties the field. */
-    default void setValue(LocalDate value) { element().setValueAsUser(value); }
+    /**
+     * Chooses the date as a user would; {@code null} empties the field. It waits until the field is visible and
+     * enabled, or until the picker's calendar is open: a picker whose field is hidden, which the application
+     * opens from a button of its own, gets the date as a pick in its calendar would set it, and its calendar
+     * closes.
+     */
+    default void setValue(LocalDate value) { DatePickerSupport.setValue(this, value); }
     default void clear() { element().setValueAsUser(null); }
 
     /**

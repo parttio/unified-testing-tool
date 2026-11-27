@@ -56,8 +56,15 @@ final class Wrappers {
     static final Map<String, String> BUTTON_FILTER_RENAMES = Map.of("withLabel", "withText", "withCaption", "withText");
     static final String BUTTON_ELEMENT = "com.vaadin.flow.component.button.testbench.ButtonElement";
 
-    /** TestBench query terminals; the conversion drops them, as the Wrapper is the lookup (ADR 0007). */
-    static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst");
+    /**
+     * TestBench query terminals; the conversion drops them, as the Wrapper is the lookup (ADR 0007), and turns
+     * {@code id("x")} into the filter {@code withId("x")}.
+     */
+    static final Set<String> TERMINALS = Set.of("single", "first", "waitForFirst", "id");
+
+    static final String APP_LAYOUT_ELEMENT = "com.vaadin.flow.component.applayout.testbench.AppLayoutElement";
+
+    static final String UNIFIED_TEMPLATE ="com.vaadin.testing.unified.component.UnifiedTemplate";
 
     private static final Set<String> COMMON_FILTERS = Set.of("withId", "withClassName", "withTheme");
 
@@ -69,10 +76,41 @@ final class Wrappers {
                     with(COMMON_FILTERS, "withLabel"),
                     Set.of("setValue", "getValue", "clear", "getLabel", "getPlaceholder", "getHelperText",
                             "getErrorMessage", "isEnabled"))),
+            // an email or password field: the same text-value Wrapper, of its own type (#555)
+            Map.entry("com.vaadin.flow.component.textfield.testbench.EmailFieldElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedEmailField",
+                    with(COMMON_FILTERS, "withLabel"),
+                    Set.of("setValue", "getValue", "clear", "getLabel", "getPlaceholder", "getHelperText",
+                            "getErrorMessage", "isEnabled"))),
+            Map.entry("com.vaadin.flow.component.textfield.testbench.PasswordFieldElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedPasswordField",
+                    with(COMMON_FILTERS, "withLabel"),
+                    Set.of("setValue", "getValue", "clear", "getLabel", "getPlaceholder", "getHelperText",
+                            "getErrorMessage", "isEnabled"))),
             Map.entry("com.vaadin.flow.component.button.testbench.ButtonElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedButton",
                     // withLabel and withCaption become withText (ADR 0001), see FILTER_RENAMES
                     with(COMMON_FILTERS, "withText", "withLabel", "withCaption"),
                     Set.of("click", "getText", "isEnabled"))),
+            // a RouterLink or an Anchor: TestBench finds both as AnchorElement (<a>), as UnifiedLink does
+            Map.entry("com.vaadin.flow.component.html.testbench.AnchorElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedLink",
+                    with(COMMON_FILTERS, "withText"),
+                    Set.of("click", "getText", "isEnabled"))),
+            // side navigation (#658): TestBench's navigate() is the item's click
+            Map.entry("com.vaadin.flow.component.sidenav.testbench.SideNavItemElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedSideNavItem", COMMON_FILTERS,
+                    Set.of("click", "getLabel", "getPath", "isExpanded", "isCurrent", "isEnabled"),
+                    Map.of("navigate", "click"))),
+            Map.entry("com.vaadin.flow.component.sidenav.testbench.SideNavElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedSideNav", COMMON_FILTERS, Set.of("getLabel"))),
+            // the application's frame (#669)
+            Map.entry(APP_LAYOUT_ELEMENT, new Wrapper(
+                    AppLayouts.APP_LAYOUT, COMMON_FILTERS,
+                    // isOverlay: the test then requires a browser (Viewports.NeedsBrowser); the actions are the
+                    // Unified names AppLayouts writes
+                    Set.of("isDrawerOpened", "isOverlay", "openDrawer", "closeDrawer", "toggleDrawer"),
+                    AppLayouts::converts)),
+            // a DrawerToggle: clicking it toggles its layout's drawer; no filters, which would filter the layout
+            Map.entry("com.vaadin.flow.component.applayout.testbench.DrawerToggleElement", new Wrapper(
+                    AppLayouts.APP_LAYOUT, Set.of(), Set.of(), Map.of("click", "toggleDrawer"))),
             Map.entry("com.vaadin.flow.component.notification.testbench.NotificationElement", new Wrapper("com.vaadin.testing.unified.component.UnifiedNotification",
                     with(COMMON_FILTERS, "withText"),
                     Set.of("getText", "isOpen"))),
@@ -111,6 +149,25 @@ final class Wrappers {
                     // find is what a $(..) inside the dialog becomes
                     Set.of("isOpen", "getHeaderTitle", "find"),
                     Chains::scopedLookupConverts)),
+            // a confirm dialog: its buttons by their role (#532), getConfirmButton().click() → confirm(), ...
+            Map.entry(ConfirmDialogs.TESTBENCH_ELEMENT, new Wrapper(
+                    ConfirmDialogs.CONFIRM_DIALOG,
+                    COMMON_FILTERS,
+                    // the Unified names the renames write
+                    Set.copyOf(ConfirmDialogs.PRESSES.values()),
+                    Map.of("getHeaderText", "getHeaderTitle", "getMessageText", "getText"),
+                    ConfirmDialogs::converts)),
+            // a login overlay or form: UnifiedLogin (#564); signing in through its fields stays TestBench, as
+            // TestBench has no single call for it
+            Map.entry("com.vaadin.flow.component.login.testbench.LoginOverlayElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedLogin",
+                    COMMON_FILTERS,
+                    Set.of("forgotPassword", "getTitle", "getDescription", "isEnabled"),
+                    Map.of("isOpened", "isOpen"))),
+            Map.entry("com.vaadin.flow.component.login.testbench.LoginFormElement", new Wrapper(
+                    "com.vaadin.testing.unified.component.UnifiedLogin",
+                    COMMON_FILTERS,
+                    Set.of("forgotPassword", "isEnabled"))),
             Map.entry("com.vaadin.flow.component.tabs.testbench.TabSheetElement", new Wrapper(
                     TabSheets.TAB_SHEET,
                     COMMON_FILTERS,
@@ -177,9 +234,44 @@ final class Wrappers {
                 && size.getSimpleName().equals("size") && size.getSelect() == call;
     }
 
-    /** The Wrapper for the element, or {@code null} when it has none yet. */
+    /**
+     * What a Template's element converts to (spec 04, "Templates"): {@code findTemplate(SearchBar.class)}, a Scope
+     * whose {@code find(..)} is what a {@code $(..)} on the element becomes.
+     */
+    static final Wrapper TEMPLATE = new Wrapper(UNIFIED_TEMPLATE, COMMON_FILTERS, Set.of("find"),
+            Chains::scopedLookupConverts);
+
+    /**
+     * The Wrapper for the element, or {@code null} when it has none yet: {@link #TEMPLATE} for a page object whose
+     * {@code @Element} tag is a {@code LitTemplate}'s, while a visit that reads them runs ({@link LitTemplates}).
+     */
     static Wrapper forElement(String elementFqn) {
-        return BY_ELEMENT.get(elementFqn);
+        Wrapper wrapper = BY_ELEMENT.get(elementFqn);
+        return wrapper != null ? wrapper : LitTemplates.ofElement(elementFqn) != null ? TEMPLATE : null;
+    }
+
+    /** The {@code LitTemplate} class a {@code $(..)} finds the element of, or {@code null}. */
+    static String templateOf(J.MethodInvocation dollar) {
+        if (!dollar.getSimpleName().equals("$") || dollar.getArguments().size() != 1) {
+            return null;
+        }
+        Expression arg = dollar.getArguments().get(0);
+        if (arg instanceof J.Literal literal && literal.getValue() instanceof String tag) {
+            return LitTemplates.ofTag(tag);
+        }
+        return arg instanceof J.FieldAccess classLiteral
+                && classLiteral.getTarget().getType() instanceof JavaType.FullyQualified element
+                ? LitTemplates.ofElement(element.getFullyQualifiedName()) : null;
+    }
+
+    /**
+     * The lookup without its terminal, as the Wrapper is the lookup (ADR 0007): {@code id("x")} stays as the filter
+     * {@code withId("x")}.
+     */
+    static J.MethodInvocation withoutTerminal(J.MethodInvocation terminal, J.MethodInvocation lookup) {
+        return terminal.getSimpleName().equals("id")
+                ? terminal.withSelect(lookup).withName(terminal.getName().withSimpleName("withId"))
+                : lookup.withPrefix(terminal.getPrefix());
     }
 
     /**
@@ -196,8 +288,13 @@ final class Wrappers {
             filters.add(call.getSimpleName());
             e = call.getSelect();
         }
-        if (!(e instanceof J.MethodInvocation dollar) || dollar.getSelect() != null
-                || !(dollar.getArguments().get(0) instanceof J.FieldAccess classLiteral)
+        if (!(e instanceof J.MethodInvocation dollar) || dollar.getSelect() != null) {
+            return null;
+        }
+        if (templateOf(dollar) != null) {
+            return TEMPLATE.filters().containsAll(filters) ? TEMPLATE : null;
+        }
+        if (!(dollar.getArguments().get(0) instanceof J.FieldAccess classLiteral)
                 || !(classLiteral.getTarget().getType() instanceof JavaType.FullyQualified type)) {
             return null;
         }

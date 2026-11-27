@@ -7,6 +7,7 @@ import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.internal.BrowserQueries;
 import com.vaadin.testing.unified.spi.TabSheetAccess;
 import java.util.List;
+import java.util.Optional;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
@@ -62,6 +63,15 @@ final class SeleniumTabSheetAccess implements TabSheetAccess {
     @Override
     public void select(String label) {
         new SeleniumElement(session, tab(label), SeleniumComponents.DEFAULT).click();
+    }
+
+    /** The tab's only {@code <a>}, which a user's click on the tab lands on (#531); the core clicks it. */
+    @Override
+    public Optional<UnifiedElement> link(String label) {
+        List<WebElement> links = tab(label).findElements(By.cssSelector("a"));
+        return links.size() == 1
+                ? Optional.of(new SeleniumElement(session, links.get(0), SeleniumComponents.DEFAULT))
+                : Optional.empty();
     }
 
     /** The tab of this Item Name. */

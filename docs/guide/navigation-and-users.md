@@ -26,12 +26,28 @@ Spec: [3. Navigation](../spec/03-navigation.md), [11. Users](../spec/11-users.md
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:redirected"
 ```
 
+`isAt(..)` matches the route template, so it can't tell `shipment` from `shipment/42`, and `hasPath(..)` needs the whole path. When part of the path isn't known in advance, such as the id of an item the test just created, use `hasPathMatching(..)` with a regular expression that matches the whole path. It retries like `hasPath`:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/NavigationTest.java:hasPathMatching"
+```
+
 ## Running as a user
 
 With Spring Security, put Spring's own `@WithMockUser` or `@WithUserDetails` on the test or the class. On Browserless it sets the security context; on Playwright and Selenium the browser logs in through a test-only endpoint. The test is the same:
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/UsersTest.java:adminSeesTheAdminArea"
+```
+
+`@WithMockUser` comes from Spring Security's test support, which a project tested through its login form may not have yet. Add it as a test dependency: `spring-boot-starter-security-test` on Spring Boot 4, or `org.springframework.security:spring-security-test` otherwise.
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security-test</artifactId>
+    <scope>test</scope>
+</dependency>
 ```
 
 ## Several windows and users

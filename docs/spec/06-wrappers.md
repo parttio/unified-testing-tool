@@ -8,18 +8,22 @@ One component per interaction pattern. Every other component follows the same pa
 
 | Pattern | Wrapper | Status |
 |---|---|---|
-| Text value | `UnifiedTextField`, `UnifiedTextArea` (PasswordField, EmailField follow) | implemented |
-| Typed value | `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker` | implemented; `UnifiedDatePicker.typeText(..)` and `UnifiedDateTimePicker.typeText(date, time)` type unparsed text; `UnifiedDateTimePicker.typeText(LocalDate, time)` types the date in the field's own format, for incomplete input on every Testing Tool |
+| Text value | `UnifiedTextField`, `UnifiedTextArea`, `UnifiedEmailField`, `UnifiedPasswordField` | implemented; `UnifiedEmailField` and `UnifiedPasswordField` ([#555](https://github.com/parttio/unified-testing-tool/issues/555)) share the text-value contract `UnifiedTextInput` (`setValue`, `clear`, `getValue`, `getPlaceholder`, and `UnifiedField`'s getters) with the other two; what is typed into a password field, and its values in a failed check, read `••••`, and the Findable View shows no value for it |
+| Typed value | `UnifiedNumberField`, `UnifiedIntegerField`, `UnifiedBigDecimalField`, `UnifiedDatePicker`, `UnifiedDateTimePicker` | implemented; `UnifiedDatePicker.typeText(..)` and `UnifiedDateTimePicker.typeText(date, time)` type unparsed text; `UnifiedDateTimePicker.typeText(LocalDate, time)` types the date in the field's own format, for incomplete input on every Testing Tool; `UnifiedDatePicker.setValue(..)` is ready when the field is visible and enabled or its calendar is open (`opened`), so it sets a picker whose field is hidden but whose calendar the application opened, through its `value`, and closes the calendar as a pick does ([#516](https://github.com/parttio/unified-testing-tool/issues/516)) |
 | Boolean value | `UnifiedCheckbox` | implemented |
 | Single selection | `UnifiedComboBox`, `UnifiedRadioButtonGroup` | implemented |
 | Multi selection | `UnifiedMultiSelectComboBox` | implemented |
-| Action | `UnifiedButton`, `UnifiedMenuBar` | implemented: `clickItem("File", "Export", "PDF")` opens the menus as a user does; items by Item Name (an icon-only item by its `aria-label`); `isItemEnabled(..)` |
-| Overlays | `UnifiedDialog`, `UnifiedNotification` | implemented |
+| Action | `UnifiedButton`, `UnifiedMenuBar` | implemented: `clickItem("File", "Export", "PDF")` opens the menus as a user does; items by Item Name (an icon-only item by its `aria-label`); `isItemEnabled(..)`; a top-level item folded into the overflow menu is still an item, but `clickItem` / `isItemEnabled` on it fail in a browser, pointing to `unfoldingOverflow()`, which reaches it through "More options" ([#664](https://github.com/parttio/unified-testing-tool/issues/664)); `getOverflowItems()`, `hasOverflowItems(..)`, `hasNoOverflowItems()` in a browser ([#493](https://github.com/parttio/unified-testing-tool/issues/493)) |
+| Layout | `UnifiedAppLayout` | implemented ([#493](https://github.com/parttio/unified-testing-tool/issues/493)): `isDrawerOpened()`, `isOverlay()` (browser only: the browser decides it from the layout); `openDrawer()`, `closeDrawer()`, `toggleDrawer()` with the layout's DrawerToggle, or Escape on an opened overlay drawer, which covers the toggle; on Browserless the drawer is opened and closed as the browser tells the server, when the layout has a DrawerToggle |
+| Links | `UnifiedLink` | implemented ([#561](https://github.com/parttio/unified-testing-tool/issues/561)): a `RouterLink`, an `Anchor` or any other `<a>`, bound to the tag; `withHref(..)`; `click()` follows the link and waits for the new page: a real click in a browser, the link's route on Browserless, where a link out of the application (another host, a servlet path, a download) or into another window (`target="_blank"`) fails asking for `@RequiresBrowser`; a click that navigated is followed by the `open` User Step; `getHref()` and `hasHref(..)` read the `href` as the application set it (relative for a `RouterLink`) on every Testing Tool |
+| Side navigation | `UnifiedSideNav`, `UnifiedSideNavItem` | implemented ([#658](https://github.com/parttio/unified-testing-tool/issues/658)): an item by its label (`withLabel`, its own text, not its child items') or `withPath(..)`; both are Scopes, so a nested item is found in its parent item or its side nav; `click()` expands the collapsed items it is in by their toggle buttons, then follows the item's path as `UnifiedLink.click()` follows a link (a click on the item's own `<a>` in a browser, the path's route on Browserless, where a path out of the application or into another window fails asking for `@RequiresBrowser`), or toggles an item without a path, as the web component does; `expand()`, `collapse()`; `isCurrent()`, `isExpanded()`, `getPath()` (as the application set it), `getItems()`; on Browserless, an item is current when its path or an alias matches the page's location, hidden in a collapsed item, and the current item's parents expand after a navigation, as the web component does in a browser |
+| Overlays | `UnifiedDialog`, `UnifiedConfirmDialog`, `UnifiedNotification` | implemented |
+| Login | `UnifiedLogin` | implemented ([#564](https://github.com/parttio/unified-testing-tool/issues/564)): a `LoginOverlay` (found while open) or a `LoginForm`, bound to `AbstractLogin` with both tags; `withTitle(..)`; `login(username, password)` types and submits in a browser, which also follows a form `action`, and fires the `LoginEvent` on Browserless, where a component with an `action` fails asking for `@RequiresBrowser` or `@WithMockUser`; the password is a secret of the run, masked everywhere except inside its own user name, [#605](https://github.com/parttio/unified-testing-tool/issues/605); `forgotPassword()`; `isOpen()`, `isError()`, `getTitle()`, `getDescription()` |
 | Disclosure | `UnifiedDetails` | implemented: `open()`, `close()`, `content()` Scope |
 | Files | `UnifiedUpload` | implemented: `upload(name, type, bytes)` waits until the server has the file |
-| Chat | `UnifiedMessageInput`, `UnifiedMessageList` | implemented: `send(text)` types and submits as a user does; a message's text is the one the application gave it (the Markdown source, not the rendered text), so every Testing Tool reads the same; `hasMessageCount(n)` and `hasMessageContaining(..)` wait for a reply ([#357](https://github.com/parttio/unified-testing-tool/issues/357)) |
+| Chat | `UnifiedMessageInput`, `UnifiedMessageList` | implemented: `send(text)` types and submits as a user does; a message's text is the one the application gave it (the Markdown source, not the rendered text), so every Testing Tool reads the same; `hasMessageCount(n)` and `hasMessageContaining(..)` wait for a reply ([#357](https://github.com/parttio/unified-testing-tool/issues/357)); one message is a lazy `message(i)` (0-based) or `message()` with `withUserName`, `withText`, `withTextContaining` and `last()`, checked with `exists`, `doesNotExist`, `hasCount`, `hasText`, `hasTextContaining` and `hasUserName` ([#515](https://github.com/parttio/unified-testing-tool/issues/515)) |
 | Data | `UnifiedGrid` | in the sketch: [07-grid.md](07-grid.md) |
-| Navigation | `UnifiedTabSheet`, `UnifiedTabs` | implemented: `selectTab(name)`, `getSelectedTab()`; a tab's name is its Item Name (the text of a tab holding a `RouterLink`); a TabSheet's `content()` Scope follows the selected tab |
+| Navigation | `UnifiedTabSheet`, `UnifiedTabs` | implemented: `selectTab(name)`, `getSelectedTab()`; a tab's name is its Item Name (the text of a tab holding a `RouterLink`); `selectTab` on a tab holding a link (a `RouterLink` or `Anchor`, its only `<a>`) follows the link as `UnifiedLink.click()` does ([#531](https://github.com/parttio/unified-testing-tool/issues/531)): a click on the `<a>` in a browser; on Browserless the tab is selected, then the link's route opened, and a link out of the application fails asking for `@RequiresBrowser`; a selection that navigated isn't read back, and is followed by the `open` User Step; a TabSheet's `content()` Scope follows the selected tab |
 | (layouts, for scoping) | `UnifiedContainer` | implemented: any component, found by test id or id; `click()` for a layout with a click listener ([#358](https://github.com/parttio/unified-testing-tool/issues/358)) |
 | (plain HTML, for scoping, text and clicks) | `UnifiedDiv`, `UnifiedSpan`, `UnifiedParagraph`, `UnifiedSection`, `UnifiedNav`, `UnifiedHeader`, `UnifiedFooter`, `UnifiedMain`, `UnifiedArticle`, `UnifiedAside` | implemented: bound to their tag, so one browser query; Scopes; `click()`, as each is a Flow `ClickNotifier` ([#358](https://github.com/parttio/unified-testing-tool/issues/358)) |
 
@@ -66,7 +70,7 @@ public interface UnifiedTextField extends UnifiedField,
 | Getters | Immediate, no retry |
 | Assertions | Static `assertThat(wrapper)` in `UnifiedAssertions`, retrying |
 | Every wrapper | `element()`, `unwrap`, `tryUnwrap`, `withTimeout`, `isVisible`, `isEnabled` |
-| Scopes | `UnifiedDialog`, `UnifiedDetails`, `UnifiedContainer`, the plain HTML wrappers and any `findComponent(..)` result also have `find` |
+| Scopes | `UnifiedDialog`, `UnifiedDetails`, `UnifiedContainer`, `UnifiedSideNav`, `UnifiedSideNavItem`, the plain HTML wrappers and any `findComponent(..)` result also have `find` |
 
 ## Unified Element
 
@@ -131,6 +135,20 @@ public interface UnifiedBadgeBrowserless extends UnifiedBadge {
 | Wrong shape | a class, or an interface not extending the wrapper: fails at the first `find(..)` with a message |
 
 Implemented; demo: `demo.addon` (component) and `demo.addon.testing` (wrappers, in the main jar).
+
+### Templates
+
+A Wrapper for a [Template](04-locating.md#templates) extends the `TemplateScope` mixin. It is then a Scope whose lookups search the Template's shadow root and light DOM:
+
+```java
+@UnifiedComponent(SearchBar.class)                  // SearchBar extends LitTemplate, @Tag("search-bar")
+public interface UnifiedSearchBar extends UnifiedWrapper, CommonFilters<UnifiedSearchBar>, TemplateScope {
+}
+
+page.find(UnifiedSearchBar.class).find(UnifiedButton.class).withId("new").click();
+```
+
+Without a Wrapper, `findTemplate(SearchBar.class)` on any Scope does the same.
 
 ### Custom filters
 

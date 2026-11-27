@@ -134,8 +134,13 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
             case ID -> "id";
             case CLASS_NAME -> "class name";
             case THEME -> "theme";
-            case ATTRIBUTE -> "attribute " + f.name();
+            // UnifiedLink.withHref(..): where the link goes reads as such
+            case ATTRIBUTE -> "href".equals(f.name()) ? "href" : "attribute " + f.name();
+            case WITHOUT_ATTRIBUTE -> "without attribute " + f.name();
         };
+        if (f.kind() == Filter.Kind.WITHOUT_ATTRIBUTE) {
+            return what;
+        }
         return what + (f.exact() ? " " : " containing ") + Phrase.quote(f.value());
     }
 
@@ -228,6 +233,12 @@ public record StepTarget(String kind, String name, List<String> filters, boolean
             sb.append(' ').append(qualifier);
         }
         return sb.toString();
+    }
+
+    /** {@link #render} without the kind, for a named target: {@code “Delete order?” (test id “delete”)}. */
+    public String renderWithoutKind() {
+        String rendered = render(false);
+        return position > 0 ? rendered : rendered.substring(kind.length()).stripLeading();
     }
 
     /** {@link #render} followed by {@code in <scope>}. */

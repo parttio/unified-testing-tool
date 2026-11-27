@@ -6,6 +6,7 @@ import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.tree.Expression;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JavaType;
 
 /**
  * Renames the TestBench element calls a Wrapper has under another name ({@code selectByText} →
@@ -54,6 +55,12 @@ public class TestBenchRenamesToUnified extends Recipe {
                         && isTabSheet(wrapperOf(original.getSelect()))) {
                     return selected.withName(selected.getName().withSimpleName("getSelectedTab")).withPrefix(m.getPrefix());
                 }
+                // d.getConfirmButton().click() → d.confirm(), as getRejectButton() and getCancelButton()
+                if (ConfirmDialogs.press(m) != null && m.getSelect() instanceof J.MethodInvocation button
+                        && method.getSelect() instanceof J.MethodInvocation original && original.getSelect() != null
+                        && wrapperOf(original.getSelect()) == Wrappers.forElement(ConfirmDialogs.TESTBENCH_ELEMENT)) {
+                    return button.withName(button.getName().withSimpleName(ConfirmDialogs.press(m))).withPrefix(m.getPrefix());
+                }
                 // l.getMessageElements().size() → l.getMessageCount()
                 if (m.getSimpleName().equals("size") && m.getSelect() instanceof J.MethodInvocation elements
                         && elements.getSimpleName().equals("getMessageElements")
@@ -61,7 +68,19 @@ public class TestBenchRenamesToUnified extends Recipe {
                         && wrapperOf(original.getSelect()) == Wrappers.forElement(MESSAGE_LIST)) {
                     return elements.withName(elements.getName().withSimpleName("getMessageCount")).withPrefix(m.getPrefix());
                 }
+                // l.getDrawerToggle().click() → l.toggleDrawer() (#669)
+                J.MethodInvocation toggle = AppLayouts.toggleClicked(m);
+                if (toggle != null && method.getSelect() instanceof J.MethodInvocation original && original.getSelect() != null
+                        && wrapperOf(original.getSelect()) == Wrappers.forElement(Wrappers.APP_LAYOUT_ELEMENT)) {
+                    return appLayoutAction(toggle, "toggleDrawer").withPrefix(m.getPrefix());
+                }
                 Wrappers.Wrapper wrapper = wrapperOf(method.getSelect());
+                // l.setDrawerOpened(true) → l.openDrawer(), (false) → l.closeDrawer(), as a user does (#669)
+                String drawer = AppLayouts.drawerAction(m);
+                if (drawer != null && wrapper == Wrappers.forElement(Wrappers.APP_LAYOUT_ELEMENT)
+                        && MigrationMarkers.add(getCursor(), AppLayouts.drawerNote(m, drawer))) {
+                    return appLayoutAction(m, drawer);
+                }
                 // t.setSelectedTabIndex(t.getTab(label)) → t.selectTab(label)
                 if (isTabSheet(wrapper) && m.getSimpleName().equals("setSelectedTabIndex") && TabSheets.tabLabel(method) != null) {
                     J label = TabSheets.tabLabel(method);
@@ -89,6 +108,20 @@ public class TestBenchRenamesToUnified extends Recipe {
                 }
                 Wrappers.Wrapper wrapper = Wrappers.ofLookup(terminal);
                 return wrapper != null && wrapper == Wrappers.forElement(Wrappers.BUTTON_ELEMENT);
+            }
+
+            /**
+             * The call as the UnifiedAppLayout action {@code name}, without arguments, of the Wrapper's method type:
+             * the element's would keep the element's import.
+             */
+            private J.MethodInvocation appLayoutAction(J.MethodInvocation call, String name) {
+                JavaType.Method type = call.getMethodType() == null ? null : call.getMethodType().withName(name)
+                        .withDeclaringType(JavaType.ShallowClass.build(AppLayouts.APP_LAYOUT))
+                        .withReturnType(JavaType.Primitive.Void)
+                        .withParameterTypes(java.util.List.of()).withParameterNames(java.util.List.of());
+                return call.withName(call.getName().withSimpleName(name).withType(type)).withMethodType(type)
+                        .withArguments(java.util.List.of(new J.Empty(org.openrewrite.Tree.randomId(),
+                                org.openrewrite.java.tree.Space.EMPTY, org.openrewrite.marker.Markers.EMPTY)));
             }
 
             private boolean isTabSheet(Wrappers.Wrapper wrapper) {

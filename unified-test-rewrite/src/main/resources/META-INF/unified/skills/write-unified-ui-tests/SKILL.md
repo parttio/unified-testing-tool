@@ -92,9 +92,11 @@ class EditPersonTest {
 | by what the user can't see | `withTestId(..)`, `withId(..)`: only when no visible name tells it apart |
 | inside a container or dialog | `dialog.find(UnifiedTextField.class).withLabel("Email")`, `page.find(UnifiedContainer.class).withTestId("billing").find(..)` |
 | a component without a Wrapper | `page.findComponent(MyComponent.class)` |
+| inside a `LitTemplate` (its `@Id` fields) | `page.findTemplate(SearchBar.class).find(UnifiedButton.class).withId("new")`: no lookup enters a template by itself; enter one at a time, find by the `@Id` value, as text the template's HTML writes is empty on Browserless |
 | a key press | `page.pressKey("Enter")`, sent to the focused component |
 | a grid row | `grid.row().withCellText("Name", "Alan Turing")`; `grid.row(0)` by index; cell components: `row.cell("Actions").find(UnifiedButton.class)` |
 | a check | `assertThat(wrapper).hasText(..)`, `.hasValue(..)`, `.isOpen()`, `.isDisabled()`, `assertThat(row).hasCellText(..)`, `assertThat(page).isAt(View.class)` |
+| a chat's messages | any message: `assertThat(chat).hasMessageContaining("Got it")`; one message: `assertThat(chat.message(2)).hasTextContaining(..)` (index from 0), `assertThat(chat.message().withUserName("Assistant").last()).hasTextContaining(..)`, `assertThat(chat.message().withTextContaining("secret")).doesNotExist()` |
 | a menu's items | `assertThat(menu).hasItems("File", "Help")`, `.hasItems(List.of("File", "Export"), "PDF", "CSV")`, `.hasItem("File", "Print")`, `.hasItemEnabled(..)`, `.hasItemDisabled(..)` |
 | present, absent, how many | `assertThat(wrapper).exists()`, `.doesNotExist()`, `.hasCount(n)`, also on grid rows |
 | gone from the user's view | `assertThat(page.find(UnifiedButton.class).withText("Approve").visible()).doesNotExist()`: lookups and `getText()` include hidden components, on every Testing Tool |
@@ -154,13 +156,22 @@ UnifiedAssertionError: Renaming a person in the editor updates the grid
   Waited        10 s (vaadin.testing.timeout)
   Tool          playwright (chromium)
   Code          EditPersonTest.java:14 (renamesAPerson) ← EditPersonTest.java:27 (renamePerson)
-  Evidence      target/surefire-reports/unified-evidence/EditPersonTest/renamesAPerson/
+  Evidence      target/surefire-reports/unified-evidence/EditPersonTest/renamesAPerson/  (failure.png, failure.view.txt)
 ```
 
 `Nearby` lists the Near Misses, closest first; `Found` is `none`, `2: …` (several matches: add a filter),
 `1, but disabled` (the user can't use it yet: do the step that enables it), or the values an assertion saw while
-waiting. `Evidence` holds a screenshot (browser) or the component tree (Browserless), and on every Testing Tool
-`<test>.view.txt`: each component the page held at the failure, with the lookup that finds it.
+waiting. `Evidence` is the test's directory and the files in it: `failure.png`, a screenshot (browser), or
+`failure.tree.txt`, the component tree (Browserless), and on every Testing Tool `failure.view.txt`: each component
+the page held at the failure, with the lookup that finds it.
+
+By default that is all a run keeps beyond `user-steps.txt`. Two opt-in settings keep more, for passing tests too
+(see Configuration):
+- `-Dvaadin.testing.user-steps.snapshots=true`: after every User Step, a screenshot (Playwright, Selenium) or the
+  component tree (Browserless) in the test's evidence directory, under `steps/`, linked from each step in the HTML
+  report.
+- `-Dvaadin.testing.playwright.trace=on-failure` (or `on`): Playwright's trace, grouped by User Step, as
+  `trace.zip` in the test's evidence directory. Open it at https://trace.playwright.dev.
 
 Decide who is wrong before changing anything:
 - **The test is wrong** when the view's code shows what the Near Miss shows (the label is "Email", the test guessed
@@ -168,6 +179,39 @@ Decide who is wrong before changing anything:
 - **The application is wrong** when the scenario you were given says the user should see something else (the
   notification, a saved value, a row): stop and report the failure's `Expected` and `Found` to the person who asked,
   with the view code involved. Change the expectation only when they confirm the new behaviour is intended.
+
+## Configuration
+
+Every setting is a JUnit configuration parameter (`src/test/resources/junit-platform.properties`, or Surefire's
+`configurationParameters`) or a system property (`-D`). Unset means the default.
+
+| Setting | Default |
+|---|---|
+| `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
+| `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
+| `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits (`500ms`, `1m`) |
+| `vaadin.testing.viewport` | `1280x720`: in a browser, the exact Viewport of every test without `@Viewport` (`phone:375x667`) |
+| `vaadin.testing.layout-checks` | `off`: `on` measures the layout after each navigation, reload and `setViewport` and puts Layout Findings on that step |
+| `vaadin.testing.layout-findings` | `report`: `fail` fails the step that measured a Layout Finding |
+| `vaadin.testing.layout-checks.screenshots` | `off`: `on` keeps a Viewport screenshot per measurement |
+| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
+| `vaadin.testing.user-steps.snapshots` | `false`; `true`: a screenshot or component tree after every User Step, in `steps/` |
+| `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
+| `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step that logged them; `error` or `off` |
+| `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
+| `vaadin.testing.user-steps.changed-since` | in a GitHub pull request, `origin/$GITHUB_BASE_REF`; else unset. The git ref "Changed in this PR" compares with |
+| `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory: changed scenarios show a diff of their User Steps against it |
+| `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run on another Testing Tool: the run summary says which scenarios differ |
+| `vaadin.testing.browserless.view-packages` | with Spring, the `@SpringBootApplication`'s packages and the test's; else the test's package |
+| `vaadin.testing.browserless.route-errors-to-session` | `false`; `true` sends a listener's exception to the session's `ErrorHandler`, as in a browser |
+| `vaadin.testing.playwright.browser` | `chromium` (or `firefox`, `webkit`) |
+| `vaadin.testing.playwright.headless` | `true` |
+| `vaadin.testing.playwright.executable` | Playwright's own browser; a path to a browser skips its download |
+| `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace as `trace.zip` |
+| `vaadin.testing.selenium.browser` | `chrome` (or `firefox`) |
+| `vaadin.testing.selenium.headless` | `true` |
+| `vaadin.testing.selenium.executable` | the installed browser |
+| `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
 ## Review a test
 
@@ -182,8 +226,8 @@ change nothing unless asked. A test you wrote yourself gets the same review befo
    - a lookup by test id, id, class name or CSS where the user reads a label, a text or a name;
    - `all().get(..)`, or any pick by position;
    - a getter with `assertEquals`, `assertTrue` or AssertJ where `assertThat(wrapper)` has the check;
-   - `Thread.sleep(..)`, a Testing Tool's own wait, or a `withTimeout(..)` or run timeout raised without a comment
-     that says what is slow;
+   - `Thread.sleep(..)`, a Testing Tool's own wait outside code that declares that Testing Tool, or a
+     `withTimeout(..)` or run timeout raised without a comment that says what is slow;
    - an Escape Hatch without `@RequiresTestingTool` and a comment saying why, including one in a `…Tasks` class or
      a page object, which the style rules don't follow;
    - the same user work copied into several tests instead of one User Task.
@@ -214,6 +258,22 @@ void showsTheRetryBanner(UnifiedPage page) {
     ...
 }
 ```
+
+Escape Hatch code gets none of the Unified API's waiting, so it waits with its Testing Tool's own API: TestBench's
+`waitForFirst()` and `waitUntil(..)`; on Playwright, Dramafinder's `AutoWait.waitForVaadinIdle(Page)` for the server
+and `Locator.waitFor()` for an element. The style rules accept that wait where the test, its class, or every test
+reaching the helper declares that Testing Tool; `Thread.sleep(..)` and another Testing Tool's waits still fail.
+
+An Escape Hatch action that reaches the server (a Playwright `Locator.click()`) returns before the server answers.
+The next Unified action waits for that answer before acting, on every Testing Tool (on Playwright for at most 5 s,
+then it acts anyway). Escape Hatch code that comes next gets no such wait, nor does an action after a longer answer:
+make it wait, in this order of preference:
+
+1. **Check the state the server produces**, on every Testing Tool: `assertThat(name).hasValue("Alan Turing");`
+   before reading the page through the Escape Hatch. The assertion retries until the answer is there.
+2. **Wait for the server in the Escape Hatch** when the answer has nothing to check, in a test with
+   `@RequiresTestingTool(TestingTool.PLAYWRIGHT)`:
+   `AutoWait.waitForVaadinIdle(page.unwrap(Page.class));` (`org.vaadin.addons.dramafinder.AutoWait`).
 
 For an extra check that only some Testing Tools can make, use `tryUnwrap(..)`; the test keeps running everywhere:
 `name.tryUnwrap(TextField.class).ifPresent(field -> assertEquals("Name", field.getLabel()));`.

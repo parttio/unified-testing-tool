@@ -37,7 +37,13 @@ final class Helpers {
 
     /** The class's own helpers using TestBench, counting calls to the given inherited helpers as such use. */
     static Set<String> usingTestBench(J.ClassDeclaration c, Set<String> inherited) {
-        return using(c, inherited, call -> call.getSelect() == null && TestBenchLeftoversToEscapeHatch.isTestBaseCall(call));
+        return using(c, inherited, call -> (call.getSelect() == null || isSuper(call.getSelect()))
+                && TestBenchLeftoversToEscapeHatch.isTestBaseCall(call));
+    }
+
+    /** {@code super}, as in {@code super.getDriver()} in an override of a TestBench base method. */
+    static boolean isSuper(Expression select) {
+        return select instanceof J.Identifier id && id.getSimpleName().equals("super");
     }
 
     /**
@@ -104,23 +110,72 @@ final class Helpers {
             if (s instanceof J.MethodDeclaration m && isBrowserTest(m) && m.getBody() != null
                     && !m.getBody().getStatements().isEmpty()) {
                 Space prefix = m.getBody().getStatements().get(0).getPrefix().withComments(emptyList());
+                String page = Pages.parameterName(m);
                 List<Statement> statements = new ArrayList<>();
+                List<JavaType> thrown = new ArrayList<>();
                 for (String name : beforeEach) {
-                    statements.add(call(name, types.get(name), prefix));
+                    statements.add(call(name, types.get(name), page == null ? Pages.NAME : page, prefix));
+                    if (types.get(name) != null) {
+                        thrown.addAll(types.get(name).getThrownExceptions());
+                    }
                 }
                 statements.addAll(m.getBody().getStatements());
-                s = m.withBody(m.getBody().withStatements(statements));
+                s = withThrows(m.withBody(m.getBody().withStatements(statements)), thrown);
             }
             result.add(s);
         }
         return result;
     }
 
-    private static J.MethodInvocation call(String name, JavaType.Method type, Space prefix) {
+    private static J.MethodInvocation call(String name, JavaType.Method type, String page, Space prefix) {
         return new J.MethodInvocation(Tree.randomId(), prefix, Markers.EMPTY, null, null,
                 new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), name, null, null),
-                JContainer.build(Space.EMPTY, List.of(JRightPadded.<Expression>build(Stubs.page())), Markers.EMPTY),
+                JContainer.build(Space.EMPTY, List.of(JRightPadded.<Expression>build(Stubs.page(page))), Markers.EMPTY),
                 type);
+    }
+
+    /** The checked exceptions the {@code @BeforeEach} methods a test now calls declare. */
+    static List<JavaType.FullyQualified> thrownBy(J.ClassDeclaration c, List<String> beforeEach) {
+        List<JavaType.FullyQualified> thrown = new ArrayList<>();
+        for (JavaType.FullyQualified t = c.getType(); t != null; t = t.getSupertype()) {
+            for (JavaType.Method m : t.getMethods()) {
+                if (beforeEach.contains(m.getName())) {
+                    m.getThrownExceptions().forEach(e -> {
+                        if (TypeUtils.asFullyQualified(e) instanceof JavaType.FullyQualified fq) {
+                            thrown.add(fq);
+                        }
+                    });
+                }
+            }
+        }
+        return thrown;
+    }
+
+    /** The test, declaring the exceptions it doesn't declare yet (itself or through a supertype). */
+    private static J.MethodDeclaration withThrows(J.MethodDeclaration m, List<JavaType> thrown) {
+        List<J.Identifier> added = new ArrayList<>();
+        List<JavaType> declared = new ArrayList<>();
+        if (m.getThrows() != null) {
+            m.getThrows().forEach(t -> declared.add(t.getType()));
+        }
+        for (JavaType t : thrown) {
+            if (!(TypeUtils.asFullyQualified(t) instanceof JavaType.FullyQualified fq)
+                    || declared.stream().anyMatch(d -> TypeUtils.isAssignableTo(d, fq))) {
+                continue;
+            }
+            declared.add(fq);
+            added.add(new J.Identifier(Tree.randomId(), Space.SINGLE_SPACE, Markers.EMPTY, emptyList(),
+                    fq.getClassName(), fq, null));
+        }
+        if (added.isEmpty()) {
+            return m;
+        }
+        JContainer<org.openrewrite.java.tree.NameTree> existing = m.getPadding().getThrows();
+        List<JRightPadded<org.openrewrite.java.tree.NameTree>> elements = existing == null ? new ArrayList<>()
+                : new ArrayList<>(existing.getPadding().getElements());
+        added.forEach(id -> elements.add(JRightPadded.build(id)));
+        return m.getPadding().withThrows(JContainer.build(existing == null ? Space.SINGLE_SPACE : existing.getBefore(),
+                elements, Markers.EMPTY));
     }
 
     /** A test method: TestBench's {@code @BrowserTest}, or JUnit's {@code @Test} (Jupiter, or JUnit 4). */

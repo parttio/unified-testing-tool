@@ -6,6 +6,8 @@
 #   scripts/bench-unified.sh --tool browserless|playwright|selenium [--scenario NAME]
 #                            [--counts|--update-counts|--time] [--runs N] [--warmup N] [--rounds N]
 #                            [--skip-build] [-- extra Maven arguments]
+#   scripts/bench-unified.sh --compare FIRST,SECOND [--browser PATH] [--scenario NAME] [--warmup N] [--rounds N]
+#                            [--skip-build] [-- extra Maven arguments]
 #
 #   --counts         count the round trips per user action and compare them with the committed counts (default)
 #   --update-counts  count them --runs times (default 3) and write them as the committed counts; a user action
@@ -13,6 +15,12 @@
 #   --time           time each pair in ABBA rounds (--warmup, default 5, then --rounds, default 30) and judge the
 #                    median ratio against the budget: 10 % or 2 ms per user action, whichever is larger. Writes
 #                    unified-test-demo/target/benchmark/<tool>.csv and .md; exit code 1 when a scenario fails
+#   --compare        time the Performance Pairs on two Testing Tools in one JVM, for example playwright,selenium
+#                    (#497): ABBA rounds, as --time; per scenario, the median ratio SECOND ÷ FIRST for the Unified UI
+#                    Test and for the Direct Tests, with its 95 % interval. Informational: no budget. Writes
+#                    unified-test-demo/target/benchmark/compare-FIRST-SECOND.csv and .md
+#   --browser        with --compare: the browser binary every side runs (a Chrome or Chromium), so that the tools
+#                    differ only in how they drive it
 #   --scenario       only this scenario: smallForm, longForm, largeGrid or comboBox
 #   --skip-build     don't install the modules first
 #
@@ -29,6 +37,8 @@ cd "$(dirname "$0")/.."
 root=$(pwd)
 
 tool=""
+compare=""
+browser=""
 scenario=""
 mode=counts
 runs=3
@@ -40,6 +50,8 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --tool) tool="$2"; shift 2 ;;
         --scenario) scenario="$2"; shift 2 ;;
+        --compare) compare="$2"; mode=compare; shift 2 ;;
+        --browser) browser="$2"; shift 2 ;;
         --counts) mode=counts; shift ;;
         --update-counts) mode=update; shift ;;
         --time) mode=time; shift ;;
@@ -51,14 +63,40 @@ while [ $# -gt 0 ]; do
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
 done
-case "$tool" in
-    browserless|playwright|selenium) ;;
-    *) echo "--tool browserless|playwright|selenium is required" >&2; exit 2 ;;
-esac
+if [ "$mode" = compare ]; then
+    case "$compare" in
+        *,*) ;;
+        *) echo "--compare takes two Testing Tools, for example playwright,selenium" >&2; exit 2 ;;
+    esac
+else
+    case "$tool" in
+        browserless|playwright|selenium) ;;
+        *) echo "--tool browserless|playwright|selenium is required" >&2; exit 2 ;;
+    esac
+    [ -z "$browser" ] || { echo "--browser goes with --compare" >&2; exit 2; }
+fi
 [ "$mode" = update ] || runs=1
 
 if $build; then
     mvn -B -q -ntp install -DskipTests ${maven_args[@]+"${maven_args[@]}"}
+fi
+
+if [ "$mode" = compare ]; then
+    bench_args="--tools $compare --warmup $warmup --rounds $rounds --out $root/unified-test-demo/target/benchmark"
+    [ -n "$scenario" ] && bench_args="$bench_args --scenario $scenario"
+    # TestBench's own setting, as the demo's Surefire configuration passes it
+    extra=(-Dcom.vaadin.testbench.Parameters.headless=true)
+    if [ -n "$browser" ]; then
+        # the Unified adapters and the Direct Tests (DramafinderPerfTest, TestBenchPerfTest) all read these
+        extra+=(-Dvaadin.testing.perf.browser="$browser" -Dvaadin.testing.playwright.executable="$browser"
+                -Dvaadin.testing.selenium.executable="$browser")
+    fi
+    echo "Timing the Performance Pairs on $compare in one JVM: $warmup warm-up and $rounds measured rounds"
+    status=0
+    (cd unified-test-demo && mvn -B -ntp -q test-compile exec:java -Dexec.mainClass=demo.perf.bench.ToolComparison \
+        -Dexec.classpathScope=test -Dexec.args="$bench_args" \
+        ${extra[@]+"${extra[@]}"} ${maven_args[@]+"${maven_args[@]}"}) || status=$?
+    exit $status
 fi
 
 if [ "$mode" = time ]; then

@@ -19,7 +19,7 @@ import org.openqa.selenium.interactions.Actions;
  * <p>
  * The scripts left here have no TestBench API yet; each names the issue that would replace it.
  */
-final class SeleniumElement implements UnifiedElement {
+final class SeleniumElement implements UnifiedElement, com.vaadin.testing.unified.spi.ElementIdentity {
 
     private final SeleniumSession session;
     private final WebElement element;
@@ -38,6 +38,11 @@ final class SeleniumElement implements UnifiedElement {
         this.element = element;
         this.support = support;
         this.roots = roots;
+    }
+
+    @Override
+    public boolean isSameElement(UnifiedElement other) {
+        return other instanceof SeleniumElement o && o.element.equals(element);
     }
 
     WebElement webElement() {
@@ -124,10 +129,18 @@ final class SeleniumElement implements UnifiedElement {
                 BrowserQueries.cssName(name));
     }
 
-    /** The same script as the {@code withAccessibleName(..)} filter; TestBench has no read of it. */
+    /**
+     * The same script as the {@code withAccessibleName(..)} filter, on the same element: what the user sees (a
+     * notification's card). TestBench has no read of it.
+     */
     @Override
     public String getAccessibleName() {
-        return (String) js("return (" + BrowserQueries.ACCESSIBLE_NAME + ")(arguments[0]);");
+        return (String) session.js("return (" + BrowserQueries.ACCESSIBLE_NAME + ")(arguments[0]);", content());
+    }
+
+    /** The element that holds what the user sees: the support's content (a notification's card), else this one. */
+    WebElement content() {
+        return SeleniumSession.stale(() -> support.content(element, session));
     }
 
     @Override
@@ -217,13 +230,51 @@ final class SeleniumElement implements UnifiedElement {
     @Override
     public void click() {
         scrollToCenter();
-        try {
-            SeleniumSession.stale(element::click);
-        } catch (ElementNotInteractableException e) { // incl. ElementClickInterceptedException
-            SeleniumSession.stale(() -> tb().callFunction("click")); // e.g. a host element without a box of its own
+        // TestBench clicks with JavaScript (focus, then click()), which nothing can cover: hit-test first, in the same
+        // round trip, so that a covered component fails as a user's click would, the same as on Playwright (#494)
+        if ("covered".equals(SeleniumSession.stale(() -> session.js(CLICK_IF_REACHABLE, element)))) {
+            throw new org.openqa.selenium.ElementClickInterceptedException(
+                    "Element is covered: another element would receive the click");
         }
         session.waitForVaadin();
     }
+
+    /**
+     * Clicks the element as TestBench does (focus, then click()) unless another element is on top of its centre, as
+     * {@code elementFromPoint} sees it through shadow roots, and through a slot for a host's own text under the point;
+     * then it returns "covered" and clicks nothing. An element
+     * without a box, or one clicks pass through, is clicked as before.
+     */
+    static final String CLICK_IF_REACHABLE = """
+            const e = arguments[0];
+            const r = e.getBoundingClientRect();
+            const x = r.left + r.width / 2, y = r.top + r.height / 2;
+            let hit = r.width > 0 && r.height > 0 ? document.elementFromPoint(x, y) : null;
+            while (hit && hit.shadowRoot) {
+              const inner = hit.shadowRoot.elementFromPoint(x, y);
+              if (!inner || inner === hit) {
+                // the point is over the host's own text, which a slot in its shadow root shows: start from that text,
+                // whose assignedSlot leads to what renders it (a side nav item's label in its <a>, #658)
+                const caret = document.caretPositionFromPoint ? document.caretPositionFromPoint(x, y)
+                    : document.caretRangeFromPoint ? document.caretRangeFromPoint(x, y) : null;
+                const text = caret && (caret.offsetNode || caret.startContainer);
+                if (text && text.nodeType === 3 && text.parentNode === hit && text.assignedSlot) hit = text;
+                break;
+              }
+              hit = inner;
+            }
+            const up = (n) => n.assignedSlot || n.parentElement
+                || (n.getRootNode() instanceof ShadowRoot ? n.getRootNode().host : null);
+            let reached = !hit || getComputedStyle(e).pointerEvents === 'none';
+            for (let n = hit; n && !reached; n = up(n)) {
+              reached = n === e;
+            }
+            if (!reached) {
+              return 'covered';
+            }
+            e.focus();
+            e.click();
+            return 'clicked';""";
 
     /** Double-clicks, then waits for Vaadin. */
     void doubleClick() {

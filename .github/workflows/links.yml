@@ -43,6 +43,9 @@ jobs:
           path: .lycheecache
           key: lychee-${{ github.sha }}
           restore-keys: lychee-
+      # The Unreleased page as the site shows it, assembled from docs/releases/unreleased/
+      - name: Assemble the Unreleased page
+        run: python3 scripts/release_notes.py unreleased docs/releases/unreleased.md
       # The site itself is left out: a page a pull request adds isn't on it until the merge.
       # docs/research isn't published.
       - name: Check

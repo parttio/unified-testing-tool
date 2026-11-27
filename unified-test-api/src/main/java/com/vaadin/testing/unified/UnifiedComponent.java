@@ -13,7 +13,11 @@ public @interface UnifiedComponent {
     /** The Flow component class. Browserless finds components by it. */
     Class<? extends Component> value();
 
-    /** Web component tag for browser Testing Tools. Empty: read from the component's {@code @Tag}. */
+    /**
+     * Web component tag for browser Testing Tools. Empty: read from the component's {@code @Tag}. Several,
+     * comma-separated, for a Wrapper bound to a supertype of components with different tags:
+     * {@code @UnifiedComponent(value = AbstractLogin.class, tag = "vaadin-login-overlay, vaadin-login-form")}.
+     */
     String tag() default "";
 
     /**

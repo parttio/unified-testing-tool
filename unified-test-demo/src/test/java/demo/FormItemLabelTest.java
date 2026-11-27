@@ -47,7 +47,7 @@ class FormItemLabelTest {
     @DisplayName("A misspelled label fails, naming the field by its form item's label")
     void aMisspelledLabelNamesTheFormItemLabel(UnifiedPage page) {
         page.navigate(SignupView.class);
-        UnifiedTextField nickname = (UnifiedTextField) page.find(UnifiedTextField.class).withLabel("Nick name")
+        UnifiedTextField nickname = page.find(UnifiedTextField.class).withLabel("Nick name")
                 .withTimeout(Duration.ofMillis(500));
 
         UnifiedAssertionError e = assertThrows(UnifiedAssertionError.class, () -> nickname.setValue("Ada"));

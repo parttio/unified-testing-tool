@@ -13,6 +13,8 @@ import com.vaadin.testing.unified.component.UnifiedMultiSelectComboBox;
 import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedRadioButtonGroup;
 import com.vaadin.testing.unified.component.UnifiedTextArea;
+import com.vaadin.testing.unified.component.UnifiedEmailField;
+import com.vaadin.testing.unified.component.UnifiedPasswordField;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import com.vaadin.testing.unified.internal.ElementSource.FilterLabel;
 import com.vaadin.testing.unified.internal.failures.FailureParts;
@@ -39,11 +41,12 @@ import java.util.Optional;
  * field kinds in the same scope with exactly the wanted name. When the scope itself is missing, the scope's own
  * lookup fails first, with Near Misses for the scope.
  */
-final class LookupFailures {
+public final class LookupFailures {
     private LookupFailures() {}
 
     /** The Wrapper types a lookup by name may have meant instead ("another kind"), with their naming filter. */
     private static final List<Class<?>> OTHER_KINDS = List.of(UnifiedTextField.class, UnifiedTextArea.class,
+            UnifiedEmailField.class, UnifiedPasswordField.class,
             UnifiedNumberField.class, UnifiedIntegerField.class, UnifiedBigDecimalField.class, UnifiedComboBox.class,
             UnifiedMultiSelectComboBox.class, UnifiedDatePicker.class, UnifiedDateTimePicker.class,
             UnifiedCheckbox.class, UnifiedRadioButtonGroup.class, UnifiedButton.class);
@@ -79,7 +82,7 @@ final class LookupFailures {
     }
 
     /** An action's Auto-Wait timed out: the component is there, but hidden or disabled. */
-    static FailureParts notUsable(LazyElement element) {
+    public static FailureParts notUsable(LazyElement element) {
         List<String> reasons = new ArrayList<>();
         safely(() -> element.tryConcrete().ifPresent(e -> {
             if (!e.isVisible()) {
@@ -92,6 +95,30 @@ final class LookupFailures {
         // the action is the failed User Step ("Failed at"), not part of the expectation
         return FailureParts.of("a visible and enabled " + target(element),
                 reasons.isEmpty() ? null : "1, but " + String.join(" and ", reasons));
+    }
+
+    /**
+     * An action on a visible, enabled component failed in the browser: when something covers it or a box clips it,
+     * the failure says so in the same words on every Testing Tool (ADR 0011, #494), with the Testing Tool's own
+     * exception as its cause. Otherwise it returns, and the caller throws that exception unchanged.
+     */
+    static void failIfUnreachable(LazyElement element, UnifiedElement concrete, RuntimeException failure) {
+        TestRun run = element.run();
+        if (!run.tool().hasRealBrowser()) {
+            return;
+        }
+        LayoutMeasurement.Reach reach;
+        try {
+            reach = LayoutMeasurement.measure(run, concrete).subject();
+        } catch (RuntimeException e) {
+            return; // a failure message never fails for want of the layout
+        }
+        if (reach == null || !(reach.reach().equals("behind") || reach.reach().equals("clipped"))) {
+            return;
+        }
+        throw run.failure(FailureParts.of("a reachable " + target(element),
+                reach.reach() + (reach.by() == null ? "" : " " + (reach.reach().equals("clipped") ? "by " : "")
+                        + reach.by())), failure);
     }
 
     // ---------------------------------------------------------------- what was expected
@@ -194,6 +221,7 @@ final class LookupFailures {
     private static FailureParts withNearMisses(FailureParts parts, LazyElement element) {
         if (element.source() instanceof ElementSource source) {
             safely(() -> addNearMisses(parts, source));
+            safely(() -> addTemplateMatches(parts, element, source));
         }
         return parts;
     }
@@ -209,8 +237,9 @@ final class LookupFailures {
         }
         TestRun run = source.run();
         UnifiedElement parent = scope.orElse(null);
+        boolean inTemplate = parent != null && ElementSource.entersTemplate(source.parent());
         List<UnifiedElement> found = run.session().find(new QuerySpec(source.componentType(), source.tag(),
-                source.filters().subList(0, source.selectorFilters()), parent));
+                source.filters().subList(0, source.selectorFilters()), parent, inTemplate));
         found = found.subList(0, Math.min(found.size(), MAX_CANDIDATES));
         List<String> values = values(source, probe, found);
         String kind = StepTarget.kindOf(source);
@@ -219,7 +248,8 @@ final class LookupFailures {
             same.add(new Candidate<>(kind, values.get(i), false, new Ref(null, found.get(i))));
         }
         List<Candidate<Ref>> other = probe.kind() == Filter.Kind.LABEL || probe.kind() == Filter.Kind.TEXT
-                || probe.kind() == Filter.Kind.ACCESSIBLE_NAME ? otherKinds(source, probe.wanted(), parent) : List.of();
+                || probe.kind() == Filter.Kind.ACCESSIBLE_NAME ? otherKinds(source, probe.wanted(), parent, inTemplate)
+                : List.of();
         NearMisses.Result<Ref> result = NearMisses.rank(probe.wanted(), same, other);
         parts.nearMisses(result.shown().stream()
                 .map(c -> new Candidate<>(c.kind(), c.value(), hidden(c.payload().element()), c.payload()).render())
@@ -228,6 +258,52 @@ final class LookupFailures {
             parts.suggestion(suggestion(source, probe, result.suggestion()));
             parts.lookup(lookup(source, probe, probe.wanted()));
         }
+    }
+
+    /**
+     * For a lookup that found none: the components it finds inside the Templates in its scope, as Near Misses with the
+     * lookup that enters their Template (spec 12, "Failures"). The suggestion, when there is no other and only one
+     * Template matches, is that lookup.
+     */
+    private static void addTemplateMatches(FailureParts parts, LazyElement element, ElementSource source) {
+        Optional<UnifiedElement> scope = scope(source);
+        if (scope == null) {
+            return;
+        }
+        UnifiedElement parent = scope.orElse(null);
+        boolean inTemplate = parent != null && ElementSource.entersTemplate(source.parent());
+        List<Templates.Match> matches = Templates.matching(source, parent, inTemplate);
+        if (matches.isEmpty()) {
+            return;
+        }
+        String wanted = target(element.withSource(withoutParent(source)));
+        String code = asCode(source);
+        List<String> lines = new ArrayList<>(parts.nearMisses());
+        for (Templates.Match m : matches) {
+            lines.add((m.count() > 1 ? m.count() + " × " : "") + wanted + " in " + m.where() + ": " + m.chain() + "."
+                    + code);
+        }
+        parts.nearMisses(lines);
+        if (parts.suggestion() == null && matches.size() == 1 && matches.get(0).count() == 1
+                && matches.get(0).known()) {
+            parts.suggestion(matches.get(0).chain() + "." + code);
+            parts.lookup(code);
+        }
+    }
+
+    private static ElementSource withoutParent(ElementSource s) {
+        return new ElementSource(s.run(), s.wrapperName(), s.wrapperType(), s.componentType(), s.tag(), s.filters(),
+                s.selectorFilters(), s.coreFilters(), s.coreFilterNames(), null, s.template());
+    }
+
+    /** The lookup as the test wrote it, from {@code find(..)} on. */
+    private static String asCode(ElementSource source) {
+        StringBuilder sb = new StringBuilder(source.wrapperType() != null
+                ? "find(" + source.wrapperType().getSimpleName() + ".class)"
+                : source.wrapperName().replace(")", ".class)"));
+        userFilters(source).forEach(f -> sb.append('.').append(f));
+        source.coreFilterNames().forEach(n -> sb.append('.').append(n.display()));
+        return sb.toString();
     }
 
     /** The scope's element: empty for the page, null when the scope can't be singled out right now. */
@@ -267,7 +343,7 @@ final class LookupFailures {
     /**
      * The adapter's facts for the elements, one each; read one by one when the adapter gives none. An ancestor
      * that is Flow's root ({@code id="ROOT-2521314"}, in a browser) counts as none: it holds every component, so
-     * it tells none apart, and Browserless has no such element.
+     * it tells none apart, and Browserless has no such element. Nor is that id an element's own (#609).
      */
     static List<ElementFacts> facts(TestRun run, List<UnifiedElement> elements) {
         List<ElementFacts> facts = null;
@@ -293,14 +369,20 @@ final class LookupFailures {
     }
 
     private static ElementFacts withoutFlowRoot(ElementFacts f) {
-        if (f == null || f.ancestorId() == null || !FLOW_ROOT.matcher(f.ancestorId()).matches()) {
+        if (f == null || !isFlowRoot(f.ancestorId()) && !isFlowRoot(f.id())) {
             return f;
         }
         return new ElementFacts(f.label(), f.text(), f.placeholder(), f.testId(), f.accessibleName(),
-                f.ancestorTestId(), null);
+                f.ancestorTestId(), isFlowRoot(f.ancestorId()) ? null : f.ancestorId(), f.internalPart(), f.data(),
+                isFlowRoot(f.id()) ? null : f.id());
     }
 
-    private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent) {
+    private static boolean isFlowRoot(String id) {
+        return id != null && FLOW_ROOT.matcher(id).matches();
+    }
+
+    private static List<Candidate<Ref>> otherKinds(ElementSource source, String wanted, UnifiedElement parent,
+            boolean inTemplate) {
         List<Candidate<Ref>> found = new ArrayList<>();
         for (Class<?> type : OTHER_KINDS) {
             UnifiedComponent annotation = type.getAnnotation(UnifiedComponent.class);
@@ -308,12 +390,11 @@ final class LookupFailures {
             if (type == source.wrapperType() || tag == null || tag.equals(source.tag())) {
                 continue;
             }
-            List<Filter> filters = new ArrayList<>(annotation.selector().isBlank() ? List.of()
-                    : WrapperSelector.filters(annotation.selector(), type.getName()));
+            List<Filter> filters = new ArrayList<>(Wrappers.typeFilters(type, annotation, tag));
             filters.add(new Filter(namingKind(type), null, wanted, true));
             try {
                 for (UnifiedElement e : source.run().session().find(new QuerySpec(annotation.value(), tag,
-                        List.copyOf(filters), parent))) {
+                        List.copyOf(filters), parent, inTemplate))) {
                     found.add(new Candidate<>(StepTarget.kindOf(type), wanted, false, new Ref(type, e)));
                 }
             } catch (RuntimeException e) {
@@ -378,7 +459,10 @@ final class LookupFailures {
 
     // ---------------------------------------------------------------- several matches
 
-    /** {@code 2: text field “City” in container (test id “billing”), text field “City” in container (…)}. */
+    /**
+     * {@code 2: text field “City” in container (test id “billing”), text field “City” in container (…) (hidden)}: a
+     * listed match that is not visible is marked, as in Near Misses.
+     */
     private static String several(ElementSource source, int lastCount) {
         List<UnifiedElement> matches = source.resolveNow();
         if (matches.size() < 2) {
@@ -389,7 +473,8 @@ final class LookupFailures {
         List<ElementFacts> facts = facts(source.run(), listed);
         String kind = StepTarget.kindOf(source);
         List<String> described = new ArrayList<>();
-        for (ElementFacts f : facts) {
+        for (int i = 0; i < facts.size(); i++) {
+            ElementFacts f = facts.get(i);
             StringBuilder sb = new StringBuilder(kind);
             String name = f == null ? null : probe != null && probe.kind() != null ? f.value(probe.kind())
                     : probe != null ? probe.wanted() : f.label() != null && !f.label().isBlank() ? f.label() : null;
@@ -400,6 +485,9 @@ final class LookupFailures {
                 sb.append(" in container (test id ").append(quote(f.ancestorTestId())).append(')');
             } else if (f != null && f.ancestorId() != null) {
                 sb.append(" in container (id ").append(quote(f.ancestorId())).append(')');
+            }
+            if (hidden(listed.get(i))) {
+                sb.append(" (hidden)");
             }
             described.add(sb.toString());
         }

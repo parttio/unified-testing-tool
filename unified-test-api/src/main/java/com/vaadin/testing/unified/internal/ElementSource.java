@@ -13,12 +13,13 @@ import java.util.function.Predicate;
  * An immutable description of what to find: component type, tag, adapter filters, core filters (property,
  * predicate) and the parent scope. {@link #resolve} returns the matching adapter elements right now.
  * {@code wrapperType} is null for {@code findComponent(..)}; the first {@code selectorFilters} filters come from
- * {@code @UnifiedComponent(selector)} and are not the user's.
+ * {@code @UnifiedComponent(selector)} and are not the user's. {@code template}: what it finds is a Template, and
+ * lookups inside it search inside the Template (spec 04, "Templates").
  */
 public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperType,
         Class<? extends Component> componentType, String tag, List<Filter> filters, int selectorFilters,
-        List<Predicate<UnifiedElement>> coreFilters, List<FilterLabel> coreFilterNames, LazyElement parent)
-        implements ElementResolver {
+        List<Predicate<UnifiedElement>> coreFilters, List<FilterLabel> coreFilterNames, LazyElement parent,
+        boolean template) implements ElementResolver {
 
     /**
      * How a core filter reads: {@code display} in API terms ({@code withHeaderTitle("Edit person")}), and the
@@ -43,7 +44,7 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
         List<Filter> copy = new ArrayList<>(filters);
         copy.add(filter);
         return new ElementSource(run, wrapperName, wrapperType, componentType, tag, List.copyOf(copy),
-                selectorFilters, coreFilters, coreFilterNames, parent);
+                selectorFilters, coreFilters, coreFilterNames, parent, template);
     }
 
     public ElementSource with(Predicate<UnifiedElement> filter, FilterLabel label) {
@@ -52,7 +53,7 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
         List<FilterLabel> names = new ArrayList<>(coreFilterNames);
         names.add(label);
         return new ElementSource(run, wrapperName, wrapperType, componentType, tag, filters, selectorFilters,
-                List.copyOf(copy), List.copyOf(names), parent);
+                List.copyOf(copy), List.copyOf(names), parent, template);
     }
 
     /** The same lookup with its last core filter named, e.g. a custom filter built from {@code where(..)}. */
@@ -60,14 +61,14 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
         List<FilterLabel> names = new ArrayList<>(coreFilterNames);
         names.set(names.size() - 1, label);
         return new ElementSource(run, wrapperName, wrapperType, componentType, tag, filters, selectorFilters,
-                coreFilters, List.copyOf(names), parent);
+                coreFilters, List.copyOf(names), parent, template);
     }
 
     /** Matching adapter elements now. Waits for the parent scope (if any) to exist. */
     public List<UnifiedElement> resolve() {
         return StaleRetry.call(run, () -> {
             UnifiedElement parentElement = parent == null ? null : parent.concrete();
-            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement)));
+            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement, entersTemplate(parent))));
         });
     }
 
@@ -85,8 +86,13 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
                 }
                 parentElement = found.get();
             }
-            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement)));
+            return filter(run.session().find(new QuerySpec(componentType, tag, filters, parentElement, entersTemplate(parent))));
         });
+    }
+
+    /** Whether a lookup inside {@code scope} searches inside a Template: the scope finds a Template. */
+    public static boolean entersTemplate(LazyElement scope) {
+        return scope != null && scope.source() instanceof ElementSource s && s.template();
     }
 
     private List<UnifiedElement> filter(List<UnifiedElement> found) {
@@ -98,7 +104,9 @@ public record ElementSource(TestRun run, String wrapperName, Class<?> wrapperTyp
 
     public String describe() {
         StringBuilder sb = new StringBuilder(wrapperName);
-        filters.forEach(f -> sb.append('.').append(f));
+        // what tells the class apart from others with its tag is the lookup's own, not the test's
+        filters.subList(SharedTags.filters(componentType, tag).size(), filters.size())
+                .forEach(f -> sb.append('.').append(f));
         coreFilterNames.forEach(n -> sb.append('.').append(n));
         if (parent != null) {
             sb.append(" inside ").append(parent.describe());

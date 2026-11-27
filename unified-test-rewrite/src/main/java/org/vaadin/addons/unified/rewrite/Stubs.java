@@ -24,7 +24,10 @@ final class Stubs {
                 void navigate(Class<?> view);
                 void navigate(Class<?> view, Object parameter);
                 Object find(Class<?> type);
+                com.vaadin.testing.unified.component.UnifiedTemplate findTemplate(Class<?> type);
                 void pressKey(String key);
+                void setViewport(int width, int height);
+                ViewportSize viewport();
                 <T> T unwrap(Class<T> type);
             }
             """,
@@ -51,12 +54,21 @@ final class Stubs {
             package com.vaadin.testing.unified.component;
             public interface UnifiedDialog {
                 Object find(Class<?> type);
+                UnifiedTemplate findTemplate(Class<?> type);
+            }
+            """,
+            """
+            package com.vaadin.testing.unified.component;
+            public interface UnifiedTemplate {
+                <T> T find(Class<T> type);
+                UnifiedTemplate findTemplate(Class<?> type);
             }
             """,
             """
             package com.vaadin.testing.unified;
             public interface Scope {
                 Object find(Class<?> type);
+                com.vaadin.testing.unified.component.UnifiedTemplate findTemplate(Class<?> type);
             }
             """,
             """
@@ -74,6 +86,14 @@ final class Stubs {
             """
             package com.vaadin.testing.unified;
             public enum TestingTool { BROWSERLESS, PLAYWRIGHT, SELENIUM }
+            """,
+            """
+            package com.vaadin.testing.unified;
+            public record ViewportSize(String name, int width, int height) {}
+            """,
+            """
+            package com.vaadin.testing.unified;
+            public @interface RequiresBrowser {}
             """,
             """
             package com.vaadin.testing.unified;
@@ -114,6 +134,8 @@ final class Stubs {
                     Assert isSelected();
                     Assert hasRowCount(int count);
                     Assert hasQueryParameter(String name, String value);
+                    Assert exists();
+                    Assert doesNotExist();
                 }
             }
             """
@@ -147,7 +169,11 @@ final class Stubs {
 
     /** The {@code page} parameter the setup recipe adds to every test method. */
     static J.Identifier page() {
-        return new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), "page",
+        return page("page");
+    }
+
+    static J.Identifier page(String name) {
+        return new J.Identifier(Tree.randomId(), Space.EMPTY, Markers.EMPTY, emptyList(), name,
                 JavaType.ShallowClass.build(TestBenchSetupToUnified.UNIFIED_PAGE), null);
     }
 

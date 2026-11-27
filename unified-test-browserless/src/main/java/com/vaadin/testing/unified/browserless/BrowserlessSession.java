@@ -56,6 +56,9 @@ final class BrowserlessSession implements AdapterSession {
         this.app = app;
         this.user = user;
         this.window = user.newWindow();
+        // what the side nav web component does after each navigation in a browser (#658)
+        com.vaadin.flow.component.UI ui = this.window.getUI();
+        ui.addAfterNavigationListener(e -> BrowserlessSideNav.autoExpand(ui, e.getLocation()));
         this.ownsUser = ownsUser;
         this.ownsApp = ownsApp;
         ACTIVE.set(this);
@@ -143,7 +146,9 @@ final class BrowserlessSession implements AdapterSession {
     public List<UnifiedElement> find(QuerySpec spec) {
         target = null; // a new lookup: a new step, or one that has not acted yet
         BrowserlessElement parent = (BrowserlessElement) spec.parent();
-        List<Component> roots = parent == null ? List.of(window().getUI()) : parent.scopeRoots();
+        List<Component> roots = parent == null ? List.of(window().getUI())
+                : spec.inTemplate() ? templateRoots(parent.component()) : parent.scopeRoots();
+        boolean rootsIncluded = spec.inTemplate() || parent != null && parent.rootsIncluded();
         // as Browserless Test does before a lookup: run the UI's pending access() tasks (one round trip)
         com.vaadin.browserless.internal.TestingLifecycleHook hook =
                 com.vaadin.browserless.internal.TestingLifecycleHookKt.getTestingLifecycleHook();
@@ -152,7 +157,7 @@ final class BrowserlessSession implements AdapterSession {
         java.util.Set<com.vaadin.flow.component.grid.Grid<?>> grids = new java.util.LinkedHashSet<>();
         // one walk per root finds the matches and the Grids under it (#401)
         for (Component root : roots) {
-            found.addAll(findIn(root, spec, parent != null && parent.rootsIncluded(), grids));
+            found.addAll(findIn(root, spec, rootsIncluded, grids));
         }
         // a Grid's cell components are not in the component tree: add those the grid rendered for the client,
         // as a browser has them in the page, and those of Grids inside them
@@ -164,7 +169,72 @@ final class BrowserlessSession implements AdapterSession {
         return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
     }
 
-    /** In the JVM, so no round trips to save: the element's values, and its nearest ancestor with a test id or id. */
+    /** The {@code LitTemplate}s in the scope, with Browserless Test's walk, which doesn't enter them. */
+    @Override
+    public List<UnifiedElement> findTemplates(UnifiedElement parent, boolean inTemplate) {
+        BrowserlessElement scope = (BrowserlessElement) parent;
+        List<Component> roots = scope == null ? List.of(window().getUI())
+                : inTemplate ? templateRoots(scope.component()) : scope.scopeRoots();
+        boolean rootsIncluded = inTemplate || scope != null && scope.rootsIncluded();
+        java.util.Set<Component> found = new java.util.LinkedHashSet<>();
+        for (Component root : roots) {
+            for (Component c : com.vaadin.browserless.internal.LocatorKt._walkAll(root)) {
+                if ((c != root || rootsIncluded) && c instanceof com.vaadin.flow.component.littemplate.LitTemplate) {
+                    found.add(c);
+                }
+            }
+        }
+        return found.stream().map(c -> (UnifiedElement) BrowserlessElement.found(this, c)).toList();
+    }
+
+    /**
+     * Where a lookup inside a Template searches (spec 04, "Templates"): the components bound to its template with
+     * {@code @Id}, which Flow keeps as virtual children and Browserless Test's own walk leaves out, then its light
+     * DOM children. Each is searched with what is under it, but not inside a Template nested in it.
+     */
+    static List<Component> templateRoots(Component template) {
+        List<Component> roots = new ArrayList<>();
+        com.vaadin.flow.internal.StateNode node = template.getElement().getNode();
+        if (node.hasFeature(com.vaadin.flow.internal.nodefeature.VirtualChildrenList.class)) {
+            var virtual = node.getFeature(com.vaadin.flow.internal.nodefeature.VirtualChildrenList.class);
+            for (int i = 0; i < virtual.size(); i++) {
+                com.vaadin.flow.dom.Element child = com.vaadin.flow.dom.Element.get(virtual.get(i));
+                if (injectedId(child) != null) {
+                    child.getComponent().ifPresent(roots::add);
+                }
+            }
+        }
+        template.getChildren().forEach(roots::add);
+        return roots;
+    }
+
+    /**
+     * The id a browser reads on the element: its {@code id} attribute, or the id of the template element it is bound
+     * to with {@code @Id}, which Flow keeps in the binding and doesn't set as an attribute on the server.
+     */
+    static String idOf(com.vaadin.flow.dom.Element element) {
+        String id = element.getAttribute("id");
+        return id != null ? id : injectedId(element);
+    }
+
+    /** The id an {@code @Id} binding gave the element in its template, or null when it has none. */
+    private static String injectedId(com.vaadin.flow.dom.Element element) {
+        if (!element.isVirtualChild()) {
+            return null;
+        }
+        com.vaadin.flow.internal.StateNode node = element.getNode();
+        var payload = node.hasFeature(com.vaadin.flow.internal.nodefeature.ElementData.class)
+                ? node.getFeature(com.vaadin.flow.internal.nodefeature.ElementData.class).getPayload() : null;
+        return payload != null && com.vaadin.flow.internal.nodefeature.NodeProperties.INJECT_BY_ID.equals(
+                payload.path(com.vaadin.flow.internal.nodefeature.NodeProperties.TYPE).asString(null))
+                ? payload.path(com.vaadin.flow.internal.nodefeature.NodeProperties.PAYLOAD).asString(null) : null;
+    }
+
+    /**
+     * In the JVM, so no round trips to save: the element's values, its own id as a browser reads it (that of its
+     * {@code @Id} binding too), and its nearest ancestor with a test id or id.
+     * Every element found is a component of the application's, so none is an internal part.
+     */
     @Override
     public List<com.vaadin.testing.unified.spi.ElementFacts> facts(List<UnifiedElement> elements) {
         return elements.stream().map(e -> {
@@ -174,7 +244,7 @@ final class BrowserlessSession implements AdapterSession {
             if (e instanceof BrowserlessElement b) {
                 for (Component c = b.component().getParent().orElse(null); c != null; c = c.getParent().orElse(null)) {
                     testId = c.getElement().getAttribute("data-testid");
-                    id = c.getElement().getAttribute("id");
+                    id = idOf(c.getElement());
                     if (testId != null || id != null) {
                         break;
                     }
@@ -182,8 +252,16 @@ final class BrowserlessSession implements AdapterSession {
             }
             String label = own.label() != null && !own.label().isBlank() || !(e instanceof BrowserlessElement b2)
                     ? own.label() : formItemLabel(b2.component());
+            java.util.Map<String, String> data = new java.util.HashMap<>();
+            String ownId = null;
+            if (e instanceof BrowserlessElement b3) {
+                com.vaadin.flow.dom.Element el = b3.component().getElement();
+                el.getAttributeNames().filter(n -> n.startsWith("data-") && !n.equals("data-testid"))
+                        .forEach(n -> data.put(n, el.getAttribute(n)));
+                ownId = idOf(el);
+            }
             return new com.vaadin.testing.unified.spi.ElementFacts(label, own.text(), own.placeholder(),
-                    own.testId(), own.accessibleName(), testId, testId == null ? id : null);
+                    own.testId(), own.accessibleName(), testId, testId == null ? id : null, false, data, ownId);
         }).toList();
     }
 
@@ -209,7 +287,8 @@ final class BrowserlessSession implements AdapterSession {
         BrowserlessComponents.Support support = BrowserlessComponents.of(spec.componentType());
         List<Component> found = new ArrayList<>();
         for (Component c : com.vaadin.browserless.internal.LocatorKt._walkAll(root)) {
-            if ((c != root || includeRoot) && spec.componentType().isInstance(c) && support.include(c)
+            if ((c != root || includeRoot) && spec.componentType().isInstance(c) && hasQueriedTag(c, spec)
+                    && support.include(c)
                     && spec.filters().stream().allMatch(f -> matches(c, f))) {
                 found.add(c);
             }
@@ -219,6 +298,22 @@ final class BrowserlessSession implements AdapterSession {
             }
         }
         return found;
+    }
+
+    /**
+     * A tag the component class doesn't declare narrows the class, as it does in a browser: {@code UnifiedLink} is
+     * {@code @UnifiedComponent(value = Component.class, tag = "a")}, so a RouterLink, an Anchor or any other
+     * {@code <a>}. A class with a {@code @Tag} of its own is found by class alone, as before. A tag list matches any
+     * of its tags: {@code UnifiedLogin} is a {@code LoginOverlay} or a {@code LoginForm}. A {@code Text} component
+     * is a text node, with no tag, so it never matches a tag (#603).
+     */
+    private static boolean hasQueriedTag(Component c, QuerySpec spec) {
+        String tag = spec.tag();
+        if (tag == null || "*".equals(tag) || spec.componentType().isAnnotationPresent(com.vaadin.flow.component.Tag.class)) {
+            return true;
+        }
+        return !c.getElement().isTextNode() && com.vaadin.testing.unified.internal.BrowserQueries.tags(tag).stream()
+                .anyMatch(t -> t.equalsIgnoreCase(c.getElement().getTag()));
     }
 
     private boolean matches(Component c, Filter f) {
@@ -231,14 +326,15 @@ final class BrowserlessSession implements AdapterSession {
             case TEXT -> f.matches(new BrowserlessElement(this, c).getText());
             case PLACEHOLDER -> f.matches(e.getProperty("placeholder"));
             case TEST_ID -> f.value().equals(e.getAttribute("data-testid"));
-            case ID -> f.value().equals(e.getAttribute("id"));
+            case ID -> f.value().equals(idOf(e));
             case CLASS_NAME -> e.getClassList().contains(f.value());
             case THEME -> {
                 String theme = e.getAttribute("theme");
                 yield theme != null && java.util.Arrays.asList(theme.split("\\s+")).contains(f.value());
             }
-            case ATTRIBUTE -> f.value().equals(e.getAttribute(f.name()));
-            case ACCESSIBLE_NAME -> f.matches(BrowserlessElement.accessibleName(c));
+            case ATTRIBUTE -> f.value() == null ? e.hasAttribute(f.name()) : f.value().equals(e.getAttribute(f.name()));
+            case WITHOUT_ATTRIBUTE -> !e.hasAttribute(f.name());
+            case ACCESSIBLE_NAME -> f.matches(new BrowserlessElement(this, c).getAccessibleName());
         };
     }
 

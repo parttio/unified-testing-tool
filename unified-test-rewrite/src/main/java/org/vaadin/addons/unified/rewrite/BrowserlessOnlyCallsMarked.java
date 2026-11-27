@@ -1,6 +1,5 @@
 package org.vaadin.addons.unified.rewrite;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -12,13 +11,9 @@ import org.openrewrite.TreeVisitor;
 import org.openrewrite.java.JavaIsoVisitor;
 import org.openrewrite.java.JavaTemplate;
 import org.openrewrite.java.MethodMatcher;
-import org.openrewrite.java.tree.Comment;
 import org.openrewrite.java.tree.J;
-import org.openrewrite.java.tree.Space;
-import org.openrewrite.java.tree.TextComment;
 import org.openrewrite.java.tree.TypeTree;
 import org.openrewrite.java.tree.TypeUtils;
-import org.openrewrite.marker.Markers;
 
 /**
  * Calls in migrated test code that only work on Browserless and that no other rule converted or marked: the fluent
@@ -129,26 +124,7 @@ public class BrowserlessOnlyCallsMarked extends Recipe {
 
     /** The class with the mixin's Migration Marker above its first annotation, or above the class. */
     private static J.ClassDeclaration marked(J.ClassDeclaration c) {
-        if (!c.getLeadingAnnotations().isEmpty()) {
-            J.Annotation first = c.getLeadingAnnotations().get(0);
-            Space prefix = withMarker(first.getPrefix(), c.getPrefix().getIndent());
-            if (prefix == first.getPrefix()) {
-                return c;
-            }
-            List<J.Annotation> annotations = new ArrayList<>(c.getLeadingAnnotations());
-            annotations.set(0, first.withPrefix(prefix));
-            return c.withLeadingAnnotations(annotations);
-        }
-        return c.withPrefix(withMarker(c.getPrefix(), c.getPrefix().getIndent()));
-    }
-
-    private static Space withMarker(Space prefix, String indent) {
-        List<Comment> comments = new ArrayList<>(prefix.getComments());
-        if (comments.stream().anyMatch(c -> c instanceof TextComment t && t.getText().endsWith(CLASS_MARKER))) {
-            return prefix;
-        }
-        comments.add(new TextComment(false, " TODO unified: " + CLASS_MARKER, "\n" + indent, Markers.EMPTY));
-        return prefix.withComments(comments);
+        return MigrationMarkers.onClass(c, CLASS_MARKER);
     }
 
     private static boolean callsTheMixin(J tree) {

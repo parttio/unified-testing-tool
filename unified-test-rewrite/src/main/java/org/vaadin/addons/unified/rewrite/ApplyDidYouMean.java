@@ -62,7 +62,7 @@ public class ApplyDidYouMean extends Recipe {
     @Option(displayName = "Evidence directory",
             description = "Where the failed run wrote its evidence; every `user-steps.json` under it is read, at any "
                     + "depth. Relative to the directory the build runs in. Default: that directory, which finds every "
-                    + "module's `target/surefire-reports/unified-evidence`.",
+                    + "module's `target/surefire-reports/unified-evidence` and `target/failsafe-reports/unified-evidence`.",
             example = "target/surefire-reports/unified-evidence", required = false)
     @Nullable
     String evidenceDir;

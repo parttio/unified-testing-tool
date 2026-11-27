@@ -46,6 +46,7 @@ public final class SeleniumAdapter implements TestingToolAdapter {
     @Override
     public AdapterSession open(AdapterContext context) {
         String baseUrl = baseUrl(context);
+        LocalBrowser local = LocalBrowser.of(context.configuration(BROWSER));
         java.util.function.Supplier<TestBenchDriverProxy> browsers = () -> {
             TestBenchDriverProxy driver = TestBench.createDriver(newBrowser(context));
             driver.manage().timeouts().scriptTimeout(context.timeout());
@@ -56,11 +57,11 @@ public final class SeleniumAdapter implements TestingToolAdapter {
             SharedBrowser shared = context.runScoped(SharedBrowser.class, () -> new SharedBrowser(browsers));
             TestBenchDriverProxy driver = shared.acquire(baseUrl);
             if (driver != null) { // null: in use by a test running in parallel
-                session = new SeleniumSession(browsers, driver, shared::release, baseUrl, context.timeout());
+                session = new SeleniumSession(browsers, local, driver, shared::release, baseUrl, context.timeout());
             }
         }
         if (session == null) {
-            session = new SeleniumSession(browsers, baseUrl, context.timeout());
+            session = new SeleniumSession(browsers, local, baseUrl, context.timeout());
         }
         // @WithMockUser / @WithUserDetails: log the browser in before the test body
         if (LoginSupport.isAvailable()) {
@@ -77,6 +78,9 @@ public final class SeleniumAdapter implements TestingToolAdapter {
             if (headless) {
                 options.addArguments("-headless");
             }
+            // a window big enough for any Viewport the tests set; the Viewport itself through WebDriver BiDi
+            options.addArguments("-width=1280", "-height=1024");
+            options.setCapability("webSocketUrl", true);
             executable.ifPresent(options::setBinary);
             return new FirefoxDriver(options);
         }
@@ -89,6 +93,8 @@ public final class SeleniumAdapter implements TestingToolAdapter {
         org.openqa.selenium.logging.LoggingPreferences logs = new org.openqa.selenium.logging.LoggingPreferences();
         logs.enable(org.openqa.selenium.logging.LogType.BROWSER, java.util.logging.Level.SEVERE);
         options.setCapability("goog:loggingPrefs", logs);
+        // WebDriver BiDi, for an exact Viewport per tab (browsingContext.setViewport, ADR 0011)
+        options.setCapability("webSocketUrl", true);
         executable.ifPresent(options::setBinary);
         return new ChromeDriver(options);
     }

@@ -15,6 +15,7 @@ import java.util.function.UnaryOperator;
 public final class FailureParts {
 
     private volatile String scenario;
+    private volatile boolean scenarioAuthored;
     private volatile Integer stepNumber;
     private volatile IntSupplier totalSteps;
     private volatile String stepText;
@@ -23,12 +24,14 @@ public final class FailureParts {
     private volatile String found;
     private volatile List<String> nearMisses = List.of();
     private volatile String suggestion;
+    private volatile String cause;
     private volatile String lookup;
     private volatile Duration waited;
     private volatile String waitedSetting;
     private volatile String tool;
     private volatile List<String> codePath = List.of();
     private volatile String evidenceDir;
+    private volatile List<String> evidenceFiles = List.of();
     private volatile UnaryOperator<String> mask = UnaryOperator.identity();
 
     /** {@code Expected …} and {@code Found …}: what was wanted, and what there was instead (null to leave out). */
@@ -65,6 +68,21 @@ public final class FailureParts {
         return this;
     }
 
+    /**
+     * The error the last attempt threw, as {@code UnsupportedOperationException: Browserless has no CSS}: its
+     * simple class name and the first line of its message. None when the last attempt returned (#611).
+     */
+    public FailureParts cause(Throwable error) {
+        this.cause = error == null ? null : oneLine(error);
+        return this;
+    }
+
+    /** {@code UnsupportedOperationException: Browserless has no CSS}: the simple class name, the message's first line. */
+    public static String oneLine(Throwable error) {
+        String message = error.getMessage() == null ? "" : error.getMessage().strip().lines().findFirst().orElse("");
+        return error.getClass().getSimpleName() + (message.isEmpty() ? "" : ": " + message);
+    }
+
     /** How long the call waited, and where that timeout came from ({@code vaadin.testing.timeout}). */
     public FailureParts waited(Duration duration, String setting) {
         this.waited = duration;
@@ -98,11 +116,25 @@ public final class FailureParts {
     }
 
     public void scenario(String newScenario) {
+        scenario(newScenario, false);
+    }
+
+    /**
+     * The scenario; one its test's author wrote ({@code @DisplayName}, the method's name) is shown unmasked, as it
+     * comes from the source, a parameterized or repeated invocation's name masked (ADR 0014).
+     */
+    public void scenario(String newScenario, boolean authored) {
         this.scenario = newScenario;
+        this.scenarioAuthored = authored;
     }
 
     public void evidenceDir(String newEvidenceDir) {
         this.evidenceDir = newEvidenceDir;
+    }
+
+    /** The failure evidence written into the evidence directory: {@code failure.png}, {@code failure.view.txt}. */
+    public void evidenceFiles(List<String> names) {
+        this.evidenceFiles = List.copyOf(names);
     }
 
     /** Hides secret values ({@code page.secret(..)}, password fields) wherever the parts are shown. */
@@ -112,7 +144,7 @@ public final class FailureParts {
 
     // ---------------------------------------------------------------- reading, masked
 
-    public String scenario() { return masked(scenario); }
+    public String scenario() { return scenarioAuthored ? scenario : masked(scenario); }
     public Integer stepNumber() { return stepNumber; }
     /** The User Steps the test recorded so far; after the test, all of them. Null when no step failed. */
     public Integer totalSteps() {
@@ -125,6 +157,8 @@ public final class FailureParts {
     public String found() { return masked(found); }
     public List<String> nearMisses() { return nearMisses.stream().map(this::masked).toList(); }
     public String suggestion() { return masked(suggestion); }
+    /** The error the last attempt threw, in one line; else null. */
+    public String cause() { return masked(cause); }
     /** The failed lookup as code, when there is a suggestion to compare it with; else null. */
     public String lookup() { return masked(lookup); }
     public Duration waited() { return waited; }
@@ -132,6 +166,7 @@ public final class FailureParts {
     public String tool() { return tool; }
     public List<String> codePath() { return codePath; }
     public String evidenceDir() { return evidenceDir; }
+    public List<String> evidenceFiles() { return evidenceFiles; }
 
     /** Whether the recording already added the failed User Step. */
     public boolean hasFailedStep() {

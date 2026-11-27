@@ -3,6 +3,7 @@ package org.vaadin.addons.unified.rewrite;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.LongConsumer;
 import org.openrewrite.ipc.http.HttpSender;
 
@@ -15,29 +16,50 @@ import org.openrewrite.ipc.http.HttpSender;
  * The build tests resolve the POMs of the dependencies the recipes add from Maven Central: OpenRewrite reads a
  * POM from the local repository only when the artifact's plain jar is next to it, which a shaded-only artifact
  * ({@code flow-build-tools}) never has. A busy CI runner then gets HTTP 429.
+ * <p>
+ * Once a request is still rate-limited after its last attempt, the senders stop waiting: until a download
+ * succeeds again, a 429 goes back at once. A rate limit that outlasts the retries otherwise makes every later
+ * download wait half a minute, and the build tests hang until the CI job times out instead of failing.
  */
 final class RetryingHttpSender implements HttpSender {
 
     static final int ATTEMPTS = 6;
     private static final long MAX_WAIT_MILLIS = 30_000;
 
+    /** Shared by the senders of one test run: each recipe test's execution context gets a sender of its own. */
+    private static final AtomicBoolean GAVE_UP = new AtomicBoolean();
+
     private final HttpSender delegate;
     private final LongConsumer sleep;
+    private final AtomicBoolean gaveUp;
 
     RetryingHttpSender(HttpSender delegate) {
-        this(delegate, RetryingHttpSender::sleep);
+        this(delegate, RetryingHttpSender::sleep, GAVE_UP);
     }
 
     RetryingHttpSender(HttpSender delegate, LongConsumer sleep) {
+        this(delegate, sleep, new AtomicBoolean());
+    }
+
+    RetryingHttpSender(HttpSender delegate, LongConsumer sleep, AtomicBoolean gaveUp) {
         this.delegate = delegate;
         this.sleep = sleep;
+        this.gaveUp = gaveUp;
     }
 
     @Override
     public Response send(Request request) {
         for (int attempt = 1;; attempt++) {
             Response response = delegate.send(request);
-            if (response.getCode() != 429 || attempt == ATTEMPTS) {
+            int code = response.getCode();
+            if (code >= 200 && code < 300) {
+                gaveUp.set(false);
+            }
+            if (code != 429 || gaveUp.get()) {
+                return response;
+            }
+            if (attempt == ATTEMPTS) {
+                gaveUp.set(true);
                 return response;
             }
             long wait = retryAfter(response.getHeaders()).orElse(backoff(attempt));

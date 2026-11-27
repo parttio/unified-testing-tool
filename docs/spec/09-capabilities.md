@@ -8,6 +8,7 @@ Decided in [#11](https://github.com/parttio/unified-testing-tool/issues/11) and 
 |---|---|---|
 | `@RequiresBrowser` | real browser: CSS, layout, client JS, real focus and keyboard, screenshots | Browserless |
 | `@RequiresTestingTool(X)` | uses a tool-specific Escape Hatch | every tool except X |
+| `@Viewport(width, height, name)` | runs at this exact Viewport ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)); implies `@RequiresBrowser` | Browserless; also skipped, with the Testing Tool's reason, when its page opens and the Testing Tool can't set an exact Viewport |
 
 ```mermaid
 flowchart TD
@@ -35,6 +36,10 @@ void looksRight(UnifiedPage page) {
 ```
 
 Network interception, tracing and browser contexts: Escape Hatch only.
+
+`page.setViewport(width, height)` resizes the Viewport mid-test, as a User Step that waits until the server has heard of it; `page.viewport()` reads it. The size a test starts at is `@Viewport` or the run's `vaadin.testing.viewport` ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)).
+
+Entering a [Template](04-locating.md#templates) that renders its content in the browser (a web component, not a `LitTemplate`'s `@Id` components) needs `@RequiresBrowser`: Browserless has no such content.
 
 ### Browser-only steps in a test for every Testing Tool
 
@@ -82,6 +87,7 @@ Tests that depend on real browser focus behaviour declare `@RequiresBrowser`.
 | Before the first `navigate(..)` | a blank page | a blank page | the view of the `""` route |
 | `navigate(..)` to the view already shown | a new page, new view instances | a new page, new view instances | the same view instance; `beforeEnter` and `setParameter` run again |
 | Back / forward history | Escape Hatch | Escape Hatch | ✗ |
+| Inside a Template: text, labels and attributes written in the template's HTML | ✓ | ✓ | ✗ (empty on the server; `withId(..)` works everywhere) |
 
 Differences in meaning are documented, not banned. Tests that depend on the browser meaning declare `@RequiresBrowser`.
 
@@ -89,14 +95,16 @@ Differences in meaning are documented, not banned. Tests that depend on the brow
 
 | Testing Tool | Captured automatically on failure |
 |---|---|
-| Playwright, Selenium | screenshot: `<test class>.<method>.png` (Playwright: the full page; Selenium: the window), with the failed step's Step Target's box in `user-steps.json` |
-| Browserless | location and component tree as text: `<test class>.<method>.tree.txt`, the failed step's Step Target marked `← this step` |
-| every Testing Tool | the [Findable View](12-readable-tests.md#findable-view) of the page: `<test class>.<method>.view.txt` |
+| Playwright, Selenium | screenshot: `failure.png` (Playwright: the full page; Selenium: the window), with the failed step's Step Target's box in `user-steps.json` |
+| Browserless | location and component tree as text: `failure.tree.txt`, the failed step's Step Target marked `← this step` |
+| every Testing Tool | the [Findable View](12-readable-tests.md#findable-view) of the page: `failure.view.txt` |
 
-Written to `vaadin.testing.evidence-dir` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes. The failure names the files (a suppressed exception), so they show in the test report. Next to them, every test writes its User Steps (`<test class>/<test method>/user-steps.txt` and `user-steps.json`), and the run writes `summary.md`; the failure's `Evidence` line names that directory ([12. Readable tests, Reports](12-readable-tests.md#reports)).
+Written into the test's evidence directory, `<vaadin.testing.evidence-dir>/<test class>/<test method>/` (default `target/surefire-reports/unified-evidence`, so CI uploads it with the reports), before the session closes, next to the test's User Steps (`user-steps.txt` and `user-steps.json`); a test that passes leaves no `failure.*` there, and an earlier run's are removed. The failure names the files (a suppressed exception), so they show in the test report, and so do its `Evidence` line, the test's directory followed by the files (`(failure.png, failure.view.txt)`), and `user-steps.json`'s `failure.evidence` ([12. Readable tests, Reports](12-readable-tests.md#reports)). The run writes `summary.md` at the evidence directory's root.
 
 ## Requirements on Testing Tool adapters
 
 - Report missing Capabilities as skipped tests.
 - Unsupported calls without the annotation fail with a message naming it.
 - Capture failure evidence as in the table, for the failed User Step.
+- Set an exact Viewport in `AdapterSession.setViewport(ViewportSize)`, for that page only, returning once the browser has applied it; the core calls it as soon as each page opens and for `page.setViewport`. A Testing Tool that can't set it exactly throws `UnsupportedOperationException` saying why (the default), never sizes approximately.
+- Run the core's layout script (`LayoutScript.SOURCE`) unchanged in `AdapterSession.measureLayout(targets, subject)`, with the subject's own element, and return its JSON string: one round trip; the script waits for AppLayout's drawer itself. Never a script of the adapter's own: the core ships no generic JavaScript call through the SPI.

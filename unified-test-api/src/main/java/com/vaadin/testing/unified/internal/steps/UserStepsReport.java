@@ -60,6 +60,9 @@ public record UserStepsReport(String testClass, String testMethod, String displa
      *    ✘ AssertionError: Expected …
      *      at EditPersonTest.java:13 (editsAPersonInTheDialog)
      * </pre>
+     *
+     * A Unified failure with a suggestion gets its {@code Did you mean} line under the {@code ✘} line, in the
+     * failure message's wording; its Near Misses stay in the message and {@code user-steps.json}.
      */
     public String text() {
         StringBuilder sb = new StringBuilder();
@@ -78,6 +81,10 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         }
         if (failure != null && status.equals("failed")) {
             sb.append(INDENT).append(FAILED_MARK).append(' ').append(steps.mask(firstLine(failure))).append('\n');
+            if (failure instanceof UnifiedAssertionError unified && unified.getSuggestion().isPresent()) {
+                sb.append(INDENT).append("  Did you mean  ").append(steps.mask(unified.getSuggestion().get()))
+                        .append('\n');
+            }
             List<CallSite> codePath = codePath();
             if (!codePath.isEmpty()) {
                 sb.append(INDENT).append("  at ").append(String.join(" ← ", codePath.stream().map(String::valueOf).toList()))
@@ -152,7 +159,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
     /** {@code EditPersonTest › Editing a person in the dialog updates the grid}. */
     private String scenario() {
         String simple = testClass.substring(testClass.lastIndexOf('.') + 1).replace('$', '.');
-        return simple + " › " + steps.mask(displayName);
+        return simple + " › " + steps.maskScenario(displayName);
     }
 
     private static String seconds(long nanos) {
@@ -200,8 +207,16 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         json.field("schemaVersion", SCHEMA_VERSION);
         json.field("testClass", testClass);
         json.field("testMethod", testMethod);
-        json.field("displayName", steps.mask(displayName));
+        json.field("displayName", steps.maskScenario(displayName));
         json.field("tool", tool);
+        if (steps.viewport() != null) {
+            json.key("viewport").open('{');
+            json.field("name", steps.viewport().name());
+            json.field("width", steps.viewport().width());
+            json.field("height", steps.viewport().height());
+            json.bool("fixed", steps.viewportFixed());
+            json.close('}');
+        }
         json.field("status", status);
         json.field("startedAt", steps.startedAt().toString());
         json.field("durationMs", steps.durationNanos() / 1_000_000);
@@ -226,6 +241,11 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             codePath().forEach(site -> callSite(json, site));
             json.close(']');
             highlight(json, steps.failureHighlight());
+            if (!steps.failureEvidence().isEmpty()) {
+                json.key("evidence").open('[');
+                steps.failureEvidence().forEach(json::value);
+                json.close(']');
+            }
             if (failure instanceof UnifiedAssertionError unified) {
                 json.optional("expected", steps.mask(unified.getExpected()));
                 json.optional("found", steps.mask(unified.getFound()));
@@ -236,6 +256,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                 }
                 json.optional("suggestion", steps.mask(unified.getSuggestion().orElse(null)));
                 json.optional("lookup", unified.getSuggestion().isPresent() ? steps.mask(unified.parts().lookup()) : null);
+                json.optional("cause", steps.mask(unified.parts().cause()));
             }
             json.close('}');
         }
@@ -279,6 +300,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     common(json, step.window(), step.status(), step.durationNanos(), step.callSite(), step.error());
                     json.optional("snapshot", step.snapshot());
                     highlight(json, step.highlight());
+                    layout(json, step.layout());
                     readsAfter(json, step);
                 }
                 case Group group -> {
@@ -303,6 +325,39 @@ public record UserStepsReport(String testClass, String testMethod, String displa
             json.close('}');
         }
         json.close(']');
+    }
+
+    /** What the automatic layout checks measured during the step (ADR 0011). */
+    private void layout(Json json, StepRecorder.Layout layout) {
+        if (layout == null) {
+            return;
+        }
+        json.key("layout").open('{');
+        json.field("point", layout.point());
+        json.optional("screenshot", layout.screenshot());
+        json.key("findings").open('[');
+        for (StepRecorder.LayoutFinding finding : layout.findings()) {
+            json.open('{');
+            json.field("kind", finding.kind());
+            json.field("text", steps.mask(finding.text()));
+            json.key("box").open('[');
+            finding.box().forEach(n -> json.number(n));
+            json.close(']');
+            json.close('}');
+        }
+        json.close(']');
+        if (!layout.components().isEmpty()) {
+            json.key("components").open('[');
+            for (StepRecorder.LayoutComponent component : layout.components()) {
+                json.open('{');
+                json.field("line", steps.mask(component.line()));
+                json.field("reach", component.reach());
+                json.optional("by", component.by() == null ? null : steps.mask(component.by()));
+                json.close('}');
+            }
+            json.close(']');
+        }
+        json.close('}');
     }
 
     /** Where a screenshot shows its Step Target: a box in fractions of the image, or why there is none. */
@@ -410,6 +465,18 @@ public record UserStepsReport(String testClass, String testMethod, String displa
         }
 
         void field(String key, long value) {
+            key(key);
+            beforeValue();
+            sb.append(value);
+        }
+
+        /** A number in an array, as written, without a needless {@code .0}. */
+        void number(double value) {
+            beforeValue();
+            sb.append(value == Math.rint(value) ? String.valueOf((long) value) : String.valueOf(value));
+        }
+
+        void bool(String key, boolean value) {
             key(key);
             beforeValue();
             sb.append(value);

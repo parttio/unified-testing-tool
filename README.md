@@ -42,7 +42,7 @@ class ProfileViewTest {
 
 | Module | Contains |
 |---|---|
-| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, User Step reports (`page.step(..)`, `user-steps.txt`, `summary.md`, `report.html`, `summary.json`, the application's log lines and the console's errors under each step, scenarios without a check, the comparison with another Testing Tool's run) and `UnifiedAssertionError`, Capabilities, Escape Hatch, adapter SPI, the API reference (`META-INF/unified/api-reference.md`) |
+| `unified-test-api` | `@UnifiedUITest`, `UnifiedPage`, Wrappers (`UnifiedTextField`, `UnifiedNumberField`, `UnifiedDatePicker`, `UnifiedCheckbox`, `UnifiedComboBox`, `UnifiedRadioButtonGroup`, `UnifiedMultiSelectComboBox`, `UnifiedButton`, `UnifiedLink`, `UnifiedNotification`, `UnifiedDialog`, `UnifiedConfirmDialog`, `UnifiedLogin`, `UnifiedGrid`, `UnifiedTabSheet`, `UnifiedContainer`, `findComponent`), users and windows (`@WithMockUser`, `openWindow`, `openAsUser`; browsers log in through a test-only endpoint), retrying `UnifiedAssertions`, User Step reports (`page.step(..)`, `user-steps.txt`, `summary.md`, `report.html`, `summary.json`, the application's log lines and the console's errors under each step, scenarios without a check, the comparison with another Testing Tool's run) and `UnifiedAssertionError`, Capabilities, Escape Hatch, adapter SPI, the API reference (`META-INF/unified/api-reference.md`) |
 | `unified-test-browserless` | Browserless Test adapter |
 | `unified-test-playwright` | Playwright adapter on Dramafinder 2.0 |
 | `unified-test-selenium` | Selenium adapter on TestBench 25.3 (needs a TestBench license) |
@@ -54,7 +54,7 @@ class ProfileViewTest {
 
 ## Try it
 
-Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha4`. The API can still change between alphas.
+Alpha releases are on Maven Central as `org.vaadin.addons`, version `0.1.0-alpha6`. The API can still change between alphas.
 
 It needs Java 21, Vaadin 25.3 and, for `@UnifiedSpringBootTest`, Spring Boot 4.1. On an older Vaadin the build passes and the tests fail when they run: each Unified UI Test fails at once, with a message that names the Vaadin version it found. Move the application to Vaadin 25.3 first.
 
@@ -66,7 +66,7 @@ Import the BOM and add the adapters you run on as test dependencies (here for a 
         <dependency>
             <groupId>org.vaadin.addons</groupId>
             <artifactId>unified-test-bom</artifactId>
-            <version>0.1.0-alpha4</version>
+            <version>0.1.0-alpha6</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -97,9 +97,9 @@ Import the BOM and add the adapters you run on as test dependencies (here for a 
 </dependencies>
 ```
 
-The BOM also sets the version of Dramafinder (`org.vaadin.addons:dramafinder`, 2.2.1), which the Playwright adapter runs on. Browserless Test and TestBench come at the versions your Vaadin BOM manages.
+The BOM also sets the version of Dramafinder (`org.vaadin.addons:dramafinder`, 2.2.4), which the Playwright adapter runs on. Browserless Test and TestBench come at the versions your Vaadin BOM manages.
 
-The Playwright adapter brings Dramafinder 2.2.1, so a project on Dramafinder 1.x moves to 2.x. Remove a direct `dramafinder` dependency: a version you declare wins over the BOM's, and the adapter needs 2.x. The class and method names are the same, so Dramafinder 1.x code left in the project still compiles, but its lookups now follow 2.x rules: `getByLabel` and `getByText` match the whole value and fail when several components match ([Dramafinder 1.x](docs/migrating-from-dramafinder.md#dramafinder-1x)).
+The Playwright adapter brings Dramafinder 2.2.4, so a project on Dramafinder 1.x moves to 2.x. Remove a direct `dramafinder` dependency: a version you declare wins over the BOM's, and the adapter needs 2.x. The class and method names are the same, so Dramafinder 1.x code left in the project still compiles, but its lookups now follow 2.x rules: `getByLabel` and `getByText` match the whole value and fail when several components match ([Dramafinder 1.x](docs/migrating-from-dramafinder.md#dramafinder-1x)).
 
 Run the tests on Browserless with `mvn test`, and on another Testing Tool with `-Dvaadin.testing.tool=playwright` or `selenium`. The Selenium adapter runs TestBench, which needs a TestBench license; Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath. Every setting: [Configuration](docs/guide/configuration.md).
 

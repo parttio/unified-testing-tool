@@ -9,10 +9,15 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
 | `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
 | `vaadin.testing.timeout` | `10s` |
+| `vaadin.testing.viewport` | `1280x720`; `[name:]WIDTHxHEIGHT` such as `phone:375x667`: the exact Viewport of every test without `@Viewport`, in a browser ([Viewports](#viewports)) |
+| `vaadin.testing.layout-checks` | `off`; `on` measures the layout after every navigation, reload and `setViewport`, in a browser, and shows its Layout Findings on that User Step ([Layout](assertions-and-waiting.md#layout)) |
+| `vaadin.testing.layout-findings` | `report`; `fail` fails the User Step that measured a Layout Finding |
+| `vaadin.testing.layout-checks.screenshots` | `off`; `on` keeps a screenshot of the Viewport per measurement, with each finding's box |
 | `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
 | `vaadin.testing.user-steps.log` | `failed` (or `all`, `none`): whose User Steps go to the CI log |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; the base for "Changed in this PR" ([Reading reports and failures](reports-and-failures.md)) |
+| `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it ([Reading reports and failures](reports-and-failures.md)) |
 | `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([Reading reports and failures](reports-and-failures.md#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged; `error`, or `off` |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
@@ -26,3 +31,25 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.selenium.headless` | `true` |
 | `vaadin.testing.selenium.executable` | the installed browser |
 | `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
+
+The Selenium adapter always runs its browser locally: it has no remote Selenium grid setting, and it reads none of TestBench's grid parameters (`com.vaadin.testbench.Parameters.gridBrowsers`, `hubHostname`) or Sauce Labs options. A remote grid is on the roadmap ([#645](https://github.com/parttio/unified-testing-tool/issues/645)). Until then, run browser tests where the browser is installed, or on Playwright.
+
+## Viewports
+
+In a browser, every test runs at an **exact** Viewport: 1280 × 720 unless the run's `vaadin.testing.viewport` or the test's `@Viewport` says otherwise. A method's `@Viewport` wins over its class's, and it is inherited from base classes. `@Viewport` implies `@RequiresBrowser`.
+
+```java
+@Test
+@Viewport(width = 375, height = 667, name = "phone")
+@DisplayName("On a phone, the menu is behind the drawer toggle")
+void onAPhone(UnifiedPage page) {
+    page.navigate(MainView.class);
+    ...
+}
+```
+
+`page.setViewport(768, 1024)` changes this window's Viewport mid-test. It is a User Step, and it waits until the application has heard of the new size: Vaadin sends a window resize 300 ms after the browser's last one, so prefer `@Viewport` for the size a test starts at. `page.viewport()` gives the current one. Windows from `openWindow()` and `openAsUser()` start at the test's Viewport.
+
+Only the Viewport is set, not the screen: `screen.width` and `getScreenWidth()` are whatever the browser says. Don't size the browser window through the Escape Hatch; use `setViewport`.
+
+When the Testing Tool can't set an exact Viewport, a test with `@Viewport`, or any test of a run with `vaadin.testing.viewport`, is skipped with the reason. A test on the default 1280 × 720 runs with a warning in its report, and a mid-test `setViewport` fails its User Step. Playwright, and Selenium on Chrome and on Firefox 132 or later, set exact Viewports. Selenium sets them through WebDriver BiDi, which it turns on in every browser it starts: an older Firefox, or a browser without BiDi, can't, and says why.

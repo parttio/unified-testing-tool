@@ -34,6 +34,43 @@ class FindableViewTest {
     }
 
     @Test
+    @DisplayName("A chat lists its message list and message input, and the text area the application added, but not"
+            + " the message input's own text area")
+    void listsAChatButNotTheMessageInputsOwnTextArea(UnifiedPage page) {
+        page.navigate(ChatView.class);
+
+        assertEquals(List.of(
+                "text area “Notes”        page.find(UnifiedTextArea.class).withLabel(\"Notes\")",
+                "message list, 1 message  page.find(UnifiedMessageList.class)",
+                "message input            page.find(UnifiedMessageInput.class)"),
+                lines(page.describe()));
+    }
+
+    @Test
+    @DisplayName("Plain HTML that says it is clickable is listed, with why; a click listener alone is not")
+    void listsClickablePlainHtml(UnifiedPage page) {
+        page.navigate(ClickablesView.class);
+
+        assertEquals(List.of(
+                "div “Mon” (role tab)  page.find(UnifiedDiv.class).withText(\"Mon\")",
+                "span “Week of 2026-11-16” (role button)  page.find(UnifiedSpan.class).withText(\"Week of 2026-11-16\")",
+                "article “Pancakes” (focusable)  page.find(UnifiedArticle.class).withText(\"Pancakes\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
+    @DisplayName("Alike buttons are told apart by the data attribute only each of them has")
+    void findsAlikeButtonsByADataAttribute(UnifiedPage page) {
+        page.navigate(PinsView.class);
+
+        assertEquals(List.of(
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-23\")",
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-24\")",
+                "button “Pin”  page.find(UnifiedButton.class).withText(\"Pin\").withAttribute(\"data-pin-date\", \"2026-11-25\")"),
+                lines(page.describe()).stream().map(l -> l.replaceAll(" {2,}", "  ")).toList());
+    }
+
+    @Test
     @DisplayName("Two fields with the same label are found through the containers that tell them apart")
     void findsAlikeFieldsThroughTheirContainers(UnifiedPage page) {
         page.navigate(CheckoutView.class);
@@ -63,9 +100,13 @@ class FindableViewTest {
                 "text field “Email”  find(UnifiedTextField.class).withLabel(\"Email\")",
                 "button “Cancel”     find(UnifiedButton.class).withText(\"Cancel\")",
                 "button “Save”       find(UnifiedButton.class).withText(\"Save\")"), lines(view));
-        assertEquals("text field “Email”                      not unique: 2 alike; one in dialog “Change email”:"
-                + " page.find(UnifiedDialog.class).withHeaderTitle(\"Change email\").find(UnifiedTextField.class)"
-                + ".withLabel(\"Email\")", lines(page.describe()).get(2));
+        // the dialog's field is found through the dialog; the profile's own Email field is not in it (#658)
+        List<String> emails = lines(page.describe()).stream().filter(l -> l.startsWith("text field “Email”"))
+                .map(l -> l.replaceAll(" {2,}", "  ")).toList();
+        assertEquals(List.of("text field “Email”  not unique: 2 alike",
+                "text field “Email”  not unique: 2 alike; one in dialog “Change email”:"
+                        + " page.find(UnifiedDialog.class).withHeaderTitle(\"Change email\").find(UnifiedTextField.class)"
+                        + ".withLabel(\"Email\")"), emails);
     }
 
     /** {@code browserless}, {@code playwright (chromium)}: the Testing Tool as the header names it. */

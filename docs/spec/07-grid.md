@@ -7,7 +7,7 @@ Decided in [#28](https://github.com/parttio/unified-testing-tool/issues/28) and,
 Rows are found by **what they show**, the way components are: `row()` returns a lazy row, its filters narrow it, and every use finds it again. Index access stays for tests where order is the point.
 
 ```java
-UnifiedGrid users = page.find(UnifiedGrid.class).withAccessibleName("Users");
+UnifiedGrid users = page.find(UnifiedGrid.class).withTestId("users");
 
 users.column("Name").header().find(UnifiedTextField.class).setValue("Ali");   // header filter
 assertThat(users).hasRowCount(1);
@@ -42,7 +42,7 @@ flowchart TD
 |---|---|
 | `UnifiedGrid` | `row()`, `row(i)`, `getRowCount()`, `column(header)`, `columnWithId(id)`, `column(index)`, `getColumnHeaders()`, `selectAll()`, `deselectAll()` |
 | `UnifiedGridRow` filters | `withCellText(column, text)`, `withCellText(text)` (any column; reads every column, so slower on large lazy Grids), `withCellTextContaining(..)`, `selected()`; each returns a new row and leaves this one unchanged. `all()`: every matching row now, by index, only for loops |
-| `UnifiedGridRow` | `grid()`, `getIndex()`, `getCellText(column)`, `getCellText(index)` (columns without header text), `cell(column)` (Scope), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `isDetailsOpen()`, `details()` (Scope) |
+| `UnifiedGridRow` | `grid()`, `getIndex()`, `getCellText(column)`, `getCellText(index)` (columns without header text), `cell(column)` (Scope), `cell(index)` (Scope, columns without header text), `select()`, `deselect()`, `isSelected()`, `click()`, `doubleClick()`, `toggleDetails()`, `isDetailsOpen()`, `details()` (Scope) |
 | `UnifiedGridColumn` | `header()` (Scope), `sort(direction)`, `getSortDirection()`, `getCellTexts()` |
 
 | Retrying assertion | On |
@@ -61,6 +61,8 @@ flowchart TD
 | Values | Rendered text only. The item behind a row: Escape Hatch (Browserless). |
 | Lazy loading | Row access scrolls the row into view and waits for its data (Auto-Wait). `getRowCount()` is the total, not the rendered rows. |
 | Cell components | Through `row.cell(column)` on every Testing Tool (Browserless queries can't see renderer components). |
+| Renderer markup | Markup a `LitRenderer` draws (no Flow component) is found in `row.cell(..)` by a Wrapper bound to its tag, in a browser. On Browserless, a lookup in such a cell fails, naming `@RequiresBrowser`; it never finds nothing. Running a renderer function is no Unified call: Escape Hatch, `GridTester.invokeLitRendererFunction` ([ADR 0015](../adr/0015-renderer-markup-is-found-by-tag-wrappers-row-click-avoids-it.md)). |
+| Row click | `click()` and `doubleClick()` click a spot of the row free of interactive content (links, buttons, focusable content, web components, renderer markup), on Playwright and Selenium alike. A row with no such spot fails with the same message on both, naming `row.cell(..).find(..).click()`. Browserless fires the grid's item click. |
 | Selection | Single and multi; `selectAll` / `deselectAll`. The multi-select checkbox column is not a column: indexes count only the application's columns (as Flow's `Grid.getColumns()`). |
 | Row details | `toggleDetails()` is what a user does: click the row (details open on click, Flow's default). Searching inside details (`details()`) is not available on Browserless yet (gap ticket). |
 

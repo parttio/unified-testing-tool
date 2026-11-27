@@ -57,12 +57,16 @@ The guide's rules of thumb are in `docs/snippets/rules-of-thumb.md`, included by
 
 Write an example inline only when it can't compile: a signature, a class skeleton, or a mistake to avoid.
 
+### Release notes
+
+A change a user of the Unified API would notice gets a release note: a file of its own in `docs/releases/unreleased/`, named `<issue>-<slug>.md`, with its section (`New`, `Changed behaviour`, `Fixed`, …) and the note as one bullet. [`docs/releases/unreleased/README.md`](docs/releases/unreleased/README.md) shows the format. Don't edit `docs/releases/unreleased.md`: the documentation build assembles the site's Unreleased page from the files, so that parallel pull requests don't conflict on one file.
+
 ### What is unreleased
 
 The site documents `main`, so mark what the latest release doesn't have, where a reader of that release meets it. Mark the item, not its surroundings: a row, a bullet or a sentence gets `*(unreleased)*` next to its name. Only a section whose every line is new gets the banner instead:
 
 ```markdown
-> **Unreleased:** on `main`, not in `0.1.0-alpha4`. See [what is unreleased](../releases/unreleased.md).
+> **Unreleased:** on `main`, not in `0.1.0-alpha6`. See [what is unreleased](../releases/unreleased.md).
 ```
 
 A section that keeps released content under a new heading, or a sentence that names a released and an unreleased item, is marked per item, so a reader of the release can tell which half they have.
@@ -70,19 +74,25 @@ A section that keeps released content under a new heading, or a sentence that na
 ## Cutting a release
 
 1. Make sure the build passes locally and in the Tests workflow on `main`.
-2. Turn `docs/releases/unreleased.md` into the release's notes (`docs/releases/<version>.md`, and its entry in `mkdocs.yml`), start a new `unreleased.md`, and take out the marks of what the release now has: `grep -rni "unreleased" README.md docs/guide docs/spec scripts`.
-3. From an up-to-date `main` with push rights:
+2. Write the release's notes from the notes in `docs/releases/unreleased/`:
 
    ```
-   mvn release:prepare release:clean -DreleaseVersion=<version> -DdevelopmentVersion=0.1.0-SNAPSHOT
+   scripts/release_notes.py release <version>
    ```
 
-   This runs the tests, sets the version in every module, commits, tags `unified-test-<version>`, moves to the next snapshot and pushes. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.
-
-4. Once the release is on Central, point the documentation at it, and push:
+   It writes `docs/releases/<version>.md`, adds it to `mkdocs.yml`'s nav and deletes the notes. Write what the release is about, its "Get it" section and its known limitations at the top, as in the previous release. Then take out the marks of what the release now has: `grep -rni "unreleased" README.md docs/guide docs/spec scripts`.
+3. Point the documentation at the new version, then commit and push the notes and the pages to `main`:
 
    ```
    scripts/doc_version.py --update
    ```
 
-   The version the README, the migration guides and the developer guide name comes from the newest file in `docs/releases/`. Until you run this, the Docs workflow warns that the documentation names the previous release.
+   The version the README, the migration guides and the developer guide name comes from the newest file in `docs/releases/`, so the release's tag names the release itself. Until the release reaches Maven Central, about half an hour after the tag, the site names a version that can't be downloaded yet.
+
+4. From an up-to-date `main` with push rights:
+
+   ```
+   mvn release:prepare release:clean -DreleaseVersion=<version> -DdevelopmentVersion=0.1.0-SNAPSHOT "-DpreparationGoals=clean install"
+   ```
+
+   This sets the version in every module, runs the tests, commits, tags `unified-test-<version>`, moves to the next snapshot and pushes. The preparation build installs the release version: the Migration Recipes' tests resolve the `unified-test-*` artifacts at that version, which are on neither Central nor the local repository yet, and fail with `Unable to download POM` under the default `verify`. `release:perform` is not needed: the tag starts the Release workflow, which publishes every module except the demo to Maven Central (`mvn -Prelease deploy`, the same secrets as Dramafinder). Releases appear on Central within about half an hour.

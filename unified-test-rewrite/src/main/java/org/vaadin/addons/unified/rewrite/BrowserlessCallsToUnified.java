@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.openrewrite.Cursor;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.Recipe;
 import org.openrewrite.TreeVisitor;
@@ -54,6 +55,12 @@ public class BrowserlessCallsToUnified extends Recipe {
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaIsoVisitor<>() {
             @Override
+            public J.CompilationUnit visitCompilationUnit(J.CompilationUnit cu, ExecutionContext ctx) {
+                // the LitTemplates the scanners found, for the views only reached for a Template's @Id fields
+                return LitTemplates.with(ctx, () -> super.visitCompilationUnit(cu, ctx));
+            }
+
+            @Override
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
                 if (!Pages.hasPageParameter(method)) {
                     return method;
@@ -64,7 +71,7 @@ public class BrowserlessCallsToUnified extends Recipe {
 
             @Override
             public J.Block visitBlock(J.Block block, ExecutionContext ctx) {
-                J.Block b = super.visitBlock(block, ctx);
+                J.Block b = super.visitBlock(viewsOnlyForTemplates(block), ctx);
                 if (!inPageMethod()) {
                     return b;
                 }
@@ -79,6 +86,31 @@ public class BrowserlessCallsToUnified extends Recipe {
                     kept.add(s);
                 }
                 return dropped ? b.withStatements(kept) : b;
+            }
+
+            /**
+             * {@code OrdersView view = navigate(OrdersView.class)} whose view is only the start of Component References
+             * to a Template's {@code @Id} fields, which become lookups ({@link TemplateFields}): the navigation alone,
+             * which then converts as a statement.
+             */
+            private J.Block viewsOnlyForTemplates(J.Block block) {
+                if (!inPageMethod()) {
+                    return block;
+                }
+                Cursor method = getCursor().dropParentUntil(t -> t instanceof J.MethodDeclaration || t == Cursor.ROOT_VALUE);
+                if (!(method.getValue() instanceof J.MethodDeclaration)) {
+                    return block;
+                }
+                return block.withStatements(org.openrewrite.internal.ListUtils.map(block.getStatements(), s -> {
+                    if (s instanceof J.VariableDeclarations v && v.getVariables().size() == 1
+                            && v.getVariables().get(0).getInitializer() instanceof J.MethodInvocation call
+                            && Browserless.isTestBaseCall(call) && call.getSimpleName().equals("navigate")
+                            && call.getArguments().get(0) instanceof J.FieldAccess
+                            && TemplateFields.onlyStartsChains(method, v.getVariables().get(0).getSimpleName())) {
+                        return call.withPrefix(v.getPrefix());
+                    }
+                    return s;
+                }));
             }
 
             @Override

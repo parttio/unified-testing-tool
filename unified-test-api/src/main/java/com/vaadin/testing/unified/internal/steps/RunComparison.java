@@ -141,7 +141,7 @@ public record RunComparison(String otherTool, int both, List<Difference> differe
     /** The first line the two lists don't share, or empty when they are equal. */
     static Optional<Parting> parting(List<String> here, List<String> there) {
         int shared = 0;
-        while (shared < here.size() && shared < there.size() && here.get(shared).equals(there.get(shared))) {
+        while (shared < here.size() && shared < there.size() && sameStep(here.get(shared), there.get(shared))) {
             shared++;
         }
         if (shared == here.size() && shared == there.size()) {
@@ -149,5 +149,17 @@ public record RunComparison(String otherTool, int both, List<Difference> differe
         }
         return Optional.of(new Parting(shared + 1, shared < here.size() ? here.get(shared).strip() : null,
                 shared < there.size() ? there.get(shared).strip() : null));
+    }
+
+    /**
+     * Whether two lines are the same User Step. A {@code user-steps.json} written before the root route read
+     * {@code open “/”} has {@code open “”} for it: the same step.
+     */
+    private static boolean sameStep(String a, String b) {
+        return rootAsSlash(a).equals(rootAsSlash(b));
+    }
+
+    private static String rootAsSlash(String line) {
+        return line.endsWith("open “”") ? line.substring(0, line.length() - 2) + "“/”" : line;
     }
 }

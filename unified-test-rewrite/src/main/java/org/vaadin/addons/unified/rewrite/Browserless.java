@@ -117,6 +117,10 @@ final class Browserless {
                     FIELD_FILTERS, TEXT_INPUT, FIELD_GETTERS),
             "com.vaadin.flow.component.textfield.TextArea", new Wrapper("com.vaadin.testing.unified.component.UnifiedTextArea",
                     FIELD_FILTERS, TEXT_INPUT, FIELD_GETTERS),
+            "com.vaadin.flow.component.textfield.EmailField", new Wrapper(COMPONENT + "UnifiedEmailField",
+                    FIELD_FILTERS, TEXT_INPUT, FIELD_GETTERS),
+            "com.vaadin.flow.component.textfield.PasswordField", new Wrapper(COMPONENT + "UnifiedPasswordField",
+                    FIELD_FILTERS, TEXT_INPUT, FIELD_GETTERS),
             // withCaption on a button is its text (ADR 0001); the recipe leaves a Migration Marker
             "com.vaadin.flow.component.button.Button", new Wrapper("com.vaadin.testing.unified.component.UnifiedButton",
                     with(COMMON_FILTERS, Map.of("withText", "withText", "withCaption", "withText")),
@@ -174,8 +178,10 @@ final class Browserless {
             Map.entry("com.vaadin.flow.component.tabs.TabSheet", new CoreSetWrapper("UnifiedTabSheet", "withTab")),
             Map.entry("com.vaadin.flow.component.tabs.Tabs", new CoreSetWrapper("UnifiedTabs", "withTab")),
             Map.entry("com.vaadin.flow.component.textfield.BigDecimalField", new CoreSetWrapper("UnifiedBigDecimalField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.EmailField", new CoreSetWrapper("UnifiedEmailField", "withLabel")),
             Map.entry("com.vaadin.flow.component.textfield.IntegerField", new CoreSetWrapper("UnifiedIntegerField", "withLabel")),
             Map.entry("com.vaadin.flow.component.textfield.NumberField", new CoreSetWrapper("UnifiedNumberField", "withLabel")),
+            Map.entry("com.vaadin.flow.component.textfield.PasswordField", new CoreSetWrapper("UnifiedPasswordField", "withLabel")),
             Map.entry("com.vaadin.flow.component.textfield.TextArea", new CoreSetWrapper("UnifiedTextArea", "withLabel")),
             Map.entry("com.vaadin.flow.component.textfield.TextField", new CoreSetWrapper("UnifiedTextField", "withLabel")),
             Map.entry("com.vaadin.flow.component.upload.Upload", new CoreSetWrapper("UnifiedUpload", null)));

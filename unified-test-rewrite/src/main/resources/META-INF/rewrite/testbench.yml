@@ -5,15 +5,22 @@ displayName: Swap TestBench for the Unified API in the Maven build
 description: >-
   Imports unified-test-bom, adds the Spring integration, `browserless-test-spring` (which Browserless runs of Spring
   tests need, without a version of its own when the project's Vaadin BOM manages it) and the Browserless and
-  Selenium adapters as test dependencies, and removes direct TestBench dependencies, which the Selenium adapter brings
-  in. Leaves a Migration Marker at the top of the pom when the project's Vaadin is older than 25.3.
+  Selenium adapters as test dependencies, and Spring Security's test support when the project uses Spring Security,
+  for `@WithMockUser`. Leaves direct TestBench dependencies to `RemoveTestBenchWhenUnused`, which
+  `MigrateTestBenchToUnified` runs: the Selenium adapter brings TestBench core and some element jars, not all. Leaves a
+  Migration Marker at the top of the pom when the project's Vaadin is older than 25.3, and on each Failsafe profile
+  that ran the tests against a server or browser outside the test (a native executable, a server address, TestBench
+  grid or Sauce Labs settings).
 preconditions:
   - org.openrewrite.maven.search.DependencyInsight:
       groupIdPattern: com.vaadin
       artifactIdPattern: vaadin-testbench*
       onlyDirect: true
 recipeList:
+  - org.vaadin.addons.unified.rewrite.SeparateFailsafeEvidence
+  - org.vaadin.addons.unified.rewrite.MarkProfilesThatTestElsewhere
   - org.vaadin.addons.unified.rewrite.CheckVaadinVersion
+  - org.vaadin.addons.unified.rewrite.AddSpringSecurityTest
   - org.openrewrite.maven.AddManagedDependency:
       groupId: org.vaadin.addons
       artifactId: unified-test-bom
@@ -40,9 +47,6 @@ recipeList:
       artifactId: unified-test-selenium
       version: ${project.version}
       scope: test
-  - org.openrewrite.maven.RemoveDependency:
-      groupId: com.vaadin
-      artifactId: vaadin-testbench*
   # an explicit version wins over the Vaadin BOM; removed only where that BOM manages one: the old standalone add-on line (1.x) would sit beside Browserless 25 (#354)
   - org.openrewrite.maven.RemoveRedundantDependencyVersions:
       groupPattern: com.vaadin
@@ -67,11 +71,15 @@ recipeList:
       oldFullyQualifiedTypeName: org.junit.Ignore
       newFullyQualifiedTypeName: org.junit.jupiter.api.Disabled
   - org.openrewrite.java.testing.junit5.ExpectedExceptionToAssertThrows
+  # the size a test starts at, while the @BeforeEach methods are still there (#496)
+  - org.vaadin.addons.unified.rewrite.ViewportsRead
   - org.vaadin.addons.unified.rewrite.TestBenchSetupToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchAssertionsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchRenamesToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchGridCellsToUnified
   - org.vaadin.addons.unified.rewrite.TestBenchLookupsToUnified
+  # @Viewport where the test starts at a size, once the class has its Unified annotation (#496)
+  - org.vaadin.addons.unified.rewrite.ViewportsWritten
   - org.vaadin.addons.unified.rewrite.TestBenchLeftoversToEscapeHatch
   - org.openrewrite.java.RemoveAnnotationAttribute:
       annotationType: org.springframework.boot.test.context.SpringBootTest

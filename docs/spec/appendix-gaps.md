@@ -42,7 +42,7 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | No way to read the Vaadin UI id of the page | [parttio/dramafinder#280](https://github.com/parttio/dramafinder/issues/280) |
 | Grid: column indexes count the selection column (Flow's `getColumns()` doesn't) | [parttio/dramafinder#281](https://github.com/parttio/dramafinder/issues/281) |
 | Grid: no single locator for a column's header content across header rows | [parttio/dramafinder#282](https://github.com/parttio/dramafinder/issues/282) |
-| A tag query takes a tag name only, not `*` for any element (`UnifiedContainer`) | [parttio/dramafinder#295](https://github.com/parttio/dramafinder/issues/295) |
+| A tag query takes a tag name only, not `*` for any element (`UnifiedContainer`), nor several tags (`UnifiedLogin`'s lookup uses a plain CSS locator) | [parttio/dramafinder#295](https://github.com/parttio/dramafinder/issues/295) |
 | `GenericElement` has no focus or enabled state | [parttio/dramafinder#296](https://github.com/parttio/dramafinder/issues/296) |
 
 ## TestBench
@@ -60,10 +60,18 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 
 | Gap | Issue |
 |---|---|
+| A lookup's walk leaves out a `LitTemplate`'s `@Id` components (its virtual children), unless a global setting exposes every template's; the adapter walks them itself for a Template the test entered | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
+| Text, labels and attributes written in a `LitTemplate`'s HTML are empty on the server, so filters on them don't match on Browserless: a limit of Flow, which no Testing Tool can close; inside a Template, `withId(..)` is the portable lookup | [#347](https://github.com/parttio/unified-testing-tool/issues/347) |
+| Markup a Grid's `LitRenderer` draws (Crud's `vaadin-crud-edit`, a clickable card) exists only in a browser: a lookup in such a cell fails on Browserless and names `@RequiresBrowser`. Its functions run on Browserless only through the Escape Hatch, `GridTester.invokeLitRendererFunction` | [#608](https://github.com/parttio/unified-testing-tool/issues/608) |
+
+| Gap | Issue |
+|---|---|
 | `CheckboxTester` and `SwitchTester` have no `setValue` | [#59](https://github.com/parttio/unified-testing-tool/issues/59) |
 | `MultiSelectComboBoxTester` replaces the selection, can't deselect one item | [#61](https://github.com/parttio/unified-testing-tool/issues/61) |
 | `TabSheetTester` / `TabsTester`: no tab labels list, no selected tab label | [#64](https://github.com/parttio/unified-testing-tool/issues/64) |
 | No public reload, key press on a component, DOM event, focused component, component tree dump or redirect-tolerant navigate | [#66](https://github.com/parttio/unified-testing-tool/issues/66) |
+| `AbstractLoginTester.login(..)` fires the `LoginEvent` only: a login form with an `action` (a form post, Spring Security's `/login`) is neither posted nor reported. `UnifiedLogin.login(..)` checks the `action` first and fails asking for `@RequiresBrowser` or `@WithMockUser` | [#582](https://github.com/parttio/unified-testing-tool/issues/582) |
+| `Page.setLocation(..)` doesn't navigate: the UI stays on the view; no adapter workaround, a test that relies on it declares `@RequiresBrowser` | [#554](https://github.com/parttio/unified-testing-tool/issues/554) |
 | Plain Elements can't be found or clicked; the generic tester's click skips DOM listeners | [#70](https://github.com/parttio/unified-testing-tool/issues/70) |
 
 ## Outside the Testing Tools
@@ -71,3 +79,4 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | Gap | Ticket |
 |---|---|
 | Spring Boot: no hook to choose the test web environment at runtime (Browserless runs could otherwise skip the embedded server) | [#27](https://github.com/parttio/unified-testing-tool/issues/27) |
+| Flow: component classes that render the same tag and no attribute that tells them apart, so a browser lookup for one also finds the others, where Browserless finds the class only: `Div` and `FlexLayout` (`div`); `Input` and `RangeInput` (`input`); `Table`, `TableRow`, `TableDataCell` and the other `Table…` classes and their `NativeTable…` counterparts; `ListBox` and `MultiSelectListBox`; `Grid` and `TreeGrid`; `Icon`, `SvgIcon` and `FontIcon`; `ContextMenu` and `GridContextMenu`, `MenuItem` and `GridMenuItem`; `IntegerSlider` and `DecimalSlider`, `IntegerRangeSlider` and `DecimalRangeSlider`. A lookup for a supertype (`Grid` for a `TreeGrid`) is the same everywhere; scope or filter the lookup to single the component out | [#562](https://github.com/parttio/unified-testing-tool/issues/562) |

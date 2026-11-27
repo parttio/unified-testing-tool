@@ -66,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unified-evidence-browserless
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 
   playwright:
@@ -114,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unified-evidence-playwright
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 ```
 
@@ -155,6 +155,84 @@ With a job per Testing Tool, the jobs run side by side and none has another's ev
 It needs `actions: read`, and the evidence artifacts named as above (`unified-evidence-<tool>`). The job's summary page then says, for each Testing Tool against Browserless, which scenarios pass on one and fail on the other, which take different User Steps and where they part, and whether both runs tested the same commit ([what it says](reports-and-failures.md#compared-with-another-testing-tool)). It reports and fails nothing: exit code 2 means fewer than two Testing Tools left evidence, which the jobs before it already show.
 
 On another CI server the command is the same: give it the evidence directories the jobs kept.
+
+### A weekly responsive run: comparing Viewports
+
+Whether the application still works on a phone is worth a run of its own, not a cost on every build ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)): run the same tests once per Viewport, with the [layout checks](assertions-and-waiting.md#layout) on, then `CompareRuns` compares the runs with the widest. A scheduled workflow:
+
+```yaml
+name: Responsive
+on:
+  schedule:
+    - cron: '17 3 * * 1'   # Mondays
+  workflow_dispatch:
+jobs:
+  viewport:
+    strategy:
+      fail-fast: false
+      matrix:
+        viewport: ['phone:375x667', 'tablet:768x1024', 'desktop:1280x720']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: >-
+          mvn -B -ntp test -Dvaadin.testing.tool=playwright
+          -Dvaadin.testing.viewport=${{ matrix.viewport }}
+          -Dvaadin.testing.layout-checks=on -Dvaadin.testing.layout-checks.screenshots=on
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unified-evidence-${{ strategy.job-index }}
+          path: target/surefire-reports/unified-evidence/
+  compare:
+    needs: viewport
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unified-evidence-*
+          path: evidence
+      - run: |
+          mvn -B -ntp -q dependency:copy -Dartifact=org.vaadin.addons:unified-test-api:<version> -DoutputDirectory=tools
+          java -cp "tools/*" com.vaadin.testing.unified.report.CompareRuns --out comparison evidence/* || [ $? -eq 2 ]
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: viewport-comparison
+          path: |
+            comparison/
+            evidence/
+```
+
+Which tests take part is the build's choice: a Maven profile or JUnit tags. A test with its own `@Viewport` runs at that size in every run and is listed as not compared.
+
+The job summary gets a table of scenarios against Viewports (✘ fails, ⚠ Layout Findings, components lost, ⑂ where the runs take other User Steps), then each finding and each lost component that needs review. `comparison/viewport-comparison.html` is the page to review: click a cell for that size against the widest. You see its screenshots side by side, its findings, the components it loses (those hidden in the AppLayout drawer or the MenuBar overflow are explained, the others need review), and the User Steps, once, forking where the runs part. Keep `evidence/` in the artifact next to it: the page links to the screenshots there. `viewport-comparison.json` is the same for an agent. It reports and fails nothing.
+
+### Surefire and Failsafe in one build
+
+The evidence directory is `target/surefire-reports/unified-evidence` whichever plugin runs the tests. A build that runs its Browserless tests with Surefire and its ITs with Failsafe would put both phases in it: one `summary.md` with the counts of both runs, Failsafe's over Surefire's. The migration recipes give every `maven-failsafe-plugin` in `<build><plugins>` and in each profile its own directory, unless it sets one already ([#512](https://github.com/parttio/unified-testing-tool/issues/512)):
+
+```xml
+<plugin>
+    <artifactId>maven-failsafe-plugin</artifactId>
+    <configuration>
+        <systemPropertyVariables>
+            <vaadin.testing.evidence-dir>${project.build.directory}/failsafe-reports/unified-evidence</vaadin.testing.evidence-dir>
+        </systemPropertyVariables>
+    </configuration>
+</plugin>
+```
+
+Without the recipe, add it by hand. The upload above takes both directories (`*-reports`), and `ApplyDidYouMean` reads both. On Gradle, a second test task (`integrationTest`) sets `systemProperty("vaadin.testing.evidence-dir", layout.buildDirectory.dir("integration-test-reports/unified-evidence").get().asFile.path)`.
 
 ### Both Testing Tools in one build
 
@@ -235,7 +313,7 @@ The reports are written the same way on any CI server: only the GitHub job summa
 
 - **The base for Changed in this PR.** Pass the base branch as `-Dvaadin.testing.user-steps.changed-since=origin/<branch>`, and make sure the checkout has the history and that branch. Any git ref works; outside a merge request, leave it unset.
 - **The base branch's User Steps.** Keep the evidence directory of the base branch's builds, and pass a copy of the last one as `-Dvaadin.testing.user-steps.baseline-dir=<directory>` to show how each changed scenario's User Steps differ.
-- **Publishing.** Keep `target/surefire-reports/unified-evidence/` as a build artifact, also when the build passes, so `summary.md` and every test's User Steps can be read after the build.
+- **Publishing.** Keep `target/*-reports/unified-evidence/` (Surefire's, and Failsafe's when the build has it) as a build artifact, also when the build passes, so `summary.md` and every test's User Steps can be read after the build.
 
 Settings are read from JUnit configuration parameters, which fall back to system properties, so `-D` on the Maven command line reaches the tests.
 
@@ -258,12 +336,12 @@ ui-tests:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports/unified-evidence/
+      - target/*-reports/unified-evidence/
 ```
 
 ### Jenkins
 
-In a multibranch pipeline building a pull request, Jenkins sets `CHANGE_TARGET` to the base branch: pass `-Dvaadin.testing.user-steps.changed-since=origin/$CHANGE_TARGET` when it is set, and archive the evidence directory with `archiveArtifacts artifacts: '**/target/surefire-reports/unified-evidence/**', allowEmptyArchive: true` in a `post { always { … } }` block.
+In a multibranch pipeline building a pull request, Jenkins sets `CHANGE_TARGET` to the base branch: pass `-Dvaadin.testing.user-steps.changed-since=origin/$CHANGE_TARGET` when it is set, and archive the evidence directory with `archiveArtifacts artifacts: '**/target/*-reports/unified-evidence/**', allowEmptyArchive: true` in a `post { always { … } }` block.
 
 ## Settings
 

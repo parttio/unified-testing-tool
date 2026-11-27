@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,7 @@ public final class StepRecorder {
         private List<CallSite> codePath = List.of();
         private String snapshot;
         private com.vaadin.testing.unified.spi.Highlight highlight;
+        private Layout layout;
         /** A failed step's Step Target, for the failure's evidence; null otherwise. */
         private transient com.vaadin.testing.unified.UnifiedElement target;
 
@@ -102,6 +104,8 @@ public final class StepRecorder {
         public String snapshot() { return snapshot; }
         /** Where its screenshot shows its Step Target; null without one. */
         public com.vaadin.testing.unified.spi.Highlight highlight() { return highlight; }
+        /** What the automatic layout checks measured during the step; null when they didn't. */
+        public Layout layout() { return layout; }
     }
 
     /** A step group: {@code page.step("Edit Alan Turing", () -> …)}, a User Task's heading. */
@@ -184,6 +188,87 @@ public final class StepRecorder {
         boolean step;
         /** The Step Target: the element the step last singled out, or null. */
         com.vaadin.testing.unified.UnifiedElement target;
+        /** The Step Target's name as the user read it, when its lookup doesn't name it ({@link #nameTarget}). */
+        String targetName;
+        /** User Steps that follow this one when it passes, e.g. the page a link opened ({@link #followedBy}). */
+        final List<Supplier<Phrase>> followUps = new ArrayList<>();
+        /** The layout measured during the step by the automatic layout checks, or null. */
+        Layout layout;
+    }
+
+    /**
+     * What the automatic layout checks measured during a User Step (ADR 0011).
+     *
+     * @param point the measurement's number in the test, from 1
+     * @param findings the Layout Findings
+     * @param screenshot its screenshot, relative to the test's evidence directory; null without one
+     * @param components the page's components then, with their Reach: what a Viewport Comparison compares
+     */
+    public record Layout(int point, List<LayoutFinding> findings, String screenshot, List<LayoutComponent> components) {
+        public Layout(int point, List<LayoutFinding> findings, String screenshot) {
+            this(point, findings, screenshot, List.of());
+        }
+    }
+
+    /**
+     * One component of a measured page, as its Findable View line names it.
+     *
+     * @param line its kind and name: {@code button “Save”}
+     * @param reach {@code visible}, {@code after scroll}, {@code clipped}, {@code behind} or {@code hidden}
+     * @param by what clips, covers or hides it; null otherwise
+     */
+    public record LayoutComponent(String line, String reach, String by) {}
+
+    /**
+     * One Layout Finding, as the reports show it.
+     *
+     * @param kind {@code scroll}, {@code clipped} or {@code overlap}
+     * @param text what it says
+     * @param box where it is, in CSS pixels of the Viewport: x, y, width, height; empty when unknown
+     */
+    public record LayoutFinding(String kind, String text, List<Double> box) {}
+
+    private boolean layoutChecks;
+    private boolean layoutChecksFail;
+    private java.nio.file.Path layoutScreenshots;
+    private int layoutPoints;
+
+    /**
+     * Turns the automatic layout checks on for this test, in a browser (ADR 0011).
+     *
+     * @param screenshots where each measurement keeps a screenshot of the Viewport; null for none
+     */
+    public void layoutChecks(boolean fail, java.nio.file.Path screenshots) {
+        this.layoutChecks = true;
+        this.layoutChecksFail = fail;
+        this.layoutScreenshots = screenshots;
+    }
+
+    public boolean layoutChecks() {
+        return layoutChecks;
+    }
+
+    /** Whether a Layout Finding fails its User Step. */
+    public boolean layoutChecksFail() {
+        return layoutChecksFail;
+    }
+
+    /** Where each measurement keeps a screenshot; null for none. */
+    public java.nio.file.Path layoutScreenshots() {
+        return layoutScreenshots;
+    }
+
+    /** The next measurement's number. */
+    public synchronized int nextLayoutPoint() {
+        return ++layoutPoints;
+    }
+
+    /** The running User Step measured this layout; outside a step, nothing. */
+    public void layout(Layout layout) {
+        Frame f = frame.get();
+        if (f != null) {
+            f.layout = layout;
+        }
     }
 
     /**
@@ -197,12 +282,27 @@ public final class StepRecorder {
         }
     }
 
+    /**
+     * The running User Step's target reads as {@code name} when its lookup gave it none: what the user read on the
+     * component before the step changed it, such as the header of a dialog the step closes. Outside a step, nothing.
+     */
+    public void nameTarget(String name) {
+        Frame f = frame.get();
+        if (f != null && name != null) {
+            f.targetName = name;
+        }
+    }
+
     private final ThreadLocal<Frame> frame = new ThreadLocal<>();
     private final Group root = new Group(null, "", null, null);
     private final Deque<Group> open = new ArrayDeque<>();
     private final Set<String> secrets = new LinkedHashSet<>();
+    /** Sign-ins' user names that contain their password, with those passwords: not masked inside the name. */
+    private final Map<String, Set<String>> userNames = new LinkedHashMap<>();
     /** The Wrapper types the test has looked up, in order: the custom ones show in its Findable View. */
     private final Set<Class<?>> wrapperTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
+    private final Set<Class<?>> templateTypes = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
+    private final Set<String> applicationPackages = java.util.Collections.synchronizedSet(new LinkedHashSet<>());
     private final Instant startedAt = Instant.now();
     private final long start = System.nanoTime();
     private int steps;
@@ -222,6 +322,7 @@ public final class StepRecorder {
     public static final int MAX_LOG_LINES = 100;
     private int windows = 1;
     private volatile String scenario;
+    private volatile boolean scenarioAuthored;
     private volatile String evidenceDir;
     private long durationNanos = -1;
     /** The session of each window, by window name ("" for the first): snapshots and trace groups. */
@@ -251,14 +352,14 @@ public final class StepRecorder {
         started(f);
         // a void Wrapper method is a User Step whatever it does; a getter is known to be one only at the end
         AdapterSession traced = voidAction ? traceStart(window, () -> action.get().render()) : null;
+        Object result;
         try {
-            Object result = body.run();
+            result = body.run();
             if (f.acted || voidAction) {
                 add(f, action.get(), window, null);
             } else if (f.read) {
                 countRead();
             }
-            return result;
         } catch (Throwable t) {
             add(f, f.acted || voidAction ? action.get() : read.get(), window, t);
             throw t;
@@ -266,6 +367,28 @@ public final class StepRecorder {
             ended(f);
             frame.remove();
             traceEnd(traced);
+        }
+        recordFollowUps(f, window);
+        return result;
+    }
+
+    /**
+     * A User Step that follows the running one once it passes, such as {@code open “users”} after a click on a link
+     * that navigated: what the user saw happen, recorded as {@code navigate(..)} records it. Outside a User Step, it
+     * is recorded at once.
+     */
+    public void followedBy(Supplier<Phrase> phrase, String window) {
+        Frame current = frame.get();
+        if (current != null) {
+            current.followUps.add(phrase);
+        } else {
+            step(phrase, window, () -> null);
+        }
+    }
+
+    private void recordFollowUps(Frame f, String window) {
+        for (Supplier<Phrase> phrase : f.followUps) {
+            step(phrase, window, () -> null);
         }
     }
 
@@ -426,10 +549,10 @@ public final class StepRecorder {
         frame.set(f);
         started(f);
         AdapterSession traced = traceStart(window, () -> phrase.get().render());
+        T result;
         try {
-            T result = sneaky(body);
+            result = sneaky(body);
             add(f, phrase.get(), window, null);
-            return result;
         } catch (Throwable t) {
             add(f, phrase.get(), window, t);
             throw t;
@@ -438,6 +561,8 @@ public final class StepRecorder {
             frame.remove();
             traceEnd(traced);
         }
+        recordFollowUps(f, window);
+        return result;
     }
 
     /** A call the recorder can't see into, e.g. {@code waitUntil(..)}: one gap, whatever runs inside. */
@@ -520,9 +645,12 @@ public final class StepRecorder {
         }
     }
 
-    private synchronized void add(Frame f, Phrase phrase, String window, Throwable error) {
+    private synchronized void add(Frame f, Phrase given, String window, Throwable error) {
+        Phrase phrase = f.targetName == null || given.target() == null || given.target().name() != null ? given
+                : given.withTarget(given.target().withName(f.targetName));
         Group container = current();
         Step step = new Step(container.nextIndex(), ++steps, phrase, window, f.callSite);
+        step.layout = f.layout;
         last = step;
         step.durationNanos = System.nanoTime() - f.start;
         if (error != null) {
@@ -633,9 +761,61 @@ public final class StepRecorder {
      * Names the test the recorder belongs to, for the failures it completes: the scenario, and the test's evidence
      * directory as the failure shows it.
      */
+    private com.vaadin.testing.unified.ViewportSize viewport;
+    private boolean viewportFixed;
+
+    /**
+     * The Viewport the test ran at, for its reports: {@code fixed} when the test declares it with {@code @Viewport},
+     * so a Viewport Comparison leaves it out. Not called without a browser.
+     */
+    public void viewport(com.vaadin.testing.unified.ViewportSize size, boolean fixed) {
+        this.viewport = size;
+        this.viewportFixed = fixed;
+        viewportChanged(null, size);
+    }
+
+    /** Each window's Viewport now ("" for the first window). */
+    private final Map<String, com.vaadin.testing.unified.ViewportSize> currentViewports =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** A window's Viewport changed, or a window opened at one. */
+    public void viewportChanged(String window, com.vaadin.testing.unified.ViewportSize size) {
+        currentViewports.put(window == null ? "" : window, size);
+    }
+
+    /** The window's Viewport now; null without a browser. */
+    public com.vaadin.testing.unified.ViewportSize currentViewport(String window) {
+        return currentViewports.get(window == null ? "" : window);
+    }
+
+    /** The Viewport the test ran at; null without a browser. */
+    public com.vaadin.testing.unified.ViewportSize viewport() {
+        return viewport;
+    }
+
+    /** Whether the test declares its Viewport. */
+    public boolean viewportFixed() {
+        return viewportFixed;
+    }
+
     public void describeTest(String scenario, String evidenceDir) {
+        describeTest(scenario, false, evidenceDir);
+    }
+
+    /**
+     * {@link #describeTest(String, String)}, saying whether the test's author wrote the scenario's name
+     * ({@code @DisplayName}, the method's name), which the reports then show unmasked (ADR 0014). A parameterized
+     * or repeated invocation's name, built from the test's arguments, is masked like the rest.
+     */
+    public void describeTest(String scenario, boolean authored, String evidenceDir) {
         this.scenario = scenario;
+        this.scenarioAuthored = authored;
         this.evidenceDir = evidenceDir;
+    }
+
+    /** The scenario's name as the reports show it: as written when its author wrote it, else masked. */
+    public String maskScenario(String name) {
+        return scenarioAuthored ? name : mask(name);
     }
 
     /**
@@ -647,7 +827,7 @@ public final class StepRecorder {
         FailureParts parts = failure.parts();
         parts.mask(this::mask);
         if (parts.scenario() == null && scenario != null) {
-            parts.scenario(scenario);
+            parts.scenario(scenario, scenarioAuthored);
         }
         if (parts.evidenceDir() == null && evidenceDir != null) {
             parts.evidenceDir(evidenceDir);
@@ -692,6 +872,37 @@ public final class StepRecorder {
         wrapperTypes.add(wrapperType);
     }
 
+    /** A {@code findTemplate(..)} of this component type started, in any window of the test. */
+    public void templateUsed(Class<?> templateType) {
+        templateTypes.add(templateType);
+    }
+
+    /** The application's own packages, where a Template's class is looked up by its tag (ADR 0018). */
+    public void applicationPackages(java.util.Collection<String> packages) {
+        applicationPackages.addAll(packages);
+    }
+
+    /** The test opened this route: its package is one of the application's. */
+    public void routeUsed(Class<?> route) {
+        if (!route.getPackageName().isEmpty()) {
+            applicationPackages.add(route.getPackageName());
+        }
+    }
+
+    /** The application's own packages known so far: from the test, and the routes it opened. */
+    public List<String> applicationPackages() {
+        synchronized (applicationPackages) {
+            return List.copyOf(applicationPackages);
+        }
+    }
+
+    /** The Template classes the test has looked up with {@code findTemplate(..)} so far, first lookup first. */
+    public List<Class<?>> templateTypes() {
+        synchronized (templateTypes) {
+            return List.copyOf(templateTypes);
+        }
+    }
+
     /** The Wrapper types the test has looked up so far, in the order of their first lookup. */
     public List<Class<?>> wrapperTypes() {
         synchronized (wrapperTypes) {
@@ -709,11 +920,58 @@ public final class StepRecorder {
         return value;
     }
 
-    /** The text with every secret value replaced by {@value Phrase#MASK}. */
-    public synchronized String mask(String text) {
-        if (text == null) {
-            return null;
+    /**
+     * Hides a sign-in's password like {@link #secret(String)}, except inside its own user name, which isn't secret
+     * (ADR 0014): {@code login("barista@vaadin.com", "barista")} is shown as {@code “barista@vaadin.com”}. A
+     * password equal to its user name is masked there too.
+     */
+    public synchronized void password(String username, String password) {
+        secret(password);
+        if (username != null && password != null && !password.isEmpty() && !username.equals(password)
+                && username.contains(password)) {
+            userNames.computeIfAbsent(username, u -> new LinkedHashSet<>()).add(password);
         }
+    }
+
+    /**
+     * The text with every secret value replaced by {@value Phrase#MASK}, except a sign-in's password inside that
+     * sign-in's user name. At each position the longest match wins, a secret over a user name of the same length.
+     */
+    public synchronized String mask(String text) {
+        if (text == null || secrets.isEmpty()) {
+            return text;
+        }
+        StringBuilder masked = new StringBuilder(text.length());
+        int i = 0;
+        while (i < text.length()) {
+            String secret = longestAt(text, i, secrets);
+            String userName = longestAt(text, i, userNames.keySet());
+            if (userName != null && (secret == null || userName.length() > secret.length())) {
+                Set<String> others = new LinkedHashSet<>(secrets);
+                others.removeAll(userNames.get(userName));
+                masked.append(replaceAll(userName, others));
+                i += userName.length();
+            } else if (secret != null) {
+                masked.append(Phrase.MASK);
+                i += secret.length();
+            } else {
+                masked.append(text.charAt(i++));
+            }
+        }
+        return masked.toString();
+    }
+
+    private static String longestAt(String text, int index, Set<String> candidates) {
+        String longest = null;
+        for (String candidate : candidates) {
+            if (text.startsWith(candidate, index) && (longest == null || candidate.length() > longest.length())) {
+                longest = candidate;
+            }
+        }
+        return longest;
+    }
+
+    private static String replaceAll(String text, Set<String> secrets) {
         String masked = text;
         for (String secret : secrets) {
             masked = masked.replace(secret, Phrase.MASK);
@@ -769,6 +1027,17 @@ public final class StepRecorder {
 
     public void failureHighlight(com.vaadin.testing.unified.spi.Highlight highlight) {
         this.failureHighlight = highlight;
+    }
+
+    private volatile List<String> failureEvidence = List.of();
+
+    /** The failure evidence files in the test's evidence directory, by name; empty without any. */
+    public List<String> failureEvidence() {
+        return failureEvidence;
+    }
+
+    public void failureEvidence(List<String> names) {
+        this.failureEvidence = List.copyOf(names);
     }
 
     public synchronized Step stepThatThrew(Throwable failure) {

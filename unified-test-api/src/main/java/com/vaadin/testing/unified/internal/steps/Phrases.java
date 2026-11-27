@@ -2,6 +2,8 @@ package com.vaadin.testing.unified.internal.steps;
 
 import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UserStepVerb;
+import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.internal.LazyElement;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -53,11 +55,25 @@ public final class Phrases {
             case "upload" -> Phrase.template("upload", "upload {value} to", target, uploadName(args));
             case "send" -> Phrase.template("send", "send {value} in", target, values(args));
             case "pressKey" -> Phrase.template("press", "press {value} on", target, values(args));
-            default -> {
-                String verb = String.join(" ", StepTarget.splitWords(name)).toLowerCase(Locale.ROOT);
-                yield Phrase.of(verb, target, values(args));
-            }
+            // a confirm dialog's answer reads as the user gives it: confirm “Delete order?”
+            case "confirm", "reject", "cancel" -> UnifiedConfirmDialog.class.isAssignableFrom(wrapperType)
+                    ? Phrase.of(name, target).byNameOnly() : Phrase.of(name, target);
+            // signing in names the user, never the password: sign in as “barista@vaadin.com” in login
+            case "login" -> UnifiedLogin.class.isAssignableFrom(wrapperType)
+                    ? Phrase.template("sign in", "sign in as {value} in", target,
+                            values(args == null || args.length == 0 ? null : new Object[] { args[0] }))
+                    : inWords(name, target, args);
+            case "forgotPassword" -> UnifiedLogin.class.isAssignableFrom(wrapperType)
+                    ? Phrase.template("press", "press “Forgot password” in", target, List.of())
+                    : inWords(name, target, args);
+            default -> inWords(name, target, args);
         };
+    }
+
+    /** The method name in words, with its arguments as values: {@code toggleDetails} → "toggle details". */
+    private static Phrase inWords(String name, StepTarget target, Object[] args) {
+        String verb = String.join(" ", StepTarget.splitWords(name)).toLowerCase(Locale.ROOT);
+        return Phrase.of(verb, target, values(args));
     }
 
     /**
@@ -157,8 +173,12 @@ public final class Phrases {
                 List.of(String.valueOf(parameter)));
     }
 
+    /**
+     * {@code open “users”}: the path as given, except the root route, which reads {@code open “/”} whether it was
+     * spelled {@code ""} or {@code "/"}.
+     */
     public static Phrase open(String path) {
-        return Phrase.template("open", "open {value}", null, List.of(path));
+        return Phrase.template("open", "open {value}", null, List.of(path.isEmpty() ? "/" : path));
     }
 
     /** {@code PeopleView} → "People", {@code EditPersonView} → "Edit Person". */

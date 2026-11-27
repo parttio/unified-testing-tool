@@ -60,7 +60,7 @@ class GuideExamples {
 
     void ownTimeout(UnifiedPage page) {
         // --8<-- [start:ownTimeout]
-        UnifiedButton slow = (UnifiedButton) page.find(UnifiedButton.class).withText("Export")
+        UnifiedButton slow = page.find(UnifiedButton.class).withText("Export")
                 .withTimeout(Duration.ofSeconds(30));
         slow.click();
         // --8<-- [end:ownTimeout]

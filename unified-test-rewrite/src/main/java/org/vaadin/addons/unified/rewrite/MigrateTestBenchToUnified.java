@@ -35,6 +35,11 @@ public class MigrateTestBenchToUnified extends Recipe {
             required = false)
     private final @Nullable Boolean addAgentSkill;
 
+    @Option(displayName = "Test a Spring Boot app in the test",
+            description = TestBenchSetupToUnified.SPRING_BOOT_TEST_OPTION,
+            required = false)
+    private final @Nullable Boolean springBootTest;
+
     public MigrateTestBenchToUnified() {
         this(null, null, null);
     }
@@ -47,13 +52,24 @@ public class MigrateTestBenchToUnified extends Recipe {
         this(addPlaywright, includePageObjects, null);
     }
 
+    public MigrateTestBenchToUnified(@Nullable Boolean addPlaywright, @Nullable Boolean includePageObjects,
+            @Nullable Boolean addAgentSkill) {
+        this(addPlaywright, includePageObjects, addAgentSkill, null);
+    }
+
     @JsonCreator
     public MigrateTestBenchToUnified(@JsonProperty("addPlaywright") @Nullable Boolean addPlaywright,
             @JsonProperty("includePageObjects") @Nullable Boolean includePageObjects,
-            @JsonProperty("addAgentSkill") @Nullable Boolean addAgentSkill) {
+            @JsonProperty("addAgentSkill") @Nullable Boolean addAgentSkill,
+            @JsonProperty("springBootTest") @Nullable Boolean springBootTest) {
         this.addPlaywright = addPlaywright;
         this.includePageObjects = includePageObjects;
         this.addAgentSkill = addAgentSkill;
+        this.springBootTest = springBootTest;
+    }
+
+    public @Nullable Boolean getSpringBootTest() {
+        return springBootTest;
     }
 
     public @Nullable Boolean getAddAgentSkill() {
@@ -86,9 +102,13 @@ public class MigrateTestBenchToUnified extends Recipe {
             names.add("org.vaadin.addons.unified.rewrite.AddPlaywrightAdapter");
         }
         names.add("org.vaadin.addons.unified.rewrite.MigrateTestBenchTestCode");
-        Environment recipes = Environment.builder().load(DeclaredRecipes.load(RECIPES)).build();
+        // the option reaches the setup recipe inside the declared test-code recipe
+        Environment recipes = Environment.builder().load(DeclaredRecipes.load(RECIPES, Boolean.FALSE.equals(springBootTest)
+                ? yaml -> DeclaredRecipes.withOption(yaml, TestBenchSetupToUnified.class, "springBootTest", "false")
+                : yaml -> yaml)).build();
         List<Recipe> list = new ArrayList<>(names.stream().map(name -> recipes.activateRecipes(name)).map(Recipe.class::cast).toList());
         list.add(new RemoveJUnit4WhenUnused()); // scans every source, so outside the build and test-code preconditions
+        list.add(new RemoveTestBenchWhenUnused(includePageObjects)); // the same, on the migrated test code
         if (Boolean.TRUE.equals(addAgentSkill)) {
             list.add(new AddMigrationMarkersSkill());
         }
@@ -103,11 +123,12 @@ public class MigrateTestBenchToUnified extends Recipe {
     public boolean equals(Object o) {
         return o instanceof MigrateTestBenchToUnified other && Objects.equals(addPlaywright, other.addPlaywright)
                 && Objects.equals(includePageObjects, other.includePageObjects)
-                && Objects.equals(addAgentSkill, other.addAgentSkill);
+                && Objects.equals(addAgentSkill, other.addAgentSkill)
+                && Objects.equals(springBootTest, other.springBootTest);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(addPlaywright, includePageObjects, addAgentSkill);
+        return Objects.hash(addPlaywright, includePageObjects, addAgentSkill, springBootTest);
     }
 }

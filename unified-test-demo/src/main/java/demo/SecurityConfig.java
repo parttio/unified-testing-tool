@@ -20,11 +20,16 @@ public class SecurityConfig {
         return http.with(VaadinSecurityConfigurer.vaadin(), vaadin -> vaadin.loginView(LoginView.class)).build();
     }
 
-    /** Demo users; passwords equal the names. */
+    /**
+     * Demo users; alice's and bob's passwords equal their names. The barista signs in through the login form
+     * ({@code LoginTest}). A password inside its own user name leaves the name readable in the reports (#605).
+     */
     @Bean
     UserDetailsService users() {
         return new InMemoryUserDetailsManager(
                 User.withUsername("alice").password("{noop}alice").roles("ADMIN").build(),
-                User.withUsername("bob").password("{noop}bob").roles("USER").build());
+                User.withUsername("bob").password("{noop}bob").roles("USER").build(),
+                User.withUsername(SignInFormView.USERNAME).password("{noop}" + SignInFormView.PASSWORD).roles("USER")
+                        .build());
     }
 }

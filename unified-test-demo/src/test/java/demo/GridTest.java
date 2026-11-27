@@ -47,6 +47,20 @@ class GridTest {
     }
     // --8<-- [end:findsARowByWhatItShows]
 
+    // --8<-- [start:namesAUserTaskAfterARow]
+    @Test
+    @DisplayName("The user selects the Editor row in a User Task named after the row")
+    void namesAUserTaskAfterARow(UnifiedPage page) {
+        UnifiedGrid roles = grid(page, "roles");
+        UnifiedGrid.UnifiedGridRow editor = roles.row().withCellText("Role", "Editor");
+
+        page.step("Select " + editor, editor::select);
+
+        assertEquals("row where Role is “Editor” in grid (test id “roles”)", editor.toString());
+        assertThat(editor).isSelected();
+    }
+    // --8<-- [end:namesAUserTaskAfterARow]
+
     // --8<-- [start:waitsForAColumn]
     @Test
     @DisplayName("Showing the archive date adds an Archived on column, hiding it takes it away")

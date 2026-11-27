@@ -4,9 +4,14 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.component.UnifiedButton;
+import com.vaadin.testing.unified.component.UnifiedConfirmDialog;
 import com.vaadin.testing.unified.component.UnifiedDialog;
+import com.vaadin.testing.unified.component.UnifiedLogin;
+import com.vaadin.testing.unified.component.UnifiedOverlayDialog;
 import com.vaadin.testing.unified.component.UnifiedGrid;
 import com.vaadin.testing.unified.internal.grid.GridSupport;
+import com.vaadin.testing.unified.internal.messages.MessageSupport;
+import com.vaadin.testing.unified.component.UnifiedMessageList;
 import java.util.List;
 import com.vaadin.testing.unified.component.UnifiedNotification;
 import com.vaadin.testing.unified.component.UnifiedCheckbox;
@@ -20,6 +25,7 @@ import com.vaadin.testing.unified.component.UnifiedNumberField;
 import com.vaadin.testing.unified.component.UnifiedTextField;
 import java.time.LocalDate;
 import com.vaadin.testing.unified.internal.LazyElement;
+import com.vaadin.testing.unified.internal.LayoutMeasurement;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.UnifiedPageImpl;
 import com.vaadin.testing.unified.internal.Wrappers;
@@ -61,19 +67,29 @@ public final class UnifiedAssertions {
     public static MultiSelectAssert assertThat(UnifiedMultiSelectComboBox field) { return new MultiSelectAssert(field); }
     public static TabSheetAssert assertThat(UnifiedTabSheet tabSheet) { return new TabSheetAssert(tabSheet); }
     public static TextAreaAssert assertThat(com.vaadin.testing.unified.component.UnifiedTextArea field) { return new TextAreaAssert(field); }
+    public static EmailFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedEmailField field) { return new EmailFieldAssert(field); }
+    /** Its values read {@code “••••”} in a failure, as they do in the User Steps. */
+    public static PasswordFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedPasswordField field) { return new PasswordFieldAssert(field); }
     public static IntegerFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedIntegerField field) { return new IntegerFieldAssert(field); }
     public static BigDecimalFieldAssert assertThat(com.vaadin.testing.unified.component.UnifiedBigDecimalField field) { return new BigDecimalFieldAssert(field); }
     public static DateTimePickerAssert assertThat(com.vaadin.testing.unified.component.UnifiedDateTimePicker field) { return new DateTimePickerAssert(field); }
     public static TabsAssert assertThat(com.vaadin.testing.unified.component.UnifiedTabs tabs) { return new TabsAssert(tabs); }
     public static DetailsAssert assertThat(com.vaadin.testing.unified.component.UnifiedDetails details) { return new DetailsAssert(details); }
+    public static AppLayoutAssert assertThat(com.vaadin.testing.unified.component.UnifiedAppLayout layout) { return new AppLayoutAssert(layout); }
     public static MenuBarAssert assertThat(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { return new MenuBarAssert(menuBar); }
+    public static SideNavAssert assertThat(com.vaadin.testing.unified.component.UnifiedSideNav sideNav) { return new SideNavAssert(sideNav); }
+    public static SideNavItemAssert assertThat(com.vaadin.testing.unified.component.UnifiedSideNavItem item) { return new SideNavItemAssert(item); }
     public static ButtonAssert assertThat(UnifiedButton button) { return new ButtonAssert(button); }
+    public static LinkAssert assertThat(com.vaadin.testing.unified.component.UnifiedLink link) { return new LinkAssert(link); }
     public static NotificationAssert assertThat(UnifiedNotification notification) { return new NotificationAssert(notification); }
     public static DialogAssert assertThat(UnifiedDialog dialog) { return new DialogAssert(dialog); }
+    public static ConfirmDialogAssert assertThat(UnifiedConfirmDialog dialog) { return new ConfirmDialogAssert(dialog); }
+    public static LoginAssert assertThat(UnifiedLogin login) { return new LoginAssert(login); }
     public static GridAssert assertThat(UnifiedGrid grid) { return new GridAssert(grid); }
     public static GridRowAssert assertThat(UnifiedGrid.UnifiedGridRow row) { return new GridRowAssert(row); }
     public static GridColumnAssert assertThat(UnifiedGrid.UnifiedGridColumn column) { return new GridColumnAssert(column); }
     public static MessageListAssert assertThat(com.vaadin.testing.unified.component.UnifiedMessageList list) { return new MessageListAssert(list); }
+    public static MessageAssert assertThat(com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message) { return new MessageAssert(message); }
     public static GenericAssert assertThat(UnifiedWrapper wrapper) { return new GenericAssert(wrapper); }
 
     // ---------------------------------------------------------------- shared retry
@@ -137,6 +153,27 @@ public final class UnifiedAssertions {
         return ((Matches) matches).count();
     }
 
+    /** A component's Reach as a failure shows it: {@code after scroll}, {@code clipped by div#box}. */
+    record ReachShown(LayoutMeasurement.Reach reach) {
+        @Override
+        public String toString() {
+            return reach.reach() + (reach.by() == null ? "" : " by " + reach.by());
+        }
+    }
+
+    /** Layout Findings as a failure shows them: one after the other, or none. */
+    record LayoutFindings(List<LayoutMeasurement.Finding> findings) {
+        boolean none() {
+            return findings.isEmpty();
+        }
+
+        @Override
+        public String toString() {
+            return findings.isEmpty() ? "no Layout Findings"
+                    : String.join("; ", findings.stream().map(LayoutMeasurement.Finding::text).toList());
+        }
+    }
+
     // ---------------------------------------------------------------- page
 
     public static final class PageAssert {
@@ -150,11 +187,69 @@ public final class UnifiedAssertions {
             return this;
         }
 
+        /**
+         * Nothing on the page scrolls sideways at the current Viewport: neither the page itself nor a container in it,
+         * such as AppLayout's content area. Grid, Tabs, TabSheet and VirtualList scroll sideways by design and don't
+         * count (ADR 0011). Retries until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public PageAssert hasNoHorizontalScroll() {
+            run.requireBrowser("hasNoHorizontalScroll");
+            check(run, () -> Phrases.page("see", "see no sideways scroll"), () -> "the page",
+                    "to have no sideways scroll", null,
+                    () -> new LayoutFindings(LayoutMeasurement.measure(run, null).findings("scroll")),
+                    v -> ((LayoutFindings) v).none());
+            return this;
+        }
+
+        /**
+         * No Layout Finding on the page at the current Viewport: nothing scrolls sideways
+         * ({@link #hasNoHorizontalScroll()}), no component is clipped out of reach, and no component a user acts on
+         * overlaps another (ADR 0011). Retries until the timeout. Needs
+         * {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public PageAssert hasNoLayoutFindings() {
+            run.requireBrowser("hasNoLayoutFindings");
+            check(run, () -> Phrases.page("see", "see no Layout Findings"), () -> "the page",
+                    "to have no Layout Findings", null,
+                    () -> new LayoutFindings(LayoutMeasurement.measure(run, null).findings()),
+                    v -> ((LayoutFindings) v).none());
+            return this;
+        }
+
         public PageAssert hasPath(String path) {
             String expected = path.startsWith("/") ? path.substring(1) : path;
             check(run, () -> Phrase.template("see", "see path {value}", null, List.of(expected)), () -> "the page",
                     "to have path", expected, () -> run.session().currentPath(), expected::equals);
             return this;
+        }
+
+        /**
+         * The page's path matches this regular expression as a whole, for a path the test only partly knows, such
+         * as {@code "products/\\d+"} after opening an item whose id it doesn't know. The path is the one
+         * {@link #hasPath(String)} compares: no leading {@code /}, no query string. Retries until the timeout.
+         *
+         * @throws java.util.regex.PatternSyntaxException at once, if {@code regex} is not a regular expression
+         */
+        public PageAssert hasPathMatching(String regex) {
+            return hasPathMatching(java.util.regex.Pattern.compile(regex));
+        }
+
+        /**
+         * {@link #hasPathMatching(String)} with a compiled pattern, e.g. one with
+         * {@link java.util.regex.Pattern#CASE_INSENSITIVE}. The User Step shows the pattern's text.
+         */
+        public PageAssert hasPathMatching(java.util.regex.Pattern pattern) {
+            java.util.regex.Pattern relative = pattern.pattern().startsWith("/")
+                    ? java.util.regex.Pattern.compile(pattern.pattern().substring(1), pattern.flags()) : pattern;
+            String regex = relative.pattern();
+            check(run, () -> Phrase.template("see", "see path matching {value}", null, List.of(regex)),
+                    () -> "the page", "to have path matching", regex, () -> run.session().currentPath(),
+                    v -> v != null && relative.matcher(withoutLeadingSlash(v.toString())).matches());
+            return this;
+        }
+
+        private static String withoutLeadingSlash(String path) {
+            return path.startsWith("/") ? path.substring(1) : path;
         }
 
         /**
@@ -222,6 +317,26 @@ public final class UnifiedAssertions {
             return self();
         }
 
+        /**
+         * {@link #check} on what a user typed: on a password field its text never reaches the failure, as it never
+         * reaches the User Steps, and reads {@code “••••”}, expected and found.
+         */
+        SELF checkTyped(String expectation, Object expected, Supplier<?> actual, Predicate<Object> ok) {
+            if (!secret()) {
+                return check(expectation, expected, actual, ok);
+            }
+            return check(expectation, Hidden.of(expected), () -> Hidden.of(actual.get()), v -> ok.test(Hidden.reveal(v)));
+        }
+
+        /** Whether what is typed into the component is hidden in the reports (a password field). */
+        private boolean secret() {
+            try {
+                return StepTarget.of(element).secret();
+            } catch (RuntimeException e) {
+                return false;
+            }
+        }
+
         /** At least one component matches the lookup (for a Wrapper from {@code all()}: one at its position). */
         public SELF exists() {
             int needed = Math.max(element.index(), 0) + 1;
@@ -237,6 +352,30 @@ public final class UnifiedAssertions {
         /** Exactly this many components match the lookup. */
         public SELF hasCount(int expected) {
             return check("to have count", expected, element::countNow, v -> Objects.equals(v, expected));
+        }
+
+        /**
+         * On screen at the current Viewport without scrolling, whether or not something covers it (ADR 0011). Retries
+         * until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public SELF isInViewport() {
+            run.requireBrowser("isInViewport");
+            return check("to be in the viewport", null, this::reach,
+                    v -> Set.of("visible", "behind").contains(((ReachShown) v).reach().reach()));
+        }
+
+        /**
+         * Not cut off: neither a box with hidden overflow nor the page keeps a user from it, though they may have to
+         * scroll to it (ADR 0011). Retries until the timeout. Needs {@link com.vaadin.testing.unified.RequiresBrowser}.
+         */
+        public SELF isNotClipped() {
+            run.requireBrowser("isNotClipped");
+            return check("not to be clipped", null, this::reach,
+                    v -> !Set.of("clipped", "hidden").contains(((ReachShown) v).reach().reach()));
+        }
+
+        private ReachShown reach() {
+            return new ReachShown(LayoutMeasurement.measure(run, element.concrete()).subject());
         }
 
         public SELF isVisible() { return check("to be visible", null, wrapper::isVisible, Boolean.TRUE::equals); }
@@ -267,6 +406,22 @@ public final class UnifiedAssertions {
         }
     }
 
+    /** A text, as a failure shows a secret one: {@code “••••”}. Empty text stays as it is: it hides nothing. */
+    private record Hidden(CharSequence text) {
+        static Object of(Object value) {
+            return value instanceof CharSequence text && !text.isEmpty() ? new Hidden(text) : value;
+        }
+
+        static Object reveal(Object value) {
+            return value instanceof Hidden hidden ? hidden.text : value;
+        }
+
+        @Override
+        public String toString() {
+            return "“" + com.vaadin.testing.unified.internal.steps.Phrase.MASK + "”";
+        }
+    }
+
     public static final class GenericAssert extends WrapperAssert<GenericAssert> {
         GenericAssert(UnifiedWrapper wrapper) { super(wrapper); }
     }
@@ -291,18 +446,31 @@ public final class UnifiedAssertions {
         }
     }
 
-    public static final class TextFieldAssert extends FieldAssert<TextFieldAssert> {
-        private final UnifiedTextField textField;
+    /** Value checks shared by the text fields ({@link com.vaadin.testing.unified.component.UnifiedTextInput}). */
+    public abstract static class TextValueAssert<SELF extends TextValueAssert<SELF>> extends FieldAssert<SELF> {
+        private final com.vaadin.testing.unified.component.UnifiedTextInput input;
 
-        TextFieldAssert(UnifiedTextField field) { super(field); this.textField = field; }
+        TextValueAssert(com.vaadin.testing.unified.component.UnifiedTextInput field) { super(field); this.input = field; }
 
-        public TextFieldAssert hasValue(String expected) {
-            return check("to have value", expected, textField::getValue, v -> Objects.equals(v, expected));
+        public SELF hasValue(String expected) {
+            return checkTyped("to have value", expected, input::getValue, v -> Objects.equals(v, expected));
         }
 
-        public TextFieldAssert isEmpty() {
-            return check("to be empty", null, textField::getValue, v -> v == null || v.toString().isEmpty());
+        public SELF isEmpty() {
+            return checkTyped("to be empty", null, input::getValue, v -> v == null || v.toString().isEmpty());
         }
+    }
+
+    public static final class TextFieldAssert extends TextValueAssert<TextFieldAssert> {
+        TextFieldAssert(UnifiedTextField field) { super(field); }
+    }
+
+    public static final class EmailFieldAssert extends TextValueAssert<EmailFieldAssert> {
+        EmailFieldAssert(com.vaadin.testing.unified.component.UnifiedEmailField field) { super(field); }
+    }
+
+    public static final class PasswordFieldAssert extends TextValueAssert<PasswordFieldAssert> {
+        PasswordFieldAssert(com.vaadin.testing.unified.component.UnifiedPasswordField field) { super(field); }
     }
 
     public static final class NumberFieldAssert extends FieldAssert<NumberFieldAssert> {
@@ -429,24 +597,89 @@ public final class UnifiedAssertions {
         }
     }
 
-    public static final class DialogAssert extends WrapperAssert<DialogAssert> {
-        private final UnifiedDialog dialog;
+    public static final class LinkAssert extends WrapperAssert<LinkAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedLink link;
 
-        DialogAssert(UnifiedDialog dialog) { super(dialog); this.dialog = dialog; }
+        LinkAssert(com.vaadin.testing.unified.component.UnifiedLink link) { super(link); this.link = link; }
 
-        public DialogAssert isOpen() {
+        /** The {@code href} as the application set it ({@code UnifiedLink.getHref()}), exactly. */
+        public LinkAssert hasHref(String expected) {
+            return check("to have href", expected, link::getHref, v -> Objects.equals(v, expected));
+        }
+    }
+
+    /** The checks of every {@link UnifiedOverlayDialog}: open or closed, and its header. */
+    public abstract static class OverlayDialogAssert<SELF extends OverlayDialogAssert<SELF>> extends WrapperAssert<SELF> {
+        private final UnifiedOverlayDialog<?> dialog;
+
+        OverlayDialogAssert(UnifiedOverlayDialog<?> dialog) { super(dialog); this.dialog = dialog; }
+
+        public SELF isOpen() {
             return check("to be open", null, dialog::isOpen, Boolean.TRUE::equals);
         }
 
         /** Passes when the dialog is closed or no longer on the page (Flow removes closed dialogs). */
-        public DialogAssert isClosed() {
+        public SELF isClosed() {
             return check("to be closed", null,
                     () -> element.tryConcrete().map(e -> Boolean.TRUE.equals(e.getPropertyBoolean("opened"))).orElse(false),
                     Boolean.FALSE::equals);
         }
 
-        public DialogAssert hasHeaderTitle(String expected) {
+        public SELF hasHeaderTitle(String expected) {
             return check("to have header title", expected, dialog::getHeaderTitle, v -> java.util.Objects.equals(v, expected));
+        }
+    }
+
+    public static final class DialogAssert extends OverlayDialogAssert<DialogAssert> {
+        DialogAssert(UnifiedDialog dialog) { super(dialog); }
+    }
+
+    /** {@code hasText(..)} and {@code hasTextContaining(..)} check the message ({@link UnifiedConfirmDialog#getText()}). */
+    public static final class ConfirmDialogAssert extends OverlayDialogAssert<ConfirmDialogAssert> {
+        private final UnifiedConfirmDialog dialog;
+
+        ConfirmDialogAssert(UnifiedConfirmDialog dialog) { super(dialog); this.dialog = dialog; }
+
+        @Override
+        public ConfirmDialogAssert hasText(String expected) {
+            return check("to have text", expected, dialog::getText, v -> Objects.equals(v, expected));
+        }
+
+        @Override
+        public ConfirmDialogAssert hasTextContaining(String part) {
+            return check("to have text containing", part, dialog::getText, v -> v != null && v.toString().contains(part));
+        }
+    }
+
+    /** A login overlay or form: open or closed, its error state and its title. */
+    public static final class LoginAssert extends WrapperAssert<LoginAssert> {
+        private final UnifiedLogin login;
+
+        LoginAssert(UnifiedLogin login) { super(login); this.login = login; }
+
+        /** A {@code LoginOverlay} is open; a {@code LoginForm} is on the page. */
+        public LoginAssert isOpen() {
+            return check("to be open", null, login::isOpen, Boolean.TRUE::equals);
+        }
+
+        /** Passes when the overlay is closed or no longer on the page. */
+        public LoginAssert isClosed() {
+            return check("to be closed", null,
+                    () -> element.tryConcrete().map(e -> Boolean.TRUE.equals(e.getPropertyBoolean("opened"))).orElse(false),
+                    Boolean.FALSE::equals);
+        }
+
+        /** Shows its error message: the application called {@code setError(true)}, e.g. for a wrong password. */
+        public LoginAssert hasError() {
+            return check("to have an error", null, login::isError, Boolean.TRUE::equals);
+        }
+
+        public LoginAssert hasNoError() {
+            return check("not to have an error", null, login::isError, Boolean.FALSE::equals);
+        }
+
+        public LoginAssert hasTitle(String expected) {
+            return check("to have title", expected, login::getTitle, v -> Objects.equals(v, expected));
         }
     }
 
@@ -487,28 +720,31 @@ public final class UnifiedAssertions {
         GridRowAssert(UnifiedGrid.UnifiedGridRow row) { this.row = row; this.run = GridSupport.runOf(row.grid()); }
 
         private GridRowAssert check(String expectation, Supplier<?> actual, Predicate<Object> ok) {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), expectation, null, actual,
-                    ok);
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row), expectation, null,
+                    actual, ok);
             return this;
         }
 
         /** At least one row matches. */
         public GridRowAssert exists() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "to exist", null,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row),
+                    "to exist", null,
                     () -> matches(GridSupport.countNow(row)), v -> count(v) > 0);
             return this;
         }
 
         /** No row matches, e.g. after it was deleted. */
         public GridRowAssert doesNotExist() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "not to exist", null,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row),
+                    "not to exist", null,
                     () -> matches(GridSupport.countNow(row)), v -> count(v) == 0);
             return this;
         }
 
         /** Exactly this many rows match. */
         public GridRowAssert hasCount(int expected) {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), row.toString(), "to have count", expected,
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(row), GridSupport.codeOf(row),
+                    "to have count", expected,
                     () -> GridSupport.countNow(row), v -> Objects.equals(v, expected));
             return this;
         }
@@ -537,14 +773,16 @@ public final class UnifiedAssertions {
         }
 
         public GridColumnAssert isSortedAscending() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to be sorted",
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), GridSupport.codeOf(column),
+                    "to be sorted",
                     "ASCENDING", column::getSortDirection,
                     v -> v == com.vaadin.flow.data.provider.SortDirection.ASCENDING);
             return this;
         }
 
         public GridColumnAssert isSortedDescending() {
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to be sorted",
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), GridSupport.codeOf(column),
+                    "to be sorted",
                     "DESCENDING", column::getSortDirection,
                     v -> v == com.vaadin.flow.data.provider.SortDirection.DESCENDING);
             return this;
@@ -552,7 +790,8 @@ public final class UnifiedAssertions {
 
         public GridColumnAssert hasCellTexts(String... expected) {
             List<String> list = List.of(expected);
-            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), column.toString(), "to have cell texts",
+            UnifiedAssertions.checkTarget(run, () -> GridSupport.targetOf(column), GridSupport.codeOf(column),
+                    "to have cell texts",
                     list, column::getCellTexts, v -> Objects.equals(v, list));
             return this;
         }
@@ -578,18 +817,8 @@ public final class UnifiedAssertions {
         }
     }
 
-    public static final class TextAreaAssert extends FieldAssert<TextAreaAssert> {
-        private final com.vaadin.testing.unified.component.UnifiedTextArea textArea;
-
-        TextAreaAssert(com.vaadin.testing.unified.component.UnifiedTextArea field) { super(field); this.textArea = field; }
-
-        public TextAreaAssert hasValue(String expected) {
-            return check("to have value", expected, textArea::getValue, v -> Objects.equals(v, expected));
-        }
-
-        public TextAreaAssert isEmpty() {
-            return check("to be empty", null, textArea::getValue, v -> v == null || v.toString().isEmpty());
-        }
+    public static final class TextAreaAssert extends TextValueAssert<TextAreaAssert> {
+        TextAreaAssert(com.vaadin.testing.unified.component.UnifiedTextArea field) { super(field); }
     }
 
     public static final class IntegerFieldAssert extends FieldAssert<IntegerFieldAssert> {
@@ -665,11 +894,89 @@ public final class UnifiedAssertions {
         }
     }
 
+    /** Retrying checks of an app layout's drawer (ADR 0011). */
+    public static final class AppLayoutAssert extends WrapperAssert<AppLayoutAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedAppLayout layout;
+
+        AppLayoutAssert(com.vaadin.testing.unified.component.UnifiedAppLayout layout) { super(layout); this.layout = layout; }
+
+        /** The drawer is shown ({@code UnifiedAppLayout.isDrawerOpened()}). */
+        public AppLayoutAssert isDrawerOpened() { return check("to have the drawer opened", null, layout::isDrawerOpened, Boolean.TRUE::equals); }
+        public AppLayoutAssert isDrawerClosed() { return check("to have the drawer closed", null, layout::isDrawerOpened, Boolean.FALSE::equals); }
+
+        /** The drawer is an overlay over the content, as on a narrow Viewport. Needs {@code @RequiresBrowser}. */
+        public AppLayoutAssert isOverlay() {
+            run.requireBrowser("isOverlay");
+            return check("to have an overlay drawer", null, layout::isOverlay, Boolean.TRUE::equals);
+        }
+
+        /** The drawer sits beside the content. Needs {@code @RequiresBrowser}. */
+        public AppLayoutAssert isNotOverlay() {
+            run.requireBrowser("isNotOverlay");
+            return check("not to have an overlay drawer", null, layout::isOverlay, Boolean.FALSE::equals);
+        }
+    }
+
+    /** Retrying checks of a side nav's top-level items. */
+    public static final class SideNavAssert extends WrapperAssert<SideNavAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedSideNav sideNav;
+
+        SideNavAssert(com.vaadin.testing.unified.component.UnifiedSideNav sideNav) { super(sideNav); this.sideNav = sideNav; }
+
+        /** Exactly these top-level items, by their labels, in this order. */
+        public SideNavAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, sideNav::getItems, list::equals);
+        }
+    }
+
+    /** Retrying checks of a side nav item: the page the user is on, its path, its child items. */
+    public static final class SideNavItemAssert extends WrapperAssert<SideNavItemAssert> {
+        private final com.vaadin.testing.unified.component.UnifiedSideNavItem item;
+
+        SideNavItemAssert(com.vaadin.testing.unified.component.UnifiedSideNavItem item) { super(item); this.item = item; }
+
+        /** It is the page the user is on ({@code UnifiedSideNavItem.isCurrent()}). */
+        public SideNavItemAssert isCurrent() { return check("to be current", null, item::isCurrent, Boolean.TRUE::equals); }
+        public SideNavItemAssert isNotCurrent() { return check("not to be current", null, item::isCurrent, Boolean.FALSE::equals); }
+
+        /** Its child items are shown. */
+        public SideNavItemAssert isExpanded() { return check("to be expanded", null, item::isExpanded, Boolean.TRUE::equals); }
+        public SideNavItemAssert isCollapsed() { return check("to be collapsed", null, item::isExpanded, Boolean.FALSE::equals); }
+
+        /** The path as the application set it ({@code UnifiedSideNavItem.getPath()}), exactly. */
+        public SideNavItemAssert hasPath(String expected) {
+            return check("to have path", expected, item::getPath, v -> Objects.equals(v, expected));
+        }
+
+        /** Exactly these child items, by their labels, in this order. */
+        public SideNavItemAssert hasItems(String... expected) {
+            List<String> list = List.of(expected);
+            return check("to have items", list, item::getItems, list::equals);
+        }
+    }
+
     /** Retrying checks of a menu bar's items, named by their Item Names from the top level down. */
     public static final class MenuBarAssert extends WrapperAssert<MenuBarAssert> {
         private final com.vaadin.testing.unified.component.UnifiedMenuBar menuBar;
 
         MenuBarAssert(com.vaadin.testing.unified.component.UnifiedMenuBar menuBar) { super(menuBar); this.menuBar = menuBar; }
+
+        /**
+         * Exactly these top-level items, in this order, are in the overflow menu ("More options") for lack of room
+         * (ADR 0011). Needs {@code @RequiresBrowser}.
+         */
+        public MenuBarAssert hasOverflowItems(String... expected) {
+            run.requireBrowser("hasOverflowItems");
+            List<String> list = List.of(expected);
+            return check("to have overflow items", list, menuBar::getOverflowItems, list::equals);
+        }
+
+        /** Every top-level item fits: the overflow menu is not shown. Needs {@code @RequiresBrowser}. */
+        public MenuBarAssert hasNoOverflowItems() {
+            run.requireBrowser("hasNoOverflowItems");
+            return check("to have no overflow items", null, menuBar::getOverflowItems, v -> ((List<?>) v).isEmpty());
+        }
 
         /** Exactly these top-level items, in this order. */
         public MenuBarAssert hasItems(String... expected) {
@@ -744,6 +1051,63 @@ public final class UnifiedAssertions {
         public MessageListAssert hasMessageContaining(String part) {
             return check("to have a message containing", part, list::getMessageTexts,
                     v -> ((List<?>) v).stream().anyMatch(text -> text != null && text.toString().contains(part)));
+        }
+    }
+
+    /**
+     * Retrying checks of one message of a chat, or of the messages a lookup matches: a reply the application adds
+     * later is waited for.
+     */
+    public static final class MessageAssert {
+        private final com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message;
+        private final TestRun run;
+
+        MessageAssert(com.vaadin.testing.unified.component.UnifiedMessageList.UnifiedMessage message) {
+            this.message = message;
+            this.run = MessageSupport.runOf(message.list());
+        }
+
+        private MessageAssert check(String expectation, Object expected, Supplier<?> actual, Predicate<Object> ok) {
+            UnifiedAssertions.checkTarget(run, () -> MessageSupport.targetOf(message), message.toString(), expectation,
+                    expected, actual, ok);
+            return this;
+        }
+
+        /** At least one message matches. */
+        public MessageAssert exists() {
+            return check("to exist", null, () -> matches(MessageSupport.countNow(message)), v -> count(v) > 0);
+        }
+
+        /** No message matches, e.g. a prompt the application must not echo. */
+        public MessageAssert doesNotExist() {
+            return check("not to exist", null, () -> matches(MessageSupport.countNow(message)), v -> count(v) == 0);
+        }
+
+        /** Exactly this many messages match. */
+        public MessageAssert hasCount(int expected) {
+            return check("to have count", expected, () -> MessageSupport.countNow(message),
+                    v -> Objects.equals(v, expected));
+        }
+
+        /** The one matching message's text, exactly. */
+        public MessageAssert hasText(String expected) {
+            return check("to have text", expected,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::text),
+                    v -> Objects.equals(v, expected));
+        }
+
+        /** The one matching message's text contains this part. */
+        public MessageAssert hasTextContaining(String part) {
+            return check("to have text containing", part,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::text),
+                    v -> v instanceof String text && text.contains(part));
+        }
+
+        /** The one matching message is from this user name, exactly. */
+        public MessageAssert hasUserName(String expected) {
+            return check("to have user name", expected,
+                    () -> MessageSupport.readNow(message, UnifiedMessageList.Message::userName),
+                    v -> Objects.equals(v, expected));
         }
     }
 }

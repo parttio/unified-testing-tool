@@ -7,9 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# a pull request's newer push replaces its older run; every push to main gets a run of its own and finishes, so each
+# merge is tested and leaves its evidence for the next pull requests' base run
 concurrency:
-  group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  group: tests-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -17,10 +19,30 @@ permissions:
   actions: read
 
 jobs:
+  # Is there more than documentation in this change? Documentation only: Browserless still runs (its unit tests read
+  # docs/guide), Playwright, Selenium and the comparison are skipped, which a required check counts as passed.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Look for changes beyond documentation
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: scripts/changes-beyond-docs.sh "$EVENT" "$BASE" >> "$GITHUB_OUTPUT"
+
   browserless:
     name: Browserless
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # a healthy run takes about 5 minutes: a hang fails the job instead of holding a runner for half an hour
+    timeout-minutes: 15
     steps:
       # full history, so the run summary can diff against the pull request's base ("Changed in this PR")
       - uses: actions/checkout@v7
@@ -61,11 +83,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-browserless
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
 
   playwright:
     name: Playwright (Dramafinder)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -103,9 +127,10 @@ jobs:
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.classpathScope=test
           -Dexec.args="install-deps chromium"
+      # no trace here: on-failure records it for every test and costs about a fifth of the run (#601); the failed
+      # tests are re-run with it below
       - name: Demo tests on Playwright
-        # a failed test keeps Playwright's trace, grouped by User Step, in the evidence artifact
-        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.playwright.trace=on-failure -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
+        run: mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright -Dvaadin.testing.user-steps.baseline-dir="$RUNNER_TEMP/base-user-steps"
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v7
@@ -118,11 +143,43 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-playwright
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
+          if-no-files-found: ignore
+      # after the uploads above, so they keep the first run's reports and evidence; its own evidence goes elsewhere.
+      # Up to 5 failed test classes: more is likely one cause, and a few traces show it.
+      - name: Re-run the failed tests with Playwright's trace
+        if: failure()
+        run: |
+          classes=$(scripts/failed-test-classes.sh unified-test-demo/target/surefire-reports)
+          if [ -z "$classes" ]; then
+            echo "No failed test class to re-run: the run failed before or outside its tests."
+            exit 0
+          fi
+          classes=$(cut -d, -f1-5 <<<"$classes")
+          echo "Re-running with Playwright's trace: $classes"
+          if mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=playwright \
+              -Dvaadin.testing.playwright.trace=on-failure \
+              -Dvaadin.testing.evidence-dir=target/retraced/unified-evidence \
+              -Dvaadin.testing.user-steps.github-summary=false \
+              -Dtest="$classes" -Dsurefire.failIfNoSpecifiedTests=false; then
+            echo "The failed tests passed when re-run with the trace ($classes): flaky? No trace was kept." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Playwright traces of the tests that failed again ($classes): artifact playwright-traces." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: unified-test-demo/target/retraced/unified-evidence/
           if-no-files-found: ignore
 
   selenium:
     name: Selenium (TestBench)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -170,15 +227,55 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: unified-evidence-selenium
-          path: '**/target/surefire-reports/unified-evidence/'
+          path: '**/target/*-reports/unified-evidence/'
           if-no-files-found: ignore
+
+  # Selenium on Firefox, for what differs by browser: the exact Viewport through WebDriver BiDi, and the layout
+  # script's measurements (ADR 0011, #490). The other tests run on Chrome only.
+  selenium-firefox:
+    name: Selenium on Firefox (Viewport and layout)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VAADIN_OFFLINE_KEY: ${{ secrets.VAADIN_OFFLINE_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Cache the Maven repository
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ github.job }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-${{ github.job }}-
+            ${{ runner.os }}-maven-
+      - name: Build without tests
+        run: mvn -B -ntp install -DskipTests
+      - name: Firefox version
+        run: firefox --version
+      - name: Viewport and layout tests on Selenium with Firefox (installed Firefox, driver from Selenium Manager)
+        run: >-
+          mvn -B -ntp -pl unified-test-demo test -Dvaadin.testing.tool=selenium
+          -Dvaadin.testing.selenium.browser=firefox -Dsurefire.failIfNoSpecifiedTests=false
+          -Dtest='ViewportTest*,LayoutTest,ReachTest,LayoutChecksFilesTest*,AppLayoutTest,MenuBarOverflowTest'
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports-selenium-firefox
+          path: '**/target/surefire-reports/'
 
   # after the three: where the same scenarios end differently, or take different User Steps, on two Testing Tools
   compare:
     name: Compare Testing Tools
-    needs: [browserless, playwright, selenium]
-    # also when a job failed: that is when the comparison says most
-    if: ${{ !cancelled() }}
+    needs: [changes, browserless, playwright, selenium]
+    # also when a job failed: that is when the comparison says most; not for documentation only, with one Testing Tool
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

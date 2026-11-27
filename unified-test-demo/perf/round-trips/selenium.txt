@@ -27,7 +27,7 @@ UnifiedPerfTest.comboBox:74 commands 2
 UnifiedPerfTest.comboBox:76 commands 19
 UnifiedPerfTest.comboBox:78 commands 3
 UnifiedPerfTest.largeGrid:63 commands 2
-UnifiedPerfTest.largeGrid:65 commands 53
+UnifiedPerfTest.largeGrid:65 commands 52
 UnifiedPerfTest.largeGrid:67 commands 4
 UnifiedPerfTest.largeGrid:68 commands 4
 UnifiedPerfTest.longForm:41 commands 2
@@ -35,10 +35,10 @@ UnifiedPerfTest.longForm:44 commands 288
 UnifiedPerfTest.longForm:47 commands 24
 UnifiedPerfTest.longForm:50 commands 16
 UnifiedPerfTest.longForm:53 commands 18
-UnifiedPerfTest.longForm:55 commands 10
+UnifiedPerfTest.longForm:55 commands 9
 UnifiedPerfTest.longForm:57 commands 3
 UnifiedPerfTest.smallForm:29 commands 2
 UnifiedPerfTest.smallForm:31 commands 12
 UnifiedPerfTest.smallForm:32 commands 12
-UnifiedPerfTest.smallForm:33 commands 10
+UnifiedPerfTest.smallForm:33 commands 9
 UnifiedPerfTest.smallForm:35 commands 4

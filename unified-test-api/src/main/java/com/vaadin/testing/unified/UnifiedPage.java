@@ -33,6 +33,32 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
     void screenshot(Path file);
 
     /**
+     * Resizes this window's Viewport, exactly, as a User Step ("set viewport to 768 × 1024"), and waits until the
+     * application has heard of it: Vaadin's resize event comes 300 ms after the last one in the browser (ADR 0011).
+     * Other windows keep theirs. For the size a test starts at, use {@link Viewport @Viewport}: it costs no wait.
+     * Needs {@link RequiresBrowser}.
+     */
+    default void setViewport(int width, int height) {
+        setViewport(ViewportSize.of(width, height));
+    }
+
+    /** {@link #setViewport(int, int)} with a size that may have a name, as the reports show it. */
+    void setViewport(ViewportSize size);
+
+    /**
+     * Measures the layout now, as the User Step "check the layout": its Layout Findings show on that step in the
+     * reports, for a moment the automatic layout checks don't measure, such as after opening the drawer (ADR 0011).
+     * With {@code vaadin.testing.layout-findings=fail}, a finding fails the step. Needs {@link RequiresBrowser}.
+     */
+    void checkLayout();
+
+    /**
+     * This window's Viewport: the test's ({@link Viewport @Viewport}, the run's {@code vaadin.testing.viewport},
+     * else 1280 × 720) until {@link #setViewport(int, int)} changes it.
+     */
+    ViewportSize viewport();
+
+    /**
      * Whether this run's Testing Tool has a real browser: false on Browserless. For a test that runs on
      * every Testing Tool but does browser-only steps, such as {@link #screenshot}, only when it can.
      * A test that only makes sense in a browser declares {@link RequiresBrowser} instead.
