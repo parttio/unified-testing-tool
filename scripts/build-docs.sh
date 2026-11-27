@@ -13,7 +13,7 @@ python3 scripts/doc_version.py
 
 rm -rf "$src"
 mkdir -p "$src"
-cp -r docs/spec docs/adr docs/guide docs/releases "$src"/
+cp -r docs/spec docs/adr docs/guide docs/releases docs/feedback "$src"/
 # the Unreleased page, assembled from one file per change (docs/releases/unreleased/)
 rm -rf "$src"/releases/unreleased
 python3 scripts/release_notes.py unreleased "$src"/releases/unreleased.md
