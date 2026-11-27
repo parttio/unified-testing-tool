@@ -88,6 +88,10 @@ _Avoid_: Task, step method, keyword, flow, journey, page object
 The component a User Step acts on or checks, marked in its snapshot and failure evidence on every Testing Tool: its line in a Browserless tree, a spotlighted box over a browser screenshot.
 _Avoid_: Highlighted element, focus, subject
 
+**Step Change**:
+A component that appeared, vanished or changed state during one action User Step, as seen by comparing the Findable View before and after it; one that no later check reads is an unchecked Step Change.
+_Avoid_: Effect, side effect, diff, delta
+
 **Base Run**:
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run
