@@ -6,7 +6,7 @@ Every Wrapper has:
 
 | Method | Does |
 |---|---|
-| `isVisible()`, `isEnabled()` | reads the state now |
+| `isVisible()`, `isEnabled()` | waits until exactly one component matches, then reads its state once; a missing component fails after the timeout, it doesn't read `false`. To check that a component is gone, use `assertThat(wrapper).doesNotExist()`, or `isHidden()` for one still on the page ([Assertions and waiting](assertions-and-waiting.md)) |
 | `withTimeout(Duration)` | the same Wrapper with its own timeout |
 | `element()` | the [Unified Element](../spec/06-wrappers.md#unified-element) underneath: text, properties, attributes, `click()`, `pressKey(..)` |
 | `unwrap(..)`, `tryUnwrap(..)` | the Testing Tool's own object ([Escape Hatch](tool-specific.md)) |
