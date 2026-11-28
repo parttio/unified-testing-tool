@@ -104,6 +104,6 @@ copy taken once after the context started (with Testcontainers, a fresh schema p
 ## Requirements on Testing Tool adapters
 
 - Read settings only through `AdapterContext.configuration(...)` and `timeout()`, and the test class, run-wide instances (such as a shared browser) and the Spring context only through `AdapterContext`. No Test Runner types: the build fails on a JUnit import in an adapter ([ADR 0008](../adr/0008-adapter-spi-is-test-runner-neutral.md)).
-- Browser adapters: own the browser lifecycle; one fresh page per test, signed out with fresh storage. Selenium reuses one browser per run (a fresh tab with no cookies or storage per test) unless `vaadin.testing.selenium.reuse-browser=false`.
+- Browser adapters: own the browser lifecycle; one fresh page per test, signed out with fresh storage. Selenium reuses one browser per run (a fresh tab with no cookies or storage per test) unless `vaadin.testing.selenium.reuse-browser=false`. Tests running in parallel in one JVM (JUnit's parallel execution) each get a browser no other test is using at that moment: Playwright launches one more `Playwright` and browser for each test running at once, reuses them for later tests, and closes them all when the run ends; Selenium starts a browser of its own for a test that finds the run's in use. Playwright for Java must not be used by two threads at once ([#686](https://github.com/parttio/unified-testing-tool/issues/686)).
 - Browserless adapter: build the app per test, from the Spring context if there is one.
 - Close everything after each test.
