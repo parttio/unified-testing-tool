@@ -1,5 +1,5 @@
 {
-  "skillSha256": "6dc523186b25c7e5ef8bc46864551313607bc19c0f1da4e0f0e3893ffb97634e",
+  "skillSha256": "5e33f0b8709206ccf323bd165201b89e4bb9058d9fb5312ccf9ea3d2c52f83c1",
   "source": "agent",
   "totals": {
     "compiles": 6,
@@ -8,8 +8,8 @@
     "playwright.passed": 6,
     "playwright.failed": 0,
     "styleRules": 6,
-    "intent": 114,
-    "plumbing": 182,
+    "intent": 123,
+    "plumbing": 169,
     "escapeHatches": 0,
     "otherFilesChanged": 0
   },
@@ -57,8 +57,8 @@
       "playwright.passed": 1,
       "playwright.failed": 0,
       "styleRules": 1,
-      "intent": 20,
-      "plumbing": 36,
+      "intent": 27,
+      "plumbing": 23,
       "escapeHatches": 0,
       "otherFilesChanged": 0
     },
@@ -70,7 +70,7 @@
       "playwright.failed": 0,
       "styleRules": 1,
       "intent": 21,
-      "plumbing": 37,
+      "plumbing": 35,
       "escapeHatches": 0,
       "otherFilesChanged": 0
     },
@@ -81,8 +81,8 @@
       "playwright.passed": 1,
       "playwright.failed": 0,
       "styleRules": 1,
-      "intent": 17,
-      "plumbing": 21,
+      "intent": 19,
+      "plumbing": 23,
       "escapeHatches": 0,
       "otherFilesChanged": 0
     }

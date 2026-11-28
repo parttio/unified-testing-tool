@@ -12,11 +12,11 @@ What an agent that writes, fixes or reviews Unified UI Tests can read, and how t
 
 ## The skill
 
-The `AddUnifiedTestingSkill` recipe writes the skill to `.claude/skills/write-unified-ui-tests/SKILL.md` and points to it from `AGENTS.md`, or from `CLAUDE.md` when the project has no `AGENTS.md`. Every Migration Recipe runs it, and it runs alone too ([Migrating from TestBench, the agent skill](../migrating-from-testbench.md#the-agent-skill)). The skill ships with each release and matches its API; the recipe replaces an older copy and keeps one you edited by hand. It writes only at the build root; when the build root has no build file, `AGENTS.md` or `CLAUDE.md` (the parent POM is in a subdirectory), it installs nothing and warns on the module's build file.
+The `AddUnifiedTestingSkill` recipe writes the skill to `.claude/skills/write-unified-ui-tests/SKILL.md` and points to it from `AGENTS.md`, or from `CLAUDE.md` when the project has no `AGENTS.md`. A project with neither file also gets a `CLAUDE.md` holding `@AGENTS.md`, so Claude Code, which reads `CLAUDE.md` and not `AGENTS.md`, sees the pointer. Every Migration Recipe runs it, and it runs alone too ([Migrating from TestBench, the agent skill](../migrating-from-testbench.md#the-agent-skill)). The skill ships with each release and matches its API; the recipe replaces an older copy and keeps one you edited by hand. It writes only at the build root; when the build root has no build file, `AGENTS.md` or `CLAUDE.md` (the parent POM is in a subdirectory), it installs nothing and warns on the module's build file.
 
 With it, an agent:
 
-- **writes** a test from a scenario: it reads the view's code before writing a lookup, proves the test on Browserless and Playwright, runs the style rules, and checks the test's `user-steps.txt` against the scenario;
+- **writes** a test from a scenario: it reads the view's code before writing a lookup, proves the test on every Testing Tool it allows (Browserless and Playwright, or only a browser for a browser-only suite against a deployed application), runs the style rules, and checks the test's `user-steps.txt` against the scenario;
 - **fixes** a failing test: it reads the failure, and decides whether the test or the application is wrong before changing anything;
 - **reviews** a test: it applies the checklist of [Reviewing a test](reviewing-tests.md) and reports its findings without changing the code.
 

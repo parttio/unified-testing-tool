@@ -394,7 +394,7 @@ The skill covers:
 - the canonical forms;
 - reading the view class (and its translation keys) before writing a lookup;
 - `@DisplayName`, comments and User Tasks;
-- proving the test on Browserless then Playwright, plus `UnifiedStyleTest` and `user-steps.txt`;
+- proving the test on every Testing Tool it allows (Browserless then Playwright, or only a browser for a browser-only suite, under Surefire or Failsafe), plus `UnifiedStyleTest` and `user-steps.txt` in the run's evidence directory;
 - reading a failure;
 - reviewing a test: the scenario against its User Steps, the code against the canonical forms, the runs, and what a change made to pass took away;
 - when the Escape Hatch is acceptable.
@@ -402,7 +402,7 @@ The skill covers:
 How the recipe decides:
 
 - **Stamp.** The shipped skill carries `<!-- unified-test-skill: write-unified-ui-tests <version> -->`, the release it came with (Maven resource filtering). A copy with an older version is replaced; one with the same or a newer version is left as it is; one without the line counts as hand-edited, is kept, and gets an OpenRewrite warning (`Markup.Warn`) naming how to take the shipped one.
-- **`AGENTS.md`, or `CLAUDE.md`.** The pointer is a section between `<!-- unified-test: write-unified-ui-tests -->` and `<!-- /unified-test -->`, added at the end or replaced where it is; the rest of the file is left as it is. It goes in `AGENTS.md`, created when missing. A project with a `CLAUDE.md` and no `AGENTS.md` gets it in `CLAUDE.md` instead, and no `AGENTS.md`: Claude Code reads `CLAUDE.md` ([#365](https://github.com/parttio/unified-testing-tool/issues/365)). With both files, only `AGENTS.md` gets it.
+- **`AGENTS.md`, or `CLAUDE.md`.** The pointer is a section between `<!-- unified-test: write-unified-ui-tests -->` and `<!-- /unified-test -->`, added at the end or replaced where it is; the rest of the file is left as it is. It goes in `AGENTS.md`. Claude Code reads `CLAUDE.md`, not `AGENTS.md`, so a project with a `CLAUDE.md` and no `AGENTS.md` gets it in `CLAUDE.md` instead, and no `AGENTS.md` ([#365](https://github.com/parttio/unified-testing-tool/issues/365)). A project with neither gets `AGENTS.md` with the section and a `CLAUDE.md` holding only `@AGENTS.md`, the line that makes Claude Code import `AGENTS.md` ([#700](https://github.com/parttio/unified-testing-tool/issues/700)). With both files, only `AGENTS.md` gets it; the `CLAUDE.md` is left as it is.
 - **Where.** It writes only at a project's root: one with a build file (`pom.xml`, Gradle), an `AGENTS.md`, a `CLAUDE.md` or the skill, and Java sources. When the build root is no project but has Java sources, and a module below it has a build file, it writes nothing and warns (`Markup.Warn`) on each such build file. The warning says the skill was not installed, and how to install it ([#698](https://github.com/parttio/unified-testing-tool/issues/698)).
 
 A second `skill-eval` suite (`unified-test-rewrite/skill-eval/writing/`, `scripts/eval-writing-skill.sh`) scores it: prose scenarios in, tests out, judged on compiling, passing on two Testing Tools, the style rules, intent share and no Escape Hatch. `resolve-migration-markers` defers to it for style.

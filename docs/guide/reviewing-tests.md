@@ -62,11 +62,11 @@ A test that failed and now passes either found a bug in the application or was w
 
 ## Reviewing a test an agent wrote
 
-An agent following the `write-unified-ui-tests` skill reports the test's `@DisplayName`, its runs on Browserless and Playwright, and its `user-steps.txt`. Review it as you would a new colleague's test, in this order:
+An agent following the `write-unified-ui-tests` skill reports the test's `@DisplayName`, its runs on every Testing Tool the test allows (Browserless and Playwright, unless `@RequiresBrowser` or `@RequiresTestingTool` limits it), and its `user-steps.txt`. Review it as you would a new colleague's test, in this order:
 
 1. **Compare the report with the request**, before reading any code. Does the `@DisplayName` say what you asked for? Is every action and every expected outcome a User Step?
 2. **Check that CI ran the same steps.** The run summary of the pull request shows the scenario's steps, independently of the agent's report.
-3. **Run it again, more than once,** on Browserless and in a browser, before you trust a test that passed the first time:
+3. **Run it again, more than once,** on each Testing Tool it allows (Browserless and a browser, or only a browser), before you trust a test that passed the first time:
 
     ```
     mvn test -Dtest=EditPersonTest

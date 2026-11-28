@@ -25,7 +25,7 @@ To see which lookup finds a row, print `grid.describe()`: the grid's columns and
 --8<-- "unified-test-demo/src/test/java/demo/GridTest.java:findsARowByWhatItShows"
 ```
 
-Row access scrolls the row into view and waits for its data, so a row far down a lazy Grid is found like the first one.
+Row access scrolls the row into view and waits for its data, so a row far down a lazy Grid is found like the first one. The scroll moves the rows the browser has drawn: an [Escape Hatch](tool-specific.md) read by row position after a row lookup, such as the third `vaadin-grid-cell-content` element, may hit a different row. Read the row through its Wrapper, `assertThat(row).hasCellText(..)`, instead.
 
 Filters add up:
 

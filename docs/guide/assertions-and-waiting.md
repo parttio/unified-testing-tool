@@ -88,7 +88,7 @@ On Browserless, retrying assertions and `waitUntil` also run pending `UI.access`
 
 ## Checking that something is there, or gone
 
-Whether a component is there, and how many are, are assertions too: they retry like the others. There is no boolean `exists()`.
+Whether a component is there, and how many are, are assertions too: they retry like the others. There is no boolean `exists()`, and `all().isEmpty()` or `all().size()` reads once, without waiting, so a check built on it races the server ([A pause before a read](common-mistakes.md#waiting-with-a-sleep)).
 
 ```java
 --8<-- "unified-test-demo/src/test/java/demo/GuideExamples.java:counting"

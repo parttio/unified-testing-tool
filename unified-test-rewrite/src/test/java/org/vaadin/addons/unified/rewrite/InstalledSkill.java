@@ -16,11 +16,16 @@ final class InstalledSkill {
     private InstalledSkill() {
     }
 
-    /** {@code .claude/skills/write-unified-ui-tests/SKILL.md} and {@code AGENTS.md}, both new. */
+    /**
+     * {@code .claude/skills/write-unified-ui-tests/SKILL.md}, {@code AGENTS.md} and the {@code CLAUDE.md} that imports
+     * it, all new.
+     */
     static SourceSpecs files() {
         List<SourceSpec<?>> specs = new ArrayList<>();
         text(null, AddUnifiedTestingSkill.skill(), s -> s.path(AddUnifiedTestingSkill.PATH)).forEach(specs::add);
         text(null, AddUnifiedTestingSkill.SECTION, s -> s.path(AddUnifiedTestingSkill.AGENTS)).forEach(specs::add);
+        text(null, AddUnifiedTestingSkill.CLAUDE_IMPORT, s -> s.path(AddUnifiedTestingSkill.CLAUDE).noTrim())
+                .forEach(specs::add);
         return specs::iterator;
     }
 }

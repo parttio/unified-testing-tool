@@ -50,7 +50,23 @@ Reading a value you need is fine. Comparing it with a second read is the getter 
 --8<-- "unified-test-demo/src/test/java/demo/CommonMistakes.java:sleepGood"
 ```
 
-Every action waits for the server, and every check waits until it holds. A sleep adds time to every run and still fails on a slow one. The same goes for a Testing Tool's own waits through the Escape Hatch. For a condition no check covers, use `page.waitUntil(..)`. The style rule `NO_RAW_WAITS` fails a test with a sleep. More: [Assertions and waiting](assertions-and-waiting.md), [Checking the style](style-rules.md#the-rules).
+Every action waits for the server, and every check waits until it holds. A sleep adds time to every run and still fails on a slow one. The same goes for a Testing Tool's own waits through the Escape Hatch. For a condition no check covers, use `page.waitUntil(..)`. The style rule `NO_RAW_WAITS` fails a test with a sleep.
+
+A pause before a read that doesn't wait is worse: the test passes by luck. Here the rows come from a background thread, after the click's answer:
+
+**Bad**
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/CommonMistakes.java:pauseBad"
+```
+
+**Good**
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/CommonMistakes.java:pauseGood"
+```
+
+The pause happens to be long enough where the test was written. On a slower run the read comes first, and the test fails now and then, far from its cause. The pause hides a race that the waiting assertion exposes: `exists()` waits until the row is there, or fails saying what it saw. A presence or absence check built on `all()` (`all().isEmpty()`, `all().size()`) is the same race without the pause, because `all()` reads now: use `exists()`, `doesNotExist()`, `hasCount(n)`, `isClosed()` or `isHidden()` ([Checking that something is there, or gone](assertions-and-waiting.md#checking-that-something-is-there-or-gone)). More: [Assertions and waiting](assertions-and-waiting.md), [Checking the style](style-rules.md#the-rules).
 
 ## A longer timeout to make it pass
 
@@ -158,4 +174,10 @@ A test migrated by hand, or written by someone used to another tool, often keeps
 | `getDriver().get("http://localhost:" + port + "/people")` | TestBench | `page.navigate(PeopleView.class)` ([Navigation](navigation-and-users.md)) |
 | `page.locator("#id")`, CSS or XPath | Playwright, Dramafinder | a Wrapper with filters; a test id or id as the last resort ([Finding components](finding-components.md)) |
 | `test(component).click()` | Browserless | `wrapper.click()` |
+| `assertTrue(locator.isVisible())` | Playwright | `assertThat(wrapper).isVisible()`, which needs exactly one match; for a text that can show more than once, `assertThat(page.find(UnifiedSpan.class).withText("Saved").visible()).exists()` |
+| `assertFalse(locator.isVisible())` | Playwright | `assertThat(wrapper.visible()).doesNotExist()`; `assertThat(wrapper).isHidden()` for one still on the page ([Checking that something is there, or gone](assertions-and-waiting.md#checking-that-something-is-there-or-gone)) |
+| `assertTrue(page.textContent("body").contains("Saved"))` | Playwright | a check on the component that shows it: `assertThat(page.find(UnifiedNotification.class)).hasTextContaining("Saved")`, or `assertThat(page.find(UnifiedSpan.class).withTextContaining("Saved")).exists()` |
+| `assertEquals("Alice", locator.inputValue())` | Playwright | `assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Alice")` |
+| `assertEquals(3, rows.count())` | Playwright | `assertThat(grid).hasRowCount(3)`; for other components, `assertThat(wrapper).hasCount(3)` |
+| `page.waitForTimeout(..)`, `Thread.sleep(..)` before a check | any | nothing: the check waits ([Waiting with a sleep](#waiting-with-a-sleep)) |
 | a base class that starts the browser or the app | TestBench, Dramafinder | `@UnifiedSpringBootTest` or `@UnifiedUITest` ([Getting started](getting-started.md)) |
