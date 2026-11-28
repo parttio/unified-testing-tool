@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.component.UnifiedButton;
 import com.vaadin.testing.unified.component.UnifiedContainer;
+import com.vaadin.testing.unified.component.UnifiedDiv;
 import com.vaadin.testing.unified.component.UnifiedNotification;
+import com.vaadin.testing.unified.component.UnifiedParagraph;
 import com.vaadin.testing.unified.component.UnifiedSpan;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import org.junit.jupiter.api.DisplayName;
@@ -32,8 +34,16 @@ class NoticesTest {
     void htmlReadsAsItsText(UnifiedPage page) {
         page.navigate(NoticesView.class);
 
-        assertThat(page.find(UnifiedContainer.class).withTestId("total")).hasText("Total 42");
+        assertThat(page.find(UnifiedDiv.class).withTestId("total")).hasText("Total 42");
         assertThat(page.find(UnifiedSpan.class).withText("Please check the input data")).isVisible();
+    }
+
+    @Test
+    @DisplayName("HTML is found by the Wrapper of its root tag, as a browser finds it")
+    void htmlIsFoundByItsRootTag(UnifiedPage page) {
+        page.navigate(NoticesView.class);
+
+        assertThat(page.find(UnifiedParagraph.class).withText("Prices include VAT")).isVisible();
     }
 
     @Test

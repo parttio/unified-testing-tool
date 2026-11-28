@@ -1,5 +1,6 @@
 package com.vaadin.testing.unified.component;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Footer;
 import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.UnifiedComponent;
@@ -9,10 +10,11 @@ import com.vaadin.testing.unified.query.TextFilter;
 import java.time.Duration;
 
 /**
- * A {@code <footer>} ({@link Footer}), to read its text, search inside it or click it. Bound to its tag, so a browser
- * finds it with one query, unlike {@link UnifiedContainer} (any tag).
+ * A {@code <footer>}: a {@link Footer}, an {@code Html} whose root is a {@code <footer>}, or any other {@code <footer>}, to read
+ * its text, search inside it or click it. Bound to its tag, so a browser finds it with one query, unlike
+ * {@link UnifiedContainer} (any tag).
  */
-@UnifiedComponent(Footer.class)
+@UnifiedComponent(value = Component.class, tag = "footer")
 public interface UnifiedFooter extends UnifiedWrapper, Scope, CommonFilters<UnifiedFooter>, TextFilter<UnifiedFooter> {
 
     /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
