@@ -48,7 +48,8 @@ class AddUnifiedTestingSkillTest implements RewriteTest {
     }
 
     @Test
-    void freshProjectGetsTheSkillAndAgentsMd() {
+    void freshProjectGetsTheSkillAgentsMdAndAClaudeMdImportingIt() {
+        // Claude Code loads CLAUDE.md, not AGENTS.md (#700): the CLAUDE.md imports AGENTS.md
         rewriteRun(with(
                 text(null, SKILL, source -> source.path(SKILL_PATH)),
                 text(null, """
@@ -57,7 +58,16 @@ class AddUnifiedTestingSkillTest implements RewriteTest {
 
                         For Unified UI Tests, follow `.claude/skills/write-unified-ui-tests/SKILL.md`.
                         <!-- /unified-test -->
-                        """, source -> source.path("AGENTS.md"))));
+                        """, source -> source.path("AGENTS.md")),
+                text(null, "@AGENTS.md\n", source -> source.path("CLAUDE.md").noTrim())));
+    }
+
+    @Test
+    void aSecondRunOnAFreshProjectChangesNothing() {
+        rewriteRun(with(
+                text(SKILL, source -> source.path(SKILL_PATH)),
+                text(AddUnifiedTestingSkill.SECTION, source -> source.path("AGENTS.md").noTrim()),
+                text("@AGENTS.md\n", source -> source.path("CLAUDE.md").noTrim())));
     }
 
     @Test

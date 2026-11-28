@@ -34,9 +34,11 @@ import org.openrewrite.text.PlainTextParser;
  * <p>
  * The pointer is a section between {@code <!-- unified-test: write-unified-ui-tests -->} and
  * {@code <!-- /unified-test -->}, added at the end or brought up to date where it is; nothing else in the file
- * changes. It goes in {@code AGENTS.md}, created when missing, unless the project has a {@code CLAUDE.md} and no
- * {@code AGENTS.md}: Claude Code reads {@code CLAUDE.md}, so the section goes there and no {@code AGENTS.md} is
- * created. With both files, only {@code AGENTS.md} gets it.
+ * changes. It goes in {@code AGENTS.md}, unless the project has a {@code CLAUDE.md} and no {@code AGENTS.md}:
+ * Claude Code reads {@code CLAUDE.md}, not {@code AGENTS.md}, so the section goes there and no {@code AGENTS.md} is
+ * created. With neither file, it creates {@code AGENTS.md} with the section and a {@code CLAUDE.md} holding only
+ * {@code @AGENTS.md}, the line that makes Claude Code import it (issue #700). With both files, only {@code AGENTS.md}
+ * gets the section; the {@code CLAUDE.md} is not touched.
  * <p>
  * It writes only into a project: a root with a build file ({@code pom.xml}, Gradle), {@code AGENTS.md},
  * {@code CLAUDE.md} or the skill, that has Java sources. When the root is no project but has Java sources, it writes
@@ -57,6 +59,8 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
     static final String SECTION_END = "<!-- /unified-test -->";
     static final String SECTION = SECTION_START + "\n## Unified UI Tests\n\n"
             + "For Unified UI Tests, follow `.claude/skills/write-unified-ui-tests/SKILL.md`.\n" + SECTION_END + "\n";
+    /** The {@code CLAUDE.md} of a project that had neither file: Claude Code loads it, and it imports AGENTS.md. */
+    static final String CLAUDE_IMPORT = "@AGENTS.md\n";
     static final String UNSTAMPED_WARNING = "write-unified-ui-tests: this copy of the skill has no version stamp, so "
             + "it was edited by hand and is left as it is. Delete it and run the recipe again to get the skill of this "
             + "release.";
@@ -88,7 +92,8 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
     public String getDescription() {
         return "Writes `.claude/skills/write-unified-ui-tests/SKILL.md`, the agent skill for writing Unified UI Tests "
                 + "of this Unified API version, replacing an older copy (but not a hand-edited one), and points to it "
-                + "from `AGENTS.md` (or from `CLAUDE.md`, when the project has that and no `AGENTS.md`).";
+                + "from `AGENTS.md` (or from `CLAUDE.md`, when the project has that and no `AGENTS.md`). With neither file, it "
+                + "also creates a `CLAUDE.md` that imports `AGENTS.md`, so Claude Code sees the pointer.";
     }
 
     @Override
@@ -135,6 +140,7 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
         }
         if (!scan.agentsExists && !scan.claudeExists) {
             parser.parse(SECTION).map(s -> (SourceFile) s.withSourcePath(AGENTS)).forEach(generated::add);
+            parser.parse(CLAUDE_IMPORT).map(s -> (SourceFile) s.withSourcePath(CLAUDE)).forEach(generated::add);
         }
         return generated;
     }
