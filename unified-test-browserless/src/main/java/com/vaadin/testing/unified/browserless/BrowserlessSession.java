@@ -282,7 +282,7 @@ final class BrowserlessSession implements AdapterSession {
         return c.getElement().getParent() == null || !"vaadin-form-item".equals(c.getElement().getParent().getTag())
                 ? null
                 : c.getElement().getParent().getChildren().filter(l -> "label".equals(l.getAttribute("slot")))
-                        .findFirst().map(l -> com.vaadin.testing.unified.internal.BrowserQueries.normalize(l.getTextRecursively())).orElse(null);
+                        .findFirst().map(l -> com.vaadin.testing.unified.internal.BrowserQueries.normalize(ElementText.of(l))).orElse(null);
     }
 
     /**
