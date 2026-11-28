@@ -73,6 +73,17 @@ void fitsAPhone(UnifiedPage page) {
 
 On Browserless, retrying assertions and `waitUntil` also run pending `UI.access` tasks and signal effects between attempts, so views updated from background threads behave as in a browser.
 
+## Checking outside the UI
+
+Some checks are not about what the user sees: an order stored in the database, a file written, a mail sent. Put them in a Backend Step, so the reports show them among the User Steps and the run summary counts them as a check ([Scenarios without a check](reports-and-failures.md#scenarios-without-a-check)):
+
+```java
+page.find(UnifiedButton.class).withText("Place order").click();
+page.backendStep("order is stored", () -> assertThat(orders.findByCustomer("Alan")).hasSize(1));
+```
+
+The report shows it as `backend: order is stored`. Its work runs once, with plain JUnit or AssertJ assertions: the action before it already waited for the server to be idle. If the application stores the result later, from a background thread, wait for it first with `page.waitUntil(..)`. If the work throws, the Backend Step fails, and so does the test. A check of what the user sees still belongs in `assertThat(..)`, which retries.
+
 ## Timeouts
 
 | Scope | How |

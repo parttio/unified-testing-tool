@@ -392,14 +392,15 @@ A test that fills a form, clicks *Save* and stops there passes whether or not th
 
 - **A check** is a retrying assertion, `assertThat(..)` from `UnifiedAssertions`, which shows as a `see` or `see no` User Step. The steps after a scenario's last check are the ones listed.
 - **Reading a value counts too.** `assertEquals("Alan", name.getValue())` records no User Step, but the Unified API counts that the test read a value after its last action, and takes the test to assert on it. Such a scenario is not listed. The retrying form, `assertThat(name).hasValue("Alan")`, is still the better one: it waits for the value on every Testing Tool, and its failure names the User Step ([Assertions and waiting](assertions-and-waiting.md)).
+- **A check outside the UI counts when it is a Backend Step.** A test that ends by checking the database, a file or a mail in plain Java looks unchecked, since the Unified API sees none of it. Put that check in `page.backendStep("order is stored", () -> ..)`: it shows as `backend: order is stored` and counts as a check ([Checking outside the UI](assertions-and-waiting.md#checking-outside-the-ui)).
 - **Not listed either:** a scenario that ends on `page.waitUntil(..)` or an Escape Hatch call, since the check may be in there, and a passing scenario with a failed User Step, since the test expected that failure (`assertThrows`).
 - **Escape Hatch scenarios are counted, not listed.** After the Escape Hatch call the Unified API sees nothing: a migrated test that reads TestBench elements and checks them with `assertEquals` or AssertJ looks unchecked. So a scenario without a check that used an Escape Hatch anywhere is counted on one line after the list, with the first three names:
 
     ```markdown
-    13 more end in Escape Hatch code, whose checks the report can't see: Edit an order, Add a product, Log out, … Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them checked here.
+    13 more used the Escape Hatch and end on User Steps the report sees no check for: Edit an order, Add a product, Log out, … Their checks may be assertions the report can't see: move checks of the UI to `assertThat(..)`, and declare the others with `page.backendStep(..)`.
     ```
 
-    The list keeps the scenarios that really check nothing, and the count shrinks as you resolve the Migration Markers ([Migrating from TestBench](../migrating-from-testbench.md#what-it-leaves-for-you)). When only Escape Hatch scenarios are unchecked, the section is that line alone.
+    The list keeps the scenarios that really check nothing, and the count shrinks as their checks move to `assertThat(..)` or into Backend Steps. In a migrated suite, resolving the Migration Markers does the same ([Migrating from TestBench](../migrating-from-testbench.md#what-it-leaves-for-you)). When only Escape Hatch scenarios are unchecked, the section is that line alone.
 
 The section reports; it fails no test. It can't tell whether a check is the right one, only that the last steps have none. In `report.html` these scenarios have a section of their own and a *no check* badge, the Escape Hatch ones after their count line with an *Escape Hatch* badge, and `summary.json` marks them with `unchecked`, and `escapeHatch` true for the Escape Hatch ones.
 

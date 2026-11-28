@@ -96,6 +96,10 @@ _Avoid_: Step method, log line, trace, keyword
 A named piece of user work in a Unified UI Test ("edit Alan Turing's name"), shown in the reports as one heading over the User Steps it performs.
 _Avoid_: Task, step method, keyword, flow, journey, page object
 
+**Backend Step**:
+A named piece of work a Unified UI Test does outside the application's UI, such as checking what the database, a file or a mail holds, shown in the reports among the User Steps but not one of them.
+_Avoid_: Server step, non-UI check, data check
+
 **Step Target**:
 The component a User Step acts on or checks, marked in its snapshot and failure evidence on every Testing Tool: its line in a Browserless tree, a spotlighted box over a browser screenshot.
 _Avoid_: Highlighted element, focus, subject

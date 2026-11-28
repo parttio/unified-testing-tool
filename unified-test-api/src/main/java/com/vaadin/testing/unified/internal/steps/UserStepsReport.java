@@ -114,7 +114,7 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     logs(sb, steps.logs(step), depth + 1);
                 }
                 case Group group -> {
-                    sb.append(indent).append(line(group.index(), group.window(), steps.mask(group.name()), false))
+                    sb.append(indent).append(line(group.index(), group.window(), steps.mask(group.text()), failedItself(group)))
                             .append('\n');
                     logs(sb, steps.logs(group), depth + 1);
                     text(sb, group.children(), depth + 1);
@@ -126,6 +126,28 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                 }
             }
         }
+    }
+
+    /**
+     * Whether a Backend Step failed in its own work, not in a User Step inside it, which carries the mark instead.
+     * A User Task is never marked itself.
+     */
+    private static boolean failedItself(Group group) {
+        return group.backend() && group.status() == Status.FAILED && !anyFailed(group.children());
+    }
+
+    private static boolean anyFailed(List<Entry> entries) {
+        for (Entry entry : entries) {
+            boolean failed = switch (entry) {
+                case Step step -> step.status() == Status.FAILED;
+                case Group group -> group.status() == Status.FAILED;
+                case Gap gap -> gap.status() == Status.FAILED;
+            };
+            if (failed) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -304,9 +326,12 @@ public record UserStepsReport(String testClass, String testMethod, String displa
                     readsAfter(json, step);
                 }
                 case Group group -> {
-                    json.field("type", "group");
+                    json.field("type", group.backend() ? "backend" : "group");
                     json.field("index", group.index());
                     json.field("name", steps.mask(group.name()));
+                    if (group.backend()) {
+                        json.field("text", steps.mask(group.text()));
+                    }
                     common(json, group.window(), group.status(), group.durationNanos(), group.callSite(),
                             group.error());
                     readsAfter(json, group);

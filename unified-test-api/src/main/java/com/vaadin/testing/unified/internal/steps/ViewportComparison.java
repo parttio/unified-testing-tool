@@ -193,7 +193,7 @@ public record ViewportComparison(String tool, ViewportSize reference, List<Viewp
                         layout.get("screenshot") instanceof String s ? s : null));
             }
             line[0]++;
-            if ("group".equals(ScenarioResult.string(entry, "type"))) {
+            if (ScenarioResult.nests(entry)) {
                 collect(ScenarioResult.entries(entry.get("steps")), measured, line);
             }
         }

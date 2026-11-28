@@ -111,6 +111,21 @@ class RunReportTest {
     }
 
     @Test
+    void aBackendStepShowsAsAHeadingOverTheUserStepsInsideIt() {
+        String backend = RunSummaryTest.EDIT_PERSON.replace("\"type\": \"group\"", "\"type\": \"backend\"")
+                .replace("\"name\": \"Edit Alan Turing\"",
+                        "\"name\": \"order is stored\", \"text\": \"backend: order is stored\"");
+        assertTrue(backend.contains("backend: order is stored"), backend);
+        String html = new RunReport(new RunSummary("Playwright",
+                List.of(scenario(backend, "EditPersonTest/editsAPerson")), 0, null), s -> List.of()).html();
+
+        int heading = html.indexOf("<li class=\"group backend\"><details open><summary>");
+        int name = html.indexOf("backend: order is stored", heading);
+        int inside = html.indexOf("fill text field", name);
+        assertTrue(heading >= 0 && name > heading && inside > name, html);
+    }
+
+    @Test
     void escapeHatchScenariosComeAfterTheOthersWithTheirOwnBadge() {
         String escapes = RunSummaryTest.EDIT_PERSON.replace("\"verb\": \"see\"", "\"verb\": \"click\"");
         String noCheck = escapes.replace("editsAPerson", "savesOnly").replace("Editing a person updates the grid",
@@ -121,7 +136,7 @@ class RunReportTest {
         int unchecked = html.indexOf("<section id=\"unchecked\">");
         String section = html.substring(unchecked, html.indexOf("<section id=\"passing\" hidden>"));
         assertTrue(section.contains("1 passing scenario ends on User Steps that nothing checks"), section);
-        int lead = section.indexOf("1 more ends in Escape Hatch code, whose checks the report can&#39;t see.");
+        int lead = section.indexOf("1 more used the Escape Hatch and ends on User Steps the report sees no check for.");
         int listed = section.indexOf("Saving only");
         int escapeHatch = section.indexOf("Editing a person updates the grid");
         assertTrue(listed >= 0 && listed < lead && lead < escapeHatch, section);
@@ -133,9 +148,11 @@ class RunReportTest {
         // only Escape Hatch scenarios: the section holds just them
         String alone = new RunReport(new RunSummary("Playwright", List.of(scenario(escapes, "EditPersonTest/editsAPerson")),
                 0, null), s -> List.of()).html();
-        assertTrue(alone.contains("1 passing scenario ends in Escape Hatch code, whose checks the report can&#39;t see."),
+        assertTrue(alone.contains("1 passing scenario used the Escape Hatch and ends on User Steps the report sees no check for."),
                 alone);
         assertFalse(alone.contains("ends on User Steps that nothing checks"), alone);
+        assertTrue(alone.contains("<code>page.backendStep(..)</code>"), alone);
+        assertFalse(alone.contains("Migration Marker"), alone);
     }
 
     @Test

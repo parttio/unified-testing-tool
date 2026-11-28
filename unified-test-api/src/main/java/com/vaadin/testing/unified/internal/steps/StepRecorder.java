@@ -109,26 +109,35 @@ public final class StepRecorder {
     }
 
     /** A step group: {@code page.step("Edit Alan Turing", () -> …)}, a User Task's heading. */
+    /** What a Backend Step's line starts with in the reports: {@code backend: order is stored}. */
+    public static final String BACKEND_PREFIX = "backend: ";
+
     public static final class Group implements Entry {
         private final String index;
         private final String name;
         private final String window;
         private final CallSite callSite;
+        private final boolean backend;
         private final List<Entry> children = new ArrayList<>();
         private int numbered;
         private Status status = Status.PASSED;
         private long durationNanos;
         private Throwable error;
 
-        Group(String index, String name, String window, CallSite callSite) {
+        Group(String index, String name, String window, CallSite callSite, boolean backend) {
             this.index = index;
             this.name = name;
             this.window = window;
             this.callSite = callSite;
+            this.backend = backend;
         }
 
         public String index() { return index; }
         public String name() { return name; }
+        /** Whether this is a Backend Step ({@code page.backendStep(..)}) rather than a User Task. */
+        public boolean backend() { return backend; }
+        /** The line the reports show: the User Task's name, or {@code backend: <name>} for a Backend Step. */
+        public String text() { return backend ? BACKEND_PREFIX + name : name; }
         public String window() { return window; }
         public CallSite callSite() { return callSite; }
         public List<Entry> children() { return Collections.unmodifiableList(children); }
@@ -294,7 +303,7 @@ public final class StepRecorder {
     }
 
     private final ThreadLocal<Frame> frame = new ThreadLocal<>();
-    private final Group root = new Group(null, "", null, null);
+    private final Group root = new Group(null, "", null, null, false);
     private final Deque<Group> open = new ArrayDeque<>();
     private final Set<String> secrets = new LinkedHashSet<>();
     /** Sign-ins' user names that contain their password, with those passwords: not masked inside the name. */
@@ -634,11 +643,20 @@ public final class StepRecorder {
 
     /** {@code page.step(name, userSteps)}: a step group around what the body records. Nests without limit. */
     public void group(String name, String window, Runnable body) {
+        group(name, window, body, false);
+    }
+
+    /** {@code page.backendStep(name, work)}: a Backend Step, recorded like a step group (ADR 0024). */
+    public void backend(String name, String window, Runnable work) {
+        group(name, window, work, true);
+    }
+
+    private void group(String name, String window, Runnable body, boolean backend) {
         CallSite callSite = CallSite.here();
         Group group;
         synchronized (this) {
             Group container = current();
-            group = new Group(container.nextIndex(), name, window, callSite);
+            group = new Group(container.nextIndex(), name, window, callSite, backend);
             container.children.add(group);
             open.push(group);
             last = group;

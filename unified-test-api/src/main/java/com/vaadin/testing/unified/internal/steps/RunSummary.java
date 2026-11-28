@@ -223,21 +223,28 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
             List<String> names = escapeHatch.stream().limit(3).map(s -> markdown(s.displayName())).toList();
             md.append(escapeHatchLead(escapeHatch.size(), !unchecked.isEmpty())).append(": ")
                     .append(String.join(", ", names)).append(escapeHatch.size() > 3 ? ", … " : ". ")
-                    .append(ESCAPE_HATCH_POINTER).append(" `assertThat(..)`, to have them checked here.\n");
+                    .append(escapeHatchPointer(RunSummary::code)).append('\n');
         }
     }
 
-    /** Where the Escape Hatch line points the reader, up to the {@code assertThat(..)} it names. */
-    static final String ESCAPE_HATCH_POINTER = "Resolve their Migration Markers, or move their checks to";
+    /**
+     * Where the Escape Hatch line points the reader: {@code assertThat(..)} for checks of the UI, a Backend Step
+     * for the others (ADR 0024), each name rendered by {@code code}.
+     */
+    static String escapeHatchPointer(java.util.function.UnaryOperator<String> code) {
+        return "Their checks may be assertions the report can't see: move checks of the UI to "
+                + code.apply("assertThat(..)") + ", and declare the others with " + code.apply("page.backendStep(..)")
+                + ".";
+    }
 
     /**
-     * {@code <n> more end in Escape Hatch code, whose checks the report can't see}, or {@code <n> passing scenarios
-     * end ..} when no other scenario is listed before them.
+     * {@code <n> more used the Escape Hatch and end on User Steps the report sees no check for}, or {@code <n>
+     * passing scenarios used ..} when no other scenario is listed before them.
      */
     static String escapeHatchLead(int count, boolean afterOthers) {
-        return count + (afterOthers ? count == 1 ? " more ends" : " more end"
-                : count == 1 ? " passing scenario ends" : " passing scenarios end")
-                + " in Escape Hatch code, whose checks the report can't see";
+        return count + (afterOthers ? " more" : count == 1 ? " passing scenario" : " passing scenarios")
+                + " used the Escape Hatch and " + (count == 1 ? "ends" : "end")
+                + " on User Steps the report sees no check for";
     }
 
     /** {@code no check}, or {@code no check after: <the last steps>}: at most three steps, then the count. */
