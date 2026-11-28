@@ -24,6 +24,25 @@ class SettingsTest {
     }
 
     @Test
+    void ignoredErrorsIsOneRegexAndIgnoresNothingWhenUnset() {
+        assertEquals(Optional.empty(), settings(Map.of()).userStepsIgnoredErrors());
+        assertEquals(Optional.empty(), settings(Map.of(Settings.USER_STEPS_IGNORED_ERRORS, "  ")).userStepsIgnoredErrors());
+        java.util.regex.Pattern pattern = settings(Map.of(Settings.USER_STEPS_IGNORED_ERRORS,
+                "net::ERR_NETWORK_CHANGED|^server ERROR PoolMonitor:")).userStepsIgnoredErrors().orElseThrow();
+        assertEquals(true, pattern.matcher("console ERROR: Failed to load resource: net::ERR_NETWORK_CHANGED").find());
+        assertEquals(true, pattern.matcher("server ERROR PoolMonitor: pool is slow").find());
+        assertEquals(false, pattern.matcher("console ERROR: server ERROR PoolMonitor: echoed").find());
+    }
+
+    @Test
+    void anInvalidIgnoredErrorsRegexNamesTheSetting() {
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> settings(Map.of(Settings.USER_STEPS_IGNORED_ERRORS, "Failed to load (")).userStepsIgnoredErrors());
+        assertEquals(true, e.getMessage().startsWith(Settings.USER_STEPS_IGNORED_ERRORS
+                + ": expected a Java regular expression, got Failed to load ("), e.getMessage());
+    }
+
+    @Test
     void viewportDefaultsTo1280By720AndTakesAnOptionalName() {
         assertEquals(new ViewportSize("", 1280, 720), settings(Map.of()).viewport());
         assertEquals(new ViewportSize("", 375, 667), settings(Map.of(Settings.VIEWPORT, "375x667")).viewport());
