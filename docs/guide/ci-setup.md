@@ -307,6 +307,21 @@ TestBench is under the Vaadin Commercial License and checks it when it loads. Gi
         run: mvn -B -ntp verify -Dvaadin.testing.tool=selenium
 ```
 
+### Parallel tests in one JVM
+
+JUnit's parallel execution runs test classes or methods on several threads of one JVM. Browserless and Playwright tests can run that way:
+
+```properties
+# src/test/resources/junit-platform.properties, or Surefire/Failsafe configurationParameters
+junit.jupiter.execution.parallel.enabled=true
+junit.jupiter.execution.parallel.mode.classes.default=concurrent
+```
+
+- **Playwright** gives each test running at the same time a browser of its own, with its own `Playwright` (Playwright for Java must not be used by two threads at once). A browser is reused by the next test once its test ends, so a run launches as many browsers as tests ran at once, and a sequential run one. All are closed when the run ends.
+- **Selenium** reuses one browser per run (`vaadin.testing.selenium.reuse-browser`); a test that finds it in use starts a browser of its own, closed when that test ends.
+- **The application** is shared by the tests running at once: give them data that doesn't collide, as for two users at the same time.
+- **Log lines** of the application are given to the test whose thread logged them; see [Log lines under the User Step](../spec/12-readable-tests.md#log-lines-under-the-user-step).
+
 ## Other CI servers
 
 The reports are written the same way on any CI server: only the GitHub job summary needs GitHub. Two things to set up yourself:

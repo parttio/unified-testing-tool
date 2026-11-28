@@ -32,6 +32,8 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.selenium.executable` | the installed browser |
 | `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
+Tests can run in parallel in one JVM with JUnit's parallel execution: on Playwright each test running at the same time gets a browser of its own ([Parallel tests in one JVM](ci-setup.md#parallel-tests-in-one-jvm)).
+
 The Selenium adapter always runs its browser locally: it has no remote Selenium grid setting, and it reads none of TestBench's grid parameters (`com.vaadin.testbench.Parameters.gridBrowsers`, `hubHostname`) or Sauce Labs options. A remote grid is on the roadmap ([#645](https://github.com/parttio/unified-testing-tool/issues/645)). Until then, run browser tests where the browser is installed, or on Playwright.
 
 ## Base URL

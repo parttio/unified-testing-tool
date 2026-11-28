@@ -16,7 +16,8 @@ import java.util.Optional;
 
 /**
  * Playwright adapter on Dramafinder 2.0. One browser per test run (JVM), one fresh browser context and page
- * per test.
+ * per test. Tests running at the same time on different threads (JUnit's parallel execution) each get a browser of
+ * their own, with its own {@code Playwright}: Playwright for Java must not be used by two threads at once.
  * <p>
  * Settings (from the Test Runner's configuration; on JUnit, configuration parameters or system properties):
  * <ul>
@@ -46,7 +47,17 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
 
     @Override
     public AdapterSession open(AdapterContext context) {
-        Browser browser = context.runScoped(SharedBrowser.class, () -> SharedBrowser.launch(context)).browser();
+        SharedBrowsers browsers = context.runScoped(SharedBrowsers.class, SharedBrowsers::new);
+        SharedBrowser shared = browsers.acquire(context);
+        try {
+            return open(context, shared.browser(), () -> browsers.release(shared));
+        } catch (RuntimeException | Error e) {
+            browsers.release(shared);
+            throw e;
+        }
+    }
+
+    private static AdapterSession open(AdapterContext context, Browser browser, Runnable release) {
         String baseUrl = context.baseUrl();
         BrowserContext browserContext = browser.newContext();
         browserContext.setDefaultTimeout(context.timeout().toMillis()); // also for windows opened later
@@ -58,7 +69,7 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
         }
         Page page = browserContext.newPage();
         PlaywrightSession session = new PlaywrightSession(browserContext, page, baseUrl, context.timeout().toMillis(),
-                trace);
+                trace, release);
         // @WithMockUser / @WithUserDetails: log the browser in before the test body
         if (LoginSupport.isAvailable()) {
             LoginSupport.testUserUrl(baseUrl).ifPresent(session::logIn);
@@ -66,7 +77,70 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
         return session;
     }
 
-    /** Playwright and its browser, shared by the run's tests and closed when the run ends. */
+    /**
+     * The run's browsers, closed when the run ends. A test takes one that no other test is using, and gives it back
+     * when it ends, so a sequential run launches one browser and tests running in parallel one each.
+     */
+    static final class SharedBrowsers implements AutoCloseable {
+        private final java.util.Deque<SharedBrowser> idle = new java.util.ArrayDeque<>();
+        private final java.util.List<SharedBrowser> all = new java.util.ArrayList<>();
+        private boolean closed;
+
+        SharedBrowser acquire(AdapterContext context) {
+            synchronized (this) {
+                if (closed) {
+                    throw new IllegalStateException("The run has ended");
+                }
+                SharedBrowser free = idle.pollFirst();
+                if (free != null) {
+                    return free;
+                }
+            }
+            SharedBrowser launched = SharedBrowser.launch(context); // outside the lock: tests launch in parallel
+            synchronized (this) {
+                if (!closed) {
+                    all.add(launched);
+                    return launched;
+                }
+            }
+            launched.close();
+            throw new IllegalStateException("The run has ended");
+        }
+
+        synchronized void release(SharedBrowser browser) {
+            if (!closed && browser.browser().isConnected()) {
+                idle.addFirst(browser);
+            }
+        }
+
+        @Override
+        public void close() {
+            java.util.List<SharedBrowser> browsers;
+            synchronized (this) {
+                closed = true;
+                browsers = java.util.List.copyOf(all);
+                all.clear();
+                idle.clear();
+            }
+            RuntimeException failure = null;
+            for (SharedBrowser browser : browsers) {
+                try {
+                    browser.close();
+                } catch (RuntimeException e) {
+                    if (failure == null) {
+                        failure = e;
+                    } else {
+                        failure.addSuppressed(e);
+                    }
+                }
+            }
+            if (failure != null) {
+                throw failure;
+            }
+        }
+    }
+
+    /** Playwright and its browser, used by one test at a time and closed when the run ends. */
     record SharedBrowser(Playwright playwright, Browser browser) implements AutoCloseable {
 
         static SharedBrowser launch(AdapterContext context) {

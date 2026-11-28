@@ -37,6 +37,8 @@ final class PlaywrightSession implements AdapterSession {
     private final String baseUrl;
 
     private final boolean ownsContext;
+    /** Gives the browser back to the run when this test's session closes; nothing for a window or second user. */
+    private final Runnable release;
     private final java.util.List<PlaywrightSession> children = new ArrayList<>();
 
     private final double timeoutMillis;
@@ -58,12 +60,19 @@ final class PlaywrightSession implements AdapterSession {
         }
     }
 
-    PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis, TraceMode trace) {
-        this(context, page, baseUrl, timeoutMillis, true, trace);
+    PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis, TraceMode trace,
+            Runnable release) {
+        this(context, page, baseUrl, timeoutMillis, true, trace, release);
     }
 
     private PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis,
             boolean ownsContext, TraceMode trace) {
+        this(context, page, baseUrl, timeoutMillis, ownsContext, trace, () -> {});
+    }
+
+    private PlaywrightSession(BrowserContext context, Page page, String baseUrl, double timeoutMillis,
+            boolean ownsContext, TraceMode trace, Runnable release) {
+        this.release = release;
         this.context = context;
         this.page = page;
         this.baseUrl = baseUrl;
@@ -679,13 +688,17 @@ final class PlaywrightSession implements AdapterSession {
 
     @Override
     public void close() {
-        for (PlaywrightSession child : children) {
-            child.close();
-        }
-        if (ownsContext) {
-            context.close(); // closes the windows opened from this one too
-        } else {
-            page.close();
+        try {
+            for (PlaywrightSession child : children) {
+                child.close();
+            }
+            if (ownsContext) {
+                context.close(); // closes the windows opened from this one too
+            } else {
+                page.close();
+            }
+        } finally {
+            release.run();
         }
     }
 
