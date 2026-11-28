@@ -225,6 +225,7 @@ Every setting is a JUnit configuration parameter (`src/test/resources/junit-plat
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a screenshot or component tree after every User Step, in `steps/` |
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step that logged them; `error` or `off` |
+| `vaadin.testing.user-steps.ignored-errors` | unset; one Java regex: `hasNoErrors()` doesn't count an error line it finds (a known console or server line); the line still shows |
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a GitHub pull request, `origin/$GITHUB_BASE_REF`; else unset. The git ref "Changed in this PR" compares with |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory: changed scenarios show a diff of their User Steps against it |

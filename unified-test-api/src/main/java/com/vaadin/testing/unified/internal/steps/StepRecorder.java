@@ -315,6 +315,8 @@ public final class StepRecorder {
     private final List<LogLine> logsBeforeFirstEntry = new ArrayList<>();
     /** The lines logged while a frame runs: its entry's, once it is known. */
     private final List<LogLine> logsOfRunning = new ArrayList<>();
+    /** The error lines {@code hasNoErrors()} doesn't count; null: none. */
+    private java.util.regex.Pattern ignoredErrors;
     private Frame running;
     private int logLines;
 
@@ -448,23 +450,35 @@ public final class StepRecorder {
     }
 
     /**
-     * Every error logged so far, in order: the application's ERROR lines and the browsers' console errors. The
-     * windows' consoles are read first.
+     * {@code hasNoErrors()} doesn't count an error line whose text this finds; the line still shows under its
+     * entry ({@code vaadin.testing.user-steps.ignored-errors}, ADR 0023).
+     */
+    public synchronized void ignoreErrors(java.util.regex.Pattern ignored) {
+        this.ignoredErrors = ignored;
+    }
+
+    /**
+     * Every error logged so far that counts, in order: the application's ERROR lines and the browsers' console
+     * errors, without the ignored ones ({@link #ignoreErrors}). The windows' consoles are read first.
      */
     public List<LogLine> errors() {
         sessions.forEach((window, session) -> console(session));
         synchronized (this) {
             List<LogLine> errors = new ArrayList<>();
-            logsBeforeFirstEntry.stream().filter(LogLine::isError).forEach(errors::add);
+            logsBeforeFirstEntry.stream().filter(this::counts).forEach(errors::add);
             collectErrors(root.children, errors);
-            logsOfRunning.stream().filter(LogLine::isError).forEach(errors::add);
+            logsOfRunning.stream().filter(this::counts).forEach(errors::add);
             return errors;
         }
     }
 
+    private boolean counts(LogLine line) {
+        return line.isError() && (ignoredErrors == null || !ignoredErrors.matcher(line.text()).find());
+    }
+
     private void collectErrors(List<Entry> entries, List<LogLine> errors) {
         for (Entry entry : entries) {
-            logsOf.getOrDefault(entry, List.of()).stream().filter(LogLine::isError).forEach(errors::add);
+            logsOf.getOrDefault(entry, List.of()).stream().filter(this::counts).forEach(errors::add);
             if (entry instanceof Group group) {
                 collectErrors(group.children, errors);
             }

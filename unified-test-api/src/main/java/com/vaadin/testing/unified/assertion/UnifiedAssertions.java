@@ -270,7 +270,9 @@ public final class UnifiedAssertions {
          * action is over.
          * <p>
          * Which lines count follows {@code vaadin.testing.user-steps.server-log}; with {@code off} only the
-         * console is checked. Console errors are known on Testing Tools that can read the console.
+         * console is checked. Console errors are known on Testing Tools that can read the console. A line that
+         * {@code vaadin.testing.user-steps.ignored-errors}, one regex for the run, finds in the line's printed text
+         * ({@code console ERROR: …}) doesn't count, and still shows in the reports.
          */
         public PageAssert hasNoErrors() {
             // checked once: an error that was logged doesn't go away by waiting

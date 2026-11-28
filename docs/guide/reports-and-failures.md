@@ -252,6 +252,7 @@ A click that makes the server throw often shows the user nothing, or a generic e
 - **The browser's console errors** show the same way on Playwright, and on Selenium with Chrome: `⚠ console ERROR: Failed to load resource: the server responded with a status of 404 () (http://localhost:8080/missing.css)`. A missing `/favicon.ico`, which every browser asks for by itself, is left out.
 - **By time, not by cause:** a line a background thread logs shows under the step that was running then. A line logged between two steps shows under the first.
 - **`assertThat(page).hasNoErrors()`** makes a scenario fail when anything was logged as an error so far, and lists what. Put it at the end of a scenario that should leave no error behind, after the check that shows the last action is over: it looks once and doesn't wait. Without it, a logged error is shown and fails nothing.
+- **Errors that are not your application's**, such as Chromium's `Failed to load resource: net::ERR_NETWORK_CHANGED` when Docker creates a network during a parallel run, can be set aside for the whole run with one Java regex: `-Dvaadin.testing.user-steps.ignored-errors='net::ERR_NETWORK_CHANGED|ResizeObserver loop'`. `hasNoErrors()` doesn't count a line in which the regex finds a match. The regex is matched against the line as it is printed, source and level first, so `^server ERROR PoolMonitor:` matches only that logger's server lines. The line still shows under its User Step: the reports stay a record of what was logged ([ADR 0023](../adr/0023-hasnoerrors-ignores-lines-matching-one-run-wide-regex.md)). An invalid regex fails every test and names the setting.
 
 The lines are also in `user-steps.json` (`logs`) and under each step in the HTML report.
 
@@ -508,6 +509,7 @@ JUnit configuration parameters (`junit-platform.properties`) or system propertie
 | `vaadin.testing.user-steps.github-summary` | `true`: append `summary.md` to the GitHub job summary when `GITHUB_STEP_SUMMARY` is set |
 | `vaadin.testing.user-steps.changed-since` | in a pull request, `origin/$GITHUB_BASE_REF`; otherwise unset. Any git ref, such as `origin/main`, gives **Changed in this PR** locally |
 | `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged ([above](#what-the-application-logged)); `error`, or `off` |
+| `vaadin.testing.user-steps.ignored-errors` | unset; one Java regex: `hasNoErrors()` doesn't count an error line it finds; the line still shows ([above](#what-the-application-logged)) |
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it |
 | `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([above](#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step, in `steps/` |

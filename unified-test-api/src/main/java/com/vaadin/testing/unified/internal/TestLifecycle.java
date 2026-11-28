@@ -161,6 +161,8 @@ public final class TestLifecycle {
             steps.describeTest(test.displayName(), test.authoredName(), evidenceDirName(test));
         }
         steps.applicationPackages(ApplicationPackages.of(context));
+        // before the session: an invalid regex fails the test without opening a browser
+        settings.userStepsIgnoredErrors().ifPresent(steps::ignoreErrors);
         TestingTool tool = settings.tool();
         AdapterSession session = adapters.apply(tool).open(context);
         ViewportSize viewport = viewport(context);
