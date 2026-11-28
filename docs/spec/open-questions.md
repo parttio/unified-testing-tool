@@ -16,7 +16,6 @@ Deliberately not decided in this spec.
 |---|---|
 | Grid extras | TreeGrid, column reordering, Grid context menu, Grid Pro editing, drag and drop: same pattern as [07-grid.md](07-grid.md) |
 | Quarkus | Same pattern as `@UnifiedSpringBootTest`: `@QuarkusTest` with its test port for browser Testing Tools, `QuarkusBrowserlessTest` for Browserless |
-| Authentication without Spring Security | The application's real login, or the Escape Hatch ([11-users.md](11-users.md)) |
 | Migration from TestBench and Browserless | Decided in [ADR 0004](../adr/0004-test-migration-openrewrite-recipes-then-agent-skill.md) and [ADR 0005](../adr/0005-browserless-migration-recipes.md): Migration Recipes, then an agent skill for Migration Markers. How to run them: [Migrating from TestBench](../migrating-from-testbench.md), [Migrating from Browserless](../migrating-from-browserless.md) |
 
 ## To verify during implementation
@@ -32,6 +31,7 @@ Deliberately not decided in this spec.
 | Base URL setting | `vaadin.testing.base-url` for the run; `@BaseUrl` per test class ([#678](https://github.com/parttio/unified-testing-tool/issues/678)) |
 | Timeout setting | `vaadin.testing.timeout` |
 | `…Containing` filters | Case-insensitive substring match, as in Dramafinder 2.0 (found while implementing) |
+| Authentication without Spring Security | `openNewSession()`, then the application's own login with `UnifiedLogin` ([11-users.md](11-users.md#a-second-user-without-spring-security), [ADR 0022](../adr/0022-a-second-user-signs-in-through-the-app-open-new-session.md)) |
 
 ## Pattern only
 

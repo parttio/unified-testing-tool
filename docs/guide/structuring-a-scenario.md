@@ -51,7 +51,7 @@ void step(String name, Runnable userSteps);   // on UnifiedPage
 - **Name it after the user's work**, with its arguments: `"Edit " + name`. Not given/when/then, and not the method name.
 - **Steps nest** without limit, as `Change the name` does above. Reports indent them, and a failure names the chain.
 - **A failure inside a step** points first at the line that called the step, then at the line inside it.
-- **`page.step(..)` is on the page**, not a static method: it needs no import and doesn't clash with `Allure.step`. It records into the test's run, so a step works across `openWindow()` and `openAsUser(..)`.
+- **`page.step(..)` is on the page**, not a static method: it needs no import and doesn't clash with `Allure.step`. It records into the test's run, so a step works across `openWindow()`, `openAsUser(..)` and `openNewSession()`.
 
 Every Wrapper action and retrying assertion is a User Step whether or not it is inside a `page.step(..)`: a test without User Tasks is reported too, as a flat list.
 

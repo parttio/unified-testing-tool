@@ -60,7 +60,7 @@ These fail every test of a run the same way, with a message that names the cause
 | `This is a Spring test, but com.vaadin:browserless-test-spring is not on the test classpath` | A `@UnifiedSpringBootTest` on Browserless needs it, and the Browserless adapter doesn't bring it. | Add the test dependency `com.vaadin:browserless-test-spring`; the BOM sets its version. |
 | `The Unified API needs Vaadin 25.3 or newer` | The application runs on an older Vaadin. | Move the application to Vaadin 25.3. |
 | `Could not install Playwright's …` | Playwright couldn't download its browser, for example behind a proxy or on an offline CI agent. | Install it with the command in the message, or point `vaadin.testing.playwright.executable` at an installed browser ([Configuration](configuration.md)). |
-| `openAsUser needs …` | `openAsUser(..)` logs in through Spring Security. | Use `@UnifiedSpringBootTest`, with Spring Security in the application ([Navigation, users and windows](navigation-and-users.md)). |
+| `openAsUser needs …` | `openAsUser(..)` logs in through Spring Security. | Use `@UnifiedSpringBootTest`, with Spring Security in the application. Without it, use `openNewSession()` and sign in through the application's own login ([A second user without Spring Security](navigation-and-users.md#a-second-user-without-spring-security)). |
 
 Two more, without a message of the Unified API:
 

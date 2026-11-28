@@ -1,6 +1,6 @@
 # 11. Users and windows
 
-Decided in [#34](https://github.com/parttio/unified-testing-tool/issues/34).
+Decided in [#34](https://github.com/parttio/unified-testing-tool/issues/34). A second user without Spring Security: [ADR 0022](../adr/0022-a-second-user-signs-in-through-the-app-open-new-session.md) ([#681](https://github.com/parttio/unified-testing-tool/issues/681)).
 
 ## Running as a user
 
@@ -58,14 +58,30 @@ The endpoint exists only in `@UnifiedSpringBootTest` test contexts: `unified-tes
 ```java
 UnifiedPage second = page.openWindow();             // same user, same session
 UnifiedPage bob = page.openAsUser("bob", "USER");   // another user, own session
+UnifiedPage other = page.openNewSession();          // own session, nobody signed in
 ```
 
 | Call | Browserless | Playwright, Selenium |
 |---|---|---|
 | `openWindow()` | `user.newWindow()` | new page in the same browser context |
 | `openAsUser(name, roles…)` | `app.newUser(name, roles…)` | new browser context, logged in through the endpoint |
+| `openNewSession()` | `app.newUser()`: no security context | Playwright: new browser context, not traced. Selenium: new browser. No login |
 
-All windows and users close at the end of the test.
+All windows and users close at the end of the test. `openAsUser` and `openNewSession` start on no view: navigate first.
+
+### A second user without Spring Security
+
+`openAsUser` needs Spring Security: Browserless signs the user in through `createSecured(..)`, the browsers through the test-only endpoint of `@UnifiedSpringBootTest`. Without it, `openNewSession()` gives a window in a session of its own with nobody signed in, whatever the test's `@WithMockUser`. The test signs in through the application's own login, as a user does, usually with `UnifiedLogin`. That is a User Step, with Auto-Wait, Near Misses and the password masked. A sign-in the test repeats is its own helper or User Task, not a Unified API type:
+
+```java
+UnifiedPage officer = admin.openNewSession();
+officer.step("Sign in as officer", () -> {
+    officer.navigate(LoginView.class);
+    officer.find(UnifiedLogin.class).login("officer", password);
+});
+```
+
+On Browserless, a `LoginForm` with a form `action` (Spring Security's `/login`) can't be submitted, as for the test's own page. An application that signs in through its `LoginEvent` listener works on every Testing Tool. The User Step reads `open a new session`, and the reports call the window `session 2`, `session 3`, and so on.
 
 ## Implementation status
 
@@ -74,14 +90,12 @@ All windows and users close at the end of the test.
 | `@WithMockUser`, `@WithUserDetails` (method, class, `@Nested`) | done: Spring's test listener sets the user, the adapter passes it to `createSecured(..).newUser(auth)` | done: login endpoint before the test body | done: login endpoint before the test body |
 | `openWindow()` | done | done (page in the same context) | done (tab in the same browser) |
 | `openAsUser(..)` | done | done (new browser context, logged in) | done (new browser, logged in) |
+| `openNewSession()` | done (new user, anonymous) | done (new browser context) | done (new browser) |
 | Redirects (anonymous → login view, missing role → access denied) | asserted like any navigation | same | same |
-
-## Not specified
-
-Authentication without Spring Security: left to implementation (the application's real login, or the Escape Hatch). See [open-questions.md](open-questions.md).
 
 ## Requirements on Testing Tool adapters
 
 - Read `@WithMockUser` / `@WithUserDetails` from the test method, then the class.
 - Browser adapters: log in through the test-only endpoint before the test body runs.
-- `openWindow` shares the user's session; `openAsUser` never does.
+- `openWindow` shares the user's session; `openAsUser` and `openNewSession` never do.
+- `openNewSession` signs nobody in, even when the test has a user.

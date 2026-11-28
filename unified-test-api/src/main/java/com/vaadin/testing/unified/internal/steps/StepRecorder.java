@@ -321,6 +321,7 @@ public final class StepRecorder {
     /** The most log lines one test keeps: an application that logs in a loop doesn't fill the reports. */
     public static final int MAX_LOG_LINES = 100;
     private int windows = 1;
+    private int newSessions = 1;
     private volatile String scenario;
     private volatile boolean scenarioAuthored;
     private volatile String evidenceDir;
@@ -982,6 +983,11 @@ public final class StepRecorder {
     /** A name for another window of the test's user: "window 2". */
     public synchronized String nextWindow() {
         return "window " + (++windows);
+    }
+
+    /** A name for a window in a new session of its own: "session 2", the test's own being the first. */
+    public synchronized String nextSession() {
+        return "session " + (++newSessions);
     }
 
     // ---------------------------------------------------------------- results

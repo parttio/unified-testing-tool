@@ -367,10 +367,21 @@ final class SeleniumSession implements AdapterSession {
     @Override
     public AdapterSession openAsUser(String username, String... roles) {
         String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
+        SeleniumSession session = newBrowser();
+        session.logIn(loginUrl);
+        return session;
+    }
+
+    /** A browser of its own (own cookies, own session) with nobody signed in. */
+    @Override
+    public AdapterSession openNewSession() {
+        return newBrowser();
+    }
+
+    private SeleniumSession newBrowser() {
         SeleniumSession session = new SeleniumSession(browsers, local, new Browser(browsers.get()), baseUrl, timeout, true,
                 null);
         children.add(session);
-        session.logIn(loginUrl);
         return session;
     }
 
