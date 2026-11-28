@@ -90,8 +90,21 @@ From then on the value is masked wherever it appears in the test's reports, in e
 
 Two places keep their text:
 
-- **The login's user name.** A password given to `UnifiedLogin.login(..)` is not masked inside that login's own user name: `login("barista@vaadin.com", "barista")` reads `sign in as “barista@vaadin.com”`, and so does a step you named `Sign in as barista@vaadin.com`. If the password equals the user name (`admin` / `admin`), it is masked there too.
+- **The login's user name.** A password given to `UnifiedLogin.login(..)` is not masked inside that login's own user name: `login("barista@vaadin.com", "barista")` reads `sign in as “barista@vaadin.com”`, and so does a step you named `Sign in as barista@vaadin.com`. If the password equals the user name (`admin` / `admin`), it is masked there too. The user name and the password are then the same text, so the reports can't show one and hide the other: [name the user in the step](#a-user-whose-password-is-its-user-name) instead.
 - **The scenario's name you wrote.** A `@DisplayName`, or the method's name, is shown as written, because it comes from your source. The name of a parameterized or repeated test's invocation (`[1] barista`) is built from its arguments, so it is masked.
+
+### A user whose password is its user name
+
+Seeded test users often have their user name as password (`admin` / `admin`). Their sign-in reads `sign in as “••••” in login`, and in a test that switches users the reports no longer say who acts. Wrap the sign-in in a step that names the user by their role, in words that don't contain the password: a secret is masked inside a step's name too, so `Log in as the administrator` would read `Log in as the ••••istrator`.
+
+```java
+page.step("Sign in as the back-office manager",
+        () -> page.find(UnifiedLogin.class).login("admin", "admin"));
+//   2  Sign in as the back-office manager
+//      2.1  sign in as “••••” in login
+```
+
+There is no way to declare a password not secret: the reports would then print it wherever it occurs ([#683](https://github.com/parttio/unified-testing-tool/issues/683)). A password that differs from its user name avoids the question.
 
 Reports are for tests that run on test data or anonymised data, so masking keeps a value out of what a reader sees but isn't a security boundary ([ADR 0014](../adr/0014-secrets-are-masked-as-substrings-except-the-login-user-name-and-display-name.md)).
 
