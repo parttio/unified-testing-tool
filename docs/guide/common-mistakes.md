@@ -158,4 +158,10 @@ A test migrated by hand, or written by someone used to another tool, often keeps
 | `getDriver().get("http://localhost:" + port + "/people")` | TestBench | `page.navigate(PeopleView.class)` ([Navigation](navigation-and-users.md)) |
 | `page.locator("#id")`, CSS or XPath | Playwright, Dramafinder | a Wrapper with filters; a test id or id as the last resort ([Finding components](finding-components.md)) |
 | `test(component).click()` | Browserless | `wrapper.click()` |
+| `assertTrue(locator.isVisible())` | Playwright | `assertThat(wrapper).isVisible()`, which needs exactly one match; for a text that can show more than once, `assertThat(page.find(UnifiedSpan.class).withText("Saved").visible()).exists()` |
+| `assertFalse(locator.isVisible())` | Playwright | `assertThat(wrapper.visible()).doesNotExist()`; `assertThat(wrapper).isHidden()` for one still on the page ([Checking that something is there, or gone](assertions-and-waiting.md#checking-that-something-is-there-or-gone)) |
+| `assertTrue(page.textContent("body").contains("Saved"))` | Playwright | a check on the component that shows it: `assertThat(page.find(UnifiedNotification.class)).hasTextContaining("Saved")`, or `assertThat(page.find(UnifiedSpan.class).withTextContaining("Saved")).exists()` |
+| `assertEquals("Alice", locator.inputValue())` | Playwright | `assertThat(page.find(UnifiedTextField.class).withLabel("Name")).hasValue("Alice")` |
+| `assertEquals(3, rows.count())` | Playwright | `assertThat(grid).hasRowCount(3)`; for other components, `assertThat(wrapper).hasCount(3)` |
+| `page.waitForTimeout(..)`, `Thread.sleep(..)` before a check | any | nothing: the check waits ([Waiting with a sleep](#waiting-with-a-sleep)) |
 | a base class that starts the browser or the app | TestBench, Dramafinder | `@UnifiedSpringBootTest` or `@UnifiedUITest` ([Getting started](getting-started.md)) |

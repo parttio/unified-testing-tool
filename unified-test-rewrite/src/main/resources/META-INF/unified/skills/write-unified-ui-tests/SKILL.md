@@ -115,6 +115,23 @@ assertions; a plain JUnit `assertEquals` on a Wrapper's getter reads once, witho
 as a gap. Use `all()` only to loop. When a lookup matches several components, add the filter that names the one
 meant (often a container) rather than picking one by position.
 
+- `isVisible()` waits for exactly one match, and fails on none or several: check absence with `doesNotExist()`, or
+  `isHidden()` for a component still on the page.
+- Text filters match the DOM text, as the view's code writes it, not as CSS `text-transform` shows it.
+- A row lookup scrolls the grid, so an Escape Hatch read by row position after it may hit another row: read the row
+  through its Wrapper.
+
+A suite migrated by hand keeps its old checks, which pass without User Steps. Convert each:
+
+| Raw check | Unified assertion |
+|---|---|
+| `assertTrue(locator.isVisible())` | `assertThat(wrapper).isVisible()`; a text that can show twice: `assertThat(page.find(UnifiedSpan.class).withText("Saved").visible()).exists()` |
+| `assertFalse(locator.isVisible())` | `assertThat(wrapper.visible()).doesNotExist()` |
+| `assertTrue(page.textContent("body").contains("Saved"))` | a check on the component that shows it: `assertThat(notification).hasTextContaining("Saved")` |
+| `assertEquals("Alice", locator.inputValue())` | `assertThat(field).hasValue("Alice")` |
+| `assertEquals(3, rows.count())` | `assertThat(grid).hasRowCount(3)`, or `assertThat(wrapper).hasCount(3)` |
+| a pause (`waitForTimeout`, `Thread.sleep`) before a check | nothing: the check waits |
+
 ## Prove it
 
 Run the test class on every Testing Tool it allows: Browserless and Playwright, or only the ones its
