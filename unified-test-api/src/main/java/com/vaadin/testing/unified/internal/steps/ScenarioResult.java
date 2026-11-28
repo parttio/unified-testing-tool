@@ -123,6 +123,13 @@ public record ScenarioResult(String testClass, String testMethod, String display
     private static void unchecked(List<Map<String, Object>> entries, List<String> pending, boolean[] checked) {
         for (Map<String, Object> entry : entries) {
             String type = string(entry, "type");
+            if ("backend".equals(type)) {
+                // the User Steps inside it come first; then its own work, which may hold a check
+                unchecked(entries(entry.get("steps")), pending, checked);
+                checked[0] = true;
+                pending.clear();
+                continue;
+            }
             boolean group = "group".equals(type);
             if (!group && isCheck(entry, type)) {
                 checked[0] = true;
@@ -201,14 +208,32 @@ public record ScenarioResult(String testClass, String testMethod, String display
         return sb.toString();
     }
 
+    /** Whether the entry holds entries of its own: a User Task's step group, or a Backend Step. */
+    static boolean nests(Map<String, Object> entry) {
+        String type = string(entry, "type");
+        return "group".equals(type) || "backend".equals(type);
+    }
+
+    /** The line of an entry that {@link #nests}: the User Task's name, {@code backend: <name>} for a Backend Step. */
+    static String heading(Map<String, Object> entry) {
+        return "backend".equals(string(entry, "type"))
+                ? StepRecorder.BACKEND_PREFIX + orEmpty(string(entry, "name"))
+                : orEmpty(string(entry, "name"));
+    }
+
+    private static boolean anyFailed(List<Map<String, Object>> entries) {
+        return entries.stream().anyMatch(e -> "failed".equals(string(e, "status")));
+    }
+
     private static void stepsText(StringBuilder sb, List<Map<String, Object>> entries, int depth) {
         for (Map<String, Object> entry : entries) {
             String type = string(entry, "type");
             boolean failed = "failed".equals(string(entry, "status"));
             String window = string(entry, "window");
             sb.append(UserStepsReport.indent(depth));
-            if ("group".equals(type)) {
-                sb.append(UserStepsReport.line(string(entry, "index"), window, orEmpty(string(entry, "name")), false))
+            if (nests(entry)) {
+                sb.append(UserStepsReport.line(string(entry, "index"), window, heading(entry),
+                        "backend".equals(type) && failed && !anyFailed(entries(entry.get("steps")))))
                         .append('\n');
                 stepsText(sb, entries(entry.get("steps")), depth + 1);
             } else {
@@ -230,10 +255,10 @@ public record ScenarioResult(String testClass, String testMethod, String display
 
     private static void stepLines(List<String> lines, List<Map<String, Object>> entries, int depth) {
         for (Map<String, Object> entry : entries) {
-            boolean group = "group".equals(string(entry, "type"));
+            boolean group = nests(entry);
             lines.add(UserStepsReport.indent(depth)
-                    + UserStepsReport.line(null, string(entry, "window"), orEmpty(string(entry, group ? "name" : "text")),
-                            false));
+                    + UserStepsReport.line(null, string(entry, "window"), group ? heading(entry)
+                            : orEmpty(string(entry, "text")), false));
             if (group) {
                 stepLines(lines, entries(entry.get("steps")), depth + 1);
             }

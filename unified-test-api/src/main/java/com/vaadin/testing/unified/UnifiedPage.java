@@ -84,6 +84,23 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
     void step(String name, Runnable userSteps);
 
     /**
+     * Work the test does outside the application's UI, such as checking what the database, a file or a mail
+     * holds, as a Backend Step: the reports show it among the User Steps as {@code backend: order is stored}, and
+     * the run summary counts it as a check (ADR 0023). The work runs once, after Auto-Wait has waited for the
+     * server to be idle; wait for a later result with {@link #waitUntil}. If it throws, the Backend Step and the
+     * test fail.
+     *
+     * <pre>{@code
+     * page.find(UnifiedButton.class).withText("Place order").click();
+     * page.backendStep("order is stored", () -> assertThat(orders.findByCustomer("Alan")).hasSize(1));
+     * }</pre>
+     *
+     * Name it after what it checks or does ("order is stored"). For checks of the UI, use
+     * {@code assertThat(..)}.
+     */
+    void backendStep(String name, Runnable work);
+
+    /**
      * Marks a value as secret and returns it unchanged: the User Step reports show it as {@code ••••} wherever
      * it appears, in every window of the test. Values typed into a password field are hidden without it.
      *

@@ -106,6 +106,7 @@ class EditPersonTest {
 | a checkbox | `check()`, `uncheck()`, `setChecked(..)`: `element().click()` toggles it on Browserless only |
 | a route the user may not open | `page.navigate(AdminView.class)` doesn't throw; check where it lands: `assertThat(page).isAt(LoginView.class)` |
 | a condition no assertion states | `page.waitUntil(() -> ..)`: a last resort, it shows as a gap in the reports |
+| a check outside the UI (database, file, mail) | `page.backendStep("order is stored", () -> assertThat(orders.findByCustomer("Alan")).hasSize(1))`: runs once, shows as `backend: order is stored`, and counts as a check in the run summary |
 | every match, to act on each | `for (UnifiedButton b : page.find(UnifiedButton.class).withText("Done").all()) { .. }` |
 
 Wrappers are the `Unified*` interfaces in `com.vaadin.testing.unified.component`; `assertThat` is

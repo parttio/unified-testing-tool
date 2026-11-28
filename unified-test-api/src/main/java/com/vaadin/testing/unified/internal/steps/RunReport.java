@@ -92,8 +92,8 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             if (!escapeHatch.isEmpty()) {
                 h.append("<p class=\"lead\">")
                         .append(esc(RunSummary.escapeHatchLead(escapeHatch.size(), !unchecked.isEmpty())))
-                        .append(". ").append(esc(RunSummary.ESCAPE_HATCH_POINTER))
-                        .append(" <code>assertThat(..)</code>, to have them checked here.</p>\n");
+                        .append(". ").append(RunSummary.escapeHatchPointer(c -> "<code>" + esc(c) + "</code>"))
+                        .append("</p>\n");
                 escapeHatch.forEach(s -> scenario(h, s, false, false, false));
             }
             h.append("</section>\n");
@@ -382,12 +382,13 @@ public record RunReport(RunSummary summary, Function<ScenarioResult, List<String
             String type = ScenarioResult.string(entry, "type");
             boolean failed = "failed".equals(ScenarioResult.string(entry, "status"));
             String window = ScenarioResult.string(entry, "window");
-            if ("group".equals(type)) {
-                h.append("<li class=\"group").append(failed ? " failed" : "").append("\"><details open><summary>");
+            if (ScenarioResult.nests(entry)) {
+                h.append("<li class=\"group").append("backend".equals(type) ? " backend" : "")
+                        .append(failed ? " failed" : "").append("\"><details open><summary>");
                 index(h, entry);
                 h.append("<span class=\"text\">");
                 window(h, window);
-                h.append(esc(orEmpty(ScenarioResult.string(entry, "name")))).append("</span>");
+                h.append(esc(ScenarioResult.heading(entry))).append("</span>");
                 meta(h, entry, null);
                 h.append("</summary>\n");
                 logs(h, entry);

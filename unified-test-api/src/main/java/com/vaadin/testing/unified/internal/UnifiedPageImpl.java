@@ -185,6 +185,11 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
+    public void backendStep(String name, Runnable work) {
+        run.steps().backend(name, run.window(), work);
+    }
+
+    @Override
     public void step(String name, Runnable userSteps) {
         run.steps().group(name, run.window(), userSteps);
     }

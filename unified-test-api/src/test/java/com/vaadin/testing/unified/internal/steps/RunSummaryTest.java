@@ -413,6 +413,18 @@ class RunSummaryTest {
     }
 
     @Test
+    void aBackendStepCountsAsACheckAfterTheUserStepsInsideIt() {
+        String open = step("open", "open People");
+        String click = step("click", "click button “Save”");
+        String backend = "{\"type\": \"backend\", \"index\": \"3\", \"name\": \"order is stored\", "
+                + "\"text\": \"backend: order is stored\", \"status\": \"passed\", \"steps\": [" + click + "]}";
+
+        assertEquals(Optional.empty(), passing("checksTheDatabase", open + "," + click + "," + backend).unchecked());
+        assertEquals(Optional.of(new ScenarioResult.Unchecked(false, List.of("click button “Save”"))),
+                passing("seedsThenClicks", backend + "," + click).unchecked());
+    }
+
+    @Test
     void theSummaryListsPassingScenariosWithoutACheck() {
         String open = step("open", "open People");
         String see = step("see", "see grid “People”");
@@ -475,8 +487,9 @@ class RunSummaryTest {
 
                 - **onlyClicks (SaveTest)** · no check
 
-                1 more ends in Escape Hatch code, whose checks the report can't see: escapesThenClicks. \
-                Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them checked here.
+                1 more used the Escape Hatch and ends on User Steps the report sees no check for: escapesThenClicks. \
+                Their checks may be assertions the report can't see: move checks of the UI to `assertThat(..)`, \
+                and declare the others with `page.backendStep(..)`.
                 """, summary.markdown());
     }
 
@@ -493,17 +506,18 @@ class RunSummaryTest {
 
                 #### Scenarios without a check
 
-                4 passing scenarios end in Escape Hatch code, whose checks the report can't see: escapes0, escapes1, \
-                escapes2, … Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them \
-                checked here.
+                4 passing scenarios used the Escape Hatch and end on User Steps the report sees no check for: \
+                escapes0, escapes1, escapes2, … Their checks may be assertions the report can't see: move checks of the UI to `assertThat(..)`, \
+                and declare the others with `page.backendStep(..)`.
                 """, md);
         assertEquals("""
                 ### Unified UI Tests · Playwright · 1 passed, 0 failed, 0 skipped
 
                 #### Scenarios without a check
 
-                1 passing scenario ends in Escape Hatch code, whose checks the report can't see: escapes0. \
-                Resolve their Migration Markers, or move their checks to `assertThat(..)`, to have them checked here.
+                1 passing scenario used the Escape Hatch and ends on User Steps the report sees no check for: \
+                escapes0. Their checks may be assertions the report can't see: move checks of the UI to `assertThat(..)`, \
+                and declare the others with `page.backendStep(..)`.
                 """, new RunSummary("Playwright", run.subList(0, 1), 0, null).markdown());
         assertFalse(new RunSummary("Playwright",
                 List.of(passing("escapesAndSees", gap("Escape Hatch") + "," + click + "," + step("see", "see b"))), 0, null)
