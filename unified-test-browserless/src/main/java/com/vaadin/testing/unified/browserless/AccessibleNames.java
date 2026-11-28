@@ -87,7 +87,7 @@ final class AccessibleNames {
             // labelled by its label slot, or its title
             case "vaadin-side-nav" -> {
                 return join(e.getChildren().filter(l -> "label".equals(l.getAttribute("slot")))
-                        .map(Element::getTextRecursively).limit(1).toList());
+                        .map(ElementText::of).limit(1).toList());
             }
             case "vaadin-card" -> {
                 String title = e.getProperty("cardTitle");
@@ -134,7 +134,7 @@ final class AccessibleNames {
                     .findFirst();
             if (item.isPresent()) {
                 String label = item.get().getAttribute("label");
-                return label != null ? label : item.get().getTextRecursively();
+                return label != null ? label : ElementText.of(item.get());
             }
         }
         String placeholder = select.getProperty("placeholder");
@@ -162,12 +162,12 @@ final class AccessibleNames {
         List<String> labels = new ArrayList<>();
         for (Element a = e.getParent(); a != null; a = a.getParent()) {
             if ("label".equals(a.getTag())) {
-                labels.add(a.getTextRecursively());
+                labels.add(ElementText.of(a));
             }
         }
         if (id != null) {
             uiElements(c).filter(l -> "label".equals(l.getTag()) && id.equals(l.getAttribute("for")))
-                    .map(Element::getTextRecursively).forEach(labels::add);
+                    .map(ElementText::of).forEach(labels::add);
         }
         return labels;
     }
@@ -183,7 +183,7 @@ final class AccessibleNames {
             all.stream().filter(el -> id.equals(BrowserlessSession.idOf(el))).findFirst()
                     .filter(t -> !targets.contains(t)).ifPresent(targets::add);
         }
-        return targets.stream().map(Element::getTextRecursively).toList();
+        return targets.stream().map(ElementText::of).toList();
     }
 
     /**
@@ -202,10 +202,10 @@ final class AccessibleNames {
     private static String ownText(Element e) {
         List<Element> children = e.getChildren().toList();
         if (children.stream().noneMatch(ch -> !ch.isTextNode() && ch.hasAttribute("slot") && hasText(ch))) {
-            return join(List.of(e.getTextRecursively()));
+            return join(List.of(ElementText.of(e)));
         }
         return join(children.stream().filter(ch -> ch.isTextNode() || !ch.hasAttribute("slot"))
-                .map(Element::getTextRecursively).toList());
+                .map(ElementText::of).toList());
     }
 
     /** Whether a browser has text in it: a tooltip shows its text in its own element there. */
@@ -214,7 +214,7 @@ final class AccessibleNames {
             String text = e.getProperty("text");
             return text != null && !text.isBlank();
         }
-        return !e.getTextRecursively().isBlank();
+        return !ElementText.of(e).isBlank();
     }
 
     /** The element and its descendant elements, text nodes left out. */

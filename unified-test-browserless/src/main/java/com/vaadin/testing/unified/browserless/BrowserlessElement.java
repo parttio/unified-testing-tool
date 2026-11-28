@@ -94,7 +94,7 @@ final class BrowserlessElement implements UnifiedElement, com.vaadin.testing.uni
     @Override
     public String getText() {
         return BrowserQueries.normalize(
-                support.text(component, session.window()).orElseGet(() -> element().getTextRecursively()));
+                support.text(component, session.window()).orElseGet(() -> ElementText.of(element())));
     }
 
     @Override
