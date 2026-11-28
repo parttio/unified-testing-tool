@@ -12,7 +12,7 @@ What an agent that writes, fixes or reviews Unified UI Tests can read, and how t
 
 ## The skill
 
-The `AddUnifiedTestingSkill` recipe writes the skill to `.claude/skills/write-unified-ui-tests/SKILL.md` and points to it from `AGENTS.md`, or from `CLAUDE.md` when the project has no `AGENTS.md`. Every Migration Recipe runs it, and it runs alone too ([Migrating from TestBench, the agent skill](../migrating-from-testbench.md#the-agent-skill)). The skill ships with each release and matches its API; the recipe replaces an older copy and keeps one you edited by hand.
+The `AddUnifiedTestingSkill` recipe writes the skill to `.claude/skills/write-unified-ui-tests/SKILL.md` and points to it from `AGENTS.md`, or from `CLAUDE.md` when the project has no `AGENTS.md`. Every Migration Recipe runs it, and it runs alone too ([Migrating from TestBench, the agent skill](../migrating-from-testbench.md#the-agent-skill)). The skill ships with each release and matches its API; the recipe replaces an older copy and keeps one you edited by hand. It writes only at the build root; when the build root has no build file, `AGENTS.md` or `CLAUDE.md` (the parent POM is in a subdirectory), it installs nothing and warns on the module's build file.
 
 With it, an agent:
 

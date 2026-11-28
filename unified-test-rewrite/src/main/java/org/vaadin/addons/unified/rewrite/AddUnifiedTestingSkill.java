@@ -39,7 +39,9 @@ import org.openrewrite.text.PlainTextParser;
  * created. With both files, only {@code AGENTS.md} gets it.
  * <p>
  * It writes only into a project: a root with a build file ({@code pom.xml}, Gradle), {@code AGENTS.md},
- * {@code CLAUDE.md} or the skill, that has Java sources. Every Migration Recipe runs it; it can also run alone.
+ * {@code CLAUDE.md} or the skill, that has Java sources. When the root is no project but has Java sources, it writes
+ * nothing and warns ({@link Markup.Warn}) on each build file below the root, a module's, so the skip is not silent
+ * (issue #698). Every Migration Recipe runs it; it can also run alone.
  */
 public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkill.Scan> {
 
@@ -58,6 +60,10 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
     static final String UNSTAMPED_WARNING = "write-unified-ui-tests: this copy of the skill has no version stamp, so "
             + "it was edited by hand and is left as it is. Delete it and run the recipe again to get the skill of this "
             + "release.";
+    static final String NO_PROJECT_ROOT_WARNING = "write-unified-ui-tests: the skill was not installed. The recipe "
+            + "writes it only at the build root, and the build root has no build file (pom.xml, Gradle), AGENTS.md or "
+            + "CLAUDE.md; this build file is below it. Add an AGENTS.md at the build root to install the skill there, "
+            + "or run the recipe with this module as the build root.";
 
     /** What the scan saw. */
     public static final class Scan {
@@ -138,6 +144,10 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
         return new TreeVisitor<>() {
             @Override
             public Tree visit(@Nullable Tree tree, ExecutionContext ctx) {
+                if (!scan.project && scan.javaSources && tree instanceof SourceFile source
+                        && isNestedBuildFile(source.getSourcePath())) {
+                    return Markup.warn(source, new IllegalStateException(NO_PROJECT_ROOT_WARNING));
+                }
                 if (!applies(scan) || !(tree instanceof PlainText text)) {
                     return tree;
                 }
@@ -155,6 +165,11 @@ public class AddUnifiedTestingSkill extends ScanningRecipe<AddUnifiedTestingSkil
 
     private static boolean applies(Scan scan) {
         return scan.project && scan.javaSources;
+    }
+
+    /** A build file below the build root: a module's, which makes no project at the root. */
+    private static boolean isNestedBuildFile(Path path) {
+        return path.getNameCount() > 1 && BUILD_FILES.contains(path.getFileName());
     }
 
     private static PlainText updateSkill(PlainText existing) {
