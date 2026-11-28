@@ -25,9 +25,9 @@ reading the diff, and anyone reading a failure, sees what the user does. The rul
    actions, reads and checks are listed in `META-INF/unified/api-reference.md` inside the `unified-test-api` jar
    (the same page is [on the site](https://parttio.github.io/unified-testing-tool/api-reference.md)); the sources
    and Javadoc have the details. Done when it compiles: `mvn test-compile`.
-3. **Prove it** (see below). Done when it passes on Browserless and Playwright, the style rules pass, and
+3. **Prove it** (see below). Done when it passes on every Testing Tool it allows, the style rules pass, and
    `user-steps.txt` tells the scenario you were asked for.
-4. **Report** the test's `@DisplayName`, the two runs, and its `user-steps.txt`.
+4. **Report** the test's `@DisplayName`, its runs, and its `user-steps.txt`.
 
 ## Shape of a test
 
@@ -71,17 +71,20 @@ class EditPersonTest {
   it inside the step and after it.
 - **Secrets**: type a password or token through `page.secret(..)`:
   `.setValue(page.secret(apiKey))`. The reports then show `••••`.
-- **Spring setup**: keep the suite on one Spring context. Every class with its own context setup (a
-  `@ServiceConnection` container field, `@MockitoBean`, `@Import`, properties, profiles) starts another, each with an
-  embedded server; share it through one base class. Test data is committed, not rolled back (the browser Testing
-  Tools refuse `@Transactional`): each test cleans up every table it writes to.
 - **Page objects** are optional and hold structure only: methods returning Wrappers
   (`UnifiedTextField name() { return page.find(UnifiedTextField.class).withLabel("Name"); }`). User work goes in
   User Tasks, checks in the test.
 - **One Spring context**: with Spring Boot, the test classes extend one shared base class that holds
   `@UnifiedSpringBootTest`, the profile (`@ActiveProfiles`) and any `@ServiceConnection` container field. A class
   with its own `@MockitoBean`, `@Import`, properties or container field gets a Spring context of its own, and each
-  context starts the application's server, on Browserless too. Add one only when the test needs that setup.
+  context starts the application's server, on Browserless too. Add one only when the test needs that setup. Test data
+  is committed, not rolled back (the browser Testing Tools refuse `@Transactional`): each test cleans up every table
+  it writes to.
+- **Without Spring Boot**: mark the class `@UnifiedUITest`. Browserless builds the views in the test JVM; a browser
+  Testing Tool opens the application at `vaadin.testing.base-url`, on a server the build starts or a deployed copy
+  (an EAR on an application server, a container), or a test class's `@BaseUrl`. A suite whose application can't run
+  in the test JVM is browser-only: each class declares `@RequiresBrowser` or `@RequiresTestingTool`, so Browserless
+  skips it. The application's data outlives the test there too: each test leaves behind nothing the next one sees.
 
 ## Canonical forms
 
@@ -114,14 +117,18 @@ meant (often a container) rather than picking one by position.
 
 ## Prove it
 
-Run the test class on both Testing Tools (add `-pl <module>` in a multi-module build):
+Run the test class on every Testing Tool it allows: Browserless and Playwright, or only the ones its
+`@RequiresBrowser` / `@RequiresTestingTool` names (add `-pl <module>` in a multi-module build):
 
 ```
 mvn test -Dtest=EditPersonTest
 mvn test -Dtest=EditPersonTest -Dvaadin.testing.tool=playwright
 ```
 
-The first run on Playwright downloads Chromium, about 280 MB.
+Run it with the plugin that runs the suite's tests. Under Failsafe (a server the build starts, or a deployed copy),
+that is `mvn verify -Dit.test=EditPersonIT -Dvaadin.testing.tool=playwright`, with
+`-Dvaadin.testing.base-url=<the application's URL>` unless the build sets it. The first run on Playwright downloads
+Chromium, about 280 MB.
 
 Then run the style rules: `mvn test -Dtest=UnifiedStyleTest`. When the project has no such test, add one: the test
 dependency `org.vaadin.addons:unified-test-archunit` (its version comes from `unified-test-bom`) and
@@ -136,8 +143,10 @@ class UnifiedStyleTest {
 }
 ```
 
-Last, read `target/surefire-reports/unified-evidence/<TestClass>/<testMethod>/user-steps.txt`. Each line is one
-User Step. Read it as the person who asked for the scenario would: every action they described appears, in their
+Last, read `<evidence-dir>/<TestClass>/<testMethod>/user-steps.txt`. `<evidence-dir>` is the
+`vaadin.testing.evidence-dir` setting: `target/surefire-reports/unified-evidence` under Surefire and Failsafe alike,
+unless the plugin's configuration sets another (a Failsafe build often sets
+`target/failsafe-reports/unified-evidence`). Each line is one User Step. Read it as the person who asked for the scenario would: every action they described appears, in their
 order, on the components they named, and every outcome they expect is a `see` line. A step you meant but don't see
 is a test that does less than asked: fix the test.
 
@@ -188,13 +197,13 @@ Every setting is a JUnit configuration parameter (`src/test/resources/junit-plat
 | Setting | Default |
 |---|---|
 | `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
-| `vaadin.testing.base-url` | `http://localhost:8080`; a test class's `@BaseUrl` and the Spring port win over it |
+| `vaadin.testing.base-url` | `http://localhost:8080`; with Spring Boot, the Spring port; a test class's `@BaseUrl` wins over both. Without Spring Boot, set it to the deployed application |
 | `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits (`500ms`, `1m`) |
 | `vaadin.testing.viewport` | `1280x720`: in a browser, the exact Viewport of every test without `@Viewport` (`phone:375x667`) |
 | `vaadin.testing.layout-checks` | `off`: `on` measures the layout after each navigation, reload and `setViewport` and puts Layout Findings on that step |
 | `vaadin.testing.layout-findings` | `report`: `fail` fails the step that measured a Layout Finding |
 | `vaadin.testing.layout-checks.screenshots` | `off`: `on` keeps a Viewport screenshot per measurement |
-| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence` |
+| `vaadin.testing.evidence-dir` | `target/surefire-reports/unified-evidence`, also under Failsafe; read the build's value before looking for evidence |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a screenshot or component tree after every User Step, in `steps/` |
 | `vaadin.testing.user-steps.log` | `failed`: print the User Steps of failed tests to the CI log; `all` or `none` |
 | `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step that logged them; `error` or `off` |
@@ -219,7 +228,7 @@ When asked to review a Unified UI Test that you didn't write, or the tests of a 
 change nothing unless asked. A test you wrote yourself gets the same review before you report it.
 
 1. **The scenario.** Read what the test was written for: the request, the ticket, or else its `@DisplayName`. Then
-   read its `user-steps.txt`; when there is none, run the test on Browserless first. Compare them as in "Prove it":
+   read its `user-steps.txt`; when there is none, run the test first, on Browserless when it allows it. Compare them as in "Prove it":
    every action, in order, on the component named, and every outcome a `see` line after the action that causes it.
    Flag a `@DisplayName` that says something the steps don't do, and a test that ends on an action with no check.
 2. **The code**, against the canonical forms. Flag:
@@ -231,7 +240,7 @@ change nothing unless asked. A test you wrote yourself gets the same review befo
    - an Escape Hatch without `@RequiresTestingTool` and a comment saying why, including one in a `…Tasks` class or
      a page object, which the style rules don't follow;
    - the same user work copied into several tests instead of one User Task.
-3. **The runs.** Run it on Browserless and on Playwright, and the style rules, as in "Prove it". Run it a second
+3. **The runs.** Run it on every Testing Tool it allows, and the style rules, as in "Prove it". Run it a second
    time before trusting a test that passed once.
 4. **A test changed to make it pass.** Read what it checked before: `git diff`, or the run summary's User Steps
    diff against the base run. Flag a removed `see` line, a weaker check (`hasText` to `hasTextContaining`, a value

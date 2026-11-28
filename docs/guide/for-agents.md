@@ -16,7 +16,7 @@ The `AddUnifiedTestingSkill` recipe writes the skill to `.claude/skills/write-un
 
 With it, an agent:
 
-- **writes** a test from a scenario: it reads the view's code before writing a lookup, proves the test on Browserless and Playwright, runs the style rules, and checks the test's `user-steps.txt` against the scenario;
+- **writes** a test from a scenario: it reads the view's code before writing a lookup, proves the test on every Testing Tool it allows (Browserless and Playwright, or only a browser for a browser-only suite against a deployed application), runs the style rules, and checks the test's `user-steps.txt` against the scenario;
 - **fixes** a failing test: it reads the failure, and decides whether the test or the application is wrong before changing anything;
 - **reviews** a test: it applies the checklist of [Reviewing a test](reviewing-tests.md) and reports its findings without changing the code.
 

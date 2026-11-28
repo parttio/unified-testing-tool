@@ -394,7 +394,7 @@ The skill covers:
 - the canonical forms;
 - reading the view class (and its translation keys) before writing a lookup;
 - `@DisplayName`, comments and User Tasks;
-- proving the test on Browserless then Playwright, plus `UnifiedStyleTest` and `user-steps.txt`;
+- proving the test on every Testing Tool it allows (Browserless then Playwright, or only a browser for a browser-only suite, under Surefire or Failsafe), plus `UnifiedStyleTest` and `user-steps.txt` in the run's evidence directory;
 - reading a failure;
 - reviewing a test: the scenario against its User Steps, the code against the canonical forms, the runs, and what a change made to pass took away;
 - when the Escape Hatch is acceptable.
