@@ -2,6 +2,7 @@ package com.vaadin.testing.unified.internal.login;
 
 import com.vaadin.testing.unified.UnifiedElement;
 import com.vaadin.testing.unified.UnifiedWrapper;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.internal.LazyElement;
 import com.vaadin.testing.unified.internal.TestRun;
 import com.vaadin.testing.unified.internal.Wrappers;
@@ -12,7 +13,8 @@ import com.vaadin.testing.unified.spi.LoginAccess;
 
 /**
  * Signing in through a LoginOverlay or a LoginForm ({@link LoginAccess}), on every Testing Tool. The password is
- * a secret of the run from the moment the test hands it over: no User Step, report or failure shows it.
+ * a secret of the run from the moment the test hands it over: no User Step, report or failure shows it, unless the
+ * test declares it {@link UnifiedLogin.Password#NOT_SECRET} (ADR 0023).
  */
 public final class LoginSupport {
     private LoginSupport() {}
@@ -25,10 +27,13 @@ public final class LoginSupport {
      * a Testing Tool without a browser can't submit: that fails, before anything is fired. A sign-in that
      * navigated is followed by an {@code open} User Step.
      */
-    public static void login(UnifiedWrapper login, String username, String password) {
+    public static void login(UnifiedWrapper login, String username, String password,
+            UnifiedLogin.Password secrecy) {
         LazyElement element = Wrappers.lazyElementOf(login);
         TestRun run = element.run();
-        run.steps().password(username, password);
+        if (secrecy != UnifiedLogin.Password.NOT_SECRET) {
+            run.steps().password(username, password);
+        }
         String before = run.session().currentPath();
         element.act("sign in", e -> {
             LoginAccess access = e.unwrap(LoginAccess.class);

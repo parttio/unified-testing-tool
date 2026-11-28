@@ -89,6 +89,22 @@ class UserStepsFilesTest {
         }
     }
 
+    /**
+     * A seeded test user whose password is its user name, declared not secret: the reports name the user (#683).
+     */
+    @UnifiedSpringBootTest
+    @Tag("launched-only")
+    static class PasswordNotSecret {
+        @Test
+        @DisplayName("Admin, whose password is test data, stays on the form")
+        void staysOnTheForm(UnifiedPage page) {
+            page.navigate(SignInFormView.class);
+            UnifiedLogin login = page.find(UnifiedLogin.class);
+            page.step("Log in as admin", () -> login.login("admin", "admin", UnifiedLogin.Password.NOT_SECRET));
+            com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat(login).hasError();
+        }
+    }
+
     private static TestingTool tool() {
         return TestingTool.parse(System.getProperty("vaadin.testing.tool", "browserless"));
     }
@@ -240,5 +256,19 @@ class UserStepsFilesTest {
         assertEquals("sign in as “barista@vaadin.com” in login",
                 json.get("steps").get(1).get("steps").get(0).get("text").asString());
         assertEquals("Type •••• again", json.get("steps").get(2).get("name").asString());
+    }
+
+    @Test
+    void aPasswordDeclaredNotSecretIsShownInTheReports(@TempDir Path dir) throws Exception {
+        TestExecutionSummary summary = run(PasswordNotSecret.class, dir);
+        assertEquals(1, summary.getTestsSucceededCount(), () -> summary.getFailures().toString());
+
+        Path test = dir.resolve("UserStepsFilesTest$PasswordNotSecret").resolve("staysOnTheForm");
+        List<String> lines = Files.readString(test.resolve("user-steps.txt")).lines().toList();
+        assertEquals(List.of(
+                "   1  open Sign In Form",
+                "   2  Log in as admin",
+                "      2.1  sign in as “admin” in login",
+                "   3  see login with an error"), lines.subList(1, lines.size()), String.join("\n", lines));
     }
 }

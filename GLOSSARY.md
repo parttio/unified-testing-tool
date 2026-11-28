@@ -105,7 +105,7 @@ A component that appeared, vanished or changed state during one action User Step
 _Avoid_: Effect, side effect, diff, delta
 
 **Secret Value**:
-A value of the test that its reports show as `••••` wherever it occurs: a sign-in password or a value the test marks as secret. Exceptions: the password inside its own sign-in's user name, and the scenario name the author wrote.
+A value of the test that its reports show as `••••` wherever it occurs: a sign-in password, unless the test declares it not secret, or a value the test marks as secret. Exceptions: the password inside its own sign-in's user name, and the scenario name the author wrote.
 _Avoid_: Sensitive data, credential, redacted value
 
 **Base Run**:

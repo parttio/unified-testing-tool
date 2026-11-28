@@ -41,7 +41,21 @@ public interface UnifiedLogin extends UnifiedWrapper, CommonFilters<UnifiedLogin
      * post: the test needs {@code @RequiresBrowser}, or {@code @WithMockUser} to sign in without the form.
      * The User Step reads {@code sign in as “barista@vaadin.com” in login}; the password is never shown.
      */
-    default void login(String username, String password) { LoginSupport.login(this, username, password); }
+    default void login(String username, String password) { login(username, password, Password.SECRET); }
+
+    /**
+     * Signs in as {@link #login(String, String)} does, saying whether the password is a secret. A seeded test user
+     * whose password is test data, often its user name ({@code admin} / {@code admin}), can be declared
+     * {@link Password#NOT_SECRET}: the reports then show it wherever it occurs, and the User Step reads
+     * {@code sign in as “admin” in login} instead of {@code sign in as “••••” in login}.
+     *
+     * <pre>{@code
+     * page.find(UnifiedLogin.class).login("admin", "admin", Password.NOT_SECRET);
+     * }</pre>
+     */
+    default void login(String username, String password, Password secrecy) {
+        LoginSupport.login(this, username, password, secrecy);
+    }
 
     /**
      * Presses "Forgot password": the component fires its {@code ForgotPasswordEvent}. Fails when the component
@@ -67,5 +81,13 @@ public interface UnifiedLogin extends UnifiedWrapper, CommonFilters<UnifiedLogin
     default String getDescription() {
         String description = element().getProperty("description");
         return description == null || description.isEmpty() ? null : description;
+    }
+
+    /** Whether a sign-in's password is a secret of the run, which the reports show as {@code ••••}. */
+    enum Password {
+        /** The reports show the password as {@code ••••} wherever it occurs, except inside a different user name. */
+        SECRET,
+        /** The password is test data: the reports show it as it is, unless another call marks it secret. */
+        NOT_SECRET
     }
 }

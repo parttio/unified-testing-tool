@@ -90,8 +90,18 @@ From then on the value is masked wherever it appears in the test's reports, in e
 
 Two places keep their text:
 
-- **The login's user name.** A password given to `UnifiedLogin.login(..)` is not masked inside that login's own user name: `login("barista@vaadin.com", "barista")` reads `sign in as “barista@vaadin.com”`, and so does a step you named `Sign in as barista@vaadin.com`. If the password equals the user name (`admin` / `admin`), it is masked there too.
+- **The login's user name.** A password given to `UnifiedLogin.login(..)` is not masked inside that login's own user name: `login("barista@vaadin.com", "barista")` reads `sign in as “barista@vaadin.com”`, and so does a step you named `Sign in as barista@vaadin.com`. If the password equals the user name (`admin` / `admin`), it is masked there too, unless you declare it not secret (below).
 - **The scenario's name you wrote.** A `@DisplayName`, or the method's name, is shown as written, because it comes from your source. The name of a parameterized or repeated test's invocation (`[1] barista`) is built from its arguments, so it is masked.
+
+A seeded test user's password is test data, not a secret. Declare it so where the test signs in, and the reports show it as it is: the user name, a step named after the user, and the password itself.
+
+```java
+page.step("Log in as admin", () -> page.find(UnifiedLogin.class).login("admin", "admin", Password.NOT_SECRET));
+//   2  Log in as admin
+//      2.1  sign in as “admin” in login
+```
+
+`login(username, password)` keeps the password secret. A value that another call marks secret (`page.secret(..)`, a plain `login(..)`) stays masked ([ADR 0023](../adr/0023-a-test-declares-a-login-password-not-secret-per-call.md)).
 
 Reports are for tests that run on test data or anonymised data, so masking keeps a value out of what a reader sees but isn't a security boundary ([ADR 0014](../adr/0014-secrets-are-masked-as-substrings-except-the-login-user-name-and-display-name.md)).
 
