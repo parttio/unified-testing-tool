@@ -1,5 +1,6 @@
 package com.vaadin.testing.unified.component;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.UnifiedComponent;
@@ -9,10 +10,11 @@ import com.vaadin.testing.unified.query.TextFilter;
 import java.time.Duration;
 
 /**
- * A {@code <p>} ({@link Paragraph}), to read its text, search inside it or click it. Bound to its tag, so a browser
- * finds it with one query, unlike {@link UnifiedContainer} (any tag).
+ * A {@code <p>}: a {@link Paragraph}, an {@code Html} whose root is a {@code <p>}, or any other {@code <p>}, to read
+ * its text, search inside it or click it. Bound to its tag, so a browser finds it with one query, unlike
+ * {@link UnifiedContainer} (any tag).
  */
-@UnifiedComponent(Paragraph.class)
+@UnifiedComponent(value = Component.class, tag = "p")
 public interface UnifiedParagraph extends UnifiedWrapper, Scope,
         CommonFilters<UnifiedParagraph>, TextFilter<UnifiedParagraph> {
 
