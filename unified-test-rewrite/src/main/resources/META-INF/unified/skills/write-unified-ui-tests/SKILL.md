@@ -188,7 +188,7 @@ Every setting is a JUnit configuration parameter (`src/test/resources/junit-plat
 | Setting | Default |
 |---|---|
 | `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
-| `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
+| `vaadin.testing.base-url` | `http://localhost:8080`; a test class's `@BaseUrl` and the Spring port win over it |
 | `vaadin.testing.timeout` | `10s`: how long a lookup or assertion waits (`500ms`, `1m`) |
 | `vaadin.testing.viewport` | `1280x720`: in a browser, the exact Viewport of every test without `@Viewport` (`phone:375x667`) |
 | `vaadin.testing.layout-checks` | `off`: `on` measures the layout after each navigation, reload and `setViewport` and puts Layout Findings on that step |

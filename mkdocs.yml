@@ -125,6 +125,7 @@ nav:
       - adr/0018-template-class-from-the-application-packages.md
       - adr/0019-only-what-a-testing-tool-cannot-do-ends-a-wait-early.md
       - adr/0020-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md
+      - adr/0021-the-base-url-is-chosen-per-test-class-by-base-url.md
   - Release notes:
       - Unreleased: releases/unreleased.md
       - 0.1.0-alpha6: releases/0.1.0-alpha6.md

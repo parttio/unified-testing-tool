@@ -20,8 +20,8 @@ import java.util.Optional;
  * <p>
  * Settings (from the Test Runner's configuration; on JUnit, configuration parameters or system properties):
  * <ul>
- * <li>{@code vaadin.testing.base-url}: app URL when the test has no Spring context; default
- * {@code http://localhost:8080}</li>
+ * <li>{@code vaadin.testing.base-url}: app URL when the test class has no {@code @BaseUrl} and its Spring context
+ * no web server port; default {@code http://localhost:8080} ({@code AdapterContext.baseUrl()}, ADR 0021)</li>
  * <li>{@code vaadin.testing.playwright.browser}: {@code chromium} (default), {@code firefox}, {@code webkit}:
  * the one browser Playwright downloads, when it isn't installed yet</li>
  * <li>{@code vaadin.testing.playwright.headless}: {@code true} (default)</li>
@@ -34,7 +34,6 @@ import java.util.Optional;
  */
 public final class PlaywrightAdapter implements TestingToolAdapter {
 
-    static final String BASE_URL = "vaadin.testing.base-url";
     static final String BROWSER = "vaadin.testing.playwright.browser";
     static final String HEADLESS = "vaadin.testing.playwright.headless";
     static final String EXECUTABLE = "vaadin.testing.playwright.executable";
@@ -48,7 +47,7 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
     @Override
     public AdapterSession open(AdapterContext context) {
         Browser browser = context.runScoped(SharedBrowser.class, () -> SharedBrowser.launch(context)).browser();
-        String baseUrl = baseUrl(context);
+        String baseUrl = context.baseUrl();
         BrowserContext browserContext = browser.newContext();
         browserContext.setDefaultTimeout(context.timeout().toMillis()); // also for windows opened later
         PlaywrightSession.TraceMode trace = PlaywrightSession.TraceMode.parse(context.configuration(TRACE).orElse("off"));
@@ -65,12 +64,6 @@ public final class PlaywrightAdapter implements TestingToolAdapter {
             LoginSupport.testUserUrl(baseUrl).ifPresent(session::logIn);
         }
         return session;
-    }
-
-    private static String baseUrl(AdapterContext context) {
-        Optional<String> fromSpring = context.springContext().flatMap(SpringSupport::baseUrl);
-        String url = fromSpring.or(() -> context.configuration(BASE_URL)).orElse("http://localhost:8080");
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
     /** Playwright and its browser, shared by the run's tests and closed when the run ends. */

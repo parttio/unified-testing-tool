@@ -133,7 +133,7 @@ Mark the class `@UnifiedUITest` instead of `@UnifiedSpringBootTest`, and leave o
 | Testing Tool | Finds the application |
 |---|---|
 | Browserless | Builds it in the test JVM from the routes in the test's package, or in the packages of `vaadin.testing.browserless.view-packages` ([Configuration](configuration.md)). |
-| Playwright, Selenium | At `vaadin.testing.base-url` (default `http://localhost:8080`), on a server your build starts first, for example with Failsafe and `jetty:start`. |
+| Playwright, Selenium | At `vaadin.testing.base-url` (default `http://localhost:8080`), on a server your build starts first, for example with Failsafe and `jetty:start`. A test class whose application runs elsewhere, such as one of several copies, says where with `@BaseUrl` ([Base URL](configuration.md#base-url)). |
 
 More in [2. Test setup](../spec/02-test-setup.md#reaching-the-application).
 

@@ -34,4 +34,13 @@ public interface AdapterContext {
      * {@code Object} so that the Unified API does not depend on Spring.
      */
     Optional<Object> springContext();
+
+    /**
+     * The test's Base URL, without a trailing {@code /}, for browser Testing Tools (ADR 0021): the test class's
+     * {@code @BaseUrl}, else the port of its Spring web server, else {@code vaadin.testing.base-url}, else
+     * {@code http://localhost:8080}.
+     */
+    default String baseUrl() {
+        return com.vaadin.testing.unified.internal.BaseUrls.of(this);
+    }
 }

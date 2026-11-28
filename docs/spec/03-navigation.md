@@ -21,7 +21,7 @@ assertThat(page).hasTitle("Profile");
 |---|---|
 | Two forms | Route class (refactor-safe, recommended) or path. Path form covers routes registered at runtime. |
 | Query parameters | Either form: `QueryParameters` after the route class, with or without `RouteParameters`, as Flow's `UI.navigate(..)` takes them, or a query string in the path. The User Step names them: `open Plan with “week=2026-11-02”`. |
-| Relative only | Paths are relative to the base URL. Absolute or external URLs need `@RequiresBrowser`. |
+| Relative only | Paths are relative to the test's base URL ([2. Test setup](02-test-setup.md#the-base-url-of-a-test)). Absolute or external URLs need `@RequiresBrowser`. |
 | User Step | The route class form reads `open People` (the view's name in words, without "View"); the path form reads the path as given, `open “profile?tab=2”`. The root route reads `open “/”`, whether it is spelled `""` or `"/"`, and so does a link click that navigates to it. |
 | Returns nothing | Auto-Waits until the view is shown and the server is idle. The view instance is available only via the Escape Hatch (Browserless). |
 | Flow types | Route classes, `RouteParameters`, `QueryParameters` from `flow-server`. |
