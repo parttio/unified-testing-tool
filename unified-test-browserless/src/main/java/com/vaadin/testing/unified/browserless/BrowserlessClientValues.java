@@ -34,6 +34,32 @@ final class BrowserlessClientValues {
         update(field, text);
     }
 
+    /** A number entered in a number field, or {@code null} cleared: sent as the browser's text of it. */
+    static void enterNumber(Component field, Number value, BrowserlessUIContext window) {
+        ((ComponentTester<?>) window.test(field)).ensureComponentIsUsable();
+        update(field, numberText(value));
+    }
+
+    /** A date picked in a date picker, or {@code null} cleared: sent as its ISO value, as the browser does. */
+    static void enterDate(Component field, java.time.LocalDate date, BrowserlessUIContext window) {
+        ((ComponentTester<?>) window.test(field)).ensureComponentIsUsable();
+        update(field, date == null ? "" : date.toString());
+    }
+
+    /** {@code 42}, not {@code 42.0}, as a number input holds it; a BigDecimal keeps its scale. */
+    private static String numberText(Number value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof java.math.BigDecimal decimal) {
+            return decimal.toPlainString();
+        }
+        if (value instanceof Double || value instanceof Float) {
+            return java.math.BigDecimal.valueOf(value.doubleValue()).stripTrailingZeros().toPlainString();
+        }
+        return value.toString();
+    }
+
     /** The presentation value as the browser sends it, focus moved to the field first and flushed after. */
     private static void update(Component field, Serializable presentation) {
         Object ui = focusTracker("moveFocusTo", Component.class, field);
