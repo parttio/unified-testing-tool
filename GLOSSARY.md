@@ -96,6 +96,10 @@ _Avoid_: Task, step method, keyword, flow, journey, page object
 The component a User Step acts on or checks, marked in its snapshot and failure evidence on every Testing Tool: its line in a Browserless tree, a spotlighted box over a browser screenshot.
 _Avoid_: Highlighted element, focus, subject
 
+**Step Change**:
+A component that appeared, vanished or changed state during one action User Step, as seen by comparing the Findable View before and after it; one that no later check reads is an unchecked Step Change.
+_Avoid_: Effect, side effect, diff, delta
+
 **Secret Value**:
 A value of the test that its reports show as `••••` wherever it occurs: a sign-in password or a value the test marks as secret. Exceptions: the password inside its own sign-in's user name, and the scenario name the author wrote.
 _Avoid_: Sensitive data, credential, redacted value
@@ -103,6 +107,10 @@ _Avoid_: Sensitive data, credential, redacted value
 **Base Run**:
 The base branch's last run of the same Unified UI Tests on the same Testing Tool, whose User Steps a pull request's changed scenarios are compared with.
 _Avoid_: Baseline, golden run, reference run
+
+**Replay**:
+Running a failed scenario again, from its evidence, with every kind of evidence on, and stopping just before the failing User Step so a person or an agent can look at the page, run the step, and try lookups; for a person in a visible browser, on Browserless with the JVM held open.
+_Avoid_: Rerun, recording, debug mode, time travel
 
 **Findable View**:
 A text view of what a Unified UI Test can find in a page or a container: one line per component, with its kind, name and state and the lookup that singles it out, written on failure on every Testing Tool and returned by `describe()`.

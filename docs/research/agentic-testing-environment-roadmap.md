@@ -8,7 +8,28 @@ Researched 2026-11-17 against `main` at `37c7b00` and the issue tracker of `part
 
 Labels: a **fact** has a source (a file path, an issue or a URL). **[opinion]** and the sections titled *Inferences* are this note's reasoning.
 
-## Answer in short
+**Refreshed 2026-11-27** for the map [Roadmap: help developers and agents catch bugs, write tests and debug failing tests](https://github.com/parttio/unified-testing-tool/issues/499). The refresh adds [Since 2026-11-17](#since-2026-11-17), which holds the status of every candidate on `main@39411f6`, new facts from four research tickets read on 2026-11-22, and the ranked roadmap decided in [Rank the roadmap: benefit, effort and verdict for every candidate](https://github.com/parttio/unified-testing-tool/issues/504). Each candidate C1–C8 now starts with its status. The sections below that one are the note of 2026-11-17, unchanged except for those status lines, the [Order](#order-ranked-2026-11-27) and [Not verified](#not-verified).
+
+## Answer in short (2026-11-27)
+
+1. **Most of the 2026-11-17 shortlist shipped in four days.** C1, C6, C7(a) and C7(c) shipped in full, and C2, C3 (level 1) and C5 in part. C4, C7(b) and C8 have nothing built, and neither does any of C9–C17. Three gaps recur: no setting fails a test that passed, the documented Limitations are not data, and the writing skill does not mention most of the new outputs.
+2. **For debugging, what is missing is a page to look at.** The reports explain a failure well after the fact, and as text they beat the other tools. But every other tool checked lets a person or an agent stop at the failure and try lookups on the page while it is still there. The project's answer is **Replay**.
+3. **Browserless is a good fit for finding bugs no test scripts.** An application exception reaches the test, the Findable View lists every component a test can act on, and a run costs milliseconds. A seeded walk over the Findable View that writes a failing Unified UI Test (the Explorer) was not found anywhere for server-side Java UIs.
+4. **Vaadin now ships its own testing skill** (`vaadin-browserless-testing`, Vaadin Skills 0.3.0). It overlaps `write-unified-ui-tests`. Pages can now also hand tools to agents (Chrome DevTools MCP, WebMCP).
+
+**Do next**, in order (the full list is in [Order](#order-ranked-2026-11-27)):
+
+| # | Candidate | Jobs | Benefit | Effort |
+|---|---|---|---|---|
+| 1 | Skill Catch-up | write, debug | High | S |
+| 2 | Fail by a setting | catch | High | S |
+| 3 | Unnamed controls as findings | catch | Medium | S |
+| 4 | Replay | debug, catch | High | M–L |
+| 5 | Step Changes | debug, catch | High | M |
+| 6 | Invert the last check | catch | Medium–High | S–M |
+| 7 | Eval Round | write | Medium | M |
+
+## The answer of 2026-11-17
 
 1. **For the agent-era basics, the Unified API is level with or ahead of the tools it sits on.** It has what the landscape note found to be the new standard: lookups in user terms, a failure message that says what to do next (Near Misses, `Did you mean`), the same failure as JSON, a text record of what every test did (User Steps), a pull-request view of changed behaviour (the diff against the Base Run), style rules as a build check, an agent skill installed by a recipe, and a harness that scores the skill. No other tool checked ships the last three together, and none runs one test both in the JVM and in a real browser.
 2. **Where it is behind is the agent's *loop*, not the test API.** Others give an agent a way to look at a running application and act on it (Playwright MCP and CLI, Chrome DevTools MCP, Storybook MCP), turn that session into test code (Playwright's `--codegen java`, the generator agent), repair a failing test (Playwright's healer), check accessibility (axe, Pest, Storybook), compare screenshots (Playwright Test, TestBench), detect flaky tests (Surefire, Playwright, Cypress Cloud) and select tests by change (Quarkus, Develocity, Playwright). The Unified API has none of these today. Four are already open issues: the accessibility snapshot ([#204](https://github.com/parttio/unified-testing-tool/issues/204)), docs for agents ([#205](https://github.com/parttio/unified-testing-tool/issues/205)), repair agents ([#206](https://github.com/parttio/unified-testing-tool/issues/206)) and the Unified Recorder ([#215](https://github.com/parttio/unified-testing-tool/issues/215)).
@@ -28,6 +49,88 @@ Labels: a **fact** has a source (a file path, an issue or a URL). **[opinion]** 
 | 8 | [Coverage in user terms](#c8-coverage-in-user-terms): routes and components no scenario touches | catch-up in idea, new without a cloud | M |
 
 ---
+
+## Since 2026-11-17
+
+Four research tickets of the map, read on 2026-11-22 against `main@39411f6`. Their full notes lived on throwaway branches, which are never merged. This section keeps their findings and sources, and leaves out the detail.
+
+- [Status audit: which roadmap candidates shipped since 2026-11-17, and what is left of each](https://github.com/parttio/unified-testing-tool/issues/500)
+- [Debugging a failing test: what other tools offer, and what the Unified reports still lack](https://github.com/parttio/unified-testing-tool/issues/501)
+- [Finding bugs no test scripts: exploratory, model-based, property-based, accessibility and mutation testing](https://github.com/parttio/unified-testing-tool/issues/502)
+- [Agent testing tools since 2026-11-17: what changed, and what it means for the Unified API](https://github.com/parttio/unified-testing-tool/issues/503)
+
+### Status of the candidates
+
+| Candidate | Status | What is left |
+|---|---|---|
+| C1 Findable View | **Shipped** (#204, PR #335, ADR 0009) | Nothing. Reach is #494. |
+| C2 Cross-tool divergence report | **Partly** (`compare-dir`, same-commit check, `CompareRuns`: PRs #309, #312, #321) | Whether a difference is a documented Limitation: #310. |
+| C3 Weak-test checks | **Level 1** (scenarios without a check, PR #307) | Fail by a setting and a PIT guide (#287); step-skip reruns (#308). |
+| C4 Live session | Open (#288) | Everything. |
+| C5 Log lines and console errors per User Step | **Partly** (PRs #314, #315; `hasNoErrors()`) | A setting that fails on a logged error, the default level, parallel tests (#289); Selenium on Firefox (#316). |
+| C6 Apply `Did you mean` | **Shipped** (`ApplyDidYouMean`, PR #313) | Suggestions it can't apply are not listed. |
+| C7 (a) `summary.json` / (b) edit hook / (c) `llms.txt` | (a) and (c) **shipped** (PRs #306, #319); (b) open (#293) | (b): the routes each scenario opens (C11). |
+| C8 Coverage in user terms | Open (#292) | Everything. |
+| C9–C17 | None built | The Findable View's `(no name)` lines are the only accessibility output. |
+
+The guide covers every shipped feature. The `write-unified-ui-tests` skill names the Findable View and the API reference. Since `fcc099e` it also lists every `vaadin.testing.*` setting. It still does not tell an agent when to use `summary.json`, the comparison with another Testing Tool, scenarios without a check, log lines and `hasNoErrors()`, `ApplyDidYouMean` or the Step Target highlight.
+
+### Debugging a failing test
+
+| # | Fact | Source |
+|---|---|---|
+| D1 | Playwright's `PWDEBUG=1` opens the Inspector, launches browsers headed and sets the default timeout to 0, in Java too. `page.pause()` stops at a chosen point, and the Inspector can step, pause and live-edit locators. | [playwright `docs/src/debug.md` @ 0492267](https://github.com/microsoft/playwright/blob/049226728d2da8054db18b04782a9848b755855e/docs/src/debug.md) |
+| D2 | Playwright's healer agent runs each failing test with `test_debug` (`pauseOnError: true`, `timeout: 0`), then uses Playwright MCP tools on the paused page to take a snapshot and generate locators. | [`playwright-test-healer.agent.md` @ 0492267](https://github.com/microsoft/playwright/blob/049226728d2da8054db18b04782a9848b755855e/packages/playwright/src/agents/playwright-test-healer.agent.md) |
+| D3 | Cypress keeps a snapshot for every command ("time travel"). `cy.pause()` lets the user resume or step. `cypress tap` (beta) lets "an AI coding agent" read the Command Log, pin a command's snapshot and read its DOM and accessibility tree. | [cypress-documentation `open-mode.mdx` @ 3110e3a](https://github.com/cypress-io/cypress-documentation/blob/3110e3a01a6f1618b0855973be9990195dd773b2/docs/app/core-concepts/open-mode.mdx); [`pause.mdx`](https://github.com/cypress-io/cypress-documentation/blob/3110e3a01a6f1618b0855973be9990195dd773b2/docs/api/commands/pause.mdx); [docs.cypress.io/app/tooling/cypress-tap](https://docs.cypress.io/app/tooling/cypress-tap) |
+| D4 | Pest's `--debug` "opens the browser window and pauses the execution of the test when it fails"; `->tinker()` opens a session on the current page. | [pestphp.com/docs/browser-testing](https://pestphp.com/docs/browser-testing) |
+| D5 | Replay.io records the browser runtime through a patched Chromium and a JS reporter. Its pages say nothing about the server side. | [docs.replay.io](https://docs.replay.io/) |
+| D6 | Surefire runs one method with `-Dtest=Class#method`, and with `-Dmaven.surefire.debug` it waits for a debugger on port 5005. Browserless creates the UI "directly in the JVM that runs your JUnit tests". | [Surefire, debugging](https://maven.apache.org/surefire/maven-surefire-plugin/examples/debugging.html); [vaadin.com/docs/latest/flow/testing/browserless](https://vaadin.com/docs/latest/flow/testing/browserless) |
+
+**Inference** [opinion]: the Unified reports equal or beat the others for reading a failure afterwards. That covers Near Misses, `Did you mean`, the Findable View, log lines per User Step and the comparison with another Testing Tool. What they lack is everything live: no pause, no held page, no lookup tried against the failed page. Only this project can reproduce a browser failure on Browserless under a JVM debugger.
+
+### Finding bugs no test scripts
+
+| # | Fact | Source |
+|---|---|---|
+| X1 | gremlins.js (last release 2020) and Crawljax (last release 2023) drive a browser. Android's Monkey sends pseudo-random events. | [gremlins.js](https://github.com/marmelab/gremlins.js/blob/master/README.md); [Crawljax](https://github.com/crawljax/crawljax/blob/master/README.md); [Android Monkey](https://developer.android.com/studio/test/other-testing-tools/monkey) |
+| X2 | Quickstrom found bugs in 20 of 43 TodoMVC implementations from one specification. | [arXiv 2203.11532](https://arxiv.org/abs/2203.11532) |
+| X3 | jqwik is in maintenance mode, and since 1.10 its user guide carries an "Anti-AI Usage Clause" addressed to coding agents. | [jqwik user guide](https://jqwik.net/docs/current/user-guide.html#anti-ai-usage-clause); [jqwik README](https://github.com/jqwik-team/jqwik/blob/main/README.md) |
+| X4 | axe-core has Java packages for Playwright and Selenium (`com.deque.html.axe-core`), and Deque reports that automated tests find "on average 57%" of issues. | [axe-core-maven-html](https://github.com/dequelabs/axe-core-maven-html/blob/develop/playwright/README.md); [Deque coverage report](https://www.deque.com/automated-accessibility-coverage-report/) |
+| X5 | Studies of AI explorers measure the pass/fail verdict as their weak point: misclassified verdicts and "incorrectly identified bugs". | [arXiv 2504.01495](https://arxiv.org/abs/2504.01495); [arXiv 2412.08581](https://arxiv.org/abs/2412.08581) |
+| X6 | On Browserless, an exception thrown by an application listener is thrown into the test (`BrowserlessSession.act`). A Browserless scenario takes single-digit milliseconds (`largeGrid` median 5.1 ms). | `BrowserlessSession.act`; [performance-benchmark.md](../guide/performance-benchmark.md) |
+
+**Inference** [opinion]: a seeded walk over the Findable View, with application exceptions as the oracle, is cheap enough to run thousands of steps per build. It can shrink a failure into a short Unified UI Test. Invariants should use a small generator of the project's own, not jqwik. An agent should report a bug only as a failing test.
+
+### Agent testing tools
+
+| # | Fact | Source |
+|---|---|---|
+| M1 | Vaadin Skills 0.3.0 adds `vaadin-browserless-testing`: use cases, page objects, lookups by label or accessible name, "Never weaken the story", and a thin layer of browser smoke tests that check "that the browser console shows no errors". | [vaadin/agent-skills `SKILL.md` @ c0645a9](https://github.com/vaadin/agent-skills/blob/c0645a9fe3770ce30a86167bf265c4ed105ad2d4/skills/vaadin-browserless-testing/SKILL.md) |
+| M2 | Dramafinder 2.1–2.2.1 adds APIs for tool adapters. It already shipped `agent.ViewOutline`, which prints a verified Dramafinder lookup per component: prior art for C1 on one Testing Tool. | [parttio/dramafinder release notes @ 1781e15](https://github.com/parttio/dramafinder/tree/1781e1567d8bccab97edb322e68438afa9444e76/docs/release-notes) |
+| M3 | Chrome DevTools MCP lets a page register "third-party developer tools" that expose "internal state, component hierarchies" to the agent. WebMCP is an experimental category. | [chrome-devtools-mcp `third-party-developer-tools.md` @ ab911a6](https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/ab911a6dd71ed4960c1c679f831c7b5607bc5505/docs/third-party-developer-tools.md) |
+| M4 | WebdriverIO MCP changed its element output to one selector per actionable line. Its commit reports that a small model picked a correct selector in 51 of 56 tasks instead of 43. | [webdriverio/mcp `7156400`](https://github.com/webdriverio/mcp/commit/7156400) |
+| M5 | `playwright-mutation-gate` inverts each test's marked primary assertion and fails the run if the test stays green. | [registry.npmjs.org/playwright-mutation-gate](https://registry.npmjs.org/playwright-mutation-gate) |
+| M6 | Storybook MCP (preview) added `stories-changed` and `stories-find-by-component`. Playwright released nothing after 1.65.1, and its test agents are still JS-only. | [storybook.js.org/docs/ai/mcp/overview](https://storybook.js.org/docs/ai/mcp/overview); [microsoft/playwright @ 0492267](https://github.com/microsoft/playwright/tree/049226728d2da8054db18b04782a9848b755855e) |
+
+**Inference** [opinion]: no candidate became redundant. The new skill turns C17 from "ask Vaadin" into "coexist with Vaadin's skill". Page-registered tools make the live session cheaper to start.
+
+### New candidates and merges
+
+Decided in the ranking, [Rank the roadmap: benefit, effort and verdict for every candidate](https://github.com/parttio/unified-testing-tool/issues/504):
+
+- **Replay**: run a failed scenario again from its evidence, with every kind of evidence on, and stop just before the failing User Step.
+  - A person sees a visible Playwright browser. On Browserless the JVM stays open for a debugger.
+  - `step`, `describe`, `find <lookup>` and `resume` work for people and agents.
+  - A Replay that passes reports the test as flaky.
+  - It starts only when asked.
+  - It absorbs F1–F3 and F6 of the debugging research, and C13. Its details are in a comment on the ranking ticket, and it gets its own map. Its held page is the core the live session (C4) builds on.
+- **Step Changes**: compare the Findable View before and after each action User Step, and report unchecked Step Changes. It merges the debugging research's per-step diff, the bug-finding research's "effects no check reads" and the agent-tools research's "what changed per action".
+- **Fail by a setting**: one `report` or `fail` setting for each kind of finding. It takes C3's and C5's "fail by a setting".
+- **Unnamed controls as findings**: the Findable View's `(no name)` lines as findings on every Testing Tool. With **axe in a browser**, it replaces C9.
+- **Invert the last check**: on Browserless, rerun each scenario with its last check inverted. A level between C3's two levels, without the marking that M5 needs.
+- **Skill Catch-up** and **Eval Round**: the skill learns the new outputs and coexists with Vaadin's, then one evaluation run measures it. The run covers both skills installed, the Findable View scored as M4 did, and C12's fixtures.
+- **Explorer on Browserless**, then **Invariants**, from the bug-finding research. The Explorer starts as a prototype.
+- **Two Testing Tools side by side**, **Findable View diff against the Base Run**, **Findable View as a page tool** (M3), and a **Guides batch** (agent sandbox, PIT, clock and network).
 
 ## 1. What is already there
 
@@ -155,6 +258,8 @@ Effort is a guess: **S** about a day or two for an agent with review, **M** abou
 
 ### C1. Findable view: the page as lookups to paste
 
+**Status 2026-11-27:** Shipped.
+
 **What.** A text view of the current page in which each line is one component a Unified UI Test can find: its kind in User Step words, its name, its state, and the exact lookup.
 
 ```
@@ -176,6 +281,8 @@ Written on failure next to the evidence on every Testing Tool, available as `pag
 
 ### C2. Cross-tool divergence report
 
+**Status 2026-11-27:** Partly shipped; the rest is #310.
+
 **What.** Given the evidence directories of two runs of the same commit on different Testing Tools, list the scenarios that differ: passed on one and failed on the other, the first User Step where they part, the `Found` values on each side, and whether the difference is a documented Limitation (`docs/spec/09-capabilities.md`) or unexplained. Shown as a section of `summary.md` and `report.html`, as the Base Run diff is.
 
 **Who.** Agent: the most useful sentence it can read after "passes on Browserless, fails on Playwright" is whether that is a known difference or its own mistake; the skill asks for both runs (H12) and gives no help when they disagree. With and without AI: the same, and confidence that the fast run means something. The maintainer: adapter bugs such as #84, #88, #259 and #267 found by a report instead of by hand (H18).
@@ -187,6 +294,8 @@ Written on failure next to the evidence on every Testing Tool, available as `pag
 **Effort.** S–M. **Risks.** Noise from values that differ by design (`getText()` as rendered); needs a table of known differences, which is the Limitations table as data. Two runs must come from the same commit.
 
 ### C3. Weak-test checks: does the test fail when the feature is broken?
+
+**Status 2026-11-27:** Level 1 shipped; fail by a setting is ranked 2nd, step-skip reruns (#308) later.
 
 **What.** Two levels.
 
@@ -205,6 +314,8 @@ A third level, mutating the application's code under the same tests with PIT (N1
 
 ### C4. Live session: an agent drives the application through the Unified API
 
+**Status 2026-11-27:** Open; ranked later, built on Replay's core (#288).
+
 **What.** A command-line session over a running application: `open PeopleView`, `describe` (C1), `click button "Save"`, `fill text field "Name" "Alan"`, `expect notification "Saved Alan"`. Every command is a Unified API call, so each is recorded as a User Step; `export` writes the session as a Unified UI Test in the canonical style, with `Did you mean` on a miss. Browserless by default, where there is no browser to start; `--tool playwright` for the same session in a browser. A CLI with a skill first; an MCP server only if asked for, since Playwright itself now steers coding agents to CLI plus skills (landscape AI4).
 
 **Who.** Agent: the explore, act and emit loop that Playwright MCP gives for raw Playwright (N1), in the terms the test is written in, and without a browser. With AI: the same through the assistant. Without AI: a REPL to try lookups.
@@ -216,6 +327,8 @@ A third level, mutating the application's code under the same tests with PIT (N1
 **Effort.** L; prototype first, as #215 does. **Risks.** Start-up: the Spring context takes seconds, so the session must stay alive between commands (a daemon, as Vaadin's dev loop is, N8). Test data and login for a session outside a test. A Browserless session is not the user's running application but a second instance in a test JVM: say so. Overlap with #215: decide whether the Unified Recorder is a second front end on the same core.
 
 ### C5. Server logs and browser console per User Step, and a smoke check
+
+**Status 2026-11-27:** Partly shipped; a failing setting is ranked 2nd (#289).
 
 **What.** Attach to each User Step the server log lines (WARN and above by default) and uncaught exceptions that occurred while it ran, and in a browser the console errors. Show them under the step in `user-steps.txt`, `user-steps.json` and `report.html`. Add `assertThat(page).hasNoErrors()` or a run setting that fails a scenario on a server exception or console error.
 
@@ -229,6 +342,8 @@ A third level, mutating the application's code under the same tests with PIT (N1
 
 ### C6. Apply `Did you mean`: repair as a diff, without a model
 
+**Status 2026-11-27:** Shipped.
+
 **What.** An OpenRewrite recipe that reads the failures in an evidence directory and, where a failure has a `suggestion` and a `codePath`, rewrites the lookup at that line. It proposes a diff; it does not run at test time.
 
 **Who.** Without AI: one command after a label rename broke forty tests. Agent and with AI: a cheap, deterministic first pass before a model looks at what is left.
@@ -241,6 +356,8 @@ A third level, mutating the application's code under the same tests with PIT (N1
 
 ### C7. The loop, packaged: run verdict, hooks, `llms.txt`
 
+**Status 2026-11-27:** (a) and (c) shipped; the edit hook (#293) is ranked later.
+
 **What.** (a) A run-level `summary.json` next to `summary.md`: counts, the failed scenarios with their failure objects, paths. (b) An optional Claude Code hook, installed by `AddUnifiedTestingSkill` on request: after an edit to a test or a view, run the matching test class on Browserless and return the failure's fixed lines. (c) `llms.txt` for the docs site and the API reference in the jar (#205).
 
 **Who.** Agent, mostly. (a) also serves CI tooling.
@@ -252,6 +369,8 @@ A third level, mutating the application's code under the same tests with PIT (N1
 **Effort.** S each. **Risks.** A hook that runs Maven on every edit is slow unless the test JVM stays warm; that ties (b) to C4's daemon or to Quarkus-style continuous testing (N14).
 
 ### C8. Coverage in user terms
+
+**Status 2026-11-27:** Open; ranked later (#292).
 
 **What.** From the run's `user-steps.json` files and, on Browserless, the route registry and the findable view (C1): which routes no scenario opens, and which findable components on visited views no User Step touched. `people: button “Delete” never clicked; text field “Phone” never filled or checked`.
 
@@ -277,14 +396,58 @@ A third level, mutating the application's code under the same tests with PIT (N1
 | C16. Clock and network | A portable clock; request mocking | Catch-up: Playwright (N3) | A Spring `Clock` bean covers Browserless without any API | — | Document the pattern in the guide rather than add API; Flow views rarely call the network from the browser |
 | C17. Vaadin MCP and Skills know the Unified API | Ask Vaadin | Planned: #205, third point | — | — | Not this project's to build |
 
-### Order [opinion]
+### Order (ranked 2026-11-27)
 
-C1 first: #204 is already open, and C4, C8, C9 and #215 build on it. C2 and C3 level 1 are small, need nothing else, and are the two that make the project's unique position visible. C6 and C7(a) are a day each and close #206's cheap half. C5 next. C4 is the largest bet and the one most likely to change how agents use the project; prototype it once C1 exists, and decide then whether #215 is a separate tool or a second front end.
+Decided with the developer driving the map in [Rank the roadmap: benefit, effort and verdict for every candidate](https://github.com/parttio/unified-testing-tool/issues/504). Jobs: catch bugs, write tests, debug failing tests. Effort: S a day or two, M about a week, L several weeks or a prototype first.
+
+**Do next**
+
+| # | Candidate | Jobs | Who gains | Benefit | Effort |
+|---|---|---|---|---|---|
+| 1 | Skill Catch-up | write, debug | Agents | High | S |
+| 2 | Fail by a setting (#287, #289) | catch | All | High | S |
+| 3 | Unnamed controls as findings | catch | All, especially Browserless-only projects | Medium | S |
+| 4 | Replay (its own map) | debug, catch | Developers and agents | High | M–L |
+| 5 | Step Changes | debug, catch | Agents, reviewers | High | M |
+| 6 | Invert the last check | catch | All | Medium–High | S–M |
+| 7 | Eval Round (absorbs #298, #436) | write | Maintainers | Medium | M |
+
+**Later**
+
+| # | Candidate | Benefit | Effort |
+|---|---|---|---|
+| 8 | Explorer on Browserless (prototype first) | High | M–L |
+| 9 | Step-skip reruns (#308) | Medium–High | M |
+| 10 | Two Testing Tools side by side | Medium–High | M |
+| 11 | Live session (#288), on Replay's core | High | L |
+| 12 | Scenarios for a changed view (C11) | Medium | M |
+| 13 | Edit hook (#293) | Medium | S |
+| 14 | Known Limitation or bug (#310) | Medium | S |
+| 15 | Coverage in user terms (#292) | Medium | M |
+| 16 | Invariants | High where used | M |
+| 17 | Findable View diff against the Base Run | Medium | M |
+| 18 | axe in a browser | Medium | M |
+| 19 | Findable View as a page tool | Medium | M |
+| 20 | Guides batch: agent sandbox, PIT, clock and network (#297) | Medium | S |
+| 21 | Unified Recorder (#215) | Medium | L |
+| 22 | SQL and data-fetch counts per step (#484) | Low | M |
+
+**Dropped**
+
+| Candidate | Reason |
+|---|---|
+| C10 Committed User Steps | The Base Run diff covers the review case, and snapshot files invite blind updates |
+| C15 Screenshot comparison | Too noisy across hosts; the Base Run Findable View diff covers the structural half |
+| Open the Browserless state in a browser | Replay shows a Browserless failure in a visible browser |
+| #206 Playwright's test agents for Java | Its ideas shipped (#290) or moved to Replay and the live session |
+| C13 Flaky check (#296) | A Replay that passes covers it |
+| #205 Docs for agents | Points 1 and 2 shipped; point 3 is now Skill Catch-up and the Eval Round |
 
 ---
 
 ## Not verified
 
+- **Added 2026-11-27.** Nothing in [Since 2026-11-17](#since-2026-11-17) was prototyped or run. That includes the Explorer, PIT under `@UnifiedSpringBootTest`, axe on Vaadin components, both testing skills installed side by side, whether a Unified wait times out under a debugger, and whether `PWDEBUG=1` works through the Playwright adapter. Not read: the Mutta paper (behind a login), Testim, Vaadin's "Debug a Failing Browserless Test" page (404). The effort figures of the ranking are guesses.
 - **Mabl, Testim, Octomind, Applitools:** their documentation could not be read from this session (HTTP 403, 522, a blocked host, 404). Nothing is claimed about them. Self-healing locators and visual AI are commonly attributed to them; that was not confirmed here.
 - **Meticulous, QA Wolf, Momentic, Launchable:** only the one page cited for each was read; the first is a product home page, and the Launchable page is three years old (its login link points to "cloudbees-smart-tests"; the current product name was not confirmed).
 - **WebdriverIO MCP (`@wdio/mcp`), Mutta, `playwright-mutation-gate`:** seen in search results only, not read.
