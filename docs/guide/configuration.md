@@ -20,6 +20,7 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.user-steps.baseline-dir` | unset; the base branch's evidence directory, such as its downloaded CI artifact: **Changed in this PR** shows how each changed scenario's User Steps differ from it ([Reading reports and failures](reports-and-failures.md)) |
 | `vaadin.testing.user-steps.compare-dir` | unset; the evidence directory of a run of the same tests on another Testing Tool: the run summary says which scenarios differ ([Reading reports and failures](reports-and-failures.md#compared-with-another-testing-tool)) |
 | `vaadin.testing.user-steps.server-log` | `warn`: the application's warnings and errors under the User Step during which they were logged; `error`, or `off` |
+| `vaadin.testing.user-steps.ignored-errors` | unset; one Java regex: `hasNoErrors()` doesn't count an error line it finds, such as `net::ERR_NETWORK_CHANGED`; the line still shows under its User Step ([What the application logged](reports-and-failures.md#what-the-application-logged)) |
 | `vaadin.testing.user-steps.snapshots` | `false`; `true`: a snapshot of the page after every User Step |
 | `vaadin.testing.playwright.trace` | `off`; `on` or `on-failure`: keep Playwright's trace, grouped by User Step |
 | `vaadin.testing.browserless.view-packages` | in a Spring test, the `@SpringBootApplication`'s packages and the test's package; otherwise the test's package |

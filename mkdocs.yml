@@ -127,6 +127,7 @@ nav:
       - adr/0020-failsafe-profiles-that-test-elsewhere-get-a-marker-no-remote-grid.md
       - adr/0021-the-base-url-is-chosen-per-test-class-by-base-url.md
       - adr/0022-a-second-user-signs-in-through-the-app-open-new-session.md
+      - adr/0023-hasnoerrors-ignores-lines-matching-one-run-wide-regex.md
       - adr/0024-a-check-outside-the-ui-is-a-backend-step.md
   - Release notes:
       - Unreleased: releases/unreleased.md

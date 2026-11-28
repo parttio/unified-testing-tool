@@ -118,6 +118,29 @@ class LogLinesTest {
     }
 
     @Test
+    void hasNoErrorsSkipsTheIgnoredLinesWhichStillShowUnderTheirStep() {
+        UnifiedPage page = fake.page;
+        fake.steps.ignoreErrors(java.util.regex.Pattern.compile("net::ERR_NETWORK_CHANGED|^server ERROR PoolMonitor:"));
+        try (ServerLogs.Listening listening = ServerLogs.start(fake.steps, ServerLogs.Level.WARN)) {
+            page.navigate(UserStepWordingTest.PeopleView.class);
+            fake.console.add("Failed to load resource: net::ERR_NETWORK_CHANGED");
+            LoggerFactory.getLogger("demo.PoolMonitor").error("Pool is slow");
+            assertThat(page).hasNoErrors();
+
+            fake.onClick = () -> SERVICE.error("Could not save");
+            page.find(UnifiedButton.class).withText("Save").click();
+
+            UnifiedAssertionError failure = assertThrows(UnifiedAssertionError.class, () -> assertThat(page).hasNoErrors());
+            assertTrue(failure.getMessage().contains("1: server ERROR PersonService: Could not save"), failure.getMessage());
+            assertFalse(failure.getMessage().contains("ERR_NETWORK_CHANGED"), failure.getMessage());
+            assertFalse(failure.getMessage().contains("Pool is slow"), failure.getMessage());
+        }
+        String text = report().text();
+        assertTrue(text.contains("⚠ console ERROR: Failed to load resource: net::ERR_NETWORK_CHANGED"), text);
+        assertTrue(text.contains("⚠ server ERROR PoolMonitor: Pool is slow"), text);
+    }
+
+    @Test
     void anApplicationThatLogsInALoopFillsNoReport() {
         fake.page.navigate(UserStepWordingTest.PeopleView.class);
         for (int i = 0; i < StepRecorder.MAX_LOG_LINES + 7; i++) {

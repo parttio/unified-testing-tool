@@ -23,6 +23,7 @@ public final class Settings {
     public static final String USER_STEPS_BASELINE_DIR = "vaadin.testing.user-steps.baseline-dir";
     public static final String USER_STEPS_COMPARE_DIR = "vaadin.testing.user-steps.compare-dir";
     public static final String USER_STEPS_SERVER_LOG = "vaadin.testing.user-steps.server-log";
+    public static final String USER_STEPS_IGNORED_ERRORS = "vaadin.testing.user-steps.ignored-errors";
     public static final String USER_STEPS_SNAPSHOTS = "vaadin.testing.user-steps.snapshots";
     public static final String VIEWPORT = "vaadin.testing.viewport";
     public static final String LAYOUT_CHECKS = "vaadin.testing.layout-checks";
@@ -181,6 +182,22 @@ public final class Settings {
             default -> throw new IllegalArgumentException(USER_STEPS_SERVER_LOG + ": expected warn, error or off, got "
                     + value);
         };
+    }
+
+    /**
+     * {@code vaadin.testing.user-steps.ignored-errors}: one Java regex; {@code hasNoErrors()} doesn't count a logged
+     * error line whose text, as the reports print it ({@code console ERROR: …}), it finds. The line still shows
+     * under its User Step (ADR 0023). Empty when unset.
+     */
+    public Optional<Pattern> userStepsIgnoredErrors() {
+        return get(USER_STEPS_IGNORED_ERRORS).map(value -> {
+            try {
+                return Pattern.compile(value.strip());
+            } catch (java.util.regex.PatternSyntaxException e) {
+                throw new IllegalArgumentException(USER_STEPS_IGNORED_ERRORS
+                        + ": expected a Java regular expression, got " + value + " (" + e.getDescription() + ")", e);
+            }
+        });
     }
 
     static Duration parseDuration(String value) {
