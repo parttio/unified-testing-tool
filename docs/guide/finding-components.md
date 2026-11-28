@@ -152,7 +152,7 @@ There is no `first()`. When several components match, either the filter is not p
 --8<-- "unified-test-demo/src/test/java/demo/DashboardTest.java:loopsOverTheMatches"
 ```
 
-`all()` reads the matches **now**, without waiting: check the count with `hasCount(n)` first, and use `all()` only to loop.
+`all()` reads the matches **now**, without waiting: check the count with `hasCount(n)` first, and use `all()` only to loop. To check that something is there or gone, use the waiting assertions, not `all().isEmpty()` or `all().size()`: `exists()`, `doesNotExist()`, `hasCount(n)`, and `isClosed()` or `isHidden()` ([Checking that something is there, or gone](assertions-and-waiting.md#checking-that-something-is-there-or-gone)).
 
 ## What is there to find?
 

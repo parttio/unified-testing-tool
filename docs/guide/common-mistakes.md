@@ -50,7 +50,23 @@ Reading a value you need is fine. Comparing it with a second read is the getter 
 --8<-- "unified-test-demo/src/test/java/demo/CommonMistakes.java:sleepGood"
 ```
 
-Every action waits for the server, and every check waits until it holds. A sleep adds time to every run and still fails on a slow one. The same goes for a Testing Tool's own waits through the Escape Hatch. For a condition no check covers, use `page.waitUntil(..)`. The style rule `NO_RAW_WAITS` fails a test with a sleep. More: [Assertions and waiting](assertions-and-waiting.md), [Checking the style](style-rules.md#the-rules).
+Every action waits for the server, and every check waits until it holds. A sleep adds time to every run and still fails on a slow one. The same goes for a Testing Tool's own waits through the Escape Hatch. For a condition no check covers, use `page.waitUntil(..)`. The style rule `NO_RAW_WAITS` fails a test with a sleep.
+
+A pause before a read that doesn't wait is worse: the test passes by luck. Here the rows come from a background thread, after the click's answer:
+
+**Bad**
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/CommonMistakes.java:pauseBad"
+```
+
+**Good**
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/CommonMistakes.java:pauseGood"
+```
+
+The pause happens to be long enough where the test was written. On a slower run the read comes first, and the test fails now and then, far from its cause. The pause hides a race that the waiting assertion exposes: `exists()` waits until the row is there, or fails saying what it saw. A presence or absence check built on `all()` (`all().isEmpty()`, `all().size()`) is the same race without the pause, because `all()` reads now: use `exists()`, `doesNotExist()`, `hasCount(n)`, `isClosed()` or `isHidden()` ([Checking that something is there, or gone](assertions-and-waiting.md#checking-that-something-is-there-or-gone)). More: [Assertions and waiting](assertions-and-waiting.md), [Checking the style](style-rules.md#the-rules).
 
 ## A longer timeout to make it pass
 

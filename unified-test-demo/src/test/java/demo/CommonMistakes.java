@@ -2,6 +2,7 @@ package demo;
 
 import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.microsoft.playwright.Page;
 import com.vaadin.testing.unified.UnifiedPage;
@@ -61,6 +62,21 @@ final class CommonMistakes {
         save.click();                                    // waits for the server's answer (Auto-Wait)
         assertThat(notification).hasText("Saved Alice"); // waits until it holds, up to the timeout
         // --8<-- [end:sleepGood]
+    }
+
+    static void pauseBad(UnifiedGrid people, UnifiedButton importPeople) throws InterruptedException {
+        // --8<-- [start:pauseBad]
+        importPeople.click();                            // the rows arrive later, pushed from a background thread
+        Thread.sleep(1000);                              // long enough on this machine, so far
+        assertFalse(people.row().withCellText("Name", "Alice").all().isEmpty());   // reads once
+        // --8<-- [end:pauseBad]
+    }
+
+    static void pauseGood(UnifiedGrid people, UnifiedButton importPeople) {
+        // --8<-- [start:pauseGood]
+        importPeople.click();
+        assertThat(people.row().withCellText("Name", "Alice")).exists();          // waits until it holds
+        // --8<-- [end:pauseGood]
     }
 
     static void timeoutBad(UnifiedPage page) {

@@ -112,8 +112,9 @@ Wrappers are the `Unified*` interfaces in `com.vaadin.testing.unified.component`
 `import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;`. Its assertions
 retry until the timeout, so a check waits for the server's answer by itself. Check what the user sees with these
 assertions; a plain JUnit `assertEquals` on a Wrapper's getter reads once, without waiting, and shows in the reports
-as a gap. Use `all()` only to loop. When a lookup matches several components, add the filter that names the one
-meant (often a container) rather than picking one by position.
+as a gap. `all()` reads now, without waiting: use it only to loop, and check presence or absence with `exists()`,
+`doesNotExist()`, `hasCount(n)`, `isClosed()` or `isHidden()`. When a lookup matches several components, add the
+filter that names the one meant (often a container) rather than picking one by position.
 
 - `isVisible()` waits for exactly one match, and fails on none or several: check absence with `doesNotExist()`, or
   `isHidden()` for a component still on the page.
@@ -130,7 +131,7 @@ A suite migrated by hand keeps its old checks, which pass without User Steps. Co
 | `assertTrue(page.textContent("body").contains("Saved"))` | a check on the component that shows it: `assertThat(notification).hasTextContaining("Saved")` |
 | `assertEquals("Alice", locator.inputValue())` | `assertThat(field).hasValue("Alice")` |
 | `assertEquals(3, rows.count())` | `assertThat(grid).hasRowCount(3)`, or `assertThat(wrapper).hasCount(3)` |
-| a pause (`waitForTimeout`, `Thread.sleep`) before a check | nothing: the check waits |
+| a pause (`waitForTimeout`, `Thread.sleep`) before a check | nothing: the check waits. The pause makes it pass by luck, hiding a race the waiting check exposes |
 
 ## Prove it
 
