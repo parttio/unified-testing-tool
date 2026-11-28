@@ -433,8 +433,11 @@ public final class BrowserQueries {
      * Browser function {@code e => internalPart}: whether the element is an internal part of another component,
      * one that component rendered itself rather than the application: Flow's client has bound no server-side
      * element to it, but has bound one of its ancestors in the same DOM tree (the {@code <vaadin-text-area>} a
-     * {@code <vaadin-message-input>} puts in its light DOM). An element in an application's own template, whose
-     * shadow root holds no bound element above it, is not one; without Flow's client, nothing is.
+     * {@code <vaadin-message-input>} puts in its light DOM). The UI's own element, {@code <body>}, doesn't count as
+     * that ancestor: it is the page, not a component rendering its parts, so an element a component's client side
+     * renders straight under it (the {@code <vaadin-notification-card>} in {@code <vaadin-notification-container>})
+     * is not one (#740). An element in an application's own template, whose shadow root holds no bound element
+     * above it, is not one either; without Flow's client, nothing is.
      */
     public static final String INTERNAL_PART = """
             e => {
@@ -442,7 +445,7 @@ public final class BrowserQueries {
               const bound = n => Object.values(clients || {}).some(c => c && typeof c.getNodeId === 'function'
                   && c.getNodeId(n) >= 0);
               if (!clients || bound(e)) return false;
-              for (let a = e.parentElement; a; a = a.parentElement) {
+              for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) {
                 if (bound(a)) return true;
               }
               return false;
