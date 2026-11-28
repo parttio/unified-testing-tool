@@ -218,6 +218,23 @@ Next to them, a failed test leaves its failure evidence: `failure.png`, a screen
 
 What the recorder can't see is never left out silently. Escape Hatch calls, `page.waitUntil(..)` and a `where(..)` written in the test show as one gap line, such as `… 1 call outside the Unified API (waitUntil)`.
 
+An Escape Hatch gap counts each `unwrap(..)`, not each use of what it returned. Work done later through a kept `Page` or `WebDriver` isn't seen, so the User Steps after it may look empty, though the test did work there, and the run summary may count the scenario as [without a check](#scenarios-without-a-check):
+
+```java
+Page playwright = page.unwrap(Page.class);    // … 1 call outside the Unified API (Escape Hatch)
+playwright.getByText("Alan Turing").click();  // not seen
+playwright.getByText("Save").click();         // not seen
+```
+
+To have each use show, unwrap where the code uses it:
+
+```java
+page.unwrap(Page.class).getByText("Alan Turing").click();   // … 2 calls outside the Unified API (Escape Hatch)
+page.unwrap(Page.class).getByText("Save").click();
+```
+
+A test migrated by the [Dramafinder recipe](../migrating-from-dramafinder.md#what-it-leaves-for-you) keeps one `Page`, like the first example; that is fine as a first step ([Keeping an unwrapped object](tool-specific.md#keeping-an-unwrapped-object)).
+
 ### What the application logged
 
 A click that makes the server throw often shows the user nothing, or a generic error. The reason is in the application's log, and the Unified API puts it where the click is:

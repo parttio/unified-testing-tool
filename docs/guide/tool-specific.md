@@ -84,6 +84,39 @@ The reports can't see what runs inside the Escape Hatch, so they show a gap line
    … 1 call outside the Unified API (Escape Hatch)
 ```
 
+### Keeping an unwrapped object
+
+The gap line counts each time the test calls `unwrap(..)`, not each time it uses what came back. Work done later through a kept `Page` or `WebDriver` isn't seen:
+
+```java
+Page playwright = page.unwrap(Page.class);    // the gap line, once
+page.navigate(ProfileView.class);
+playwright.getByText("Alan Turing").click();  // not seen
+playwright.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save")).click();  // not seen
+```
+
+```
+   … 1 call outside the Unified API (Escape Hatch)
+   1  open view “Profile”
+```
+
+The User Steps after it may look empty, though the test did work there, and the run summary may count the scenario as [without a check](reports-and-failures.md#scenarios-without-a-check).
+
+To have each use show, unwrap where the code uses it:
+
+```java
+page.navigate(ProfileView.class);
+page.unwrap(Page.class).getByText("Alan Turing").click();
+page.unwrap(Page.class).getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save")).click();
+```
+
+```
+   1  open view “Profile”
+   … 2 calls outside the Unified API (Escape Hatch)
+```
+
+A test migrated by the [Dramafinder recipe](../migrating-from-dramafinder.md#what-it-leaves-for-you) keeps one `Page` in a local like the first example. That is fine as a first step: the test runs, and the gap line says the Escape Hatch is there. As you rewrite its calls with Wrappers, the User Steps fill in.
+
 ## Declaring the Capability
 
 `@RequiresTestingTool` is what makes the test skip, not fail, on the other Testing Tools. The opt-in style rule `TOOL_CODE_NEEDS_CAPABILITY` checks that every test reaching a Testing Tool's own code, directly or through a helper in its class, declares it; `tryUnwrap(..)` needs no annotation ([Checking the style](style-rules.md)).
