@@ -77,6 +77,7 @@ class ErrorsTest {
 
     /** A known error, such as a browser's network noise, is set aside for the whole run, and still shows. */
     @Test
+    @DisplayName("Errors the run says to ignore don't fail hasNoErrors() and still show under their step")
     void ignoresTheErrorsTheRunSaysToIgnore(@TempDir Path dir) throws Exception {
         TestingTool tool = TestingTool.parse(System.getProperty("vaadin.testing.tool", "browserless"));
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
