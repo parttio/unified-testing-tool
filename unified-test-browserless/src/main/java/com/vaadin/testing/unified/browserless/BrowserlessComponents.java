@@ -98,10 +98,11 @@ final class BrowserlessComponents {
         register(Notification.class, new OverlayHost() {
             @Override
             public Optional<String> text(Component component, BrowserlessUIContext window) {
-                // the text is in a renderer: read it through the tester
+                // a text-only notification keeps its text in a property, read through the tester; one built from
+                // components has none (#690): its components are child elements, read as any element's text
                 ComponentTester<?> tester = window.test(component);
                 try {
-                    return Optional.of((String) tester.getClass().getMethod("getText").invoke(tester));
+                    return Optional.ofNullable((String) tester.getClass().getMethod("getText").invoke(tester));
                 } catch (ReflectiveOperationException e) {
                     throw new IllegalStateException("NotificationTester.getText() not available", e);
                 }
