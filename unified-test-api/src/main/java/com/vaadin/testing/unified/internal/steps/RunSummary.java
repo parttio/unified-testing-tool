@@ -229,7 +229,7 @@ public record RunSummary(String tool, List<ScenarioResult> scenarios, int disabl
 
     /**
      * Where the Escape Hatch line points the reader: {@code assertThat(..)} for checks of the UI, a Backend Step
-     * for the others (ADR 0023), each name rendered by {@code code}.
+     * for the others (ADR 0024), each name rendered by {@code code}.
      */
     static String escapeHatchPointer(java.util.function.UnaryOperator<String> code) {
         return "Their checks may be assertions the report can't see: move checks of the UI to "

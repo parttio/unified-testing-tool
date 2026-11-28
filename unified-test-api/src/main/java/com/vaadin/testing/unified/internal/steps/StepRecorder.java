@@ -632,7 +632,7 @@ public final class StepRecorder {
         group(name, window, body, false);
     }
 
-    /** {@code page.backendStep(name, work)}: a Backend Step, recorded like a step group (ADR 0023). */
+    /** {@code page.backendStep(name, work)}: a Backend Step, recorded like a step group (ADR 0024). */
     public void backend(String name, String window, Runnable work) {
         group(name, window, work, true);
     }

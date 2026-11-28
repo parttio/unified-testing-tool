@@ -10,5 +10,5 @@ section: New
   line about scenarios that used the Escape Hatch now reads `<n> passing scenarios used the Escape Hatch and end on
   User Steps the report sees no check for`. It points to `assertThat(..)` and `page.backendStep(..)`, and no longer to
   Migration Markers, which the run can't see
-  ([ADR 0023](../adr/0023-a-check-outside-the-ui-is-a-backend-step.md),
+  ([ADR 0024](../adr/0024-a-check-outside-the-ui-is-a-backend-step.md),
   [guide](../guide/assertions-and-waiting.md#checking-outside-the-ui)).

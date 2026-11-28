@@ -86,7 +86,7 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
     /**
      * Work the test does outside the application's UI, such as checking what the database, a file or a mail
      * holds, as a Backend Step: the reports show it among the User Steps as {@code backend: order is stored}, and
-     * the run summary counts it as a check (ADR 0023). The work runs once, after Auto-Wait has waited for the
+     * the run summary counts it as a check (ADR 0024). The work runs once, after Auto-Wait has waited for the
      * server to be idle; wait for a later result with {@link #waitUntil}. If it throws, the Backend Step and the
      * test fail.
      *

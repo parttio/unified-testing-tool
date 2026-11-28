@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** {@code page.backendStep(..)}: work outside the UI, shown among the User Steps but not one of them (ADR 0023). */
+/** {@code page.backendStep(..)}: work outside the UI, shown among the User Steps but not one of them (ADR 0024). */
 public class BackendStepTest {
 
     private final FakePage fake = new FakePage().add("vaadin-button", "text", "Place order");
