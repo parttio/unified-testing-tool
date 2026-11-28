@@ -170,6 +170,24 @@ final class BrowserlessComponents {
     }
 
     static {
+        // a value the user types arrives as the field's client update, setModelValue(.., true) included (#689)
+        Support typed = new Support() {
+            @Override
+            public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
+                if (!(value instanceof String text)) {
+                    return false;
+                }
+                BrowserlessClientValues.typeText(component, text, window);
+                return true;
+            }
+        };
+        register(com.vaadin.flow.component.textfield.TextField.class, typed);
+        register(com.vaadin.flow.component.textfield.TextArea.class, typed);
+        register(com.vaadin.flow.component.textfield.EmailField.class, typed);
+        register(com.vaadin.flow.component.textfield.PasswordField.class, typed);
+    }
+
+    static {
         register(Checkbox.class, new Support() {
             @Override
             public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
