@@ -29,7 +29,7 @@ Deliberately not decided in this spec.
 
 | Item | Decision |
 |---|---|
-| Base URL setting | `vaadin.testing.base-url` |
+| Base URL setting | `vaadin.testing.base-url` for the run; `@BaseUrl` per test class ([#678](https://github.com/parttio/unified-testing-tool/issues/678)) |
 | Timeout setting | `vaadin.testing.timeout` |
 | `…Containing` filters | Case-insensitive substring match, as in Dramafinder 2.0 (found while implementing) |
 

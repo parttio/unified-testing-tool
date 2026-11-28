@@ -65,7 +65,7 @@ These fail every test of a run the same way, with a message that names the cause
 Two more, without a message of the Unified API:
 
 - **A Selenium run fails on TestBench's license.** TestBench checks its license when it loads. Give the run a TestBench license, such as the `VAADIN_OFFLINE_KEY` environment variable on CI. Browserless and Playwright runs never load TestBench, even with the Selenium adapter on the classpath.
-- **A browser run of an application without Spring Boot can't connect.** The Unified API never starts a server. Start the application before the tests, and set `vaadin.testing.base-url` if it isn't at `http://localhost:8080` ([Getting started](getting-started.md#without-spring-boot)).
+- **A browser run of an application without Spring Boot can't connect.** The Unified API never starts a server. Start the application before the tests, and set `vaadin.testing.base-url` if it isn't at `http://localhost:8080`, or `@BaseUrl` on a test class whose application runs elsewhere ([Base URL](configuration.md#base-url)).
 
 ## A test is skipped
 
