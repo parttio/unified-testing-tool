@@ -1,18 +1,18 @@
-# Field feedback: migrating Bakery's TestBench suite
+# Field feedback: migrating a TestBench suite (Project C)
 
-Feedback collected after migrating the UI tests of Vaadin's **Bakery** starter app from **TestBench with page objects**
+Feedback collected after migrating a real app's UI tests from **TestBench with page objects**
 to the Unified API. It looks at how easy the tests were to write and how fast they run, and records what went well and
 what didn't, to steer the project and to name its advantages.
 
 | | |
 |---|---|
 | Unified API version | **0.1.0-alpha5**, on Browserless, Playwright and Selenium |
-| Project | Bakery (`vaadin/bakery-app-starter-flow-spring`), Vaadin's public starter: Spring Boot 4.1, Vaadin 25.3, mostly Lit templates, two Flow `Crud`s |
+| Project | **Project C** (anonymised): a Spring Boot 4.1 / Vaadin 25.3 app, mostly Lit templates, two Flow `Crud`s |
 | Before | 5 TestBench IT classes (17 tests), 16 page objects, a server started by `spring-boot:start` |
-| Feedback issue | [#602](https://github.com/parttio/unified-testing-tool/issues/602); the alpha4 attempt is [#524](https://github.com/parttio/unified-testing-tool/issues/524) |
-| Fixed since | Every finding filed upstream was closed by [0.1.0-alpha6](../releases/0.1.0-alpha6.md); see [Status of the findings](#status-of-the-findings) |
+| Fixed since | Every finding was closed by [0.1.0-alpha6](../releases/0.1.0-alpha6.md); see [Status of the findings](#status-of-the-findings) |
 
-The F-numbers refer to the project's own findings list, kept so the findings can be traced back. Statements marked
+The project's own migration log and findings list (F1 to F18) stay in that project; the F-numbers are kept so the
+findings can be traced back. Statements marked
 *(judgment)* are an assessment, not measurements.
 
 ## In short
@@ -49,11 +49,11 @@ The F-numbers refer to the project's own findings list, kept so the findings can
 | Tests that run without TestBench | 0 | 15 (Playwright) | **Unified** |
 | Whole `mvn verify -Pit` | 43–51 s | Browserless 17–18 s, Playwright 37–38 s, Selenium 40–41 s | **Unified** without a browser; about the same in one |
 | Time spent in the test classes | ~20 s, classes run in parallel | ~30 s on Selenium, summed over the classes | **TestBench** |
-| Flaky runs | 0 in 3 runs | 0 in 2 rounds × 3 tools | Same |
-| Failure messages and reports | Stack trace and screenshot | Step list, `Found` / `Nearby` / `Did you mean`, `summary.md`, `report.html` | **Unified** |
+| Flaky runs | 0 in 2 rounds × 3 tools | Same |
+| Failure messages and reports | Step list, `Found` / `Nearby` / `Did you mean`, `summary.md`, `report.html` | **Unified** |
 | Looking at the page while writing a test | Browser devtools, then a page object | `page.describe()` (the Findable View) | **Unified**, with gaps (F13, F15) |
 | Reaching shadow-DOM HTML in a template | `$` looks inside shadow roots | Not possible; needs an Escape Hatch (F7) | **TestBench** |
-| Flow `Crud` | `CrudElement` | No Wrapper, and doesn't work on Browserless (F9) | **TestBench** |
+| Flow `Crud` | No Wrapper, and doesn't work on Browserless (F9) | **TestBench** |
 | Clicking content drawn in a grid cell | `getCell(…)` | A different Escape Hatch per tool | **TestBench** |
 | Window size | Resized to 1024×800 | No setting for it (F16) | **TestBench** |
 | Checking part of the URL | `getCurrentUrl()` | `hasPath` only compares the whole path; check removed (F11) | **TestBench** |
@@ -65,7 +65,7 @@ The F-numbers refer to the project's own findings list, kept so the findings can
 Each test is written once and runs on whichever tool `-Dvaadin.testing.tool` names. A tool a test can't use is named
 in an annotation: `@RequiresBrowser` on 11 tests, `@RequiresTestingTool(SELENIUM)` on 1.
 
-- **Browserless** runs 4 tests (dashboard counters, storefront dialogs, field validation, access denied) in about 0.5 s
+- **Browserless** runs 4 tests (dashboard counters, dialogs on the main view, field validation, access denied) in about 0.5 s
   once Spring is up; about 8 s of the 17–18 s build is starting the Spring context. A useful check before every commit,
   though it covers only part of the suite.
 - **Playwright** runs 15 tests with no TestBench and no TestBench license. Before, every test needed TestBench.
@@ -77,13 +77,13 @@ in an annotation: `@RequiresBrowser` on 11 tests, `@RequiresTestingTool(SELENIUM
 
   ```java
   // TestBench: three page objects are needed to read this
-  OrderEditorElement orderEditor = storefrontPage.getOrderEditor();
-  TextFieldElement customerNameField = orderEditor.getCustomerNameField();
-  testFieldOverflow(customerNameField);
+  EditorElement editor = mainPage.getEditor();
+  TextFieldElement nameField = editor.getNameField();
+  testFieldOverflow(nameField);
 
   // Unified: says which field it uses
-  UnifiedTextField customerName = orderEditor(page).find(UnifiedTextField.class).withLabel("Customer");
-  assertRejectsOverflow(customerName);
+  UnifiedTextField name = editor(page).find(UnifiedTextField.class).withLabel("Name");
+  assertRejectsOverflow(name);
   ```
 
 - **Templates:** `findTemplate(View.class)` with `withId("…")` reaches the `@Id` fields of all 7 Lit templates,
@@ -96,7 +96,7 @@ in an annotation: `@RequiresBrowser` on 11 tests, `@RequiresTestingTool(SELENIUM
 - `@UnifiedSpringBootTest` starts the app inside the test on a random port; the build no longer starts and stops it, and
   the base URL is no longer hard-coded.
 - The base test class went from a TestBench base class to two annotations and a static block.
-- `@WithUserDetails("admin@…")` signs in through the app's own `UserDetailsService`. Only the tests that check the
+- `@WithUserDetails("…")` signs in through the app's own `UserDetailsService`. Only the tests that check the
   login still use the login form.
 
 ### 4. Checks that wait
@@ -133,7 +133,7 @@ return. Every `assertNotNull(element)` and hand-written wait was removed. All ru
    for a rewrite.
 2. **Flow `Crud` (F9).** No `UnifiedCrud`; on Browserless its buttons have no text and clicking them does nothing. That
    puts 7 of 17 tests in a browser, and every Crud test needs `.visible()` on its button and dialog lookups (F14).
-3. **Content drawn by renderers in grid cells.** The Crud's edit pencil and the storefront's order cards come from a
+3. **Content drawn by renderers in grid cells.** The Crud's edit button and the main view's cards come from a
    `LitRenderer`, not Flow components. Clicking them took two Escape Hatches (Dramafinder on Playwright, TestBench on
    Selenium) and a route navigation on Browserless: three pieces of code for one click, where TestBench needed
    `getCell(…)`.
@@ -180,17 +180,17 @@ TestBench license, 15 tests); Selenium only for the shadow-DOM check, until F7 i
 
 ## Status of the findings
 
-| Finding | Upstream | Status |
-|---|---|---|
-| F13 Browserless link lookup crash | [#603](https://github.com/parttio/unified-testing-tool/issues/603); the hidden error behind a timeout: [#611](https://github.com/parttio/unified-testing-tool/issues/611) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
-| F10 Playwright race after an Escape Hatch action | [#604](https://github.com/parttio/unified-testing-tool/issues/604) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
-| F6 Password masking | [#605](https://github.com/parttio/unified-testing-tool/issues/605) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
-| F1, F3, F4, F5, F18 Recipe ignores page objects | [#606](https://github.com/parttio/unified-testing-tool/issues/606), [#607](https://github.com/parttio/unified-testing-tool/issues/607) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
-| F9 Renderer-drawn cell content, `row.cell(int)` | [#608](https://github.com/parttio/unified-testing-tool/issues/608) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md). A `Crud` Wrapper stays out of scope ([#615](https://github.com/parttio/unified-testing-tool/issues/615)) |
-| F7, F15 Template shadow DOM and Findable View hints | [#609](https://github.com/parttio/unified-testing-tool/issues/609), [#617](https://github.com/parttio/unified-testing-tool/issues/617) | Findable View hints fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md). Piercing a template's shadow root was declined ([ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md)) |
-| F11, F14 Path prefix check, hidden matches | [#610](https://github.com/parttio/unified-testing-tool/issues/610) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) (`hasPathMatching`, hidden matches in `Found`) |
-| F16 Window size | [#489](https://github.com/parttio/unified-testing-tool/issues/489), [#496](https://github.com/parttio/unified-testing-tool/issues/496) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) (`@Viewport`) |
-| F17 Build profiles that changed meaning | [#613](https://github.com/parttio/unified-testing-tool/issues/613) | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) (marked by the recipe) |
+| Finding | Status |
+|---|---|
+| F13 Browserless link lookup crash | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
+| F10 Playwright race after an Escape Hatch action | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
+| F6 Password masking | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
+| F1, F3, F4, F5, F18 Recipe ignores page objects | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) |
+| F9 Renderer-drawn cell content, `row.cell(int)` | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md). A `Crud` Wrapper stays out of scope |
+| F7, F15 Template shadow DOM and Findable View hints | Findable View hints fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md). Piercing a template's shadow root was declined ([ADR 0012](../adr/0012-lookups-enter-templates-explicitly.md)) |
+| F11, F14 Path prefix check, hidden matches | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) (`hasPathMatching`, hidden matches in `Found`) |
+| F16 Window size | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) (`@Viewport`) |
+| F17 Build profiles that changed meaning | Fixed in [0.1.0-alpha6](../releases/0.1.0-alpha6.md) (marked by the recipe) |
 
 ## Advantages to highlight
 
