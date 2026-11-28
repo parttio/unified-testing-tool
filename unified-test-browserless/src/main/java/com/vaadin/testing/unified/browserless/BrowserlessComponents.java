@@ -170,6 +170,34 @@ final class BrowserlessComponents {
     }
 
     static {
+        // a value the user enters arrives as the field's client update, setModelValue(.., true) included (#689)
+        Support typed = new Support() {
+            @Override
+            public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
+                if (!(value instanceof String text)) {
+                    return false;
+                }
+                BrowserlessClientValues.typeText(component, text, window);
+                return true;
+            }
+        };
+        register(com.vaadin.flow.component.textfield.TextField.class, typed);
+        register(com.vaadin.flow.component.textfield.TextArea.class, typed);
+        register(com.vaadin.flow.component.textfield.EmailField.class, typed);
+        register(com.vaadin.flow.component.textfield.PasswordField.class, typed);
+        register(com.vaadin.flow.component.textfield.AbstractNumberField.class, new Support() {
+            @Override
+            public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
+                if (value != null && !(value instanceof Number)) {
+                    return false;
+                }
+                BrowserlessClientValues.enterNumber(component, (Number) value, window);
+                return true;
+            }
+        });
+    }
+
+    static {
         register(Checkbox.class, new Support() {
             @Override
             public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
@@ -249,34 +277,29 @@ final class BrowserlessComponents {
                 (session, c) -> new BrowserlessCoreSetAccess.MessageListAccessImpl(
                         (com.vaadin.flow.component.messages.MessageList) c)));
         register(com.vaadin.flow.component.datepicker.DatePicker.class, new Support() {
-            /** A String: text typed as it is (UnifiedDatePicker.typeText); ISO dates are parsed. */
+            /**
+             * A LocalDate or null (UnifiedDatePicker.setValue, clear), or a String: text typed as it is
+             * (UnifiedDatePicker.typeText), ISO dates parsed. A date reaches the picker as the client's update
+             * of its ISO value (#689).
+             */
             @Override
             public boolean setValue(Component component, Object value, BrowserlessUIContext window) {
-                if (!(value instanceof String text)) {
+                java.time.LocalDate date;
+                if (value == null || value instanceof java.time.LocalDate) {
+                    date = (java.time.LocalDate) value;
+                } else if (value instanceof String text) {
+                    try {
+                        date = text.isBlank() ? null : java.time.LocalDate.parse(text.strip());
+                    } catch (java.time.format.DateTimeParseException e) {
+                        // not a date: what a browser does with text it can't parse, it reports an unparsable change
+                        component.getElement().setProperty("_inputElementValue", text);
+                        com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "unparsable-change");
+                        return true;
+                    }
+                } else {
                     return false;
                 }
-                com.vaadin.flow.component.datepicker.DatePicker picker = (com.vaadin.flow.component.datepicker.DatePicker) component;
-                java.time.LocalDate date = null;
-                try {
-                    date = text.isBlank() ? null : java.time.LocalDate.parse(text.strip());
-                } catch (java.time.format.DateTimeParseException e) {
-                    // not a date: what a browser does with text it can't parse, it reports an unparsable change
-                    picker.getElement().setProperty("_inputElementValue", text);
-                    com.vaadin.browserless.internal.BasicUtilsKt._fireDomEvent(component, "unparsable-change");
-                    return true;
-                }
-                Object tester = window.test(component);
-                try {
-                    if (date == null) {
-                        tester.getClass().getMethod("clear").invoke(tester);
-                    } else {
-                        tester.getClass().getMethod("setValue", java.time.LocalDate.class).invoke(tester, date);
-                    }
-                } catch (java.lang.reflect.InvocationTargetException e) {
-                    throw e.getCause() instanceof RuntimeException r ? r : new IllegalStateException(e.getCause());
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException(e);
-                }
+                BrowserlessClientValues.enterDate(component, date, window);
                 return true;
             }
         });

@@ -66,6 +66,19 @@ class AddUnifiedTestingSkillTest implements RewriteTest {
     }
 
     @Test
+    void warnsOnTheModulesBuildFileWhenTheBuildRootIsNoProject() {
+        // issue #698: the module's pom.xml is below the build root, which has no build file, so nothing is written
+        String warning = AddUnifiedTestingSkill.NO_PROJECT_ROOT_WARNING;
+        rewriteRun(
+                spec -> spec.afterRecipe(run -> assertThat(run.getChangeset().getAllResults())
+                        .singleElement()
+                        .satisfies(r -> assertThat(r.getAfter().getMarkers().findFirst(Markup.Warn.class))
+                                .hasValueSatisfying(warn -> assertThat(warn.getMessage()).isEqualTo(warning)))),
+                text("<project/>", "~~(" + warning + ")~~><project/>", source -> source.path("app/pom.xml")),
+                java("class ViewTest {}"));
+    }
+
+    @Test
     void replacesACopyWithAnOlderStamp() {
         rewriteRun(with(
                 text("""

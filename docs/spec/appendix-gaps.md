@@ -73,6 +73,7 @@ The gaps below are closed: the first six in **Dramafinder 2.0.0**, the Grid, fie
 | `AbstractLoginTester.login(..)` fires the `LoginEvent` only: a login form with an `action` (a form post, Spring Security's `/login`) is neither posted nor reported. `UnifiedLogin.login(..)` checks the `action` first and fails asking for `@RequiresBrowser` or `@WithMockUser` | [#582](https://github.com/parttio/unified-testing-tool/issues/582) |
 | `Page.setLocation(..)` doesn't navigate: the UI stays on the view; no adapter workaround, a test that relies on it declares `@RequiresBrowser` | [#554](https://github.com/parttio/unified-testing-tool/issues/554) |
 | Plain Elements can't be found or clicked; the generic tester's click skips DOM listeners | [#70](https://github.com/parttio/unified-testing-tool/issues/70) |
+| `ComponentTester.setValueAsUser` sets a field's value through `AbstractFieldSupport`, so a field's `setModelValue(.., fromClient)` override never runs and an application's own field can read null. The adapter sends the value of a text input, number field and date picker as the element's property update from the client, after the tester's checks; other fields (ComboBox, Select, RadioButtonGroup, TimePicker, DateTimePicker) still go through their testers | [#689](https://github.com/parttio/unified-testing-tool/issues/689) |
 
 ## Outside the Testing Tools
 

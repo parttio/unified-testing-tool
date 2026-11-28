@@ -21,8 +21,8 @@ import org.openqa.selenium.firefox.FirefoxOptions;
  * <p>
  * Settings (from the Test Runner's configuration; on JUnit, configuration parameters or system properties):
  * <ul>
- * <li>{@code vaadin.testing.base-url}: app URL when the test has no Spring context; default
- * {@code http://localhost:8080}</li>
+ * <li>{@code vaadin.testing.base-url}: app URL when the test class has no {@code @BaseUrl} and its Spring context
+ * no web server port; default {@code http://localhost:8080} ({@code AdapterContext.baseUrl()}, ADR 0021)</li>
  * <li>{@code vaadin.testing.selenium.browser}: {@code chrome} (default) or {@code firefox}</li>
  * <li>{@code vaadin.testing.selenium.headless}: {@code true} (default)</li>
  * <li>{@code vaadin.testing.selenium.executable}: path to the browser binary, instead of the installed one</li>
@@ -32,7 +32,6 @@ import org.openqa.selenium.firefox.FirefoxOptions;
  */
 public final class SeleniumAdapter implements TestingToolAdapter {
 
-    static final String BASE_URL = "vaadin.testing.base-url";
     static final String BROWSER = "vaadin.testing.selenium.browser";
     static final String HEADLESS = "vaadin.testing.selenium.headless";
     static final String EXECUTABLE = "vaadin.testing.selenium.executable";
@@ -45,7 +44,7 @@ public final class SeleniumAdapter implements TestingToolAdapter {
 
     @Override
     public AdapterSession open(AdapterContext context) {
-        String baseUrl = baseUrl(context);
+        String baseUrl = context.baseUrl();
         LocalBrowser local = LocalBrowser.of(context.configuration(BROWSER));
         java.util.function.Supplier<TestBenchDriverProxy> browsers = () -> {
             TestBenchDriverProxy driver = TestBench.createDriver(newBrowser(context));
@@ -97,12 +96,6 @@ public final class SeleniumAdapter implements TestingToolAdapter {
         options.setCapability("webSocketUrl", true);
         executable.ifPresent(options::setBinary);
         return new ChromeDriver(options);
-    }
-
-    private static String baseUrl(AdapterContext context) {
-        Optional<String> fromSpring = context.springContext().flatMap(SpringSupport::baseUrl);
-        String url = fromSpring.or(() -> context.configuration(BASE_URL)).orElse("http://localhost:8080");
-        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
 

@@ -26,7 +26,7 @@ One Testing Tool per **run**. Test code never names it.
 | Setting | Values | Default |
 |---|---|---|
 | `vaadin.testing.tool` | `browserless`, `playwright`, `selenium` | `browserless` |
-| `vaadin.testing.base-url` | URL of the running app (browser Testing Tools) | from the Spring port, else `http://localhost:8080` |
+| `vaadin.testing.base-url` | URL of the running app (browser Testing Tools), when the test class has no `@BaseUrl` and no Spring port | `http://localhost:8080` |
 | `vaadin.testing.timeout` | Auto-Wait and assertion timeout | `10s` |
 | `vaadin.testing.viewport` | the Viewport of every test without `@Viewport`, `[name:]WIDTHxHEIGHT` such as `phone:375x667` (browser Testing Tools) | `1280x720` |
 | `vaadin.testing.layout-checks` | `on`: measure the layout after every navigation, reload and Viewport change, in a browser ([ADR 0011](../adr/0011-responsive-testing-viewports-layout-findings-viewport-comparison.md)) | `off` |
@@ -52,7 +52,20 @@ The Unified API never starts a server itself.
 | App | Browserless | Browser Testing Tools |
 |---|---|---|
 | Spring Boot, `@UnifiedSpringBootTest` | App built in the test JVM from the Spring context (`SpringBrowserlessApplicationContext`); routes from the packages of the `@SpringBootApplication` and the test's own package. Needs `com.vaadin:browserless-test-spring` (a Spring test without it fails at once). | Same Spring context, random port; base URL `http://localhost:<port>` |
-| Plain servlet / other | Views found with Browserless's `@ViewPackages` | Server started by the build (e.g. Failsafe + `jetty:start`); base URL from `vaadin.testing.base-url` |
+| Plain servlet / other | Views found with Browserless's `@ViewPackages` | Server started by the build (e.g. Failsafe + `jetty:start`); base URL from `vaadin.testing.base-url`, or the test class's `@BaseUrl` |
+
+### The Base URL of a test
+
+Decided in [#678](https://github.com/parttio/unified-testing-tool/issues/678) ([ADR 0021](../adr/0021-the-base-url-is-chosen-per-test-class-by-base-url.md)). On browser Testing Tools, relative navigation, the path checks, `isAt(..)` and the Findable View resolve against the test's Base URL, the first of:
+
+| Source | Scope |
+|---|---|
+| `@BaseUrl("http://…")`, or `@BaseUrl(provider = P.class)` with `P implements BaseUrlProvider`, called with the test class when the test's page opens | Test class: inherited, and found on an enclosing class for a `@Nested` test. Both or neither set fails the test. |
+| The port of the test's Spring web server, with `server.servlet.context-path` | Spring context |
+| `vaadin.testing.base-url` | Run |
+| `http://localhost:8080` | Default |
+
+A trailing `/` is dropped. Browserless ignores the Base URL. Adapters read it as `AdapterContext.baseUrl()`, so every browser Testing Tool resolves it the same way.
 
 `@UnifiedSpringBootTest` always uses a random port, also on Browserless runs. Cost: one embedded-server start per cached Spring context, not per test. Benefit: same app setup on every Testing Tool. A suite whose classes each declare their own `@MockitoBean`s, `@Import`s, properties or `@ServiceConnection` containers starts one context per class; keep it on one through a shared base class ([#331](https://github.com/parttio/unified-testing-tool/issues/331), [Migrating from Browserless](../migrating-from-browserless.md#one-spring-context)).
 

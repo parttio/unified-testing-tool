@@ -7,7 +7,7 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | Setting | Default |
 |---|---|
 | `vaadin.testing.tool` | `browserless` (or `playwright`, `selenium`) |
-| `vaadin.testing.base-url` | from the Spring port, else `http://localhost:8080` |
+| `vaadin.testing.base-url` | the URL of the application in a browser, when the test class has no `@BaseUrl` and no Spring port; `http://localhost:8080` ([Base URL](#base-url)) |
 | `vaadin.testing.timeout` | `10s` |
 | `vaadin.testing.viewport` | `1280x720`; `[name:]WIDTHxHEIGHT` such as `phone:375x667`: the exact Viewport of every test without `@Viewport`, in a browser ([Viewports](#viewports)) |
 | `vaadin.testing.layout-checks` | `off`; `on` measures the layout after every navigation, reload and `setViewport`, in a browser, and shows its Layout Findings on that User Step ([Layout](assertions-and-waiting.md#layout)) |
@@ -33,6 +33,21 @@ Set these as JUnit configuration parameters, in `src/test/resources/junit-platfo
 | `vaadin.testing.selenium.reuse-browser` | `true`: one browser per run, a fresh tab without cookies or storage per test |
 
 The Selenium adapter always runs its browser locally: it has no remote Selenium grid setting, and it reads none of TestBench's grid parameters (`com.vaadin.testbench.Parameters.gridBrowsers`, `hubHostname`) or Sauce Labs options. A remote grid is on the roadmap ([#645](https://github.com/parttio/unified-testing-tool/issues/645)). Until then, run browser tests where the browser is installed, or on Playwright.
+
+## Base URL
+
+In a browser, a test opens the application at its Base URL: relative `navigate(..)`, `hasPath(..)`, `hasPathMatching(..)` and `isAt(..)` resolve against it. Browserless has no URL and ignores it. The first of these that is set wins ([ADR 0021](../adr/0021-the-base-url-is-chosen-per-test-class-by-base-url.md)):
+
+1. `@BaseUrl` on the test class, on a class it extends, or, for a `@Nested` test, on an enclosing class.
+2. The port of the test's Spring web server: `@UnifiedSpringBootTest`'s random port.
+3. `vaadin.testing.base-url`, for the whole run.
+4. `http://localhost:8080`.
+
+`@BaseUrl("http://localhost:18721/app")` gives the class a fixed URL. When the URL is only known at run time, such as a free copy of the application from a pool, name a `BaseUrlProvider` instead. It needs a no-argument constructor, and it is called with the test class each time a test opens its page:
+
+```java
+--8<-- "unified-test-demo/src/test/java/demo/BaseUrlTest.java:provider"
+```
 
 ## Viewports
 

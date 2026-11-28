@@ -28,10 +28,10 @@ Deliberately not decided in this spec.
 
 | Item | Decision |
 |---|---|
-| Base URL setting | `vaadin.testing.base-url` |
+| Base URL setting | `vaadin.testing.base-url` for the run; `@BaseUrl` per test class ([#678](https://github.com/parttio/unified-testing-tool/issues/678)) |
 | Timeout setting | `vaadin.testing.timeout` |
 | `…Containing` filters | Case-insensitive substring match, as in Dramafinder 2.0 (found while implementing) |
-| Authentication without Spring Security | `openNewSession()`, then the application's own login with `UnifiedLogin` ([11-users.md](11-users.md#a-second-user-without-spring-security), [ADR 0021](../adr/0021-a-second-user-signs-in-through-the-app-open-new-session.md)) |
+| Authentication without Spring Security | `openNewSession()`, then the application's own login with `UnifiedLogin` ([11-users.md](11-users.md#a-second-user-without-spring-security), [ADR 0022](../adr/0022-a-second-user-signs-in-through-the-app-open-new-session.md)) |
 
 ## Pattern only
 

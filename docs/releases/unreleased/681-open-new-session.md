@@ -6,5 +6,5 @@ section: New
   Browserless user, a new Playwright browser context, a new Selenium browser). The test signs in through the
   application's own login with `UnifiedLogin`, as User Steps. `openAsUser(..)` still needs Spring Security, and its
   error now points here. The adapter SPI's `AdapterSession` gains `openNewSession()`
-  ([ADR 0021](../adr/0021-a-second-user-signs-in-through-the-app-open-new-session.md),
+  ([ADR 0022](../adr/0022-a-second-user-signs-in-through-the-app-open-new-session.md),
   [guide](../guide/navigation-and-users.md#a-second-user-without-spring-security)).

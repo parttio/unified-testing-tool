@@ -60,6 +60,10 @@ _Avoid_: Shadow host, web component, LitTemplate, app template
 The packages the Unified API takes as the application's own, read from the test the same way on every Testing Tool: the test class's, the `@SpringBootApplication`'s, the configured view packages and those of the routes the test opened, with their subpackages. A Template's class is looked up in them by its tag (ADR 0018).
 _Avoid_: classpath, scan packages, base packages
 
+**Base URL**:
+The address of the running application that a browser Testing Tool opens for a test; relative paths, the current path and route checks are resolved against it. Each test has one, chosen per test class or for the whole run (ADR 0021).
+_Avoid_: App URL, server URL, root URL
+
 **Viewport**:
 The visible area of a Unified Page, as width × height in CSS pixels, which the application lays itself out for; a test runs at one unless it changes it.
 _Avoid_: Window size, screen size, resolution, breakpoint

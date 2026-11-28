@@ -1,6 +1,6 @@
 # 11. Users and windows
 
-Decided in [#34](https://github.com/parttio/unified-testing-tool/issues/34). A second user without Spring Security: [ADR 0021](../adr/0021-a-second-user-signs-in-through-the-app-open-new-session.md) ([#681](https://github.com/parttio/unified-testing-tool/issues/681)).
+Decided in [#34](https://github.com/parttio/unified-testing-tool/issues/34). A second user without Spring Security: [ADR 0022](../adr/0022-a-second-user-signs-in-through-the-app-open-new-session.md) ([#681](https://github.com/parttio/unified-testing-tool/issues/681)).
 
 ## Running as a user
 
