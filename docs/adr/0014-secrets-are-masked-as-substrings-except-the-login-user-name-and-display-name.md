@@ -18,4 +18,4 @@ We decide to keep substring masking, with two exceptions. A login's password is 
 
 - A login's user name appears in full in every report, even where it contains the password. The user name isn't secret: the step names it anyway.
 - Another Secret Value inside the user name (a `page.secret(..)` value, or another login's password) is still masked there.
-- A password that equals its user name is masked everywhere, the user name included. A test whose password is test data can declare it not secret with `login(.., Password.NOT_SECRET)` ([ADR 0023](0023-a-test-declares-a-login-password-not-secret-per-call.md)).
+- A password that equals its user name is masked everywhere, the user name included.

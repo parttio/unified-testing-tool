@@ -252,27 +252,6 @@ public class UserStepWordingTest {
     }
 
     @Test
-    void aPasswordDeclaredNotSecretIsShownEverywhere() {
-        fake.add("vaadin-login-overlay", "opened", "true");
-
-        fake.page.find(UnifiedLogin.class).login("admin", "admin", UnifiedLogin.Password.NOT_SECRET);
-
-        assertEquals("sign in as “admin” in login", fake.steps.mask(texts().get(0)));
-        assertEquals("Log in as admin, open Administration", fake.steps.mask("Log in as admin, open Administration"));
-        assertEquals(List.of("login admin admin"), fake.actions);
-    }
-
-    @Test
-    void aPasswordDeclaredNotSecretStaysMaskedWhereAnotherCallMarksItSecret() {
-        fake.add("vaadin-login-overlay", "opened", "true");
-        fake.page.secret("admin");
-
-        fake.page.find(UnifiedLogin.class).login("admin", "admin", UnifiedLogin.Password.NOT_SECRET);
-
-        assertEquals("sign in as “••••” in login", fake.steps.mask(texts().get(0)));
-    }
-
-    @Test
     void anotherSecretInsideAUserNameIsStillMaskedThere() {
         fake.add("vaadin-login-overlay", "opened", "true");
         fake.page.secret("vaadin");

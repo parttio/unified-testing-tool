@@ -274,7 +274,6 @@ Login, Flow's `AbstractLogin`. Guide: [Working with components, Login](https://p
 - **Actions**, each with the User Step it reports:
   - `forgotPassword()`: press “Forgot password” in login “…”
   - `login(String, String)`: sign in as “…” in login “…”
-  - `login(String, String, Password)`: sign in as “…” in login “…”
 - **Reads:** `getDescription() → String`, `getTitle() → String`, `isError() → boolean`, `isForgotPasswordButtonVisible() → boolean`, `isOpen() → boolean`
 - **Checks:** those of every Wrapper, and `hasError()`, `hasNoError()`, `hasTitle(String)`, `isClosed()`, `isOpen()`
 
