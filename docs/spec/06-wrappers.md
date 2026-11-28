@@ -92,6 +92,7 @@ The portable layer every wrapper is written on:
 | `findChildren(tag)` | direct light-DOM children with this tag (`*`: any), in order; text nodes don't count; never a web component's shadow DOM. `children()` is `findChildren("*")`. |
 | `findDescendants(tag)` | every light-DOM element below, in document order. Web components add light DOM of their own in a browser (a text field's input and label), which Browserless doesn't have. |
 | `setValueAsUser` on a native `<input>` | sets the value and fires `input` and `change`, for Flow's `Input` and a bare `Element("input")` |
+| `setValueAsUser` on a text input, number field or date picker | the value arrives as a user's does: the field's `setModelValue(.., fromClient)` runs with `fromClient` true, which an application's own field may override. Browserless sends it as the element's property update from the client (a number as the browser's text, a date as its ISO value), after the tester's checks; a field that doesn't synchronize its value only shows it, as in a browser |
 
 Browserless acts on the server-side element and component, firing events as from the browser. Browser Testing Tools act on the DOM. **Limitation:** on Browserless a property is the server-side value; it equals the browser value only for properties Flow synchronises.
 
