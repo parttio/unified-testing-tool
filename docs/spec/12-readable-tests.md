@@ -216,7 +216,7 @@ A reader checks `schemaVersion` first. Version 1 only adds fields in a compatibl
 | `type` | string | the exception class, `java.lang.AssertionError` |
 | `message` | string, optional | its message, secrets masked |
 | `stepIndex`, `stepNumber` | string, number, optional | the User Step that threw it; left out when the test failed outside any User Step (a plain JUnit assertion) |
-| `codePath` | array of call sites | where it happened, outermost first: the call site of each `page.step(..)` it passed through, then the failed User Step's (or the first line of the failure's stack trace outside the Unified API) |
+| `codePath` | array of call sites | where it happened, outermost first: the call site of each `page.step(..)` it passed through, then the failed User Step's (or the first line of the failure's stack trace outside the Unified API and the test frameworks: JUnit, opentest4j, AssertJ, Hamcrest) |
 | `expected`, `found` | string, optional | a `UnifiedAssertionError`'s `Expected` and `Found` lines (see [Failures](#failures)) |
 | `nearMisses` | array of strings, optional | its Near Misses, closest first: `text field “E-mail”`, `dialog “Help” (hidden)`; left out when there are none |
 | `suggestion` | string, optional | its `Did you mean`: `find(UnifiedTextField.class).withLabel("E-mail")` |

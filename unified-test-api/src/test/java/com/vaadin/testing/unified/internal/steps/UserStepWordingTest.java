@@ -654,6 +654,40 @@ public class UserStepWordingTest {
         assertTrue(fake.lines().contains("1.1.1  click button “Missing”   ✘"), fake.lines());
     }
 
+    /** JUnit's own frames (AssertionFailureBuilder, Assertions) are not the line inside the step. */
+    @Test
+    void aJUnitAssertionFailingInsideAStepPointsAtTheAssertionsLine() {
+        int[] assertionLine = new int[1];
+        AssertionError error = assertThrows(AssertionError.class, () -> fake.page.step("Check the case", () -> {
+            assertionLine[0] = new Throwable().getStackTrace()[0].getLineNumber() + 1;
+            assertEquals("a", "b");
+        }));
+
+        List<CallSite> path = new UserStepsReport("demo.FakeTest", "test", "test", "browserless", "failed", error,
+                fake.steps).codePath();
+        assertEquals(2, path.size(), path.toString());
+        CallSite inner = path.get(1);
+        assertEquals("UserStepWordingTest.java", inner.file(), inner.toString());
+        assertEquals(assertionLine[0], inner.line(), inner.toString());
+        assertEquals("aJUnitAssertionFailingInsideAStepPointsAtTheAssertionsLine", inner.method());
+    }
+
+    /** AssertJ, Hamcrest and opentest4j frames are skipped like JUnit's. */
+    @Test
+    void anAssertJFailurePointsAtTheTestsLineNotAssertJs() {
+        AssertionError error = new AssertionError("expected a but was b");
+        error.setStackTrace(new StackTraceElement[] {
+                new StackTraceElement("org.opentest4j.AssertionFailedError", "<init>", "AssertionFailedError.java", 40),
+                new StackTraceElement("org.assertj.core.error.ShouldBeEqual", "newAssertionError", "ShouldBeEqual.java",
+                        104),
+                new StackTraceElement("org.assertj.core.api.AbstractAssert", "isEqualTo", "AbstractAssert.java", 201),
+                new StackTraceElement("org.hamcrest.MatcherAssert", "assertThat", "MatcherAssert.java", 20),
+                new StackTraceElement("demo.EditPersonIT", "lambda$editPerson$0", "EditPersonIT.java", 119),
+                new StackTraceElement("com.vaadin.testing.unified.UnifiedPage", "step", "UnifiedPage.java", 50)});
+
+        assertEquals("EditPersonIT.java:119 (editPerson)", CallSite.of(error).orElseThrow().toString());
+    }
+
     /** The expected items in the test's order, so two runs of a scenario word the step alike. */
     @Test
     void selectedItemsAreNamedInTheTestsOrder() {

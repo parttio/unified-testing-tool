@@ -28,10 +28,13 @@ public record CallSite(String className, String method, String file, int line) {
                 .orElse(null));
     }
 
-    /** The first frame of the throwable's stack trace outside the Unified API, if any. */
+    /**
+     * The first frame of the throwable's stack trace outside the Unified API and the test frameworks that build
+     * assertion errors (JUnit, opentest4j, AssertJ, Hamcrest), if any: the line of the failing assertion.
+     */
     public static Optional<CallSite> of(Throwable throwable) {
         for (StackTraceElement e : throwable.getStackTrace()) {
-            if (!skipped(e.getClassName(), null)) {
+            if (!skipped(e.getClassName(), null) && !testFramework(e.getClassName())) {
                 return Optional.of(new CallSite(e.getClassName(), methodName(e.getMethodName()), e.getFileName(),
                         e.getLineNumber()));
             }
@@ -72,6 +75,11 @@ public record CallSite(String className, String method, String file, int line) {
             return !(outer.endsWith("Test") || outer.endsWith("Tests"));
         }
         return false;
+    }
+
+    private static boolean testFramework(String className) {
+        return className.startsWith("org.junit.") || className.startsWith("org.opentest4j.")
+                || className.startsWith("org.assertj.") || className.startsWith("org.hamcrest.");
     }
 
     private static String simpleName(String className) {
