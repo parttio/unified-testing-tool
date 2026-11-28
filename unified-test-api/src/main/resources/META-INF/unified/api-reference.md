@@ -39,7 +39,7 @@ App layout, Flow's `AppLayout`. Guide: [Working with components, App layout](htt
 
 ### `UnifiedArticle`
 
-Article, Flow's `Article`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Article, any Flow component rendered as `<article>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -50,7 +50,7 @@ Article, Flow's `Article`. Guide: [Working with components, Plain HTML and text]
 
 ### `UnifiedAside`
 
-Aside, Flow's `Aside`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Aside, any Flow component rendered as `<aside>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -177,7 +177,7 @@ Dialog, Flow's `Dialog`. Guide: [Working with components, Dialogs and notificati
 
 ### `UnifiedDiv`
 
-Div, Flow's `Div`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Div, any Flow component rendered as `<div>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -199,7 +199,7 @@ Email field, Flow's `EmailField`. Guide: [Working with components, Text fields](
 
 ### `UnifiedFooter`
 
-Footer, Flow's `Footer`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Footer, any Flow component rendered as `<footer>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -236,7 +236,7 @@ Grid, Flow's `Grid`. Guide: [Grid](https://parttio.github.io/unified-testing-too
 
 ### `UnifiedHeader`
 
-Header, Flow's `Header`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Header, any Flow component rendered as `<header>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -279,7 +279,7 @@ Login, Flow's `AbstractLogin`. Guide: [Working with components, Login](https://p
 
 ### `UnifiedMain`
 
-Main, Flow's `Main`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Main, any Flow component rendered as `<main>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -336,7 +336,7 @@ Multi-select combo box, Flow's `MultiSelectComboBox`. Guide: [Working with compo
 
 ### `UnifiedNav`
 
-Nav, Flow's `Nav`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Nav, any Flow component rendered as `<nav>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -366,7 +366,7 @@ Number field, Flow's `NumberField`. Guide: [Working with components, Typed value
 
 ### `UnifiedParagraph`
 
-Paragraph, Flow's `Paragraph`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Paragraph, any Flow component rendered as `<p>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -398,7 +398,7 @@ Radio button group, Flow's `RadioButtonGroup`. Guide: [Working with components, 
 
 ### `UnifiedSection`
 
-Section, Flow's `Section`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Section, any Flow component rendered as `<section>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
@@ -431,7 +431,7 @@ Side nav item, Flow's `SideNavItem`. Guide: [Working with components, Side navig
 
 ### `UnifiedSpan`
 
-Span, Flow's `Span`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
+Span, any Flow component rendered as `<span>`. Guide: [Working with components, Plain HTML and text](https://parttio.github.io/unified-testing-tool/guide/components/#plain-html-and-text).
 
 - **Filters:** `withText(String)`, `withTextContaining(String)`
 - **Actions**, each with the User Step it reports:
