@@ -48,7 +48,7 @@ void onAPhone(UnifiedPage page) {
 }
 ```
 
-`page.setViewport(768, 1024)` changes this window's Viewport mid-test. It is a User Step, and it waits until the application has heard of the new size: Vaadin sends a window resize 300 ms after the browser's last one, so prefer `@Viewport` for the size a test starts at. `page.viewport()` gives the current one. Windows from `openWindow()` and `openAsUser()` start at the test's Viewport.
+`page.setViewport(768, 1024)` changes this window's Viewport mid-test. It is a User Step, and it waits until the application has heard of the new size: Vaadin sends a window resize 300 ms after the browser's last one, so prefer `@Viewport` for the size a test starts at. `page.viewport()` gives the current one. Windows from `openWindow()`, `openAsUser()` and `openNewSession()` start at the test's Viewport.
 
 Only the Viewport is set, not the screen: `screen.width` and `getScreenWidth()` are whatever the browser says. Don't size the browser window through the Escape Hatch; use `setViewport`.
 

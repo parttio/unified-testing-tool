@@ -78,7 +78,7 @@ private static void editPerson(UnifiedPage page, String name, String newName, St
 void step(String name, Runnable userSteps);   // on UnifiedPage
 ```
 
-- **On the page, not static.** It needs no static import and doesn't clash with `Allure.step`. It records into the test's run, so it works across `openWindow` and `openAsUser`.
+- **On the page, not static.** It needs no static import and doesn't clash with `Allure.step`. It records into the test's run, so it works across `openWindow`, `openAsUser` and `openNewSession`.
 - **`Runnable` only.** Wrappers are lazy, so a test declares them before the step and uses them inside and after it.
 - **Nesting:** steps nest without limit. Reports indent them, and a failure names the chain (`In step  Edit Alan Turing › …`).
 - **Failure location:** a failure inside a step points first at the line that called the step, then at the line inside it.
@@ -182,7 +182,7 @@ On by default; `vaadin.testing.user-steps.server-log` sets which of the applicat
 Off by default; both settings below cost time and disk on every step.
 
 - **Snapshots** (`vaadin.testing.user-steps.snapshots=true`): after each User Step, passed or failed, the step's window writes the page into `<test evidence dir>/steps/<number>`: a viewport screenshot (`.png`) in a browser, with its Step Target's box in the step's `highlight`; the component tree with its location (`.tree.txt`) on Browserless, with the Step Target marked at the end of its line (`  ← this step`). The Step Target is the component the step singled out to act on or to check, so a check marks what it checked. At most 200 per test. The step's `snapshot` field names it. A test's run starts by removing the snapshots an earlier run left. A text snapshot is masked like the reports; a Browserless tree shows a password field's value as `••••`. A snapshot that can't be taken is left out and never fails the test.
-- **Playwright's trace** (`vaadin.testing.playwright.trace`: `off`, `on`, `on-failure`): the test's browser context records a trace with screenshots and DOM snapshots, each User Task and User Step a group named in its words, so Playwright's trace viewer lists the test's steps with their actions inside. It is kept as `<test evidence dir>/trace.zip` always (`on`) or when the test failed (`on-failure`), and named on the failure (`Recording: …`). Windows from `openWindow()` share it; users from `openAsUser(..)` have browser contexts of their own and are not traced. Open it at trace.playwright.dev, or with `mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="show-trace trace.zip"`.
+- **Playwright's trace** (`vaadin.testing.playwright.trace`: `off`, `on`, `on-failure`): the test's browser context records a trace with screenshots and DOM snapshots, each User Task and User Step a group named in its words, so Playwright's trace viewer lists the test's steps with their actions inside. It is kept as `<test evidence dir>/trace.zip` always (`on`) or when the test failed (`on-failure`), and named on the failure (`Recording: …`). Windows from `openWindow()` share it; users from `openAsUser(..)` and `openNewSession()` have browser contexts of their own and are not traced. Open it at trace.playwright.dev, or with `mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="show-trace trace.zip"`.
 
 Later outputs, built from the same `user-steps.json`: living documentation per view.
 

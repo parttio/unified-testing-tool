@@ -82,9 +82,17 @@ final class BrowserlessSession implements AdapterSession {
     public AdapterSession openAsUser(String username, String... roles) {
         if (!(app instanceof SecuredBrowserlessApplicationContext<?> secured)) {
             throw new IllegalStateException("openAsUser needs Spring Security in the application"
-                    + " (spring-security on the test classpath and a SecurityFilterChain bean)");
+                    + " (spring-security on the test classpath and a SecurityFilterChain bean). Without it,"
+                    + " openNewSession() opens a session with nobody signed in: sign in through the application's own"
+                    + " login (UnifiedLogin)");
         }
         return child(new BrowserlessSession(app, secured.newUser(username, roles), true, false));
+    }
+
+    /** A new user of the same application: a VaadinSession of its own, with no security context. */
+    @Override
+    public AdapterSession openNewSession() {
+        return child(new BrowserlessSession(app, app.newUser(), true, false));
     }
 
     private BrowserlessSession child(BrowserlessSession session) {

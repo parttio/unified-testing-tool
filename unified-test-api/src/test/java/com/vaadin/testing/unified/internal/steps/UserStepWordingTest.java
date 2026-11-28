@@ -12,6 +12,7 @@ import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.testing.unified.component.UnifiedEmailField;
 import com.vaadin.testing.unified.component.UnifiedPasswordField;
 import com.vaadin.testing.unified.UnifiedComponent;
+import com.vaadin.testing.unified.UnifiedPage;
 import com.vaadin.testing.unified.UnifiedWrapper;
 import com.vaadin.testing.unified.UserStepVerb;
 import com.vaadin.testing.unified.component.UnifiedButton;
@@ -77,6 +78,17 @@ public class UserStepWordingTest {
             case Group g -> "group " + g.name();
             case Gap g -> g.text();
         }).toList();
+    }
+
+    @Test
+    void aNewSessionOpensAsSuchAndItsWindowIsCountedApartFromWindows() {
+        fake.page.openWindow();
+        UnifiedPage other = fake.page.openNewSession();
+        other.openNewSession();
+
+        assertEquals(List.of("open window 2", "open a new session", "open a new session"), texts());
+        assertEquals(List.of("", "", "session 2"), fake.steps.entries().stream()
+                .map(e -> ((Step) e).window() == null ? "" : ((Step) e).window()).toList());
     }
 
     @Test

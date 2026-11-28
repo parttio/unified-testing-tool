@@ -44,6 +44,9 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
     /** Another user with its own session, logged in with the given roles. Closed at the end of the test. */
     UnifiedPage openAsUser(String username, String... roles);
 
+    /** A window in a new session of its own, nobody signed in: sign in through the app. Closed at the end of the test. */
+    UnifiedPage openNewSession();
+
     /** Needs {@link RequiresBrowser}. */
     void screenshot(Path file);
 

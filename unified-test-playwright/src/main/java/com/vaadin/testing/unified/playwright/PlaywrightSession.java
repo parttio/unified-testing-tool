@@ -109,13 +109,24 @@ final class PlaywrightSession implements AdapterSession {
     @Override
     public AdapterSession openAsUser(String username, String... roles) {
         String loginUrl = LoginSupport.userUrl(baseUrl, username, roles);
+        PlaywrightSession session = newContext();
+        session.logIn(loginUrl);
+        return session;
+    }
+
+    /** A new browser context (own cookies, own session) with nobody signed in. */
+    @Override
+    public AdapterSession openNewSession() {
+        return newContext();
+    }
+
+    private PlaywrightSession newContext() {
         BrowserContext other = context.browser().newContext();
         other.setDefaultTimeout(timeoutMillis);
         // a context of its own: not traced
         PlaywrightSession session = new PlaywrightSession(other, other.newPage(), baseUrl, timeoutMillis, true,
                 TraceMode.OFF);
         children.add(session);
-        session.logIn(loginUrl);
         return session;
     }
 

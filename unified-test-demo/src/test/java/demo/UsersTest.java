@@ -5,6 +5,7 @@ import static com.vaadin.testing.unified.assertion.UnifiedAssertions.assertThat;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.testing.unified.UnifiedPage;
+import com.vaadin.testing.unified.component.UnifiedLogin;
 import com.vaadin.testing.unified.spring.UnifiedSpringBootTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,6 +41,30 @@ class UsersTest {
         assertThat(second.findComponent(Span.class).withText("Anonymous")).isVisible();
     }
     // --8<-- [end:openWindowSharesTheSession]
+
+    // ---------------------------------------------------------------- a second user through the app's own login
+
+    // --8<-- [start:openNewSessionSignsIn]
+    @Test
+    @DisplayName("A second user signs in through the login form in a session of their own")
+    void secondUserSignsInThroughTheForm(UnifiedPage page) {
+        page.navigate(SignInFormView.class);
+
+        UnifiedPage barista = page.openNewSession();
+        signIn(barista, SignInFormView.USERNAME, SignInFormView.PASSWORD);
+
+        assertThat(barista).isAt(HomeView.class);
+        assertThat(page).isAt(SignInFormView.class);
+    }
+
+    /** The test's own sign-in, reused for every user: a User Task over the app's login form. */
+    private static void signIn(UnifiedPage page, String username, String password) {
+        page.step("Sign in as " + username, () -> {
+            page.navigate(SignInFormView.class);
+            page.find(UnifiedLogin.class).login(username, password);
+        });
+    }
+    // --8<-- [end:openNewSessionSignsIn]
 
     // ---------------------------------------------------------------- logged in (browsers: test-only login endpoint)
 
@@ -95,6 +120,22 @@ class UsersTest {
             assertThat(alice).isAt(AdminView.class);
             bob.navigate(AdminView.class);
             assertThat(bob.findComponent(H2.class).withTextContaining("Admin area")).doesNotExist();
+        }
+
+        @Test
+        @DisplayName("A new session is anonymous, with its own visits, while Alice stays signed in")
+        void openNewSessionIsSignedOut(UnifiedPage alice) {
+            alice.navigate(WhoAmIView.class);
+            UnifiedPage other = alice.openNewSession();
+            other.navigate(WhoAmIView.class);
+
+            assertThat(other.findComponent(Span.class).withText("Anonymous")).isVisible();
+            assertThat(other.findComponent(Span.class).withText("Visits in this session: 1")).isVisible();
+            // alice keeps her session and her role; the new session has neither
+            alice.navigate(AdminView.class);
+            assertThat(alice).isAt(AdminView.class);
+            other.navigate(AdminView.class);
+            assertThat(other).isAt(LoginView.class);
         }
 
         @Test

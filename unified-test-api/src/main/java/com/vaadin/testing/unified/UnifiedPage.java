@@ -69,8 +69,8 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
     /**
      * A named piece of user work, a User Task: the User Steps {@code userSteps} performs show under this name
      * in the reports. Steps nest without limit. On a failure inside, the report points first at the line that
-     * called this step, then at the line inside it. Works across {@link #openWindow()} and
-     * {@link #openAsUser}: every window records into the test's one list of User Steps.
+     * called this step, then at the line inside it. Works across {@link #openWindow()},
+     * {@link #openAsUser} and {@link #openNewSession()}: every window records into the test's one list of User Steps.
      *
      * <pre>{@code
      * page.step("Edit " + name, () -> {
@@ -102,4 +102,17 @@ public interface UnifiedPage extends Scope, HasEscapeHatch {
      * {@code ROLE_} prefix added). Starts on no view: navigate first.
      */
     UnifiedPage openAsUser(String username, String... roles);
+
+    /**
+     * A window in a new session of its own, with nobody signed in: sign in through the application's own login,
+     * as a user does. Works without Spring Security, and ignores the test's {@code @WithMockUser}. Starts on no
+     * view: navigate first.
+     *
+     * <pre>{@code
+     * UnifiedPage officer = admin.openNewSession();
+     * officer.navigate(LoginView.class);
+     * officer.find(UnifiedLogin.class).login("officer", password);
+     * }</pre>
+     */
+    UnifiedPage openNewSession();
 }

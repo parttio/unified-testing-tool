@@ -77,7 +77,7 @@ final class FakePage {
                         actions.add("navigate " + args[0]);
                         yield null;
                     }
-                    case "openWindow", "openAsUser" -> proxy;
+                    case "openWindow", "openAsUser", "openNewSession" -> proxy;
                     case "consoleErrors" -> {
                         List<String> errors = List.copyOf(console);
                         console.clear();

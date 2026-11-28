@@ -84,7 +84,7 @@ class TestLifecycleTest {
                             }
                             case "find" -> found;
                             // another window records into the same list
-                            case "openWindow", "openAsUser" -> proxy;
+                            case "openWindow", "openAsUser", "openNewSession" -> proxy;
                             case "isAt" -> false;
                             default -> null;
                         };

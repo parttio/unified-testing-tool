@@ -160,6 +160,12 @@ public interface AdapterSession extends AutoCloseable {
     AdapterSession openAsUser(String username, String... roles);
 
     /**
+     * A window in a new session of its own, with nobody signed in, whatever the test's user. This session closes
+     * it when it closes.
+     */
+    AdapterSession openNewSession();
+
+    /**
      * For failure messages only (Near Misses, several matches): what each element shows a user, in the order
      * given. Testing Tools with a round trip per read should read them all at once. The default reads each value
      * through the Unified Element and knows no ancestors.

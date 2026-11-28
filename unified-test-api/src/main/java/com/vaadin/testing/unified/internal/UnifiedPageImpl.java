@@ -178,6 +178,13 @@ public final class UnifiedPageImpl implements UnifiedPage {
     }
 
     @Override
+    public UnifiedPage openNewSession() {
+        String window = run.steps().nextSession();
+        return run.steps().action(() -> Phrases.page("open", "open a new session"), run.window(),
+                () -> new UnifiedPageImpl(run.inWindow(run.session().openNewSession(), window)));
+    }
+
+    @Override
     public void step(String name, Runnable userSteps) {
         run.steps().group(name, run.window(), userSteps);
     }

@@ -27,7 +27,8 @@ final class LoginSupport {
     static String userUrl(String baseUrl, String username, String... roles) {
         if (!isAvailable()) {
             throw new IllegalStateException("openAsUser needs @UnifiedSpringBootTest (unified-test-spring) and Spring"
-                    + " Security on the test classpath");
+                    + " Security on the test classpath. Without them, openNewSession() opens a session with nobody"
+                    + " signed in: sign in through the application's own login (UnifiedLogin)");
         }
         return url(baseUrl, TestLogin.tokenFor(username, roles));
     }
