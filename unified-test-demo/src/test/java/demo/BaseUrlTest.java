@@ -58,11 +58,12 @@ class BaseUrlTest {
         assertEquals("127.0.0.1:" + port, script(page, "return window.location.host"));
     }
 
-    /** Reads the page through the Escape Hatch of either browser Testing Tool. */
+    /** Reads the page through the Escape Hatch of either browser Testing Tool (the class requires a browser). */
     private static String script(UnifiedPage page, String body) {
-        var playwright = page.tryUnwrap(com.microsoft.playwright.Page.class);
-        Object result = playwright.isPresent() ? playwright.get().evaluate("() => { " + body + " }")
-                : ((JavascriptExecutor) page.unwrap(WebDriver.class)).executeScript(body);
-        return (String) result;
+        return page.tryUnwrap(com.microsoft.playwright.Page.class)
+                .map(playwright -> (String) playwright.evaluate("() => { " + body + " }"))
+                .or(() -> page.tryUnwrap(WebDriver.class)
+                        .map(driver -> (String) ((JavascriptExecutor) driver).executeScript(body)))
+                .orElseThrow();
     }
 }
