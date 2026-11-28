@@ -43,6 +43,7 @@ public class NoticesView extends VerticalLayout {
         HorizontalLayout welcome = new HorizontalLayout(new Span("Welcome"), greeting);
         welcome.setTestId("welcome");
 
-        add(save, importRows, export, welcome, new Html("<div data-testid=\"total\"><b>Total</b> 42</div>"), warning);
+        add(save, importRows, export, welcome, new Html("<div data-testid=\"total\"><b>Total</b> 42</div>"),
+                new Html("<p>Prices include <em>VAT</em></p>"), warning);
     }
 }

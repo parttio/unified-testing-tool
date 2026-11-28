@@ -1,5 +1,6 @@
 package com.vaadin.testing.unified.component;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Main;
 import com.vaadin.testing.unified.Scope;
 import com.vaadin.testing.unified.UnifiedComponent;
@@ -9,10 +10,11 @@ import com.vaadin.testing.unified.query.TextFilter;
 import java.time.Duration;
 
 /**
- * A {@code <main>} ({@link Main}), to read its text, search inside it or click it. Bound to its tag, so a browser
- * finds it with one query, unlike {@link UnifiedContainer} (any tag).
+ * A {@code <main>}: a {@link Main}, an {@code Html} whose root is a {@code <main>}, or any other {@code <main>}, to read
+ * its text, search inside it or click it. Bound to its tag, so a browser finds it with one query, unlike
+ * {@link UnifiedContainer} (any tag).
  */
-@UnifiedComponent(Main.class)
+@UnifiedComponent(value = Component.class, tag = "main")
 public interface UnifiedMain extends UnifiedWrapper, Scope, CommonFilters<UnifiedMain>, TextFilter<UnifiedMain> {
 
     /** Returns this Wrapper with another timeout for Auto-Wait and assertions. */
