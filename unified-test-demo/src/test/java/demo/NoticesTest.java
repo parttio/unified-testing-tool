@@ -73,4 +73,16 @@ class NoticesTest {
         assertTrue(view.lines().anyMatch(l -> l.startsWith("button “Export all”")), view);
         assertThat(page.find(UnifiedButton.class).withText("Export all")).isVisible();
     }
+
+    @Test
+    @DisplayName("The Findable View lists an open notification with its text (#740)")
+    void findableViewListsAnOpenNotification(UnifiedPage page) {
+        page.navigate(NoticesView.class);
+
+        page.find(UnifiedButton.class).withText("Import").click();
+
+        String view = page.describe();
+        assertTrue(view.lines().anyMatch(l -> l.startsWith("notification “3 rows imported”")
+                && l.contains("page.find(UnifiedNotification.class)")), view);
+    }
 }
